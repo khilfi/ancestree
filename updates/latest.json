@@ -1,19 +1,19 @@
 {
-  "version": "0.1.0",
-  "notes": "The first release of AncesTree as a desktop app, for Windows, macOS (Apple Silicon) and Linux.\n\n- One window, with the family on rings, as a family tree, on a timeline and on a map, and an icon by the clock.\n- It can start when you sign in, and it makes a backup each day.\n- Its own database comes with it: fetched and checked the first time it starts, with nothing else to install.\n- Updates are signed, and installed when you restart.\n",
-  "pub_date": "2026-09-30T02:26:32Z",
+  "version": "0.1.1",
+  "notes": "The first update, to check that updates reach every computer.\n\n- Nothing in the app changes.\n- It installs itself: when you choose **Restart to update**, or the next time AncesTree starts.\n",
+  "pub_date": "2026-09-30T02:56:25Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc3NuUHlRVWllUkM0Q01xWmdVZEdETzJid2xJWU5uRXBXdmhJNXBWdmtHSHRzelppY09WUlRQRjhzTkllMFpiM0szZ2MyUThxbHBPUUc5OFpDdTZLZXdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM2MzczCWZpbGU6QW5jZXNUcmVlXzAuMS4wX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuMS4wClNoN1loazQxUWZka0pqeU9LNjVsMHdzMG5KYUpLV1hSblFGMjFTWndXbmFVRmNhZklhS2xYblNqbFQ1R3FGcU9GeHpvQjFxOTl6c1l2QjlzRnJidkRBPT0K",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.0/AncesTree_0.1.0_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc29qZjQwUkNudUNYZjJDd1NMNG5lZmpJakFyQzQ0M0QrV2txdy8wYmxKWFZsNU96UzJWUlZRWmVBSHhDOFNGYU1qQ0ZlY0lEb0F1RGU5ckJkbm1JcXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzUyCWZpbGU6QW5jZXNUcmVlXzAuMS4xX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuMS4xCmhhbTlVR21iMlZSTjg3ejBTQzhhQXVQQTJ0NUY5MFJneENTUkViTUMyTERTU3c3MkNDcDg1cG1RM3ZiSEI4VVlZNlpNM2tucVVYQWlRSGpweUgzUUF3PT0K",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc21LSUsySWNvR0c4czg1Qnk2ck9pdFlsbmxLNWt2V214WGozNGw3bEl2OWRJa2N6aFNOOVdiMFBXRVp0S1RsOUJoY2lmR1d5dmpPQTBFTFp5ditkUUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM2MzkxCWZpbGU6QW5jZXNUcmVlXzAuMS4wX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4xLjAKN3IxZGlJaWRJT3hlellWV1ZwZTlCd29ER1c4TmtFREtRQTJkelo0NUpIRlJGenh3dXFSdkwzck1MckRRdGN0MDZGVWo0ZmtNTXp1QXpHYWNPWlFmQVE9PQo=",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.0/AncesTree_0.1.0_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc3J4UnJ2eTk4d2RHS2U2Y0c4REtiWHM3NWVZdTh6VjZWbWhKRTgvdzhmeFZjVGlzSlJiaElxejFBRXlwVEtBVW9ZSHZyRnhGK3dySEZBaXJUUDAzMnc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzY5CWZpbGU6QW5jZXNUcmVlXzAuMS4xX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4xLjEKdFcyUnlSUE9OZ2RNdFhrRW83bzRnV2tGN21EdGZQaWJrY0N4VUozN0t0eEtCSFArSy9mWWMvWnZaTWROMnV6L1hVSG5kUnpTS011bWJjRHNEQmwxQXc9PQo=",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_amd64.AppImage"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc2tjYTMwSFFWTE56R3NYQ3lTaEl4TkxLdlQ1L0hjN2NpS0t2bU5kQWpUK1RoOEQ2MFBHK1gyOVYyS25Mb0t2dDllMXJueTc4UWZMeGJDMlcvWElEdHdRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM2MzY0CWZpbGU6QW5jZXNUcmVlXzAuMS4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjEuMApLd0s5NUxQSDBPM3VLVnh2b29RVlMwbGNycmY3Z0p2OTdRSFRjVldubmM3TzB4bHZKUDY2OG5VMXpTRGU1RTNXb0x6QURaRDhSWnZuVnJabHkzUWxCQT09Cg==",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.0/AncesTree_0.1.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc3F1eEw3RE9hNWJzZWE1ZHNXaERaWXZSOWpRNnI3cFdXdXRDNXpUZjJUc0N3UHpuUWg3bWx6WHk2MElVdWppb2Y0M1VYaFJZRitBdzU5U3RKbG1yOUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzQ1CWZpbGU6QW5jZXNUcmVlXzAuMS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjEuMQo2U1Buby9SZ0xrY2lORWlQb3dnampuVVNtNE1WRjloNzJ1KzB6MnVCVm1wWW9CSVFMUVJneXdCRkFxbWovM3JscTM5YXRFZE1QRDAvd3FIRkllb29EUT09Cg==",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_x64-setup.exe"
     }
   }
 }
