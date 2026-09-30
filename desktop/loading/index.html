@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AncesTree</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #fafaf9;
+        color: #292524;
+      }
+      main {
+        width: min(28rem, 100% - 2rem);
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      p {
+        margin: 0.25rem 0;
+        color: #57534e;
+      }
+      progress {
+        width: 100%;
+        margin-top: 0.75rem;
+        accent-color: #0f766e;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #1c1917;
+          color: #e7e5e4;
+        }
+        p {
+          color: #a8a29e;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>AncesTree</h1>
+      <p id="status">Starting…</p>
+      <progress id="bar" hidden></progress>
+    </main>
+    <script>
+      // Shown while the engine starts; the shell then opens the app in this window.
+      const status = document.getElementById("status");
+      const bar = document.getElementById("bar");
+      const mb = (bytes) => Math.round(bytes / 1048576);
+      const lines = {
+        preparing: () => "Starting…",
+        updating: (event) => `Updating AncesTree to ${event.version}…`,
+        download: (event) =>
+          `Getting the database ready, the first time only: ` +
+          `${event.what.startsWith("neo4j") ? "Neo4j" : "Java"}, ` +
+          `${mb(event.done)}${event.total ? ` of ${mb(event.total)}` : ""} MB`,
+        "starting-database": () => "Starting the database…",
+        "database-ready": () => "Opening the family…",
+        ready: () => "Opening the family…",
+        "waiting-for-internet": (event) =>
+          "AncesTree needs the internet this once, to fetch its database (about 330 MB). " +
+          `Trying again in ${event.retry_in} seconds.`,
+        exited: () => "AncesTree's engine stopped. Its log is in the app's data folder.",
+      };
+      const { listen, emit } = window.__TAURI__.event;
+      listen("engine", ({ payload }) => {
+        const line = lines[payload.stage];
+        if (line) status.textContent = line(payload);
+        const downloading = payload.stage === "download" && payload.total;
+        bar.hidden = !downloading;
+        if (downloading) {
+          bar.max = payload.total;
+          bar.value = payload.done;
+        }
+      }).then(() => emit("loading-page-ready")); // the shell then says again where things are
+    </script>
+  </body>
+</html>

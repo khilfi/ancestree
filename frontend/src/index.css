@@ -1,0 +1,314 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* The tree canvas */
+
+/* Zoomed out: faces only. */
+/* People have a fixed size (geometry.ts), so hiding names never makes React Flow re-measure. */
+.tree-far .person-label {
+  display: none;
+}
+
+/* Photos are dots this far out: skip what can't be seen, so panning 500 people stays smooth. */
+.tree-tiny .react-flow__node * {
+  box-shadow: none;
+  color: transparent;
+}
+.tree-tiny .react-flow__edge-path {
+  marker-end: none;
+}
+
+/* Rearrange: everyone glides to their place on the rings. */
+.tree-moving .react-flow__node {
+  transition: transform 600ms ease-in-out;
+}
+
+/* Whoever the pointer is over comes to the front, grown, above their neighbours. */
+.react-flow__node:hover {
+  /* biome-ignore lint/complexity/noImportantStyles: React Flow sets z-index inline */
+  z-index: 1000 !important;
+}
+
+.tree-link {
+  stroke: #a8a29e;
+  stroke-width: 1.5;
+}
+.tree-marriage {
+  stroke: #78716c;
+}
+.tree-pair {
+  stroke: #d6d3d1;
+}
+.react-flow__edge:hover .tree-link {
+  stroke: #44403c;
+  stroke-width: 2;
+}
+.tree-junction {
+  fill: #78716c;
+}
+
+/* A filter's others, when they're faded rather than hidden. */
+.react-flow__node.tree-faded {
+  opacity: 0.25;
+}
+.react-flow__edge.tree-faded {
+  opacity: 0.15;
+}
+
+/*
+ * Finding a relationship. The person it starts from pulses while the second person is
+ * picked; then the path between them glows and everyone else fades. A ring and a thicker
+ * outline as well as the colour, so colour is never the only signal.
+ */
+.kin-from .person-photo {
+  outline: 4px solid #f59e0b;
+  outline-offset: 3px;
+  animation: kin-pulse 1.4s ease-out infinite;
+}
+@keyframes kin-pulse {
+  from {
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0.6);
+  }
+  to {
+    box-shadow: 0 0 0 18px rgb(245 158 11 / 0);
+  }
+}
+.tree-kin .react-flow__node {
+  cursor: pointer;
+}
+.kin-path .person-photo {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+.tree-kin-result .react-flow__node:not(.kin-path) {
+  opacity: 0.25;
+}
+.tree-kin-result .react-flow__edge:not(.kin-path) {
+  opacity: 0.12;
+}
+.react-flow__edge.kin-path .tree-link {
+  stroke: #f59e0b;
+  stroke-width: 3;
+}
+.react-flow__edge.kin-path .tree-junction {
+  fill: #f59e0b;
+}
+
+/*
+ * Life stories: the story reads like a page. MDXEditor's stylesheet arrives with the
+ * editor, after this one, so these rules are scoped to win. Tailwind's reset takes away list
+ * bullets and heading sizes; they're set again here.
+ */
+.mdxeditor.story-editor {
+  font-family: inherit;
+}
+/* The side panel is narrow: the toolbar wraps rather than scrolling sideways. */
+.mdxeditor-toolbar.story-toolbar {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  border-radius: 0.5rem;
+}
+/* The editor's menus and dialogs, above the wide view (z-50). */
+body > .mdxeditor-popup-container {
+  z-index: 60;
+}
+.story-editor .story {
+  min-height: 14rem;
+  padding: 0.75rem 0.125rem 1rem;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #292524;
+}
+/* "Write about their life…" wraps like the text it stands for. */
+.story-editor .story:not([contenteditable]) {
+  right: 0;
+  left: 0;
+  white-space: normal;
+  color: #a8a29e;
+}
+.story-editor .story > :not(:first-child) {
+  margin-top: 0.75em;
+}
+.story-editor .story :is(h1, h2, h3) {
+  margin-top: 1.25em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1c1917;
+}
+.story-editor .story h1 {
+  font-size: 1.45em;
+}
+.story-editor .story h2 {
+  font-size: 1.25em;
+}
+.story-editor .story h3 {
+  font-size: 1.08em;
+}
+.story-editor .story :is(ul, ol) {
+  padding-left: 1.5em;
+}
+.story-editor .story ul {
+  list-style: disc;
+}
+.story-editor .story ol {
+  list-style: decimal;
+}
+.story-editor .story li > :is(ul, ol) {
+  margin-top: 0.25em;
+}
+.story-editor .story blockquote {
+  border-left: 3px solid #d6d3d1;
+  padding-left: 0.9em;
+  color: #57534e;
+  font-style: italic;
+}
+.story-editor .story a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.story-editor .story img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+}
+.story-editor .story hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid #e7e5e4;
+}

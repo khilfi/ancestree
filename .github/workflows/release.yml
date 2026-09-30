@@ -1,0 +1,127 @@
+# A release: a version tag, such as v0.2.0, builds AncesTree for Windows, macOS (Apple Silicon)
+# and Linux, and puts in the tag's release the installers, each system's update file and their
+# SHA-256 sums. It holds no key: each build signs its update file with a key made for the run
+# and thrown away, and the maintainer signs the files again on their own computer. Installed
+# apps check updates against the maintainer's public key alone, which is built into them.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: The release, with what's new in it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes="release-notes/$version.md"
+          [ -f "$notes" ] || { echo "::error::$notes is missing: write what's new first"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" --title "AncesTree $version" --notes-file "$notes" --verify-tag
+
+  build:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+          - os: macos-latest
+            bundles: app,dmg
+          - os: ubuntu-24.04
+            bundles: appimage
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            frontend/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Linux packages for Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+          # linuxdeploy, which makes the AppImage, would strip every library it finds, with a
+          # strip too old for some of them. They're fine as they come.
+          echo "NO_STRIP=true" >> "$GITHUB_ENV"
+
+      - name: The app's pages
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile && pnpm build && pnpm build:viewer
+
+      - name: The engine
+        working-directory: backend
+        run: >
+          uv run --with pyinstaller pyinstaller ../desktop/engine/engine.spec --noconfirm
+          --distpath ../desktop/engine/dist --workpath ../desktop/engine/build
+
+      - name: The app
+        working-directory: desktop
+        run: |
+          pnpm install --frozen-lockfile
+          # A key for this run alone: the maintainer signs the update files again later.
+          pnpm tauri signer generate -w "$RUNNER_TEMP/run.key" -p run --ci
+          export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=run
+          export TAURI_SIGNING_PRIVATE_KEY="$(cat "$RUNNER_TEMP/run.key")"
+          pnpm tauri build --verbose --bundles ${{ matrix.bundles }} \
+            --config "{\"version\":\"${GITHUB_REF_NAME#v}\"}"
+
+      - name: Into the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          bundle=desktop/src-tauri/target/release/bundle
+          mkdir -p out
+          case "$RUNNER_OS" in
+            Windows)
+              cp "$bundle/nsis/AncesTree_${version}_x64-setup.exe" out/ ;;
+            macOS)
+              cp "$bundle/dmg/AncesTree_${version}_aarch64.dmg" out/
+              cp "$bundle/macos/AncesTree.app.tar.gz" "out/AncesTree_${version}_aarch64.app.tar.gz" ;;
+            Linux)
+              cp "$bundle/appimage/AncesTree_${version}_amd64.AppImage" out/ ;;
+          esac
+          ls -la out
+          gh release upload "$GITHUB_REF_NAME" out/* --clobber
+
+  sums:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: SHA256SUMS.txt, which release.py checks each file against before signing it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --dir files
+          cd files
+          sha256sum * > ../SHA256SUMS.txt
+          cat ../SHA256SUMS.txt
+          gh release upload "$GITHUB_REF_NAME" ../SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber

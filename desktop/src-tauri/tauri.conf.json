@@ -1,0 +1,54 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "AncesTree",
+  "mainBinaryName": "AncesTree",
+  "version": "0.1.0",
+  "identifier": "app.ancestree.desktop",
+  "build": {
+    "frontendDist": "../loading"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "publisher": "AncesTree",
+    "shortDescription": "The family's own AncesTree",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../engine/dist/ancestree-engine": "engine"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/hooks.nsh"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIyNkMwRkExMzY2Q0ZDMTYKUldRVy9HdzJvUTlzc3FTOXZFelRLOTA5S3ArZ3hNQnNPYjRqMWljcG1wUzNxa3NpOHRrY2VubkEK",
+      "endpoints": ["https://raw.githubusercontent.com/khilfi/ancestree/main/updates/latest.json"],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

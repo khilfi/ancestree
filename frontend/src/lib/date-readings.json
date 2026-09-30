@@ -1,0 +1,23 @@
+[
+  { "date": { "year": 1950 }, "reading": "1950" },
+  { "date": { "year": 1950, "month": 3 }, "reading": "March 1950" },
+  { "date": { "year": 1938, "month": 3, "day": 14 }, "reading": "14 March 1938" },
+  { "date": { "year": 2000, "month": 2, "day": 29 }, "reading": "29 February 2000" },
+  { "date": { "year": 1920, "qualifier": "about" }, "reading": "about 1920" },
+  {
+    "date": { "year": 1938, "month": 3, "day": 14, "qualifier": "about" },
+    "reading": "about 14 March 1938"
+  },
+  { "date": { "year": 1900, "month": 3, "qualifier": "before" }, "reading": "before March 1900" },
+  { "date": { "year": 1945, "qualifier": "after" }, "reading": "after 1945" },
+  {
+    "date": { "year": 1910, "year_to": 1915, "qualifier": "between" },
+    "reading": "between 1910 and 1915"
+  },
+  {
+    "date": { "year": 1910, "year_to": 1910, "qualifier": "between" },
+    "reading": "between 1910 and 1910"
+  },
+  { "date": { "year": 1700, "month": 12, "day": 31 }, "reading": "31 December 1700" },
+  { "date": { "original_text": "zaman Jepun" }, "reading": "zaman Jepun" }
+]

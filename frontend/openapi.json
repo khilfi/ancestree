@@ -1,0 +1,7506 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AncesTree",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "description": "Is the app running, and can it reach Neo4j?",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graph": {
+      "get": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Get Graph",
+        "description": "Everyone, every link, and where each person sits on the lineage rings.",
+        "operationId": "get_graph",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/graph": {
+      "get": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Get Sample Graph",
+        "description": "A generated, fictional family, for trying the canvas at size. Nothing is stored.",
+        "operationId": "get_sample_graph",
+        "parameters": [
+          {
+            "name": "people",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 10,
+              "default": 2000,
+              "title": "People"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/layout/positions": {
+      "put": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Save Positions",
+        "description": "Remember where people were dragged to; a null position puts them back on the rings.",
+        "operationId": "save_positions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Positions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Clear Positions",
+        "description": "Rearrange: everyone goes back to their place on the rings.",
+        "operationId": "clear_positions",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Read Settings",
+        "operationId": "read_settings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreeSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Save Settings",
+        "description": "The centre of the tree (none: the oldest ancestor) and how the rings are coloured.",
+        "operationId": "save_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TreeSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreeSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Search People",
+        "description": "Find people by name or nickname: every word matches the start of a word.",
+        "operationId": "search_people",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonSummary"
+                  },
+                  "title": "Response Search People"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Create Person",
+        "operationId": "create_person",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Person",
+        "operationId": "get_person",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Update Person",
+        "description": "Replace everything the person form edits.",
+        "operationId": "update_person",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Patch Person",
+        "description": "Change only what's given: a gender, a date of birth, where they live or where they\nwere born, for the quick fixes in What's missing and on the map. One Undo\nstep.",
+        "operationId": "patch_person",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Delete Person",
+        "description": "Move to the Trash, restorable for 30 days.",
+        "operationId": "delete_person",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrashEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/relatives": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Add Relative",
+        "description": "Create a parent, spouse, child or sibling of this person, already linked.",
+        "operationId": "add_relative",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewRelative"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelativeAdded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/fill-in": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Fill In Unknown Parent",
+        "description": "Turn an unknown parent into someone new, or someone already in the tree.",
+        "operationId": "fill_in_unknown_parent",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FillIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelativeAdded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/children/order": {
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Set Children Order",
+        "operationId": "set_children_order",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChildrenOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/photo": {
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Upload Photo",
+        "operationId": "upload_photo",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_photo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Remove Photo",
+        "description": "The photo moves to profile/previous/ in the person's folder; nothing is deleted.",
+        "operationId": "remove_photo",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/photo/crop": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Photo Crop",
+        "description": "The square kept from the photo, so a new crop can start from it.",
+        "operationId": "get_photo_crop",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Crop"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Recrop Photo",
+        "operationId": "recrop_photo",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Crop"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/photo/avatar": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Avatar",
+        "operationId": "get_avatar",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 128,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "V"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/photo/display": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Display Photo",
+        "description": "The whole photo, upright, for choosing a new crop.",
+        "operationId": "get_display_photo",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "V"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/biography": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Biography",
+        "description": "The life story (Markdown) and its Sources, from biography.md in the person's folder.",
+        "operationId": "get_biography",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Biography"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Save Biography",
+        "description": "Save the story. Refused (409, \"changed_outside\") if the file changed since\n`base_version`, e.g. in Obsidian; the answer carries the file as it is now.",
+        "operationId": "save_biography",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BiographyUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Biography"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/media": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Add Picture",
+        "description": "A picture for the story, kept in the person's media/ folder.",
+        "operationId": "add_picture",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_add_picture"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PictureAdded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/media/{name}": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Picture",
+        "operationId": "get_picture",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relationships": {
+      "post": {
+        "tags": [
+          "relationships"
+        ],
+        "summary": "Create Relationship",
+        "description": "Link two people. Refused with 409 and the reason when a rule would break.",
+        "operationId": "create_relationship",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relationships/{link_id}": {
+      "patch": {
+        "tags": [
+          "relationships"
+        ],
+        "summary": "Update Relationship",
+        "operationId": "update_relationship",
+        "parameters": [
+          {
+            "name": "link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Link Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "relationships"
+        ],
+        "summary": "Delete Relationship",
+        "operationId": "delete_relationship",
+        "parameters": [
+          {
+            "name": "link_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Link Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relationship-kinds": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "List Relationship Kinds",
+        "description": "Kinds of parent-child link, with how many links use each.",
+        "operationId": "list_relationship_kinds",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KindView"
+                  },
+                  "type": "array",
+                  "title": "Response List Relationship Kinds"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Create Relationship Kind",
+        "operationId": "create_relationship_kind",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KindInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KindView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/relationship-kinds/{key}": {
+      "patch": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update Relationship Kind",
+        "description": "Rename, relabel, hide (active=false), reorder, or change ring placement.",
+        "operationId": "update_relationship_kind",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KindUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KindView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Delete Relationship Kind",
+        "description": "Only a kind that no link uses; hide it otherwise.",
+        "operationId": "delete_relationship_kind",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kinship": {
+      "get": {
+        "tags": [
+          "kinship"
+        ],
+        "summary": "Find Relationship",
+        "description": "How two people are related, both ways round, with the path between them.\nEvery statement comes in each kinship language, so switching needs no new answer.",
+        "operationId": "find_relationship",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KinshipAnswer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kinship/dictionary": {
+      "get": {
+        "tags": [
+          "kinship"
+        ],
+        "summary": "Kinship Dictionary",
+        "description": "Every relation's words in English, Malay and Javanese, as the answers say them.",
+        "operationId": "kinship_dictionary",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KinshipDictionary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kinship/settings": {
+      "get": {
+        "tags": [
+          "kinship"
+        ],
+        "summary": "Kinship Settings",
+        "description": "The kinship language and the Malay birth-order titles.",
+        "operationId": "kinship_settings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KinshipSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "kinship"
+        ],
+        "summary": "Save Kinship Settings",
+        "description": "Choose the kinship language; set the family's Malay birth-order titles. Not\na change to the tree, so there's no Undo step for it.",
+        "operationId": "save_kinship_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KinshipSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KinshipSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trash": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "List Trash",
+        "description": "Deleted people, newest first. Each stays restorable for 30 days.",
+        "operationId": "list_trash",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrashEntry"
+                  },
+                  "type": "array",
+                  "title": "Response List Trash"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trash/{entry}/restore": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Restore From Trash",
+        "description": "Put someone back, with their files and every link to people still in the tree.",
+        "operationId": "restore_from_trash",
+        "parameters": [
+          {
+            "name": "entry",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dates/read": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Read Date",
+        "description": "How a typed date is understood, for the live preview under date fields.",
+        "operationId": "read_date",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Text"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DateReading"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports": {
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Make Export",
+        "description": "Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or\na copy of the app with the family inside, following its choices: view-only, or to\nedit and send back, for someone.",
+        "operationId": "make_export",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exports/{name}": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Download Export",
+        "description": "An export or backup from DATA_DIR/exports, as a download.",
+        "operationId": "download_export",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "summary": "List Backups",
+        "description": "The backup archives, newest first, with what each holds; and the backup folder\n(BACKUP_DIR), with whether it can be reached.",
+        "operationId": "list_backups",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Add Backup",
+        "description": "Bring in a backup archive from elsewhere, e.g. another disk, to restore from.",
+        "operationId": "add_backup",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_add_backup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Backup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/{name}/restore": {
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Restore Backup",
+        "description": "Replace everything with this backup. Everything as it is now is backed up first.\nRefused (422, \"bad_archive\") if the archive is damaged: then nothing changes.",
+        "operationId": "restore_backup",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupRestored"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Get History",
+        "description": "What Undo and Redo would do next.",
+        "operationId": "get_history",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history/undo": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Undo",
+        "description": "Undo the latest change; with `step`, only if that's still the latest (\"not_latest\").\nRefused (409, \"cant_undo\") if what it changed has since been changed another way: the\nhistory is then cleared, so nothing made meanwhile is overwritten.",
+        "operationId": "undo",
+        "parameters": [
+          {
+            "name": "step",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryMove"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history/redo": {
+      "post": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Redo",
+        "description": "Redo the change undone last.",
+        "operationId": "redo",
+        "parameters": [
+          {
+            "name": "step",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryMove"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/facts": {
+      "get": {
+        "tags": [
+          "family"
+        ],
+        "summary": "Get Family Facts",
+        "description": "Family facts: the counts; the generations; the oldest, youngest and longest-lived;\nthe biggest families; the longest chain; cousins who married; names, places and decades;\nthis month's dates; and what's still to fill in. Each fact names its people by id.",
+        "operationId": "get_family_facts",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFacts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/me": {
+      "get": {
+        "tags": [
+          "family"
+        ],
+        "summary": "Get Me",
+        "description": "Which person you are, for \"Me\"; none until you've chosen.",
+        "operationId": "get_me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "family"
+        ],
+        "summary": "Set Me",
+        "description": "Choose which person you are, or none to forget. Not an Undo step: it isn't a change to\nthe tree, like the kinship language.",
+        "operationId": "set_me",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/template": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Import Template",
+        "description": "The columns an import reads, as a CSV that Excel opens. With example=true, filled in\nwith the fictional test family.",
+        "operationId": "import_template",
+        "parameters": [
+          {
+            "name": "example",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Example"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/csv; charset=utf-8": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/preview": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Preview Import",
+        "description": "What an import would change, for you to tick, its questions, and what it would leave\nout. The import runs inside the database and is rolled back: nothing is written.",
+        "operationId": "preview_import",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_import"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "List Imports",
+        "description": "Earlier imports, of spreadsheets and from copies, newest first.",
+        "operationId": "list_imports",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Imports"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Run Import",
+        "description": "Import the file with these answers and the changes ticked: a backup first, then one\nUndo step.",
+        "operationId": "run_import",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_run_import"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDone"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/copy/preview": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Preview Copy",
+        "description": "What a copy to edit brings back, compared with what the app knows it started from and\nwith the tree now: each change for you to tick. The file is only read, never run.\nRefused (422) when it isn't a copy to edit (\"not_a_copy\", \"not_to_edit\"), is locked without\nits password (\"locked\"), has another (\"wrong_password\") or is damaged (\"damaged\"); (409)\nwhen it wasn't made here (\"unknown_copy\") or is older than one brought in (\"older_copy\").",
+        "operationId": "preview_copy",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_copy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/copy": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Run Copy",
+        "description": "Bring in the changes ticked: a backup first, then the people, details and links as one\nUndo step, then stories and photos. Take back undoes it all later.",
+        "operationId": "run_copy",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_run_copy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDone"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/{import_id}/report": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Import Report",
+        "description": "What an import left out or found different, as a CSV.",
+        "operationId": "import_report",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/imports/{import_id}/take-back": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Take Back Import",
+        "description": "Undo an import: everyone it added goes to the Trash, with their links; its other links\ngo; the details it changed go back, and the people it removed come back.",
+        "operationId": "take_back_import",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportTakenBack"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Map",
+        "description": "Everyone but unknown parents, with where they live and were born, each found on the\nmap: by your pin for the place, its town, its state's middle, or its country.",
+        "operationId": "get_map",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMap"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/map": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Sample Map",
+        "description": "The made-up family on the map, spread over real towns. Nothing is stored.",
+        "operationId": "get_sample_map",
+        "parameters": [
+          {
+            "name": "people",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 10,
+              "default": 2000,
+              "title": "People"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMap"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/pins": {
+      "put": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Put Pin",
+        "description": "Put a place the gazetteer doesn't know on the map, or move its pin. One Undo step.",
+        "operationId": "put_pin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPins"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Remove Pin",
+        "description": "Take a place's pin off the map. One Undo step.",
+        "operationId": "remove_pin",
+        "parameters": [
+          {
+            "name": "town",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Town"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "Malaysia",
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPins"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Anniversary": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/FactPerson"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "birthday",
+              "death"
+            ],
+            "title": "Kind"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "kind",
+          "day",
+          "date",
+          "years"
+        ],
+        "title": "Anniversary",
+        "description": "A birthday this month, or the anniversary of a death."
+      },
+      "Backup": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "made_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Made At"
+          },
+          "app_version": {
+            "type": "string",
+            "title": "App Version"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          },
+          "automatic": {
+            "type": "boolean",
+            "title": "Automatic",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "folder",
+          "size",
+          "made_at",
+          "app_version",
+          "people",
+          "links",
+          "files"
+        ],
+        "title": "Backup",
+        "description": "A backup archive, from its manifest."
+      },
+      "BackupList": {
+        "properties": {
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "reachable": {
+            "type": "boolean",
+            "title": "Reachable"
+          },
+          "backups": {
+            "items": {
+              "$ref": "#/components/schemas/Backup"
+            },
+            "type": "array",
+            "title": "Backups"
+          },
+          "automatic_backups": {
+            "type": "boolean",
+            "title": "Automatic Backups",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder",
+          "reachable",
+          "backups"
+        ],
+        "title": "BackupList"
+      },
+      "BackupRestored": {
+        "properties": {
+          "made_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Made At"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          },
+          "backup": {
+            "type": "string",
+            "title": "Backup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "made_at",
+          "people",
+          "links",
+          "files",
+          "backup"
+        ],
+        "title": "BackupRestored"
+      },
+      "Biography": {
+        "properties": {
+          "story": {
+            "type": "string",
+            "title": "Story"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "story",
+          "sources",
+          "version"
+        ],
+        "title": "Biography"
+      },
+      "BiographyUpdate": {
+        "properties": {
+          "story": {
+            "type": "string",
+            "maxLength": 2000000,
+            "title": "Story"
+          },
+          "sources": {
+            "items": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Sources"
+          },
+          "base_version": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Base Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "story",
+          "base_version"
+        ],
+        "title": "BiographyUpdate"
+      },
+      "Body_add_backup": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "An AncesTree backup archive (.zip)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_add_backup"
+      },
+      "Body_add_picture": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_add_picture"
+      },
+      "Body_preview_copy": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "A copy to edit, as it came back (.html)"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "The copy's password, when it's locked. Used to open it, then forgotten."
+          },
+          "answers": {
+            "type": "string",
+            "title": "Answers",
+            "description": "Your answers so far, as JSON: each question's id -> an option's id",
+            "default": "{}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_copy"
+      },
+      "Body_preview_import": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "A spreadsheet saved as CSV"
+          },
+          "answers": {
+            "type": "string",
+            "title": "Answers",
+            "description": "Your answers so far, as JSON: each question's id -> an option's id",
+            "default": "{}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_import"
+      },
+      "Body_run_copy": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "A copy to edit, as it came back (.html)"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password",
+            "description": "The copy's password, when it's locked. Used to open it, then forgotten."
+          },
+          "answers": {
+            "type": "string",
+            "title": "Answers",
+            "description": "Your answers so far, as JSON: each question's id -> an option's id",
+            "default": "{}"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen",
+            "description": "The changes ticked, as a JSON list of their ids. Left out: those ticked to begin with."
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_run_copy"
+      },
+      "Body_run_import": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "A spreadsheet saved as CSV"
+          },
+          "answers": {
+            "type": "string",
+            "title": "Answers",
+            "description": "Your answers so far, as JSON: each question's id -> an option's id",
+            "default": "{}"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen",
+            "description": "The changes ticked, as a JSON list of their ids. Left out: those ticked to begin with."
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_run_import"
+      },
+      "Body_upload_photo": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF"
+          },
+          "crop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crop",
+            "description": "JSON crop in percent; centred if absent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_photo"
+      },
+      "ChangeKind": {
+        "type": "string",
+        "enum": [
+          "add_person",
+          "set",
+          "add_link",
+          "remove_person",
+          "remove_link",
+          "change_link",
+          "fill_in",
+          "order",
+          "story",
+          "photo"
+        ]
+      },
+      "ChildGroup": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "other_parents": {
+            "items": {
+              "$ref": "#/components/schemas/PersonSummary"
+            },
+            "type": "array",
+            "title": "Other Parents"
+          },
+          "order_decided": {
+            "type": "boolean",
+            "title": "Order Decided"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Relative"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "other_parents",
+          "order_decided",
+          "children"
+        ],
+        "title": "ChildGroup",
+        "description": "Children of the same parents, eldest first when that is known.\n\n`kind` is None for children by birth; otherwise the kind of link (e.g. adoptive) that\nthis group of children shares with this person."
+      },
+      "ChildrenOrder": {
+        "properties": {
+          "child_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Child Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "child_ids"
+        ],
+        "title": "ChildrenOrder",
+        "description": "Children of the same two parents, eldest first."
+      },
+      "CopyPermissions": {
+        "properties": {
+          "add": {
+            "type": "boolean",
+            "title": "Add",
+            "default": true
+          },
+          "change": {
+            "type": "boolean",
+            "title": "Change",
+            "default": true
+          },
+          "remove": {
+            "type": "boolean",
+            "title": "Remove",
+            "default": true
+          },
+          "stories": {
+            "type": "boolean",
+            "title": "Stories",
+            "default": true
+          },
+          "photos": {
+            "type": "boolean",
+            "title": "Photos",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "CopyPermissions",
+        "description": "What relatives may do in a copy to edit: all of it unless switched off."
+      },
+      "CopyPreview": {
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "about": {
+            "$ref": "#/components/schemas/CopyReturned"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/ImportQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ImportChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "left_out": {
+            "items": {
+              "$ref": "#/components/schemas/ImportLeftOut"
+            },
+            "type": "array",
+            "title": "Left Out"
+          },
+          "second_look": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSecondLook"
+            },
+            "type": "array",
+            "title": "Second Look"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_name",
+          "about",
+          "questions",
+          "changes",
+          "left_out",
+          "second_look"
+        ],
+        "title": "CopyPreview",
+        "description": "What a copy to edit brings back, for you to tick. Nothing is written."
+      },
+      "CopyReturned": {
+        "properties": {
+          "copy_id": {
+            "type": "string",
+            "title": "Copy Id"
+          },
+          "for_name": {
+            "type": "string",
+            "title": "For Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "made_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Made At"
+          },
+          "saved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved At"
+          },
+          "brought_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brought At"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "copy_id",
+          "for_name",
+          "title",
+          "made_at",
+          "saved_at",
+          "brought_at",
+          "locked"
+        ],
+        "title": "CopyReturned",
+        "description": "Which copy to edit came back, as the app recorded it when it made it."
+      },
+      "Counts": {
+        "properties": {
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "couples": {
+            "type": "integer",
+            "title": "Couples"
+          },
+          "unknown_parents": {
+            "type": "integer",
+            "title": "Unknown Parents"
+          },
+          "families": {
+            "type": "integer",
+            "title": "Families"
+          },
+          "unlinked": {
+            "type": "integer",
+            "title": "Unlinked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "people",
+          "links",
+          "couples",
+          "unknown_parents",
+          "families",
+          "unlinked"
+        ],
+        "title": "Counts",
+        "description": "What the tree's toolbar used to show, and more."
+      },
+      "Crop": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Y"
+          },
+          "width": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "maximum": 100.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "title": "Crop",
+        "description": "The kept square, in percent of the upright photo (react-easy-crop's `croppedArea`)."
+      },
+      "DateQualifier": {
+        "type": "string",
+        "enum": [
+          "exact",
+          "about",
+          "before",
+          "after",
+          "between"
+        ],
+        "title": "DateQualifier"
+      },
+      "DateReading": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "date",
+          "description",
+          "error"
+        ],
+        "title": "DateReading"
+      },
+      "DateView": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/PartialDate"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "text",
+          "description"
+        ],
+        "title": "DateView"
+      },
+      "DecadeCount": {
+        "properties": {
+          "decade": {
+            "type": "integer",
+            "title": "Decade"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decade",
+          "people"
+        ],
+        "title": "DecadeCount"
+      },
+      "Descendants": {
+        "properties": {
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "generations": {
+            "type": "integer",
+            "title": "Generations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "people",
+          "count",
+          "generations"
+        ],
+        "title": "Descendants",
+        "description": "\"Tok Ismail & Nenek Fatimah, 38 over 4 generations\"."
+      },
+      "DictionaryRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "relation": {
+            "type": "string",
+            "title": "Relation"
+          },
+          "words": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DictionaryWord"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "type": "object",
+            "title": "Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "relation",
+          "words"
+        ],
+        "title": "DictionaryRow"
+      },
+      "DictionarySection": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/DictionaryRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "rows"
+        ],
+        "title": "DictionarySection"
+      },
+      "DictionaryWord": {
+        "properties": {
+          "word": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word"
+          },
+          "descr": {
+            "type": "boolean",
+            "title": "Descr",
+            "default": false
+          },
+          "also": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Also"
+          },
+          "address": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Address"
+          },
+          "krama": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Krama"
+          },
+          "krama_inggil": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Krama Inggil"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "word"
+        ],
+        "title": "DictionaryWord",
+        "description": "One language's words for a row of the Kinship dictionary."
+      },
+      "ExportFile": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "format": {
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "folder",
+          "format",
+          "size"
+        ],
+        "title": "ExportFile"
+      },
+      "ExportFormat": {
+        "type": "string",
+        "enum": [
+          "archive",
+          "gedcom",
+          "csv",
+          "copy"
+        ],
+        "title": "ExportFormat"
+      },
+      "ExportRequest": {
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/ExportFormat"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Title",
+            "default": ""
+          },
+          "hide_living": {
+            "type": "boolean",
+            "title": "Hide Living",
+            "default": false
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "archive": {
+            "type": "boolean",
+            "title": "Archive",
+            "default": true
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": false
+          },
+          "for_name": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "For Name",
+            "default": ""
+          },
+          "may": {
+            "$ref": "#/components/schemas/CopyPermissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "title": "ExportRequest"
+      },
+      "FactPerson": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "FactPerson"
+      },
+      "FamilyFacts": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          },
+          "generations": {
+            "items": {
+              "$ref": "#/components/schemas/GenerationCount"
+            },
+            "type": "array",
+            "title": "Generations"
+          },
+          "oldest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "youngest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "span_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Years"
+          },
+          "span_about": {
+            "type": "boolean",
+            "title": "Span About"
+          },
+          "longest_life": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonYears"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "average_life": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Life"
+          },
+          "lives_known": {
+            "type": "integer",
+            "title": "Lives Known"
+          },
+          "oldest_living": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonYears"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "biggest_family": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Parents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "most_descendants": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Descendants"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "longest_chain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pair"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "farthest_by_blood": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pair"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cousins_married": {
+            "items": {
+              "$ref": "#/components/schemas/Pair"
+            },
+            "type": "array",
+            "title": "Cousins Married"
+          },
+          "names": {
+            "items": {
+              "$ref": "#/components/schemas/NameCount"
+            },
+            "type": "array",
+            "title": "Names"
+          },
+          "birthplaces": {
+            "items": {
+              "$ref": "#/components/schemas/NameCount"
+            },
+            "type": "array",
+            "title": "Birthplaces"
+          },
+          "decades": {
+            "items": {
+              "$ref": "#/components/schemas/DecadeCount"
+            },
+            "type": "array",
+            "title": "Decades"
+          },
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "this_month": {
+            "items": {
+              "$ref": "#/components/schemas/Anniversary"
+            },
+            "type": "array",
+            "title": "This Month"
+          },
+          "to_fill_in": {
+            "$ref": "#/components/schemas/ToFillIn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "counts",
+          "generations",
+          "oldest",
+          "youngest",
+          "span_years",
+          "span_about",
+          "longest_life",
+          "average_life",
+          "lives_known",
+          "oldest_living",
+          "biggest_family",
+          "most_descendants",
+          "longest_chain",
+          "farthest_by_blood",
+          "cousins_married",
+          "names",
+          "birthplaces",
+          "decades",
+          "month",
+          "this_month",
+          "to_fill_in"
+        ],
+        "title": "FamilyFacts"
+      },
+      "FamilyMap": {
+        "properties": {
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/MapPerson"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "pins": {
+            "items": {
+              "$ref": "#/components/schemas/Pin"
+            },
+            "type": "array",
+            "title": "Pins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "people",
+          "pins"
+        ],
+        "title": "FamilyMap",
+        "description": "Everyone but unknown parents, with where they live and were born, and the pins."
+      },
+      "FillIn": {
+        "properties": {
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "existing": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing"
+          }
+        },
+        "type": "object",
+        "title": "FillIn",
+        "description": "An unknown parent becomes a real person: someone new, or someone in the tree."
+      },
+      "Gender": {
+        "type": "string",
+        "enum": [
+          "male",
+          "female",
+          "unknown"
+        ],
+        "title": "Gender"
+      },
+      "GenderedLabel": {
+        "properties": {
+          "neutral": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Neutral"
+          },
+          "male": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Male"
+          },
+          "female": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Female"
+          }
+        },
+        "type": "object",
+        "required": [
+          "neutral"
+        ],
+        "title": "GenderedLabel",
+        "description": "One side of a relationship kind: \"adoptive parent\", or \"adoptive father\"/\"mother\"."
+      },
+      "GenerationCount": {
+        "properties": {
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generation",
+          "people"
+        ],
+        "title": "GenerationCount"
+      },
+      "Graph": {
+        "properties": {
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/GraphPerson"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/GraphLink"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/GraphLayout"
+          }
+        },
+        "type": "object",
+        "required": [
+          "people",
+          "links",
+          "layout"
+        ],
+        "title": "Graph"
+      },
+      "GraphLayout": {
+        "properties": {
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/LayoutUnit"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "seats": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Seat"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Seats"
+          },
+          "unlinked": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Unlinked"
+          },
+          "centre_chosen": {
+            "type": "boolean",
+            "title": "Centre Chosen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "units",
+          "seats",
+          "unlinked",
+          "centre_chosen"
+        ],
+        "title": "GraphLayout"
+      },
+      "GraphLink": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "spouse"
+            ],
+            "title": "Type"
+          },
+          "source": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Target"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpouseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "in_layout": {
+            "type": "boolean",
+            "title": "In Layout",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target",
+          "kind",
+          "status"
+        ],
+        "title": "GraphLink",
+        "description": "For \"parent\" links, `source` is the parent and `target` the child."
+      },
+      "GraphPerson": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Year"
+          },
+          "death_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Year"
+          },
+          "birth_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Order"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "title": "Placeholder"
+          },
+          "photo_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Version"
+          },
+          "birthplace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthplace"
+          },
+          "born_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Born In"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          },
+          "born": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "died": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_living": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Living"
+          },
+          "birth_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "nickname",
+          "gender",
+          "birth_year",
+          "death_year",
+          "birth_order",
+          "placeholder",
+          "photo_version"
+        ],
+        "title": "GraphPerson"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Database"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "database_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Database Version"
+          },
+          "data_folder": {
+            "type": "string",
+            "title": "Data Folder"
+          },
+          "backup_folder": {
+            "type": "string",
+            "title": "Backup Folder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "database",
+          "schema_version",
+          "data_folder",
+          "backup_folder"
+        ],
+        "title": "Health"
+      },
+      "HistoryMove": {
+        "properties": {
+          "done": {
+            "$ref": "#/components/schemas/HistoryStep"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "done",
+          "history"
+        ],
+        "title": "HistoryMove"
+      },
+      "HistoryStep": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "at"
+        ],
+        "title": "HistoryStep",
+        "description": "One change that can be undone or redone, e.g. \"Link Siti and Ali\"."
+      },
+      "HistoryView": {
+        "properties": {
+          "undo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "redo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistoryStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "undo",
+          "redo"
+        ],
+        "title": "HistoryView",
+        "description": "What Undo and Redo would do next."
+      },
+      "ImportChange": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ChangeKind"
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "clash": {
+            "type": "boolean",
+            "title": "Clash",
+            "default": false
+          },
+          "unsure": {
+            "type": "boolean",
+            "title": "Unsure",
+            "default": false
+          },
+          "removes": {
+            "type": "boolean",
+            "title": "Removes",
+            "default": false
+          },
+          "picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture"
+          },
+          "needs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Needs"
+          },
+          "blocked_by": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Blocked By"
+          },
+          "ticked": {
+            "type": "boolean",
+            "title": "Ticked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "row",
+          "name",
+          "ticked"
+        ],
+        "title": "ImportChange",
+        "description": "One thing the import would do, which you can leave out. New people, new links\nand details changed only in the file start ticked; a removal, a clash, a detail whose\nfile doesn't say what it started from, or a date that can't be read waits for your tick."
+      },
+      "ImportDifference": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "person": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "written": {
+            "type": "string",
+            "title": "Written"
+          },
+          "in_tree": {
+            "type": "string",
+            "title": "In Tree"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "person",
+          "name",
+          "column",
+          "written",
+          "in_tree"
+        ],
+        "title": "ImportDifference",
+        "description": "A row that is someone already in the tree says something the tree doesn't, and it\nisn't offered as a change: the tree has been changed since the file was exported, so the\ntree's is the newer. For you to look at."
+      },
+      "ImportDone": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "changed": {
+            "type": "integer",
+            "title": "Changed",
+            "default": 0
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed",
+            "default": 0
+          },
+          "stories": {
+            "type": "integer",
+            "title": "Stories",
+            "default": 0
+          },
+          "photos": {
+            "type": "integer",
+            "title": "Photos",
+            "default": 0
+          },
+          "left_out": {
+            "type": "integer",
+            "title": "Left Out"
+          },
+          "backup": {
+            "type": "string",
+            "title": "Backup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "people",
+          "links",
+          "left_out",
+          "backup"
+        ],
+        "title": "ImportDone"
+      },
+      "ImportLeftOut": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "written": {
+            "type": "string",
+            "title": "Written"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "column",
+          "written",
+          "why"
+        ],
+        "title": "ImportLeftOut",
+        "description": "A value or a link that didn't come in, and why; the rest of the row still did. For a\ncopy: whose it was, in `column`, with no row."
+      },
+      "ImportOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ImportOption",
+        "description": "One answer to a question: \"person:<id>\" (someone in the tree), \"row:<n>\" (a row of the\nfile), \"new\" (someone new) or \"out\" (leave the link out)."
+      },
+      "ImportPerson": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "born": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Born"
+          },
+          "birthplace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthplace"
+          },
+          "named_in": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Named In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "name",
+          "born",
+          "birthplace",
+          "named_in"
+        ],
+        "title": "ImportPerson",
+        "description": "Someone the import adds."
+      },
+      "ImportPreview": {
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/ImportPerson"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "matched": {
+            "type": "integer",
+            "title": "Matched"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "links_to_tree": {
+            "type": "integer",
+            "title": "Links To Tree"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/ImportQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "left_out": {
+            "items": {
+              "$ref": "#/components/schemas/ImportLeftOut"
+            },
+            "type": "array",
+            "title": "Left Out"
+          },
+          "second_look": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSecondLook"
+            },
+            "type": "array",
+            "title": "Second Look"
+          },
+          "differences": {
+            "items": {
+              "$ref": "#/components/schemas/ImportDifference"
+            },
+            "type": "array",
+            "title": "Differences"
+          },
+          "columns_not_read": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns Not Read"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ImportChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_name",
+          "rows",
+          "people",
+          "matched",
+          "links",
+          "links_to_tree",
+          "questions",
+          "left_out",
+          "second_look",
+          "differences",
+          "columns_not_read"
+        ],
+        "title": "ImportPreview"
+      },
+      "ImportQuestion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "written": {
+            "type": "string",
+            "title": "Written"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "same_person",
+              "which_person"
+            ],
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ImportOption"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "row",
+          "column",
+          "written",
+          "kind",
+          "text",
+          "options",
+          "answer"
+        ],
+        "title": "ImportQuestion"
+      },
+      "ImportSecondLook": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "message"
+        ],
+        "title": "ImportSecondLook",
+        "description": "Something that came in but is worth a look, e.g. an unlikely age gap."
+      },
+      "ImportSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "spreadsheet",
+              "copy"
+            ],
+            "title": "Kind",
+            "default": "spreadsheet"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "for_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "For Name"
+          },
+          "imported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Imported At"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "people_present": {
+            "type": "integer",
+            "title": "People Present"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "changed": {
+            "type": "integer",
+            "title": "Changed",
+            "default": 0
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed",
+            "default": 0
+          },
+          "stories": {
+            "type": "integer",
+            "title": "Stories",
+            "default": 0
+          },
+          "photos": {
+            "type": "integer",
+            "title": "Photos",
+            "default": 0
+          },
+          "left_out": {
+            "items": {
+              "$ref": "#/components/schemas/ImportLeftOut"
+            },
+            "type": "array",
+            "title": "Left Out"
+          },
+          "differences": {
+            "type": "integer",
+            "title": "Differences"
+          },
+          "second_look": {
+            "type": "integer",
+            "title": "Second Look"
+          },
+          "taken_back_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken Back At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "file_name",
+          "imported_at",
+          "people",
+          "people_present",
+          "links",
+          "left_out",
+          "differences",
+          "second_look",
+          "taken_back_at"
+        ],
+        "title": "ImportSummary",
+        "description": "An earlier import, for Settings \u2192 Import and What's missing."
+      },
+      "ImportTakenBack": {
+        "properties": {
+          "moved": {
+            "type": "integer",
+            "title": "Moved"
+          },
+          "gone": {
+            "type": "integer",
+            "title": "Gone"
+          },
+          "restored": {
+            "type": "integer",
+            "title": "Restored",
+            "default": 0
+          },
+          "reverted": {
+            "type": "integer",
+            "title": "Reverted",
+            "default": 0
+          },
+          "kept": {
+            "type": "integer",
+            "title": "Kept",
+            "default": 0
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links",
+            "default": 0
+          },
+          "stories": {
+            "type": "integer",
+            "title": "Stories",
+            "default": 0
+          },
+          "photos": {
+            "type": "integer",
+            "title": "Photos",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "moved",
+          "gone"
+        ],
+        "title": "ImportTakenBack"
+      },
+      "KinExplanation": {
+        "properties": {
+          "sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sentences"
+          },
+          "top": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top"
+          },
+          "pair": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair"
+          },
+          "removed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removed"
+          },
+          "rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentences"
+        ],
+        "title": "KinExplanation",
+        "description": "\"What does this mean?\": the answer told with the people on the path, in\nEnglish like the rest of the app."
+      },
+      "KinPerson": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "photo_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Version"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "title": "Placeholder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "full_name",
+          "gender",
+          "photo_version",
+          "placeholder"
+        ],
+        "title": "KinPerson",
+        "description": "Someone an answer mentions: the two people, or anyone on the path between them."
+      },
+      "KinRelation": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "marriage",
+              "blood",
+              "in_law",
+              "step",
+              "kind",
+              "chain"
+            ],
+            "title": "Type"
+          },
+          "forward": {
+            "$ref": "#/components/schemas/KinStatement"
+          },
+          "reverse": {
+            "$ref": "#/components/schemas/KinStatement"
+          },
+          "generations": {
+            "type": "integer",
+            "title": "Generations"
+          },
+          "shared_ancestors": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Shared Ancestors"
+          },
+          "path": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "links": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KinExplanation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "forward",
+          "reverse",
+          "generations",
+          "shared_ancestors",
+          "path",
+          "links"
+        ],
+        "title": "KinRelation",
+        "description": "One way the two are related."
+      },
+      "KinStatement": {
+        "properties": {
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "words": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/KinWord"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "type": "object",
+            "title": "Words"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry"
+          }
+        },
+        "type": "object",
+        "required": [
+          "term",
+          "sentence"
+        ],
+        "title": "KinStatement"
+      },
+      "KinWord": {
+        "properties": {
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence"
+          },
+          "english": {
+            "type": "boolean",
+            "title": "English",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "term",
+          "sentence"
+        ],
+        "title": "KinWord",
+        "description": "A statement in one kinship language: its word, and the sentence with it, which\nstays English: \"Siti is Ali's mak su\"."
+      },
+      "KindInput": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "parent_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          },
+          "child_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          },
+          "in_layout": {
+            "type": "boolean",
+            "title": "In Layout",
+            "default": true
+          },
+          "words": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/KindWords"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/KindLanguage"
+            },
+            "type": "object",
+            "title": "Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "parent_label",
+          "child_label"
+        ],
+        "title": "KindInput"
+      },
+      "KindLanguage": {
+        "type": "string",
+        "enum": [
+          "ms",
+          "jv"
+        ]
+      },
+      "KindUpdate": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "parent_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenderedLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "child_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenderedLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "in_layout": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Layout"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "words": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/KindWords"
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/KindLanguage"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Words"
+          }
+        },
+        "type": "object",
+        "title": "KindUpdate"
+      },
+      "KindView": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "builtin": {
+            "type": "boolean",
+            "title": "Builtin"
+          },
+          "blood": {
+            "type": "boolean",
+            "title": "Blood"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "in_layout": {
+            "type": "boolean",
+            "title": "In Layout"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "parent_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          },
+          "child_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          },
+          "words": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/KindWords"
+            },
+            "type": "object",
+            "title": "Words"
+          },
+          "usage": {
+            "type": "integer",
+            "title": "Usage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "builtin",
+          "blood",
+          "active",
+          "in_layout",
+          "sort_order",
+          "parent_label",
+          "child_label",
+          "usage"
+        ],
+        "title": "KindView"
+      },
+      "KindWords": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "parent_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          },
+          "child_label": {
+            "$ref": "#/components/schemas/GenderedLabel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "parent_label",
+          "child_label"
+        ],
+        "title": "KindWords",
+        "description": "A kind's words in another kinship language, e.g. Malay: \"angkat\", \"bapa\nangkat\" / \"emak angkat\", \"anak angkat\". `label` is the kind as a qualifier, as in \"abang\nangkat\"."
+      },
+      "KinshipAnswer": {
+        "properties": {
+          "a": {
+            "type": "string",
+            "format": "uuid",
+            "title": "A"
+          },
+          "b": {
+            "type": "string",
+            "format": "uuid",
+            "title": "B"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/KinRelation"
+            },
+            "type": "array",
+            "title": "Relations"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/KinPerson"
+            },
+            "type": "array",
+            "title": "People"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b",
+          "relations",
+          "people"
+        ],
+        "title": "KinshipAnswer"
+      },
+      "KinshipDictionary": {
+        "properties": {
+          "languages": {
+            "items": {
+              "$ref": "#/components/schemas/KinshipLanguage"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/DictionarySection"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "languages",
+          "sections"
+        ],
+        "title": "KinshipDictionary"
+      },
+      "KinshipLanguage": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "KinshipLanguage"
+      },
+      "KinshipSettings": {
+        "properties": {
+          "language": {
+            "$ref": "#/components/schemas/Language",
+            "default": "en"
+          },
+          "titles": {
+            "items": {
+              "type": "string",
+              "maxLength": 20
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Titles"
+          },
+          "youngest": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Youngest",
+            "default": "su"
+          }
+        },
+        "type": "object",
+        "title": "KinshipSettings",
+        "description": "The kinship language and the Malay birth-order titles. Stored in\nDATA_DIR/settings/app.json under \"kinship\"."
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "en",
+          "ms",
+          "jv"
+        ]
+      },
+      "LayoutUnit": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "centre": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Centre"
+          },
+          "anchor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anchor"
+          },
+          "anchor_seat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Seat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "centre",
+          "anchor",
+          "anchor_seat",
+          "size"
+        ],
+        "title": "LayoutUnit",
+        "description": "One set of rings: a family's own, or a cluster hanging off one person."
+      },
+      "LinkView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "spouse"
+            ],
+            "title": "Type"
+          },
+          "source": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Target"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpouseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target",
+          "kind",
+          "status"
+        ],
+        "title": "LinkView"
+      },
+      "Located": {
+        "properties": {
+          "place": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "found": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pin",
+                  "town",
+                  "state",
+                  "country"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Found"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "country"
+        ],
+        "title": "Located",
+        "description": "A place as written, and where it goes on the map: `found` says how. None there means it\nwasn't found: a country the gazetteer doesn't know."
+      },
+      "MapPerson": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "lives": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Located"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "born": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Located"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "MapPerson"
+      },
+      "MapPins": {
+        "properties": {
+          "pins": {
+            "items": {
+              "$ref": "#/components/schemas/Pin"
+            },
+            "type": "array",
+            "title": "Pins"
+          }
+        },
+        "type": "object",
+        "title": "MapPins",
+        "description": "Every pin, kept in settings/app.json, so backups carry them."
+      },
+      "MeSettings": {
+        "properties": {
+          "person": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          }
+        },
+        "type": "object",
+        "title": "MeSettings",
+        "description": "Which person you are, for \"Me\". None until you choose. Stored in\nDATA_DIR/settings/app.json under \"me\"; not an Undo step."
+      },
+      "NameCount": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "people"
+        ],
+        "title": "NameCount",
+        "description": "\"Siti (3)\", \"Selangor (9)\", with who they are."
+      },
+      "NewRelative": {
+        "properties": {
+          "relation": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "child",
+              "spouse",
+              "sibling"
+            ],
+            "title": "Relation"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInput"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "biological"
+          },
+          "other_parent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Parent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relation",
+          "person"
+        ],
+        "title": "NewRelative",
+        "description": "Create someone already linked, e.g. \"Add child\"."
+      },
+      "Notice": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Notice",
+        "description": "Something worth a second look that was still saved, e.g. an unlikely age gap."
+      },
+      "Pair": {
+        "properties": {
+          "a": {
+            "$ref": "#/components/schemas/FactPerson"
+          },
+          "b": {
+            "$ref": "#/components/schemas/FactPerson"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "Pair",
+        "description": "Two people and what joins them: the links between them, or a kinship word."
+      },
+      "Parents": {
+        "properties": {
+          "parents": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "Parents"
+          },
+          "children": {
+            "type": "integer",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parents",
+          "children"
+        ],
+        "title": "Parents",
+        "description": "\"Hassan & Mariam, 4 children\"."
+      },
+      "PartialDate": {
+        "properties": {
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "month": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "qualifier": {
+            "$ref": "#/components/schemas/DateQualifier",
+            "default": "exact"
+          },
+          "year_to": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year To"
+          },
+          "original_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Text"
+          }
+        },
+        "type": "object",
+        "title": "PartialDate",
+        "description": "A date that may be incomplete or approximate: \"1950\", \"Mar 1950\", \"c. 1920\", \"1910-1915\".\n\nUnknown parts stay empty; they are never filled with a stand-in value."
+      },
+      "PersonDate": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/FactPerson"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "date"
+        ],
+        "title": "PersonDate",
+        "description": "\"Tok Ismail, born about 1905\"."
+      },
+      "PersonDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "name_jawi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Jawi"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birth_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "death_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "death_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "burial_place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burial Place"
+          },
+          "residence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "living": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living"
+          },
+          "is_living": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Living"
+          },
+          "occupation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "title": "Placeholder"
+          },
+          "photo_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Version"
+          },
+          "sibling_position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sibling Position"
+          },
+          "parents": {
+            "items": {
+              "$ref": "#/components/schemas/Relative"
+            },
+            "type": "array",
+            "title": "Parents"
+          },
+          "spouses": {
+            "items": {
+              "$ref": "#/components/schemas/Relative"
+            },
+            "type": "array",
+            "title": "Spouses"
+          },
+          "siblings": {
+            "items": {
+              "$ref": "#/components/schemas/Relative"
+            },
+            "type": "array",
+            "title": "Siblings"
+          },
+          "child_groups": {
+            "items": {
+              "$ref": "#/components/schemas/ChildGroup"
+            },
+            "type": "array",
+            "title": "Child Groups"
+          },
+          "link_count": {
+            "type": "integer",
+            "title": "Link Count"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "nickname",
+          "title",
+          "name_jawi",
+          "gender",
+          "birth_date",
+          "birth_place",
+          "death_date",
+          "death_place",
+          "burial_place",
+          "residence",
+          "living",
+          "is_living",
+          "occupation",
+          "notes",
+          "placeholder",
+          "photo_version",
+          "sibling_position",
+          "parents",
+          "spouses",
+          "siblings",
+          "child_groups",
+          "link_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PersonDetail"
+      },
+      "PersonInput": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "name_jawi": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Jawi"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender",
+            "default": "unknown"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birth_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "death_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "death_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "burial_place": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burial Place"
+          },
+          "residence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "living": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living"
+          },
+          "occupation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name"
+        ],
+        "title": "PersonInput",
+        "description": "The person form. Only the full name is required."
+      },
+      "PersonPatch": {
+        "properties": {
+          "gender": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Gender"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birth_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PersonPatch",
+        "description": "What's missing's quick fixes, and the map's: only what's\ngiven changes. A date of birth comes as parts, or typed, like the form's."
+      },
+      "PersonSaved": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonDetail"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": "array",
+            "title": "Notices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "notices"
+        ],
+        "title": "PersonSaved"
+      },
+      "PersonSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Year"
+          },
+          "death_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Year"
+          },
+          "photo_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Version"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "title": "Placeholder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "nickname",
+          "gender",
+          "birth_year",
+          "death_year",
+          "photo_version",
+          "placeholder"
+        ],
+        "title": "PersonSummary"
+      },
+      "PersonYears": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/FactPerson"
+          },
+          "years": {
+            "type": "integer",
+            "title": "Years"
+          },
+          "about": {
+            "type": "boolean",
+            "title": "About"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "years",
+          "about"
+        ],
+        "title": "PersonYears",
+        "description": "\"Nenek Fatimah, 94 years\"."
+      },
+      "PictureAdded": {
+        "properties": {
+          "src": {
+            "type": "string",
+            "title": "Src"
+          }
+        },
+        "type": "object",
+        "required": [
+          "src"
+        ],
+        "title": "PictureAdded"
+      },
+      "Pin": {
+        "properties": {
+          "town": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Town"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": "Malaysia"
+          },
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "Pin",
+        "description": "A place the gazetteer doesn't know, put on the map by hand: everyone who lives or was\nborn there lands on it."
+      },
+      "Place": {
+        "properties": {
+          "town": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Town"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": "Malaysia"
+          }
+        },
+        "type": "object",
+        "title": "Place"
+      },
+      "Position": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "x",
+          "y"
+        ],
+        "title": "Position"
+      },
+      "Positions": {
+        "properties": {
+          "positions": {
+            "items": {
+              "$ref": "#/components/schemas/Position"
+            },
+            "type": "array",
+            "maxItems": 20000,
+            "title": "Positions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "positions"
+        ],
+        "title": "Positions"
+      },
+      "RelationshipCreate": {
+        "properties": {
+          "person_a": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person A"
+          },
+          "person_b": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person B"
+          },
+          "a_is": {
+            "type": "string",
+            "enum": [
+              "parent",
+              "child",
+              "spouse",
+              "sibling"
+            ],
+            "title": "A Is"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "biological"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SpouseStatus",
+            "default": "married"
+          },
+          "shared_parents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Parents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person_a",
+          "person_b",
+          "a_is"
+        ],
+        "title": "RelationshipCreate",
+        "description": "Read as \"`person_a` is `person_b`'s `a_is`\": a is b's mother -> a_is \"parent\"."
+      },
+      "RelationshipResult": {
+        "properties": {
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/LinkView"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": "array",
+            "title": "Notices"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "links",
+          "notices",
+          "suggestions"
+        ],
+        "title": "RelationshipResult"
+      },
+      "RelationshipUpdate": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpouseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "swap": {
+            "type": "boolean",
+            "title": "Swap",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "RelationshipUpdate"
+      },
+      "Relative": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname"
+          },
+          "gender": {
+            "$ref": "#/components/schemas/Gender"
+          },
+          "birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Year"
+          },
+          "death_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Year"
+          },
+          "photo_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Version"
+          },
+          "placeholder": {
+            "type": "boolean",
+            "title": "Placeholder"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "link_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Id"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpouseStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "nickname",
+          "gender",
+          "birth_year",
+          "death_year",
+          "photo_version",
+          "placeholder",
+          "label",
+          "link_id"
+        ],
+        "title": "Relative"
+      },
+      "RelativeAdded": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonDetail"
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": "array",
+            "title": "Notices"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "notices",
+          "suggestions"
+        ],
+        "title": "RelativeAdded"
+      },
+      "RestoreResult": {
+        "properties": {
+          "person": {
+            "$ref": "#/components/schemas/PersonDetail"
+          },
+          "restored_links": {
+            "type": "integer",
+            "title": "Restored Links"
+          },
+          "skipped_links": {
+            "type": "integer",
+            "title": "Skipped Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "restored_links",
+          "skipped_links"
+        ],
+        "title": "RestoreResult"
+      },
+      "Seat": {
+        "properties": {
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "partner_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Of"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unit",
+          "generation",
+          "parent",
+          "order",
+          "partner_of",
+          "branch"
+        ],
+        "title": "Seat",
+        "description": "Where someone sits on the rings; the browser draws it."
+      },
+      "SiblingGroup": {
+        "properties": {
+          "parents": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "Parents"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parents",
+          "children"
+        ],
+        "title": "SiblingGroup",
+        "description": "Children of the same parents whose order isn't known yet."
+      },
+      "SpouseStatus": {
+        "type": "string",
+        "enum": [
+          "married",
+          "divorced",
+          "widowed"
+        ],
+        "title": "SpouseStatus"
+      },
+      "Suggestion": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "marry",
+            "title": "Type"
+          },
+          "person_a": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person A"
+          },
+          "person_b": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person B"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "person_a",
+          "person_b",
+          "message"
+        ],
+        "title": "Suggestion"
+      },
+      "ToFillIn": {
+        "properties": {
+          "no_gender": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "No Gender"
+          },
+          "no_birth_year": {
+            "items": {
+              "$ref": "#/components/schemas/FactPerson"
+            },
+            "type": "array",
+            "title": "No Birth Year"
+          },
+          "no_birth_order": {
+            "items": {
+              "$ref": "#/components/schemas/SiblingGroup"
+            },
+            "type": "array",
+            "title": "No Birth Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "no_gender",
+          "no_birth_year",
+          "no_birth_order"
+        ],
+        "title": "ToFillIn"
+      },
+      "TrashEntry": {
+        "properties": {
+          "entry": {
+            "type": "string",
+            "title": "Entry"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Person Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "deleted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deleted At"
+          },
+          "restore_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Restore Until"
+          },
+          "link_count": {
+            "type": "integer",
+            "title": "Link Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry",
+          "person_id",
+          "full_name",
+          "deleted_at",
+          "restore_until",
+          "link_count"
+        ],
+        "title": "TrashEntry"
+      },
+      "TreeSettings": {
+        "properties": {
+          "centre": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Centre"
+          },
+          "colours": {
+            "type": "string",
+            "enum": [
+              "branch",
+              "generation",
+              "closeness",
+              "off"
+            ],
+            "title": "Colours",
+            "default": "branch"
+          }
+        },
+        "type": "object",
+        "title": "TreeSettings",
+        "description": "Stored in DATA_DIR/settings/app.json."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

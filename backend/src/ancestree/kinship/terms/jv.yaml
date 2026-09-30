@@ -1,0 +1,222 @@
+# Tembung kekerabatan Basa Jawa: the relationship finder's Javanese words, each
+# chosen from its sources.
+#
+# The keys are exactly those of en.yaml: read the notes at the top of that file. Answers
+# stay English sentences with these words in them: "Hassan is Ali's pakdhé".
+#
+# The words are ngoko, the plain level a family chart uses; the dictionary adds krama and
+# krama inggil. Javanese makes distinctions English doesn't, and the entries use them:
+#   by_seniority    whether B's line is the elder: pakdhé or paklik (the uncle against your
+#                   parent), kangmas or adhi, mas ipé or adhi ipé (the sibling in between)
+# Cousins are misanan and mindhoan; the Central Javanese words are in the dictionary.
+
+language: Basa Jawa
+
+grammar:
+  possessive: "{thing} {owner}"         # adhiné ibu kuwalon: the owner comes last,
+  possessive_suffix:                    # and what is owned takes -é, or -né after a vowel
+    after_vowel: né
+    after_consonant: é
+  side: "{term} saka {side}"            # simbah putri saka bapak
+  seniority: "{term} {seniority}"       # only where no word says it
+  half: "{term} tunggal bapak utawa ibu"
+  half_paternal: "{term} tunggal bapak" # kangmas tunggal bapak: sharing the father
+  half_maternal: "{term} tunggal ibu"   # mbakyu tunggal ibu: sharing the mother
+  former: "tilas {term}"                # tilas bojo
+  kind: "{term} {kind}"                 # sedulur angkat
+  distant: sedulur adoh
+
+words:
+  paternal: bapak
+  maternal: ibu
+  elder: tuwa
+  younger: enom
+
+# Generations have their own names, the same up and down from buyut, for 18 generations
+# (Kompas 2025; Robson 1987 to gantung siwur). Ancestors are called simbah (mbah) + the name.
+blood:
+  "1,0": {male: bapak, female: ibu, unknown: wong tuwa}
+  "2,0": {male: simbah kakung, female: simbah putri, unknown: simbah}
+  "3,0": {any: simbah buyut}
+  "4,0": {any: simbah canggah}
+  "5,0": {any: simbah waréng}
+  "6,0": {any: simbah udheg-udheg}
+  "7,0": {any: simbah gantung siwur}
+  "8,0": {any: simbah gropak senthé}
+  "9,0": {any: simbah debog bosok}
+  "10,0": {any: simbah galih asem}
+  "11,0": {any: simbah gropak waton}
+  "12,0": {any: simbah cendheng}
+  "13,0": {any: simbah giyeng}
+  "14,0": {any: simbah cumpleng}
+  "15,0": {any: simbah ampleng}
+  "16,0": {any: simbah menyaman}
+  "17,0": {any: simbah menya-menya}
+  "18,0": {any: simbah trah tumerah}
+  "0,1": {male: anak lanang, female: anak wadon, unknown: anak}
+  "0,2": {any: putu}
+  "0,3": {any: buyut}
+  "0,4": {any: canggah}
+  "0,5": {any: waréng}
+  "0,6": {any: udheg-udheg}
+  "0,7": {any: gantung siwur}
+  "0,8": {any: gropak senthé}
+  "0,9": {any: debog bosok}
+  "0,10": {any: galih asem}
+  "0,11": {any: gropak waton}
+  "0,12": {any: cendheng}
+  "0,13": {any: giyeng}
+  "0,14": {any: cumpleng}
+  "0,15": {any: ampleng}
+  "0,16": {any: menyaman}
+  "0,17": {any: menya-menya}
+  "0,18": {any: trah tumerah}
+  "1,1":
+    male: sedulur lanang
+    female: sedulur wadon
+    unknown: sedulur
+    by_seniority:
+      elder: {male: kangmas, female: mbakyu, unknown: sedulur tuwa}
+      younger: {male: adhi lanang, female: adhi wadon, unknown: adhi}
+  "2,1":                                # both words until it's known who is older
+    male: pakdhé / paklik
+    female: budhé / bulik
+    unknown: sedulur wong tuwa
+    by_seniority:
+      elder: {male: pakdhé, female: budhé}
+      younger: {male: paklik, female: bulik}
+  "3,1": {any: simbah}                  # a grandparent's brother or sister is also simbah
+  "1,2": {any: keponakan}
+  "1,3": {any: putu keponakan}
+  "1,4": {}                             # said in pieces: buyuté kangmas
+  "2,2": {any: misanan}                 # sedulur tunggal mbah
+  "3,3": {any: mindhoan}                # sedulur tunggal buyut
+  "4,4": {any: sedulur tunggal canggah}
+
+# Beyond the entries above. A parent's cousin or a cousin's child is said in pieces:
+# "misanané ibu", "anaké misanan".
+patterns:
+  ancestor: {any: leluhur}              # beyond the 18 named generations
+  descendant: {any: turun}
+  uncle: ""
+  nephew: ""
+  cousin: "{degree}"
+  removed: ""
+  degrees: [misanan, mindhoan, sedulur tunggal canggah, sedulur tunggal waréng,
+            sedulur tunggal udheg-udheg, sedulur tunggal gantung siwur]
+  degrees_beyond: sedulur adoh
+  times: []
+  times_beyond: ""
+
+marriage:
+  "=": {any: bojo}
+
+in_law:
+  "=u": {male: bapak maratuwa, female: ibu maratuwa, unknown: maratuwa}
+  "d=": {any: mantu}
+  "=ud":
+    any: ipé
+    by_seniority:
+      elder: {male: mas ipé, female: mbakyu ipé}
+      younger: {any: adhi ipé}
+  "ud=":
+    any: ipé
+    by_seniority:
+      elder: {male: mas ipé, female: mbakyu ipé}
+      younger: {any: adhi ipé}
+  "=ud=": {any: pripéan}
+  "d=u": {any: bésan}
+  "==": {female: maru}
+  "uud=":                               # a pakdhé's wife is a budhé, a paklik's a bulik
+    male: pakdhé / paklik
+    female: budhé / bulik
+    unknown: sedulur wong tuwa
+    by_seniority:
+      elder: {male: pakdhé, female: budhé}
+      younger: {male: paklik, female: bulik}
+  "dd=": {any: putu mantu}
+
+step:
+  "u=": {male: bapak kuwalon, female: ibu kuwalon, unknown: wong tuwa kuwalon}
+  "=d": {any: anak kuwalon}
+  "u=d": {any: sedulur kuwalon}
+
+# Adoptive, foster and any other kinds: the words set in Settings -> Relationship kinds.
+kinds: settings
+
+# What only the Kinship dictionary shows, by the rows of dictionary.yaml: other words
+# (`also`), address words, `krama` and `krama_inggil`, notes; `word` for rows about words
+# rather than one relation; `descr` where Javanese describes the relation instead.
+dictionary:
+  father: {krama_inggil: rama, address: [Pak]}
+  mother: {also: [simbok, mbok, biyung, mak], krama_inggil: ibu, address: [Bu, Mbok], note: "Robson found simbok in the villages and ibu among the educated."}
+  parent: {krama: tiyang sepuh}
+  grandfather: {also: [mbah kakung, mbah lanang], krama_inggil: éyang kakung, address: [Mbah]}
+  grandmother: {also: [mbah putri, mbah uti, mbah wadon], krama_inggil: éyang putri, address: [Mbah]}
+  grandmother-paternal: {descr: true}
+  great-grandparent: {also: [mbah buyut]}
+  great-grandparent-2: {also: [mbah canggah]}
+  great-grandparent-3: {also: [mbah waréng]}
+  son: {krama_inggil: putra}
+  daughter: {krama_inggil: putri}
+  child: {krama_inggil: putra}
+  grandchild: {krama_inggil: wayah}
+  great-grandchild: {note: "The same word as for a great-grandparent: the names go both ways."}
+  great-grandchild-4: {note: "udheg-udheg, gantung siwur and on: see Generation names."}
+  brother-elder: {also: [kakang, mas], krama_inggil: raka, address: [Mas, Kang]}
+  sister-elder: {also: [mbak, yu], krama_inggil: raka, address: [Mbak, Mbakyu, Yu]}
+  brother-younger: {krama_inggil: rayi, address: [Dhik]}
+  sister-younger: {krama_inggil: rayi, address: [Dhik]}
+  brother: {krama: sadhèrèk jaler}
+  sister: {krama: sadhèrèk èstri}
+  half-brother-paternal: {descr: true, also: [sedulur kuwalon (half- and step-siblings alike)]}
+  half-sister-maternal: {descr: true}
+  full-siblings: {word: sedulur tunggal bapa biyung}
+  twins: {word: kembar, also: [kembar dhampit (a boy and a girl)]}
+  order-eldest: {word: mbarep, also: [pembarep]}
+  order-second: {word: panggulu}
+  order-third: {word: null}
+  order-later: {word: null, note: "Javanese names only the first, the second, the middle and the last two."}
+  order-middle: {word: penengah, also: [pandhadha]}
+  order-youngest: {word: ragil, also: [wuragil], note: "The second youngest is sumendhi."}
+  uncle-elder: {also: [siwa, uwa (older words)], address: [Pakdhé, Wa]}
+  aunt-elder: {also: [mbokdhé, uwa], address: [Budhé, Wa]}
+  uncle-younger: {also: [paman (old)], address: [Lik, Paklik]}
+  aunt-younger: {also: [mbok cilik, bibi (old)], address: [Lik, Bulik]}
+  uncle-eldest: {note: "Javanese words follow whether he is older or younger than your parent, not his place."}
+  aunt-second: {note: "budhé if she is older than your parent, bulik if younger."}
+  uncle-third: {note: "pakdhé if he is older than your parent, paklik if younger."}
+  uncle: {note: "Both words, until birth dates or an order say who is older."}
+  aunt-by-marriage: {note: "A pakdhé's wife is a budhé; a paklik's, a bulik."}
+  great-uncle: {also: [simbah raka (older than your grandparent), simbah rayi (younger)], note: "A grandparent's brother or sister is also simbah."}
+  great-aunt: {also: [simbah raka, simbah rayi]}
+  nephew: {also: [ponakan, prunan (Central Java: a younger sibling's child)], krama: kapenakan}
+  niece: {also: [ponakan, prunan (Central Java: a younger sibling's child)], krama: kapenakan}
+  great-grandnephew: {descr: true}
+  cousin-1: {note: "sedulur tunggal mbah: sharing grandparents. Central Java: nak-sanak."}
+  cousin-2: {note: "sedulur tunggal buyut: sharing great-grandparents. Central Java: misan."}
+  cousin-3: {descr: true, note: "Central Java: mindho."}
+  cousin-4: {descr: true, note: "Beyond third cousins, the link is usually forgotten (Robson 1987)."}
+  cousin-of-parent: {descr: true, address: [Pakdhé, Budhé, Paklik, Bulik (by line)]}
+  child-of-cousin: {descr: true}
+  cousins-central-java: {word: "nak-sanak (1st), misan (2nd), mindho (3rd)", note: "Robson 1987, around Muntilan and Sleman. East Java and school books use misanan and mindhoan."}
+  husband: {krama: semah, krama_inggil: garwa, address: [Mas]}
+  wife: {krama: semah, krama_inggil: garwa, address: [Dhik]}
+  former-wife: {also: [mantan bojo]}
+  father-in-law: {address: [Bapak]}
+  mother-in-law: {address: [Ibu]}
+  son-in-law: {also: [anak mantu], address: [Nak]}
+  daughter-in-law: {also: [anak mantu], address: [Nak]}
+  sibling-in-law-elder: {note: "ipé follows the sibling in between: mas ipé, mbakyu ipé, adhi ipé."}
+  co-sibling-in-law: {note: "People who have married siblings: padha ngalap (Robson 1987)."}
+  co-parent-in-law: {address: [Mas, Mbakyu (a daughter's parents-in-law), Dhik (a son's)]}
+  stepmother: {also: [mbok kuwalon]}
+  adopted-child: {note: "anak pupon (Robson 1987)."}
+  foster-child: {note: "asuh is from Indonesian: bapak asuh, anak asuh."}
+  milk-mother: {word: null}
+  milk-sibling: {word: sedulur tunggal suson, note: "Children nursed at the same breast may not marry (Robson 1987)."}
+  family: {word: brayat, also: [kulawarga (formal)]}
+  relatives: {word: sanak-sedulur}
+  ancestors: {word: leluhur, also: [trah (everyone descended from one ancestor)]}
+  descendants: {word: anak putu, also: [turun]}
+  distant-in-law: {word: munthu katutan sambel, also: [mambu-mambu], note: "Literally, the pestle with chilli paste stuck to it (Robson 1987)."}

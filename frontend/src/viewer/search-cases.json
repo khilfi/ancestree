@@ -1,0 +1,30 @@
+{
+  "about": "One search rule for the app (backend/src/ancestree/domain/search.py) and for a view-only copy (src/viewer/search.ts). Both sides' tests run these searches.",
+  "people": [
+    { "id": "1", "full_name": "Hassan bin Ismail", "nickname": "Acan" },
+    { "id": "2", "full_name": "Aminah binti Hassan", "nickname": null },
+    { "id": "3", "full_name": "Siti binti Rahman", "nickname": null },
+    { "id": "4", "full_name": "Rahman bin Ismail", "nickname": null },
+    { "id": "5", "full_name": "Ismail bin Ahmad", "nickname": "Tok Ismail" },
+    { "id": "6", "full_name": "Zulkifli bin Hassan", "nickname": "Zul" },
+    { "id": "7", "full_name": "Unknown parent", "nickname": null, "placeholder": true },
+    { "id": "8", "full_name": "Nor binti Hassan", "nickname": null },
+    { "id": "9", "full_name": "Dato' Hamid bin Kassim", "nickname": null }
+  ],
+  "searches": [
+    { "text": "", "limit": 20, "found": ["2", "9", "1", "5", "8", "4", "3", "6"] },
+    { "text": "", "limit": 3, "found": ["2", "9", "1"] },
+    { "text": "has", "limit": 20, "found": ["1", "2", "8", "6"] },
+    { "text": "sit rah", "limit": 20, "found": ["3"] },
+    { "text": "ismail", "limit": 20, "found": ["5", "1", "4"] },
+    { "text": "tok", "limit": 20, "found": ["5"] },
+    { "text": "zul", "limit": 20, "found": ["6"] },
+    { "text": "  HASSAN   bin  ", "limit": 20, "found": ["1", "2", "8", "6"] },
+    { "text": "dato", "limit": 20, "found": ["9"] },
+    { "text": "hamid kas", "limit": 20, "found": ["9"] },
+    { "text": "unknown", "limit": 20, "found": [] },
+    { "text": "acan", "limit": 20, "found": ["1"] },
+    { "text": "ali", "limit": 20, "found": [] },
+    { "text": "b", "limit": 20, "found": ["2", "9", "1", "5", "8", "4", "3", "6"] }
+  ]
+}

@@ -1,0 +1,323 @@
+# The desktop app: built, installed, measured
+# and updated on Windows, macOS (Apple Silicon) and Linux, at each push to main that changes
+# the app.
+#
+# Each system: build 0.1.0 and install it; open the 2,000-person sample in its web view and
+# time the frames (the app fetches that system's Neo4j and Java on the way); check that only
+# the app's window reaches its engine, that it starts at sign-in, and that it survives being
+# ended abruptly, with its data and a first automatic backup; build 0.1.1 and let 0.1.0
+# update itself to it, from a server on the runner; then refuse updates signed with a key it
+# doesn't know, for another version, or for none. The keys are made for this run and thrown
+# away with it, so no secret is kept anywhere.
+#
+# In a private repository, a Mac's minutes count ten times over against GitHub's monthly
+# allowance, so a commit can name the systems to run: "[only: macos linux]" in its message.
+# Otherwise, all three.
+
+name: Desktop app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # A release's update file and notes change nothing in the app.
+    paths-ignore: ["updates/**", "release-notes/**", "README.md"]
+
+permissions:
+  contents: read
+
+jobs:
+  systems:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python3 - >> "$GITHUB_OUTPUT" <<'EOF'
+          import json, os, re
+          systems = {
+              "windows": {"os": "windows-latest", "bundles": "nsis"},
+              "macos": {"os": "macos-latest", "bundles": "app,dmg"},
+              "linux": {"os": "ubuntu-24.04", "bundles": "appimage"},
+          }
+          asked = re.search(r"\[only: *([a-z ]+)\]", os.environ.get("MESSAGE", ""))
+          names = asked.group(1).split() if asked else list(systems)
+          print("matrix=" + json.dumps({"include": [systems[n] for n in names if n in systems]}))
+          EOF
+          cat "$GITHUB_OUTPUT"
+
+  desktop:
+    needs: systems
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.systems.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: bash
+    env:
+      APP_ID: app.ancestree.desktop
+      # Every start asks for updates: here, a server that isn't there, unless a step says.
+      ANCESTREE_UPDATE_URL: http://127.0.0.1:9/latest.json
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            frontend/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v7
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Linux packages for Tauri and a screen
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev xvfb
+          # linuxdeploy, which makes the AppImage, strips every library it finds, the engine's
+          # too, with a strip too old for some of them. They're fine as they come.
+          echo "NO_STRIP=true" >> "$GITHUB_ENV"
+          # One screen for the whole job. An update restarts the app, and a screen made for
+          # each start (xvfb-run) closes with the first, under the one after it.
+          Xvfb :99 -screen 0 1600x1000x24 > /dev/null 2>&1 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+          echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
+
+      - name: The app's pages
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile && pnpm build && pnpm build:viewer
+
+      - name: The engine
+        working-directory: backend
+        run: >
+          uv run --with pyinstaller pyinstaller ../desktop/engine/engine.spec --noconfirm
+          --distpath ../desktop/engine/dist --workpath ../desktop/engine/build
+
+      - name: A throwaway update key, for this run only
+        working-directory: desktop
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm tauri signer generate -w "$RUNNER_TEMP/s5.key" -p s5 --ci
+          echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=s5" >> "$GITHUB_ENV"
+          { echo "TAURI_SIGNING_PRIVATE_KEY<<KEY"; cat "$RUNNER_TEMP/s5.key"; echo; echo "KEY"; } >> "$GITHUB_ENV"
+          echo "PUBKEY=$(cat "$RUNNER_TEMP/s5.key.pub")" >> "$GITHUB_ENV"
+
+      - name: Build 0.1.0
+        working-directory: desktop
+        run: |
+          pnpm tauri build --verbose --bundles ${{ matrix.bundles }} \
+            --config "{\"plugins\":{\"updater\":{\"pubkey\":\"$PUBKEY\",\"dangerousInsecureTransportProtocol\":true}}}"
+          mkdir -p "$RUNNER_TEMP/v010"
+          cp -R src-tauri/target/release/bundle/. "$RUNNER_TEMP/v010/"
+          find "$RUNNER_TEMP/v010" -maxdepth 2 | sort
+
+      - name: Install 0.1.0, and how the system sees it unsigned
+        run: |
+          case "$RUNNER_OS" in
+            Windows)
+              setup=$(ls "$RUNNER_TEMP"/v010/nsis/*-setup.exe)
+              "$setup" //S
+              app="$LOCALAPPDATA/AncesTree/AncesTree.exe"
+              data="$LOCALAPPDATA/$APP_ID" ;;
+            macOS)
+              mkdir -p "$HOME/Applications"
+              cp -R "$RUNNER_TEMP/v010/macos/AncesTree.app" "$HOME/Applications/"
+              bundle="$HOME/Applications/AncesTree.app"
+              codesign -dv "$bundle" 2>&1 | grep -E "Signature|TeamIdentifier" || true
+              spctl --assess --type execute -vv "$bundle" 2>&1 || true
+              app="$bundle/Contents/MacOS/AncesTree"
+              data="$HOME/Library/Application Support/$APP_ID" ;;
+            Linux)
+              mkdir -p "$HOME/apps"
+              cp "$RUNNER_TEMP"/v010/appimage/*.AppImage "$HOME/apps/AncesTree.AppImage"
+              chmod +x "$HOME/apps/AncesTree.AppImage"
+              app="$HOME/apps/AncesTree.AppImage"
+              data="$HOME/.local/share/$APP_ID" ;;
+          esac
+          echo "APP=$app" >> "$GITHUB_ENV"
+          echo "DATA=$data" >> "$GITHUB_ENV"
+          if [ "$RUNNER_OS" = Windows ]; then echo "PY=python" >> "$GITHUB_ENV"; else echo "PY=python3" >> "$GITHUB_ENV"; fi
+          du -sh "$RUNNER_TEMP/v010"/* || true
+
+      - name: The 2,000-person sample in this web view
+        run: |
+          ANCESTREE_BENCH=1 "$APP" &
+          for i in $(seq 1 120); do [ -f "$DATA/bench.json" ] && break; sleep 5; done
+          sleep 10
+          cat "$DATA/bench.json" || { echo "no result"; tail -n 50 "$DATA/logs/"*.log; exit 1; }
+          echo
+          if grep -q '"error"' "$DATA/bench.json"; then echo "::warning::The sample didn't show in this web view"; fi
+          grep -hE "stage\": \"(starting-database|database-ready|ready)\"" "$DATA/logs/shell.log" || true
+
+      - name: Only the window gets in, start at sign-in, and a restart
+        run: |
+          readies() { grep -c '"stage": "ready"' "$DATA/logs/shell.log" || true; }
+          ready() {  # waits for one more start than $1, and says the engine's port
+            for i in $(seq 1 60); do
+              if [ "$(readies)" -gt "$1" ]; then
+                grep -o '"stage": "ready", "port": [0-9]*' "$DATA/logs/shell.log" | tail -n 1 | grep -o '[0-9]*$'
+                return 0
+              fi
+              sleep 5
+            done
+            echo "the engine never said it was ready" >&2
+            return 1
+          }
+          end() {  # ends the app at once, as a crash or a power cut would; then waits for its engine
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM AncesTree.exe; else pkill -9 -x AncesTree; fi
+            for i in $(seq 1 30); do
+              if [ "$RUNNER_OS" = Windows ]; then tasklist | grep -i ancestree-engine > /dev/null || return 0
+              else pgrep -f 'ancestree-engine|org[.]neo4j[.]server' > /dev/null || return 0; fi
+              sleep 2
+            done
+            echo "the engine or its Neo4j outlived the app"; return 1
+          }
+          secret=$("$PY" -c "import secrets; print(secrets.token_hex(32))")
+          as_window() { curl -sf -H "Cookie: ancestree_session=$secret" "$@"; }
+
+          # Started as from the Start menu, the Launchpad or the list of apps.
+          before=$(readies)
+          ANCESTREE_SESSION=$secret "$APP" &
+          port=$(ready "$before")
+          outside=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/api/health")
+          echo "a program outside the window gets: $outside"
+          [ "$outside" = 403 ]
+          as_window -H 'content-type: application/json' \
+            -d '{"full_name": "Hassan bin Ismail", "gender": "male"}' "http://127.0.0.1:$port/api/persons"
+          echo
+          case "$RUNNER_OS" in
+            Windows) reg query 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run' //v AncesTree ;;
+            macOS) cat "$HOME/Library/LaunchAgents/AncesTree.plist" ;;
+            Linux) cat "$HOME/.config/autostart/AncesTree.desktop" ;;
+          esac
+
+          # Ended abruptly, then started as at sign-in: hidden, the family still there, and
+          # the first automatic backup a minute later.
+          end
+          before=$(readies)
+          ANCESTREE_SESSION=$secret "$APP" --hidden &
+          port=$(ready "$before")
+          started=$(grep -E '^[0-9]+ starting ' "$DATA/logs/shell.log" | tail -n 1)
+          echo "$started"
+          [[ "$started" == *"hidden: true"* ]]
+          people=$(as_window "http://127.0.0.1:$port/api/persons")
+          [[ "$people" == *"Hassan bin Ismail"* ]]
+          for i in $(seq 1 30); do
+            backups=$(as_window "http://127.0.0.1:$port/api/backups" || true)
+            [[ "$backups" == *'"automatic":true'* ]] && break
+            sleep 5
+          done
+          as_window "http://127.0.0.1:$port/api/backups" | "$PY" -c "
+          import json, sys
+          listed = json.load(sys.stdin)
+          print(listed['folder'], [backup['name'] for backup in listed['backups']])
+          assert [backup['people'] for backup in listed['backups'] if backup['automatic']] == [1]
+          "
+          end
+
+      - name: Build 0.1.1, the update
+        working-directory: desktop
+        run: |
+          pnpm tauri build --verbose --bundles ${{ matrix.bundles }} \
+            --config "{\"version\":\"0.1.1\",\"plugins\":{\"updater\":{\"pubkey\":\"$PUBKEY\",\"dangerousInsecureTransportProtocol\":true}}}"
+          mkdir -p "$RUNNER_TEMP/updates"
+          case "$RUNNER_OS" in
+            Windows) file=$(ls src-tauri/target/release/bundle/nsis/*0.1.1*-setup.exe); key=windows-x86_64 ;;
+            macOS) file="src-tauri/target/release/bundle/macos/AncesTree.app.tar.gz"; key=darwin-aarch64 ;;
+            Linux) file=$(ls src-tauri/target/release/bundle/appimage/*0.1.1*.AppImage); key=linux-x86_64 ;;
+          esac
+          name=$(basename "$file" | tr ' ' '-')
+          cp "$file" "$RUNNER_TEMP/updates/$name"
+          signature=$(cat "$file.sig")
+          printf '{"version":"0.1.1","notes":"S5","pub_date":"2026-09-29T00:00:00Z","platforms":{"%s":{"signature":"%s","url":"http://127.0.0.1:18765/%s"}}}' \
+            "$key" "$signature" "$name" > "$RUNNER_TEMP/updates/latest.json"
+          # And three the app must refuse, each offering this file as 0.1.2 (offer <name> <signature> <file>).
+          offer() {
+            printf '{"version":"0.1.2","notes":"%s","pub_date":"2026-09-29T00:00:00Z","platforms":{"%s":{"signature":"%s","url":"http://127.0.0.1:18765/%s"}}}' \
+              "$1" "$key" "$2" "$3" > "$RUNNER_TEMP/updates/$1.json"
+          }
+          # Signed with a key the app doesn't know. The run's own key is in the environment, and
+          # the signer takes a key named on its command line over it, but not a key file.
+          pnpm tauri signer generate -w "$RUNNER_TEMP/other.key" -p other --ci
+          cp "$file" "$RUNNER_TEMP/updates/other-$name"
+          pnpm tauri signer sign -k "$(cat "$RUNNER_TEMP/other.key")" -p other "$RUNNER_TEMP/updates/other-$name"
+          offer other-key "$(cat "$RUNNER_TEMP/updates/other-$name.sig")" "other-$name"
+          # With the app's own key: signed for 0.1.1, as it is; and signed for no version at all,
+          # which only requireSignedVersion refuses.
+          offer other-version "$signature" "$name"
+          cp "$file" "$RUNNER_TEMP/updates/unbound-$name"
+          pnpm tauri signer sign "$RUNNER_TEMP/updates/unbound-$name"
+          offer no-version "$(cat "$RUNNER_TEMP/updates/unbound-$name.sig")" "unbound-$name"
+          ls -la "$RUNNER_TEMP/updates"
+
+      - name: 0.1.0 updates itself to 0.1.1
+        run: |
+          (cd "$RUNNER_TEMP/updates" && "$PY" -m http.server 18765 --bind 127.0.0.1 > /dev/null 2>&1 &)
+          # The app asks once, as it starts: the server must be answering first.
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:18765/latest.json > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:18765/latest.json
+          ANCESTREE_UPDATE_URL=http://127.0.0.1:18765/latest.json "$APP" &
+          for i in $(seq 1 60); do grep -q "starting 0.1.1" "$DATA/logs/shell.log" 2>/dev/null && break; sleep 5; done
+          grep -E "starting|update" "$DATA/logs/shell.log"
+          grep -q "starting 0.1.1" "$DATA/logs/shell.log"
+
+      - name: An update signed with another key, or for another version or none, is refused
+        run: |
+          refuses() {  # started with $1.json on offer: it says why it won't update ($2), and starts as it is
+            if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM AncesTree.exe || true; else pkill -9 -x AncesTree || true; fi
+            for i in $(seq 1 30); do  # until its engine and Neo4j have gone too
+              if [ "$RUNNER_OS" = Windows ]; then tasklist | grep -i ancestree-engine > /dev/null || break
+              else pgrep -f 'ancestree-engine|org[.]neo4j[.]server' > /dev/null || break; fi
+              sleep 2
+            done
+            seen=$(wc -l < "$DATA/logs/shell.log")
+            ANCESTREE_UPDATE_URL="http://127.0.0.1:18765/$1.json" "$APP" &
+            for i in $(seq 1 60); do
+              tail -n +"$((seen + 1))" "$DATA/logs/shell.log" | grep -q '"stage": "ready"' && break
+              sleep 5
+            done
+            after=$(tail -n +"$((seen + 1))" "$DATA/logs/shell.log")
+            echo "== $1"; echo "$after" | grep -E "starting|update"
+            [[ "$after" == *"update check failed: "*"$2"* ]]
+            [[ "$after" == *'"stage": "ready"'* ]]
+            [[ "$after" != *"starting 0.1.2"* ]]
+          }
+          refuses other-key "created with a different key"
+          refuses other-version "signed for version 0.1.1"
+          refuses no-version "does not specify the version"
+
+      - name: What the app wrote, when something failed
+        if: failure()
+        run: |
+          for log in shell.log engine.log; do
+            echo "== $log"; tail -n 80 "$DATA/logs/$log" 2>/dev/null || echo "(none)"
+          done
+          echo "== Neo4j's debug.log"; tail -n 40 "$DATA/neo4j/store/logs/debug.log" 2>/dev/null || echo "(none)"
+          ps aux 2>/dev/null | grep -iE "ancestree|neo4j" | grep -v grep || tasklist 2>/dev/null | grep -iE "ancestree|java" || true
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ runner.os }}
+          path: |
+            ${{ env.DATA }}/bench.json
+            ${{ env.DATA }}/logs/
+            ${{ env.DATA }}/neo4j/store/logs/
+          if-no-files-found: warn

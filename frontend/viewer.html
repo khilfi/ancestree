@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- A view-only copy: it may not connect to anything, or
+         load anything from anywhere. Everything it shows is inside this file. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src data: blob:; media-src data: blob:; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>"
+    />
+    <title>AncesTree</title>
+  </head>
+  <body>
+    <!-- Where a phone only previews the file, with scripts off: how to open it instead. -->
+    <noscript>
+      <div
+        style="max-width: 32rem; margin: 3rem auto; padding: 0 1.25rem; font-family: system-ui, sans-serif; line-height: 1.5; color: #292524"
+      >
+        <h1 style="margin: 0 0 0.75rem; font-size: 1.25rem; font-weight: 600">
+          A family tree from AncesTree
+        </h1>
+        <p style="margin: 0 0 0.75rem">
+          This file is a view-only copy of a family tree. It opens in a web browser, with nothing to
+          install and no internet needed:
+        </p>
+        <ul style="margin: 0 0 0.75rem; padding-left: 1.25rem; list-style: disc">
+          <li>on a computer, double-click the file;</li>
+          <li>on an Android phone or tablet, open it with Chrome.</li>
+        </ul>
+        <p style="margin: 0">
+          iPhones and iPads can only preview a file like this one, so this is all they show. Open it
+          on a computer or an Android device instead.
+        </p>
+      </div>
+    </noscript>
+    <div id="root"></div>
+    <!--ANCESTREE-COPY-->
+    <script type="module" src="/src/viewer/main.tsx"></script>
+  </body>
+</html>

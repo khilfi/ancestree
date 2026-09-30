@@ -1,0 +1,267 @@
+# The Kinship dictionary's rows, each word with its
+# source.
+#
+# Each row is a relation, described in plain English, and the relation it stands for, `kin`.
+# Every language's word for it comes from that language's word list, exactly as an answer
+# gets it, so the dictionary can't disagree with the answers. Each word list then adds, by
+# row id, what only the dictionary shows: other words, address words, speech levels, notes.
+# A row without `kin` is about words rather than one relation (birth-order names, "family");
+# each word list gives its `word` for it.
+#
+# kin:
+#   blood: "m,n"          A climbs m generations, B is n below (as in the word lists)
+#   marriage: "="         husband or wife; `former: true` for a divorced one
+#   in_law / step: shape  "=u", "ud=", "==" ... (as in the word lists)
+#   kind: key             with `side`: parent, child or sibling (adoptive, foster...)
+#   gender                male, female or unknown (the default)
+#   seniority             elder or younger
+#   place                 "1/3": the eldest of three; "3/3": the youngest
+#   side                  paternal or maternal (grandparents; half-siblings with `half`)
+#   parts                 the same relation in pieces, each a kin, for a language that
+#                         says it that way (a parent's cousin: a parent, then a cousin)
+
+sections:
+  - id: parents
+    title: Parents and grandparents
+    rows:
+      - {id: father, relation: Your father, kin: {blood: "1,0", gender: male}}
+      - {id: mother, relation: Your mother, kin: {blood: "1,0", gender: female}}
+      - id: parent
+        relation: A parent whose gender isn't recorded
+        kin: {blood: "1,0"}
+      - {id: grandfather, relation: Your grandfather, kin: {blood: "2,0", gender: male}}
+      - {id: grandmother, relation: Your grandmother, kin: {blood: "2,0", gender: female}}
+      - id: grandmother-paternal
+        relation: Your father's mother
+        kin: {blood: "2,0", gender: female, side: paternal}
+      - id: great-grandparent
+        relation: A grandparent's parent
+        kin: {blood: "3,0"}
+      - id: great-grandparent-2
+        relation: A great-grandparent's parent
+        kin: {blood: "4,0"}
+      - id: great-grandparent-3
+        relation: A great-grandparent's grandparent (five generations up)
+        kin: {blood: "5,0"}
+
+  - id: children
+    title: Children and grandchildren
+    rows:
+      - {id: son, relation: Your son, kin: {blood: "0,1", gender: male}}
+      - {id: daughter, relation: Your daughter, kin: {blood: "0,1", gender: female}}
+      - {id: child, relation: A child whose gender isn't recorded, kin: {blood: "0,1"}}
+      - {id: grandchild, relation: A child's child, kin: {blood: "0,2"}}
+      - {id: great-grandchild, relation: A grandchild's child, kin: {blood: "0,3"}}
+      - id: great-grandchild-2
+        relation: A grandchild's grandchild
+        kin: {blood: "0,4"}
+      - id: great-grandchild-3
+        relation: A great-great-grandchild's child (five generations down)
+        kin: {blood: "0,5"}
+      - id: great-grandchild-4
+        relation: Six generations down, and further
+        kin: {blood: "0,6"}
+
+  - id: siblings
+    title: Brothers and sisters
+    rows:
+      - id: brother-elder
+        relation: An older brother
+        kin: {blood: "1,1", gender: male, seniority: elder}
+      - id: sister-elder
+        relation: An older sister
+        kin: {blood: "1,1", gender: female, seniority: elder}
+      - id: brother-younger
+        relation: A younger brother
+        kin: {blood: "1,1", gender: male, seniority: younger}
+      - id: sister-younger
+        relation: A younger sister
+        kin: {blood: "1,1", gender: female, seniority: younger}
+      - id: brother
+        relation: A brother, when it isn't known who is older
+        kin: {blood: "1,1", gender: male}
+      - id: sister
+        relation: A sister, when it isn't known who is older
+        kin: {blood: "1,1", gender: female}
+      - id: half-brother-paternal
+        relation: An older brother who shares only your father
+        kin: {blood: "1,1", gender: male, seniority: elder, half: true, side: paternal}
+      - id: half-sister-maternal
+        relation: A younger sister who shares only your mother
+        kin: {blood: "1,1", gender: female, seniority: younger, half: true, side: maternal}
+      - {id: full-siblings, relation: Brothers and sisters who share both parents}
+      - {id: twins, relation: Twins}
+
+  - id: birth-order
+    title: Birth order
+    rows:
+      - {id: order-eldest, relation: The eldest child}
+      - {id: order-second, relation: The second child}
+      - {id: order-third, relation: The third child}
+      - {id: order-later, relation: The fourth child and later}
+      - {id: order-middle, relation: A middle child}
+      - {id: order-youngest, relation: The youngest child}
+
+  - id: uncles
+    title: Uncles and aunts
+    rows:
+      - id: uncle-elder
+        relation: A parent's older brother
+        kin: {blood: "2,1", gender: male, seniority: elder}
+      - id: aunt-elder
+        relation: A parent's older sister
+        kin: {blood: "2,1", gender: female, seniority: elder}
+      - id: uncle-younger
+        relation: A parent's younger brother
+        kin: {blood: "2,1", gender: male, seniority: younger}
+      - id: aunt-younger
+        relation: A parent's younger sister
+        kin: {blood: "2,1", gender: female, seniority: younger}
+      - id: uncle-eldest
+        relation: A parent's brother who is the eldest of all the brothers and sisters
+        kin: {blood: "2,1", gender: male, seniority: elder, place: "1/4"}
+      - id: aunt-second
+        relation: A parent's sister who is the second of the brothers and sisters
+        kin: {blood: "2,1", gender: female, place: "2/4"}
+      - id: uncle-third
+        relation: A parent's brother who is the third of the brothers and sisters
+        kin: {blood: "2,1", gender: male, place: "3/4"}
+      - id: aunt-youngest
+        relation: A parent's sister who is the youngest of the brothers and sisters
+        kin: {blood: "2,1", gender: female, seniority: younger, place: "4/4"}
+      - id: uncle
+        relation: A parent's brother, when it isn't known who is older
+        kin: {blood: "2,1", gender: male}
+      - id: aunt-by-marriage
+        relation: The wife of a parent's eldest brother
+        kin: {in_law: "uud=", gender: female, seniority: elder, place: "1/4"}
+      - id: uncle-by-marriage
+        relation: The husband of a parent's younger sister
+        kin: {in_law: "uud=", gender: male, seniority: younger}
+      - {id: great-uncle, relation: A grandparent's brother, kin: {blood: "3,1", gender: male}}
+      - {id: great-aunt, relation: A grandparent's sister, kin: {blood: "3,1", gender: female}}
+
+  - id: nephews
+    title: Nephews and nieces
+    rows:
+      - {id: nephew, relation: A brother's or sister's son, kin: {blood: "1,2", gender: male}}
+      - id: niece
+        relation: A brother's or sister's daughter
+        kin: {blood: "1,2", gender: female}
+      - id: grandnephew
+        relation: A brother's or sister's grandchild
+        kin: {blood: "1,3"}
+      - id: great-grandnephew
+        relation: An older brother's great-grandchild
+        kin:
+          blood: "1,4"
+          parts:
+            - {blood: "1,1", gender: male, seniority: elder}
+            - {blood: "0,3"}
+
+  - id: cousins
+    title: Cousins
+    rows:
+      - {id: cousin-1, relation: Cousins who share grandparents, kin: {blood: "2,2"}}
+      - {id: cousin-2, relation: Cousins who share great-grandparents, kin: {blood: "3,3"}}
+      - id: cousin-3
+        relation: Cousins who share great-great-grandparents
+        kin: {blood: "4,4"}
+      - {id: cousin-4, relation: More distant cousins, kin: {blood: "5,5"}}
+      - id: cousin-of-parent
+        relation: Your mother's first cousin
+        kin:
+          blood: "3,2"
+          gender: female
+          parts:
+            - {blood: "1,0", gender: female}
+            - {blood: "2,2", gender: female}
+      - id: child-of-cousin
+        relation: A first cousin's son
+        kin:
+          blood: "2,3"
+          gender: male
+          parts:
+            - {blood: "2,2"}
+            - {blood: "0,1", gender: male}
+      - {id: cousins-central-java, relation: Cousin words in Central Java}
+
+  - id: spouses
+    title: Husbands and wives
+    rows:
+      - {id: husband, relation: Your husband, kin: {marriage: "=", gender: male}}
+      - {id: wife, relation: Your wife, kin: {marriage: "=", gender: female}}
+      - id: former-wife
+        relation: A wife you're divorced from
+        kin: {marriage: "=", gender: female, former: true}
+      - id: co-wife
+        relation: Another wife of your husband
+        kin: {in_law: "==", gender: female}
+
+  - id: in-laws
+    title: In-laws
+    rows:
+      - {id: father-in-law, relation: Your husband's or wife's father, kin: {in_law: "=u", gender: male}}
+      - {id: mother-in-law, relation: Your husband's or wife's mother, kin: {in_law: "=u", gender: female}}
+      - {id: son-in-law, relation: Your daughter's husband, kin: {in_law: "d=", gender: male}}
+      - {id: daughter-in-law, relation: Your son's wife, kin: {in_law: "d=", gender: female}}
+      - {id: grandchild-in-law, relation: A grandchild's husband or wife, kin: {in_law: "dd="}}
+      - id: sibling-in-law-elder
+        relation: Your husband's or wife's older brother
+        kin: {in_law: "=ud", gender: male, seniority: elder}
+      - id: sister-in-law-elder
+        relation: Your older brother's wife
+        kin: {in_law: "ud=", gender: female, seniority: elder}
+      - id: sibling-in-law-younger
+        relation: Your younger sister's husband
+        kin: {in_law: "ud=", gender: male, seniority: younger}
+      - id: co-sibling-in-law
+        relation: Your wife's sister's husband
+        kin:
+          in_law: "=ud="
+          gender: male
+          parts:
+            - {marriage: "=", gender: female}
+            - {blood: "1,1", gender: female}
+            - {marriage: "=", gender: male}
+      - id: co-parent-in-law
+        relation: Your child's husband's or wife's parent
+        kin: {in_law: "d=u"}
+
+  - id: step
+    title: Step-family
+    rows:
+      - {id: stepfather, relation: Your mother's husband who isn't your father, kin: {step: "u=", gender: male}}
+      - {id: stepmother, relation: Your father's wife who isn't your mother, kin: {step: "u=", gender: female}}
+      - {id: stepson, relation: Your husband's or wife's son, kin: {step: "=d", gender: male}}
+      - {id: stepdaughter, relation: Your husband's or wife's daughter, kin: {step: "=d", gender: female}}
+      - id: stepbrother-elder
+        relation: An older son of your step-parent
+        kin: {step: "u=d", gender: male, seniority: elder}
+
+  - id: adoption
+    title: Adoption, fostering and milk kinship
+    rows:
+      - {id: adoptive-father, relation: A father by adoption, kin: {kind: adoptive, side: parent, gender: male}}
+      - {id: adoptive-mother, relation: A mother by adoption, kin: {kind: adoptive, side: parent, gender: female}}
+      - {id: adopted-child, relation: An adopted child, kin: {kind: adoptive, side: child}}
+      - id: adoptive-brother
+        relation: An older brother by adoption
+        kin: {kind: adoptive, side: sibling, gender: male, seniority: elder}
+      - {id: foster-mother, relation: A foster mother, kin: {kind: foster, side: parent, gender: female}}
+      - {id: foster-child, relation: A foster child, kin: {kind: foster, side: child}}
+      - {id: milk-mother, relation: A woman who nursed you as a baby}
+      - {id: milk-sibling, relation: A child nursed by the same woman as you}
+
+  - id: generations
+    title: Generation names
+    generations: 18                     # a row for each generation up and down, 1 to 18
+
+  - id: family
+    title: Family in general
+    rows:
+      - {id: family, relation: A family}
+      - {id: relatives, relation: Relatives}
+      - {id: ancestors, relation: Ancestors}
+      - {id: descendants, relation: Descendants}
+      - {id: distant-in-law, relation: A very distant relative by marriage}

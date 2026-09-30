@@ -1,0 +1,111 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="page1">
+    <mxGraphModel grid="1" page="1">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="kamal" value="Kamal Bin Daud" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="kalsom" value="Kalsom Binti Yusof" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="0" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k1" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="salmah" value="Salmah" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rosli" value="Rosli Bin Kamal&lt;div&gt;(Tok Li)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jafar" value="Ja`far*" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="suraya" value="Suraya Binti Hashim" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-200" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k2" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-100" y="350" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="aiman" value="Aiman Bin Rosli&lt;div&gt;3/4/1995&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="0" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="balqis" value="Balqis Binti Rosli&lt;div&gt;12/6/92&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-200" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="spouse-blank" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="350" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k3" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="420" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hana" value="Hana" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="550" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="umar" value="Umar" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="550" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="child-blank" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="550" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="idris" value="Idris Bin Musa" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-400" y="500" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k4" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-300" y="600" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hashim" value="Hashim Bin Ali" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-400" y="0" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k5" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-400" y="120" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1000" y="0" width="500" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="ahmad1" value="Ahmad" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="group">
+          <mxGeometry x="0" y="0" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ahmad2" value="Ahmad" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="group">
+          <mxGeometry x="200" y="0" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="k6" value="Kahwin" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="group">
+          <mxGeometry x="100" y="100" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="nur" value="Nur" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="group">
+          <mxGeometry x="300" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="siti" value="Siti" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="group">
+          <mxGeometry x="0" y="250" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="Draft: check with Mak" style="text;html=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="800" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="kamal" target="k1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="kalsom" target="k1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="k1" target="salmah"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="k1" target="rosli"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="k1" target="jafar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="rosli" target="k2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="suraya" target="k2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="k2" target="aiman"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="k2" target="balqis"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="salmah" target="k3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="spouse-blank" target="k3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="k3" target="hana"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="k3" target="umar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="k3" target="child-blank"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="idris" target="k4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="balqis" target="k4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="hashim" target="k5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="k5" target="suraya"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e19" edge="1" parent="group" source="ahmad1" target="k6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e20" edge="1" parent="group" source="ahmad2" target="k6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e21" edge="1" parent="group" source="k6" target="nur"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e22" edge="1" parent="group" source="k6" target="siti"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e23" edge="1" parent="1" source="umar" target="hana"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

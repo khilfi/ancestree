@@ -1,0 +1,13 @@
+Label,name,alias,father,mother,gender,age,status,birthplace_city,birthplace_state,birthplace_country,current_location_city,current_location_state,current_location_country,deceased_status,deceased_day,deceased_month,deceased_year,bday
+Person,Aiman Bin Rosli,Man,Rosli Bin Kamal,Suraya Binti Hashim,Male,30,Single,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,FALSE,,,,3/4/1995
+Person,Balqis Binti Rosli,Qis,Rosli Bin Kamal,Suraya Binti Hashim,Female,33,Married,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,FALSE,,,,12/6/1992
+Person,Rosli Bin Kamal,Li,Wati Binti Omar,Kalsom Binti Yusof,Male,75,Deceased,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,TRUE,,,,1/1/1950
+Person,Suraya Binti Hashim,Aya,,,Female,70,Widow,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,FALSE,,,,5/5/1955
+Person,Kamal Bin Daud,,,,Male,65,Deceased,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,TRUE,,,,1/1/1960
+Person,Kalsom Binti Yusof,,,,Female,65,Deceased,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,TRUE,,,,1/1/1960
+Person,Wati Binti Omar,,,,Female,65,Deceased,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,TRUE,,,,1/1/1960
+Person,Hashim Bin Ali,,,,male,65,deceased,Ipoh,Perak,Malaysia,Ipoh,Perak,Malaysia,TRUE,,,,1/1/1960
+Person,Danial bin aiman,,Aiman Bin Rosli,Nora binti zakaria,Male,3,single,,,,,,,FALSE,,,,7/7/2022
+Person,Farid bin aiman,,Aiman Bin Rosli,Nora binti zakaria,Male,3,single,,,,,,,FALSE,,,,7/7/2022
+Person,Nora binti zakaria,,,,Female,29,married,,,,,,,FALSE,,,,9/9/1996
+Person,Zara Binti Idris,,Idris Bin Musa,Balqis Binti Rosli,Female,10,Single,,,,,,,FALSE,,,,1/2/2015

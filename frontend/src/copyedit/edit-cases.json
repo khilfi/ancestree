@@ -1,0 +1,848 @@
+{
+  "about": "Changes to the fictional test family, Keluarga Contoh, and what the API answers to each. The app answers them (backend/tests/integration/test_edit_cases.py) and so must a copy to edit (src/copyedit/edit-cases.test.ts), from the same family: the rules are the app's, in both. '@Full name' is that person's id; '$name' is what an earlier step kept. 'expect' checks the answer's fields by their path, 'notices' its notices' codes.",
+  "cases": [
+    {
+      "name": "a third birth parent is refused",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Yusof bin Ismail",
+            "person_b": "@Hassan bin Ismail",
+            "a_is": "parent"
+          },
+          "status": 409,
+          "code": "third_parent"
+        }
+      ]
+    },
+    {
+      "name": "no one becomes their own ancestor",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Ali bin Rosli",
+            "person_b": "@Hassan bin Ismail",
+            "a_is": "parent",
+            "kind": "adoptive"
+          },
+          "status": 409,
+          "code": "cycle"
+        }
+      ]
+    },
+    {
+      "name": "no one is linked to themselves",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hassan bin Ismail",
+            "person_b": "@Hassan bin Ismail",
+            "a_is": "spouse"
+          },
+          "status": 409,
+          "code": "self_link"
+        }
+      ]
+    },
+    {
+      "name": "a parent and child can't marry",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hassan bin Ismail",
+            "person_b": "@Zulkifli bin Hassan",
+            "a_is": "spouse"
+          },
+          "status": 409,
+          "code": "parent_and_spouse"
+        }
+      ]
+    },
+    {
+      "name": "a link given twice is refused",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Ismail bin Ahmad",
+            "person_b": "@Hassan bin Ismail",
+            "a_is": "parent"
+          },
+          "status": 409,
+          "code": "already_linked"
+        },
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hassan bin Ismail",
+            "person_b": "@Mariam binti Daud",
+            "a_is": "spouse"
+          },
+          "status": 409,
+          "code": "already_spouses"
+        }
+      ]
+    },
+    {
+      "name": "an unknown parent can't be linked to anyone else",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Unknown parent",
+            "person_b": "@Zulkifli bin Hassan",
+            "a_is": "parent"
+          },
+          "status": 409,
+          "code": "placeholder"
+        }
+      ]
+    },
+    {
+      "name": "a kind the tree doesn't have is refused",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Osman bin Latif",
+            "person_b": "@Zulkifli bin Hassan",
+            "a_is": "parent",
+            "kind": "stepfather"
+          },
+          "status": 409,
+          "code": "unknown_kind"
+        }
+      ]
+    },
+    {
+      "name": "brother and sister with no parents are joined under an unknown parent",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Suraya binti Idris",
+            "person_b": "@Noraini binti Musa",
+            "a_is": "sibling"
+          },
+          "status": 201,
+          "keep": {
+            "unknown": "links.0.source"
+          },
+          "expect": {
+            "links.length": 2,
+            "links.1.source": "$unknown",
+            "links.0.target": "@Suraya binti Idris",
+            "links.1.target": "@Noraini binti Musa"
+          }
+        },
+        {
+          "call": "GET /api/persons/$unknown",
+          "status": 200,
+          "expect": {
+            "placeholder": true,
+            "full_name": "Unknown parent"
+          }
+        }
+      ]
+    },
+    {
+      "name": "siblings who share a parent already are refused",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hassan bin Ismail",
+            "person_b": "@Yusof bin Ismail",
+            "a_is": "sibling"
+          },
+          "status": 409,
+          "code": "already_siblings"
+        }
+      ]
+    },
+    {
+      "name": "siblings with other parents are asked which they share",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hafiz bin Rahman",
+            "person_b": "@Faridah binti Yusof",
+            "a_is": "sibling"
+          },
+          "status": 409,
+          "code": "choose_shared_parents",
+          "expect": {
+            "detail.candidates.length": 4
+          }
+        },
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hafiz bin Rahman",
+            "person_b": "@Faridah binti Yusof",
+            "a_is": "sibling",
+            "shared_parents": []
+          },
+          "status": 409,
+          "code": "no_shared_parents"
+        },
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Hafiz bin Rahman",
+            "person_b": "@Faridah binti Yusof",
+            "a_is": "sibling",
+            "shared_parents": ["@Osman bin Latif"]
+          },
+          "status": 409,
+          "code": "not_a_parent"
+        }
+      ]
+    },
+    {
+      "name": "a sibling takes the parent chosen, with a word about her name",
+      "steps": [
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Salmah binti Daud",
+            "person_b": "@Zulkifli bin Hassan",
+            "a_is": "sibling",
+            "shared_parents": ["@Hassan bin Ismail"]
+          },
+          "status": 201,
+          "notices": ["patronymic_mismatch"],
+          "expect": {
+            "links.length": 1,
+            "links.0.source": "@Hassan bin Ismail",
+            "links.0.target": "@Salmah binti Daud",
+            "suggestions.length": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "two parents of the same child are asked about marrying",
+      "steps": [
+        {
+          "call": "POST /api/persons",
+          "body": {
+            "full_name": "Budi bin Zulkifli",
+            "gender": "male"
+          },
+          "status": 201,
+          "keep": {
+            "budi": "person.id"
+          },
+          "notices": []
+        },
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Zulkifli bin Hassan",
+            "person_b": "$budi",
+            "a_is": "parent"
+          },
+          "status": 201,
+          "expect": {
+            "suggestions.length": 0
+          }
+        },
+        {
+          "call": "POST /api/relationships",
+          "body": {
+            "person_a": "@Faridah binti Yusof",
+            "person_b": "$budi",
+            "a_is": "parent"
+          },
+          "status": 201,
+          "expect": {
+            "suggestions.length": 1,
+            "suggestions.0.type": "marry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "someone who died before being born is saved, with a word",
+      "steps": [
+        {
+          "call": "POST /api/persons",
+          "body": {
+            "full_name": "Ujian Tarikh",
+            "birth_date": {
+              "year": 1950,
+              "month": null,
+              "day": null,
+              "qualifier": "exact",
+              "year_to": null,
+              "original_text": null
+            },
+            "death_date": {
+              "year": 1940,
+              "month": null,
+              "day": null,
+              "qualifier": "exact",
+              "year_to": null,
+              "original_text": null
+            }
+          },
+          "status": 201,
+          "notices": ["died_before_born"],
+          "expect": {
+            "person.birth_date.text": "1950",
+            "person.death_date.description": "1940",
+            "person.is_living": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "a name already in the tree is pointed out",
+      "steps": [
+        {
+          "call": "POST /api/persons",
+          "body": {
+            "full_name": "hassan  bin ismail",
+            "birth_date": {
+              "year": 1938,
+              "month": null,
+              "day": null,
+              "qualifier": "exact",
+              "year_to": null,
+              "original_text": null
+            }
+          },
+          "status": 201,
+          "notices": ["possible_duplicate"],
+          "expect": {
+            "person.full_name": "hassan bin ismail"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a child whose name says another father is pointed out",
+      "steps": [
+        {
+          "call": "POST /api/persons/@Hassan bin Ismail/relatives",
+          "body": {
+            "relation": "child",
+            "person": {
+              "full_name": "Ali bin Ahmad",
+              "gender": "male"
+            }
+          },
+          "status": 201,
+          "notices": ["patronymic_mismatch"],
+          "expect": {
+            "person.parents.0.full_name": "Hassan bin Ismail",
+            "person.parents.0.label": "Father"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a parent too young is pointed out",
+      "steps": [
+        {
+          "call": "POST /api/persons/@Aisyah binti Ali/relatives",
+          "body": {
+            "relation": "child",
+            "person": {
+              "full_name": "Anak Ujian",
+              "birth_date": {
+                "year": 2015,
+                "month": null,
+                "day": null,
+                "qualifier": "exact",
+                "year_to": null,
+                "original_text": null
+              }
+            }
+          },
+          "status": 201,
+          "notices": ["parent_too_young"]
+        }
+      ]
+    },
+    {
+      "name": "a new sister shares the birth parents already recorded",
+      "steps": [
+        {
+          "call": "POST /api/persons/@Zulkifli bin Hassan/relatives",
+          "body": {
+            "relation": "sibling",
+            "person": {
+              "full_name": "Ujian binti Hassan",
+              "gender": "female"
+            }
+          },
+          "status": 201,
+          "expect": {
+            "person.parents.length": 2,
+            "person.parents.0.full_name": "Hassan bin Ismail",
+            "person.parents.1.full_name": "Mariam binti Daud",
+            "person.sibling_position": "Daughter of Acan & Mariam binti Daud"
+          }
+        }
+      ]
+    },
+    {
+      "name": "birth order is set for all the children by birth, or refused",
+      "steps": [
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/children/order",
+          "body": {
+            "child_ids": ["@Karim bin Hassan", "@Aminah binti Hassan"]
+          },
+          "status": 409,
+          "code": "incomplete_order"
+        },
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/children/order",
+          "body": {
+            "child_ids": ["@Ali bin Rosli"]
+          },
+          "status": 409,
+          "code": "not_children"
+        },
+        {
+          "call": "PUT /api/persons/@Yusof bin Ismail/children/order",
+          "body": {
+            "child_ids": ["@Lina binti Zakaria"]
+          },
+          "status": 409,
+          "code": "not_by_birth"
+        },
+        {
+          "call": "PUT /api/persons/@Rahman bin Ismail/children/order",
+          "body": {
+            "child_ids": ["@Siti binti Rahman", "@Hafiz bin Rahman"]
+          },
+          "status": 409,
+          "code": "mixed_families"
+        },
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/children/order",
+          "body": {
+            "child_ids": [
+              "@Zulkifli bin Hassan",
+              "@Nor binti Hassan",
+              "@Karim bin Hassan",
+              "@Aminah binti Hassan"
+            ]
+          },
+          "status": 200,
+          "expect": {
+            "child_groups.0.children.0.id": "@Zulkifli bin Hassan",
+            "child_groups.0.children.3.id": "@Aminah binti Hassan",
+            "child_groups.0.order_decided": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "an unknown parent goes with their last link",
+      "steps": [
+        {
+          "call": "GET /api/persons/@Mariam binti Daud",
+          "status": 200,
+          "keep": {
+            "first": "parents.0.link_id"
+          }
+        },
+        {
+          "call": "DELETE /api/relationships/$first",
+          "status": 204
+        },
+        {
+          "call": "GET /api/persons/@Unknown parent",
+          "status": 200
+        },
+        {
+          "call": "GET /api/persons/@Salmah binti Daud",
+          "status": 200,
+          "keep": {
+            "last": "parents.0.link_id"
+          }
+        },
+        {
+          "call": "DELETE /api/relationships/$last",
+          "status": 204
+        },
+        {
+          "call": "GET /api/persons/@Unknown parent",
+          "status": 404
+        }
+      ]
+    },
+    {
+      "name": "a marriage has a status but no kind",
+      "steps": [
+        {
+          "call": "GET /api/persons/@Hassan bin Ismail",
+          "status": 200,
+          "keep": {
+            "marriage": "spouses.0.link_id",
+            "parent": "parents.0.link_id"
+          }
+        },
+        {
+          "call": "PATCH /api/relationships/$marriage",
+          "body": {
+            "kind": "adoptive"
+          },
+          "status": 409,
+          "code": "not_parent_link"
+        },
+        {
+          "call": "PATCH /api/relationships/$parent",
+          "body": {
+            "status": "married"
+          },
+          "status": 409,
+          "code": "not_a_marriage"
+        },
+        {
+          "call": "PATCH /api/relationships/$marriage",
+          "body": {
+            "status": "divorced"
+          },
+          "status": 200,
+          "expect": {
+            "links.0.status": "divorced"
+          }
+        },
+        {
+          "call": "GET /api/persons/@Hassan bin Ismail",
+          "status": 200,
+          "expect": {
+            "spouses.0.label": "Former wife"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a link turned round is checked again, and a refusal changes nothing",
+      "steps": [
+        {
+          "call": "GET /api/persons/@Aminah binti Hassan",
+          "status": 200,
+          "keep": {
+            "link": "parents.0.link_id"
+          },
+          "expect": {
+            "parents.0.full_name": "Hassan bin Ismail"
+          }
+        },
+        {
+          "call": "PATCH /api/relationships/$link",
+          "body": {
+            "swap": true
+          },
+          "status": 409,
+          "code": "third_parent"
+        },
+        {
+          "call": "GET /api/persons/@Aminah binti Hassan",
+          "status": 200,
+          "expect": {
+            "parents.0.full_name": "Hassan bin Ismail",
+            "parents.0.link_id": "$link"
+          }
+        },
+        {
+          "call": "GET /api/persons/@Hassan bin Ismail",
+          "status": 200,
+          "keep": {
+            "father": "parents.0.link_id"
+          }
+        },
+        {
+          "call": "PATCH /api/relationships/$father",
+          "body": {
+            "swap": true
+          },
+          "status": 200,
+          "expect": {
+            "links.0.source": "@Hassan bin Ismail",
+            "links.0.target": "@Ismail bin Ahmad",
+            "links.0.id": "$father"
+          }
+        }
+      ]
+    },
+    {
+      "name": "only an unknown parent is filled in",
+      "steps": [
+        {
+          "call": "POST /api/persons/@Hassan bin Ismail/fill-in",
+          "body": {
+            "existing": "@Ismail bin Ahmad"
+          },
+          "status": 409,
+          "code": "not_unknown"
+        },
+        {
+          "call": "POST /api/persons/@Unknown parent/fill-in",
+          "body": {
+            "person": {
+              "full_name": "Daud bin Ahmad",
+              "gender": "male"
+            }
+          },
+          "status": 200,
+          "notices": [],
+          "expect": {
+            "person.full_name": "Daud bin Ahmad",
+            "person.child_groups.0.children.length": 2
+          }
+        },
+        {
+          "call": "GET /api/persons/@Unknown parent",
+          "status": 404
+        }
+      ]
+    },
+    {
+      "name": "a quick fix changes only what it's given",
+      "steps": [
+        {
+          "call": "PATCH /api/persons/@Hassan bin Ismail",
+          "body": {},
+          "status": 409,
+          "code": "nothing_to_change"
+        },
+        {
+          "call": "PATCH /api/persons/@Zulkifli bin Hassan",
+          "body": {
+            "residence": {
+              "town": "Ipoh",
+              "state": "Perak",
+              "country": "Malaysia"
+            }
+          },
+          "status": 200,
+          "expect": {
+            "person.residence.town": "Ipoh",
+            "person.birth_date.text": "10/9/1980"
+          }
+        },
+        {
+          "call": "PATCH /api/persons/@Zulkifli bin Hassan",
+          "body": {
+            "residence": null
+          },
+          "status": 200,
+          "expect": {
+            "person.residence": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a date that isn't one is refused",
+      "steps": [
+        {
+          "call": "PUT /api/persons/@Zulkifli bin Hassan",
+          "body": {
+            "full_name": "Zulkifli bin Hassan",
+            "gender": "male",
+            "birth_date": {
+              "year": 1980,
+              "month": 2,
+              "day": 30,
+              "qualifier": "exact",
+              "year_to": null,
+              "original_text": null
+            }
+          },
+          "status": 422
+        },
+        {
+          "call": "PUT /api/persons/@Zulkifli bin Hassan",
+          "body": {
+            "full_name": "  Zulkifli   bin Hassan ",
+            "nickname": "  ",
+            "gender": "male",
+            "occupation": "Guru"
+          },
+          "status": 200,
+          "expect": {
+            "person.full_name": "Zulkifli bin Hassan",
+            "person.nickname": null,
+            "person.occupation": "Guru",
+            "person.birth_date": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "the Trash keeps someone with their links",
+      "steps": [
+        {
+          "call": "DELETE /api/persons/@Zulkifli bin Hassan",
+          "status": 200,
+          "keep": {
+            "entry": "entry"
+          },
+          "expect": {
+            "full_name": "Zulkifli bin Hassan",
+            "link_count": 2
+          }
+        },
+        {
+          "call": "GET /api/persons/@Zulkifli bin Hassan",
+          "status": 404
+        },
+        {
+          "call": "POST /api/trash/$entry/restore",
+          "status": 200,
+          "expect": {
+            "restored_links": 2,
+            "skipped_links": 0,
+            "person.parents.length": 2
+          }
+        },
+        {
+          "call": "POST /api/trash/$entry/restore",
+          "status": 404
+        }
+      ]
+    },
+    {
+      "name": "undo and redo, the latest step only",
+      "steps": [
+        {
+          "call": "POST /api/persons",
+          "body": {
+            "full_name": "Ujian Buat Asal"
+          },
+          "status": 201,
+          "keep": {
+            "new": "person.id"
+          }
+        },
+        {
+          "call": "GET /api/history",
+          "status": 200,
+          "keep": {
+            "step": "undo.id"
+          },
+          "expect": {
+            "undo.label": "Add Ujian Buat Asal",
+            "redo": null
+          }
+        },
+        {
+          "call": "POST /api/history/undo?step=not-the-latest",
+          "status": 409,
+          "code": "not_latest"
+        },
+        {
+          "call": "POST /api/history/undo?step=$step",
+          "status": 200,
+          "expect": {
+            "done.label": "Add Ujian Buat Asal",
+            "history.undo": null,
+            "history.redo.label": "Add Ujian Buat Asal"
+          }
+        },
+        {
+          "call": "GET /api/persons/$new",
+          "status": 404
+        },
+        {
+          "call": "POST /api/history/redo",
+          "status": 200
+        },
+        {
+          "call": "GET /api/persons/$new",
+          "status": 200,
+          "expect": {
+            "full_name": "Ujian Buat Asal"
+          }
+        },
+        {
+          "call": "DELETE /api/persons/$new",
+          "status": 200
+        },
+        {
+          "call": "GET /api/history",
+          "status": 200,
+          "expect": {
+            "undo.label": "Move Ujian Buat Asal to the Trash"
+          }
+        },
+        {
+          "call": "POST /api/history/undo",
+          "status": 200
+        },
+        {
+          "call": "GET /api/persons/$new",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "name": "a story is written as the app writes it, and a save from before a change is refused",
+      "steps": [
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/biography",
+          "body": {
+            "story": "  He worked on the railway for thirty years.  ",
+            "sources": ["  Talk with   Nor, 2019 ", " "],
+            "base_version": "none"
+          },
+          "status": 200,
+          "expect": {
+            "story": "He worked on the railway for thirty years.",
+            "sources": ["Talk with Nor, 2019"],
+            "version": "4c845aff8615cdcf"
+          },
+          "keep": {
+            "version": "version"
+          }
+        },
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/biography",
+          "body": {
+            "story": "Written elsewhere first.",
+            "sources": [],
+            "base_version": "none"
+          },
+          "status": 409,
+          "code": "changed_outside"
+        },
+        {
+          "call": "GET /api/persons/@Hassan bin Ismail/biography",
+          "status": 200,
+          "expect": {
+            "story": "He worked on the railway for thirty years.",
+            "version": "$version"
+          }
+        },
+        {
+          "call": "PUT /api/persons/@Hassan bin Ismail/biography",
+          "body": {
+            "story": "",
+            "sources": [],
+            "base_version": "$version"
+          },
+          "status": 200,
+          "expect": {
+            "story": "",
+            "sources": [],
+            "version": "none"
+          }
+        }
+      ]
+    }
+  ]
+}

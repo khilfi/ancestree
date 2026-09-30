@@ -1,0 +1,42 @@
+# Local settings and secrets
+.env
+*.local
+
+# Real family data never goes in git.
+# (Fictional test fixtures live under backend/tests/fixtures and backend/src/ancestree/seed.)
+/data/
+/imports/
+/*.csv
+/*.drawio
+.obsidian/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# The desktop app's builds
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# Node
+node_modules/
+frontend/dist/
+# The view-only copy's app, built when a copy is made
+frontend/dist-viewer/
+*.tsbuildinfo
+
+# Editors and OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

@@ -1,0 +1,189 @@
+# Istilah kekerabatan Bahasa Melayu: the relationship finder's Malay words, each
+# chosen from its sources.
+#
+# The keys are exactly those of en.yaml: read the notes at the top of that file. Answers
+# stay English sentences with these words in them: "Hassan is Ali's pak long".
+#
+# Malay makes distinctions English doesn't, and the entries use them:
+#   by_seniority    older or younger: abang, kakak, adik; abang ipar, adik ipar
+#   by_birth_order  an uncle's or aunt's own place among their brothers and sisters:
+#                   pak long, mak ngah … pak su, from the family's titles
+# The everyday words come first, as the family says them (ayah, emak, pak cik); formal and
+# regional words are in the dictionary.
+
+language: Bahasa Melayu
+
+# The birth-order titles, until Settings → Kinship words says otherwise.
+titles:
+  places: [long, ngah, lang]
+  youngest: su
+
+grammar:
+  possessive: "{thing} {owner}"         # adik lelaki ibu tiri: the owner comes last
+  side: "{term} sebelah {side}"         # nenek sebelah ayah
+  seniority: "{term} {seniority}"       # saudara angkat tua: only where no word says it
+  half: "{term} sebapa atau seibu"      # a half-sibling, the shared parent not known
+  half_paternal: "{term} sebapa"        # abang sebapa: sharing the father
+  half_maternal: "{term} seibu"         # kakak seibu: sharing the mother
+  former: "bekas {term}"                # bekas isteri
+  kind: "{term} {kind}"                 # abang angkat
+  distant: saudara jauh
+
+words:
+  paternal: ayah
+  maternal: emak
+  elder: tua
+  younger: muda
+
+blood:
+  "1,0": {male: ayah, female: emak, unknown: orang tua}
+  "2,0": {male: datuk, female: nenek, unknown: datuk atau nenek}
+  "3,0": {any: moyang}                  # Kamus Dewan: bapa atau ibu kpd datuk
+  "4,0": {any: buyut}                   # Kamus Dewan: ibu bapa kpd moyang
+  "0,1": {male: anak lelaki, female: anak perempuan, unknown: anak}
+  "0,2": {any: cucu}
+  "0,3": {any: cicit}                   # Kamus Dewan: anak kpd cucu
+  "0,4": {any: piut}                    # Kamus Dewan: cucu kpd cucu
+  "0,5": {any: oneng-oneng}             # Kamus Dewan: anak piut
+  "1,1":
+    male: saudara lelaki
+    female: saudara perempuan
+    unknown: saudara
+    by_seniority:
+      elder: {male: abang, female: kakak, unknown: abang atau kakak}
+      younger: {male: adik lelaki, female: adik perempuan, unknown: adik}
+  "2,1":
+    male: pak cik
+    female: mak cik
+    unknown: bapa atau emak saudara
+    by_birth_order:
+      titled: {male: "pak {title}", female: "mak {title}"}
+  "3,1": {male: datuk saudara, female: nenek saudara, unknown: datuk atau nenek saudara}
+  "1,2": {any: anak saudara}
+  "1,3": {any: cucu saudara}
+  "1,4": {any: cicit saudara}
+  "2,2": {any: sepupu}                  # Kamus Dewan: saudara sedatuk
+  "3,3": {any: dua pupu}                # Kamus Dewan: saudara semoyang
+  "4,4": {any: tiga pupu}
+
+# Beyond the entries above. Malay has no words for a parent's cousin or a cousin's child:
+# those are said in pieces, "sepupu emak", "anak sepupu", like far great-uncles.
+patterns:
+  ancestor: {any: nenek moyang}         # five generations up and further
+  descendant: {any: piut-miut}          # Kamus Dewan: keturunan yg sudah jauh
+  uncle: ""
+  nephew: ""
+  cousin: "{degree}"
+  removed: ""
+  degrees: [sepupu, dua pupu, tiga pupu]
+  degrees_beyond: saudara jauh          # Kamus Dewan: a distant relative
+  times: []
+  times_beyond: ""
+
+marriage:
+  "=": {male: suami, female: isteri, unknown: pasangan}
+
+in_law:
+  "=u": {male: bapa mertua, female: emak mertua, unknown: mertua}
+  "d=": {any: menantu}
+  "=ud":
+    any: ipar
+    by_seniority:
+      elder: {male: abang ipar, female: kakak ipar}
+      younger: {any: adik ipar}
+  "ud=":
+    any: ipar
+    by_seniority:
+      elder: {male: abang ipar, female: kakak ipar}
+      younger: {any: adik ipar}
+  "=ud=": {any: biras}                  # Kamus Dewan: two people who married two siblings
+  "d=u": {any: besan}                   # Kamus Dewan: ibu bapa kpd menantu
+  "==": {female: madu}                  # Kamus Dewan: another wife of one's husband
+  "uud=":                               # an uncle's wife takes his title: Mak Long
+    male: pak cik
+    female: mak cik
+    unknown: bapa atau emak saudara
+    by_birth_order:
+      titled: {male: "pak {title}", female: "mak {title}"}
+  "dd=": {any: cucu menantu}
+
+step:
+  "u=": {male: bapa tiri, female: emak tiri, unknown: ibu atau bapa tiri}
+  "=d": {any: anak tiri}
+  "u=d":
+    any: saudara tiri
+    by_seniority:
+      elder: {male: abang tiri, female: kakak tiri}
+      younger: {any: adik tiri}
+
+# Adoptive, foster and any other kinds: the words set in Settings -> Relationship kinds.
+kinds: settings
+
+# What only the Kinship dictionary shows, by the rows of dictionary.yaml: other words
+# (`also`), address words, notes; `word` for rows about words rather than one relation;
+# `descr` where the language describes the relation instead of having a word for it.
+dictionary:
+  father: {also: [bapa (formal), abah], address: [Ayah, Abah]}
+  mother: {also: [mak, ibu (formal), umi, mama], address: [Mak, Emak, Ibu]}
+  parent: {also: [ibu bapa (both parents)]}
+  grandfather: {also: [atuk, tok], address: [Tok, Atuk], note: "Everyday words differ from state to state."}
+  grandmother: {also: [nek, tok], address: [Nenek, Nek, Tok]}
+  grandmother-paternal: {also: [nenek sebelah bapa]}
+  great-grandparent: {note: "Kamus Dewan: bapa atau ibu kpd datuk."}
+  great-grandparent-2: {note: "Kamus Dewan: ibu bapa kpd moyang."}
+  great-grandparent-3: {also: [cakawari, cilawagi (archaic)], note: "Kamus Dewan has cakawari for the generation above buyut, marked archaic; answers say nenek moyang."}
+  son: {address: [his birth-order name, e.g. Along, or his name]}
+  daughter: {address: [her birth-order name, e.g. Angah, or her name]}
+  great-grandchild: {note: "Kamus Dewan: anak kpd cucu."}
+  great-grandchild-2: {note: "Kamus Dewan: cucu kpd cucu."}
+  great-grandchild-3: {note: "Kamus Dewan: anak piut."}
+  great-grandchild-4: {note: "Kamus Dewan: keturunan yg sudah jauh, distant descendants."}
+  brother-elder: {address: [Abang, Bang, Along … by his place]}
+  sister-elder: {address: [Kakak, Kak, Kak Long … by her place]}
+  brother-younger: {address: [Adik, Dik, or his name]}
+  sister-younger: {address: [Adik, Dik, or her name]}
+  brother: {note: "Kamus Dewan's saudara covers half-brothers and half-sisters too."}
+  half-brother-paternal: {also: [abang tiri (loosely)], note: "tiri properly means step-; sebapa and seibu say which parent is shared."}
+  full-siblings: {word: saudara kandung}
+  twins: {word: kembar}
+  order-eldest: {word: sulung, also: [long, along]}
+  order-second: {word: ngah, also: [angah], note: "Kamus Dewan: anak yg kedua (from tengah, middle)."}
+  order-third: {word: alang, also: [lang], note: "Kamus Dewan: a name for the third child. Some families say uda."}
+  order-later: {word: "andak, anjang, teh, cik … (by region)", note: "Kamus Dewan gives andak for the fourth or fifth. Perak: Andak, Anjang, Teh; another list: Ateh, Anjang, Atam, Andak, Acik. Set your family's titles in Settings -> Kinship words."}
+  order-middle: {word: ngah}
+  order-youngest: {word: bongsu, also: [su, busu, usu, cu, ucu], note: "Kamus Dewan: busu, the youngest uncle, aunt or child."}
+  uncle-elder: {also: [pak long, pak ngah … by his place, bapa saudara (formal)], address: [Pak Long, Pak Ngah, Pak Cik]}
+  aunt-elder: {also: [mak long, mak ngah … by her place, emak saudara (formal), ibu saudara (formal)], address: [Mak Long, Mak Ngah, Mak Cik]}
+  uncle-younger: {also: [pak su … by his place, bapa saudara (formal)], address: [Pak Su, Pak Cik]}
+  aunt-younger: {also: [mak su … by her place, emak saudara (formal)], address: [Mak Su, Mak Cik]}
+  uncle-eldest: {note: "The title is his own place among his brothers and sisters, your parent included: if your father is the eldest, his next brother is Pak Ngah."}
+  aunt-youngest: {also: [mak busu, mak usu, mak cu]}
+  uncle: {also: [bapa saudara (formal)], note: "The general word, until his place among his brothers and sisters is known."}
+  aunt-by-marriage: {note: "An uncle's wife takes his title: Pak Long's wife is Mak Long."}
+  uncle-by-marriage: {note: "An aunt's husband takes her title."}
+  nephew: {also: [anak buah (everyday)]}
+  niece: {also: [anak buah (everyday)]}
+  great-grandnephew: {descr: true}
+  cousin-1: {note: "Kamus Dewan: saudara sedatuk, sharing grandparents."}
+  cousin-2: {note: "Kamus Dewan: saudara semoyang, sharing great-grandparents."}
+  cousin-3: {also: [saudara sebuyut]}
+  cousin-4: {note: "Kamus Dewan: saudara jauh, a distant relative."}
+  cousin-of-parent: {descr: true, address: [Pak Cik, Mak Cik]}
+  child-of-cousin: {descr: true, note: "A first cousin's grandchild is cucu pupu (Kamus Dewan)."}
+  cousins-central-java: {word: null}
+  husband: {address: [Abang, Bang]}
+  co-wife: {note: "Kamus Dewan: wanita lain yg menjadi isteri kpd suami sendiri."}
+  father-in-law: {also: [bapa mentua (Kamus Dewan's spelling)]}
+  mother-in-law: {also: [ibu mertua, emak mentua]}
+  sibling-in-law-elder: {note: "ipar follows the sibling in between: your husband's older brother is abang ipar, his younger one adik ipar."}
+  co-sibling-in-law: {note: "Kamus Dewan: the tie between two people who married two siblings."}
+  co-parent-in-law: {note: "Kamus Dewan: ibu bapa kpd menantu."}
+  stepmother: {also: [ibu tiri]}
+  foster-mother: {note: "Malay uses angkat for fostering as well as adoption."}
+  milk-mother: {word: ibu susuan}
+  milk-sibling: {word: saudara susuan, also: [saudara susu, saudara setetek], note: "In Islam, milk kinship bars marriage as blood kinship does."}
+  family: {word: keluarga}
+  relatives: {word: saudara-mara, also: [sanak saudara]}
+  ancestors: {word: nenek moyang}
+  descendants: {word: anak cucu, also: [keturunan]}
+  distant-in-law: {word: null}

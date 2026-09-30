@@ -1,0 +1,37 @@
+# AncesTree local services.
+# Every port is bound to 127.0.0.1, so nothing is reachable from other devices.
+# Values such as NEO4J_PASSWORD come from the .env file next to this one.
+name: ancestree
+
+services:
+  neo4j:
+    image: neo4j:2026.08.1-community
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7474:7474" # Neo4j Browser, for looking at the data directly
+      - "127.0.0.1:7687:7687" # Bolt: the backend connects here
+    environment:
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}"
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 256m
+      # Nothing reported to Neo4j: neither the server's anonymous usage data
+      # nor Neo4j Browser's product analytics. Nor any
+      # fleet discovery broadcasts, or monitoring through Neo4j Aura.
+      NEO4J_dbms_usage__report_enabled: "false"
+      NEO4J_client_allow__telemetry: "false"
+      NEO4J_server_fleet__discovery_enabled: "false"
+      NEO4J_dbms_fleet__manager_enabled: "false"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${NEO4J_AUTH#neo4j/}\" 'RETURN 1' > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 15s
+
+volumes:
+  neo4j-data:
+  neo4j-logs:

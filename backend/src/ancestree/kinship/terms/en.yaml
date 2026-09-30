@@ -1,0 +1,148 @@
+# The relationship finder's English words.
+#
+# Keys describe a relationship's structure, never English words, so ms.yaml and jv.yaml use
+# the very same keys. The relationship is always B's, as seen from A: "B is A's ...".
+#
+#   blood "m,n"   A climbs m generations to the nearest shared ancestor, and B is n
+#                 generations below it. "2,1" is a parent's sibling; "2,2" a first cousin.
+#   in_law, step  the shape of the route: u = to a parent, d = to a child, = to a spouse.
+#                 "=u" is a spouse's parent; "u=" is a parent's spouse; "==" a spouse's
+#                 other spouse.
+#
+# An entry gives one word per gender of B: male, female, and unknown (the neutral word, used
+# whenever the gender isn't recorded). "any" suits every gender. Where a language's word
+# depends on more than gender, an entry can also have (the most specific wins):
+#   by_birth_order:  B's place among B's own brothers and sisters: "eldest", "second",
+#                    "third" ... "youngest", then "other"; or "titled", a template such as
+#                    "pak {title}" filled with the family's birth-order titles (Malay, D14)
+#   by_seniority:    {elder: ..., younger: ...}: whether B's line is the elder: B against
+#                    A (siblings), against A's parent (uncles), B's parent against A
+#                    (nephews), their parents (cousins); for in-laws, the sibling in between
+# each either one word, or split by gender: {elder: {male: ..., female: ...}}.
+# Where a language has no word, the relation is said in pieces ("wife's sister's husband").
+#
+# `dictionary` (at the end) adds what only the Kinship dictionary shows, by the rows of
+# dictionary.yaml.
+
+language: English
+
+grammar:
+  sentence: "{b} is {a}'s {term}"        # Siti is Ali's aunt
+  possessive: "{owner}'s {thing}"       # stepmother's younger brother
+  side: "{side} {term}"                 # maternal grandmother
+  seniority: "{seniority} {term}"       # elder brother
+  half: "half-{term}"                   # half-sister (half_paternal / half_maternal if a
+                                        # language says which parent is shared)
+  former: "former {term}"               # former wife (divorced)
+  kind: "{kind} {term}"                 # adoptive brother
+  distant: "distant relative by marriage"
+  nth: english                          # 2nd, 3rd, 21st: or a template such as "ke-{n}"
+
+words:
+  paternal: paternal
+  maternal: maternal
+  elder: elder
+  younger: younger
+
+blood:
+  "1,0": {male: father, female: mother, unknown: parent}
+  "2,0": {male: grandfather, female: grandmother, unknown: grandparent}
+  "3,0": {male: great-grandfather, female: great-grandmother, unknown: great-grandparent}
+  "0,1": {male: son, female: daughter, unknown: child}
+  "0,2": {male: grandson, female: granddaughter, unknown: grandchild}
+  "0,3": {male: great-grandson, female: great-granddaughter, unknown: great-grandchild}
+  "1,1": {male: brother, female: sister, unknown: sibling}
+  "2,1": {male: uncle, female: aunt, unknown: "parent's sibling"}
+  "3,1": {male: great-uncle, female: great-aunt, unknown: "grandparent's sibling"}
+  "1,2": {male: nephew, female: niece, unknown: "sibling's child"}
+  "1,3": {male: grandnephew, female: grandniece, unknown: "sibling's grandchild"}
+  "1,4": {male: great-grandnephew, female: great-grandniece, unknown: "sibling's great-grandchild"}
+  "2,2": {any: first cousin}
+  "3,3": {any: second cousin}
+  "4,4": {any: third cousin}
+
+# Any distance the table above doesn't list. {nth} is 2nd, 3rd... (see grammar.nth);
+# {ancestor} and {descendant} are the neutral words for the generation in between.
+patterns:
+  ancestor:                             # 4 or more generations up: "2nd great-grandfather"
+    male: "{nth} great-grandfather"
+    female: "{nth} great-grandmother"
+    unknown: "{nth} great-grandparent"
+  descendant:                           # 4 or more generations down
+    male: "{nth} great-grandson"
+    female: "{nth} great-granddaughter"
+    unknown: "{nth} great-grandchild"
+  uncle:                                # a great-grandparent's sibling, and further up
+    male: "{nth} great-uncle"
+    female: "{nth} great-aunt"
+    unknown: "{ancestor}'s sibling"
+  nephew:                               # a sibling's great-great-grandchild, and further down
+    male: "{nth} great-grandnephew"
+    female: "{nth} great-grandniece"
+    unknown: "sibling's {descendant}"
+  cousin: "{degree} cousin"             # the degree is one less than the smaller count
+  removed: "{cousin} {times} removed"   # removed: the difference between the counts
+  degrees: [first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth]
+  degrees_beyond: "{nth}"
+  times: [once, twice, three times, four times, five times, six times, seven times,
+          eight times, nine times, ten times]
+  times_beyond: "{n} times"
+
+marriage:
+  "=": {male: husband, female: wife, unknown: spouse}
+
+in_law:
+  "=u": {male: father-in-law, female: mother-in-law, unknown: parent-in-law}
+  "d=": {male: son-in-law, female: daughter-in-law, unknown: child-in-law}
+  "=ud": {male: brother-in-law, female: sister-in-law, unknown: sibling-in-law}
+  "ud=": {male: brother-in-law, female: sister-in-law, unknown: sibling-in-law}
+  "=ud=": {}                            # no English word: said as "wife's sister's husband"
+  "d=u": {any: co-parent-in-law}        # a child's spouse's parent
+  "==": {female: co-wife}               # another wife of one's husband; others in pieces
+  "uud=": {male: uncle by marriage, female: aunt by marriage, unknown: "parent's sibling's spouse"}
+  "dd=": {male: grandson-in-law, female: granddaughter-in-law, unknown: grandchild-in-law}
+
+step:
+  "u=": {male: stepfather, female: stepmother, unknown: stepparent}
+  "=d": {male: stepson, female: stepdaughter, unknown: stepchild}
+  "u=d": {male: stepbrother, female: stepsister, unknown: stepsibling}
+
+# Adoptive, foster and any other kinds: English uses each kind's own words, from
+# Settings -> Relationship kinds.
+kinds: settings
+
+# What only the Kinship dictionary shows, by the rows of dictionary.yaml: other words
+# (`also`), notes; `word` for rows about words rather than one relation (null: no word).
+dictionary:
+  parent: {note: "The neutral word, until a gender is recorded."}
+  grandmother-paternal: {also: [grandmother on your father's side]}
+  great-grandparent-2: {also: [great-great-grandparent]}
+  great-grandparent-3: {also: [great-great-great-grandparent]}
+  great-grandchild-2: {also: [great-great-grandchild]}
+  great-grandchild-3: {also: [great-great-great-grandchild]}
+  brother: {note: "English says elder or younger only when it matters; the word itself doesn't change."}
+  full-siblings: {word: full brothers and sisters}
+  twins: {word: twins}
+  order-eldest: {word: eldest}
+  order-second: {word: second}
+  order-third: {word: third}
+  order-later: {word: "fourth, fifth …"}
+  order-middle: {word: middle child}
+  order-youngest: {word: youngest}
+  uncle-eldest: {note: "English has no birth-order words for uncles and aunts."}
+  great-uncle: {also: [grand-uncle, granduncle]}
+  great-aunt: {also: [grand-aunt, grandaunt]}
+  grandnephew: {also: [great-nephew, great-niece]}
+  cousin-1: {note: "Cousins are counted by the ancestors they share: grandparents for first cousins, great-grandparents for second."}
+  cousin-of-parent: {note: "\"Removed\" counts the generations between the two cousins."}
+  cousins-central-java: {word: null}
+  co-wife: {note: "The anthropologists' word; everyday English says \"husband's other wife\"."}
+  co-sibling-in-law: {note: "English has no single word; some say co-brother-in-law or co-sister-in-law."}
+  co-parent-in-law: {note: "Rarely heard in everyday English."}
+  milk-mother: {word: milk mother, also: [wet nurse]}
+  milk-sibling: {word: milk brother / milk sister}
+  family: {word: family}
+  relatives: {word: relatives, also: [kin]}
+  ancestors: {word: ancestors, also: [forebears]}
+  descendants: {word: descendants}
+  distant-in-law: {word: null}

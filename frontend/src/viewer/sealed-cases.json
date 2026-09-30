@@ -1,0 +1,25 @@
+{
+  "about": "A family sealed by the backend (exchange/copies.py seal), open and locked, for both sides' tests: the copy's page must open what the backend seals.",
+  "password": "kunci rahsia",
+  "snapshot": {
+    "about": {
+      "title": "Keluarga Contoh",
+      "people": 2
+    },
+    "names": ["Siti binti Rahman", "Zul", "Dato' Hamid bin Kassim"],
+    "note": "</script> & \u2028 <!-- ok"
+  },
+  "open": {
+    "format": 1,
+    "gzip": "H4sIAAAAAAAC/xWNMQ7CMAxFr2I8wNIKiTGqWGBA6gYbiMGFiFokcdQ4U1WJ43AuTkKyvOW/pz8jDZIVzYzK6iwa7K3LNL0IDhJURmwwWol12i0NBvI2obnhhZVh4FB4ptFTKOI1u8IjqWzgRJ6fVYCeUmKP9xKL1odumx4TR93DGn6fL3SrtgV54/IHKNSo6o4AAAA="
+  },
+  "locked": {
+    "format": 1,
+    "locked": {
+      "salt": "DBSWao2mryzderlquOVQmQ==",
+      "iv": "8fDaa8zczAnkQv51",
+      "iterations": 1000,
+      "data": "3BhlOAa33g8F9+M+tmexDZYdDAeDnhVme3nBBWsxKFGYw0dIY/LgiAqgmP4L88u8OFwrouUpBACyQFXLaUzQyht6Z1R9ggNgWtEa11hH4a83+CtvjSFTAFKgkZisXlJDv5Jhsu1kzNgJNKwUxVMs6I8QG+MEV448tM+xoI4DXewambEP5rA0JwDgKdv/5IYEHDCs3p309hR4livTHhy/4YwmFD94"
+    }
+  }
+}
