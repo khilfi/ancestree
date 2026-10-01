@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router";
+import { useFamilyFolder } from "@/api/familyFolder";
 import { useTrash } from "@/api/queries";
 import { useDatabaseDown } from "@/app/DatabaseWarning";
 import { cn } from "@/lib/utils";
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { to: "kinship", label: "Kinship words" },
   { to: "me", label: "Me" },
+  { to: "family-folder", label: "Family folder" },
   { to: "kinds", label: "Relationship kinds" },
   { to: "missing", label: "What's missing" },
   { to: "import", label: "Import" },
@@ -27,6 +29,11 @@ function sectionClass({ isActive }: { isActive: boolean }): string {
  *  the housekeeping that used to sit in the top bar. */
 export function SettingsPage() {
   const inTrash = useTrash().data?.length ?? 0;
+  const folder = useFamilyFolder().data;
+  // For the keeper: computers asking to join, and changes waiting from relatives'.
+  const asking = folder?.asking?.length ?? 0;
+  const changes = folder?.changes?.length ?? 0;
+  const answered = folder?.answers?.length ?? 0; // a relative's: the keeper's answers, unread
   const down = useDatabaseDown();
 
   return (
@@ -39,6 +46,20 @@ export function SettingsPage() {
         {SECTIONS.map((section) => (
           <NavLink key={section.to} to={section.to} className={sectionClass}>
             {section.label}
+            {section.to === "family-folder" && asking + changes + answered > 0 && (
+              <span
+                className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums"
+                title={[
+                  asking > 0 && `${asking} asking to join`,
+                  changes > 0 && `${changes} with changes waiting`,
+                  answered > 0 && "the keeper has answered",
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              >
+                {asking + changes + answered}
+              </span>
+            )}
             {section.to === "trash" && inTrash > 0 && (
               <span className="text-xs text-stone-500 tabular-nums">{inTrash}</span>
             )}

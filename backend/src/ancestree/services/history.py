@@ -8,6 +8,9 @@ so their photos and stories go and come with them.
 Only the latest step can be undone, and only while what it touched is still as it left it.
 Anything else is refused and the history is cleared: a change made some other way is never
 overwritten.
+
+Each step, and each undoing or redoing of one, is also told to `journal`, when there is one:
+who changed whom, kept beside each person.
 """
 
 import asyncio
@@ -109,6 +112,25 @@ class Step:
     # People a change moved to the Trash after the rest of it, such as an import's removals
     # (M19): undone through the Trash, before the rest; redone after it.
     removed: list[str] = field(default_factory=list)
+    arranging: bool = False  # only where people sit on the tree changed
+    # The relative's computer that sent the changes: {computer, email, sent}.
+    sent_by: dict[str, str] | None = None
+
+    def whom(self) -> set[str]:
+        """Everyone the step changed: people, both ends of each link, and who went to the
+        Trash or came back; never an unknown parent."""
+        people = {
+            pid
+            for pid, image in self.people.items()
+            if not ((image.after or image.before or {}).get("placeholder"))
+        }
+        for link in self.links.values():
+            for end in (link.before, link.after):
+                if end is not None:
+                    people |= {str(end["source"]), str(end["target"])}
+        if self.trash is not None:
+            people.add(self.trash[1])
+        return people | set(self.removed)
 
     def changes_anything(self) -> bool:
         return bool(
@@ -145,6 +167,7 @@ class Recorder:
         self.ends: dict[str, tuple[str, str]] = {}  # the links asked about: who they joined
         # People to move to the Trash once the rest is done, in the same step.
         self.removing: list[str] = []
+        self.sent_by: dict[str, str] | None = None  # changes a relative's computer sent
 
     def name(self, person_id: object) -> str:
         """Their name as it was before the change (or as created by it)."""
@@ -174,6 +197,8 @@ class History:
         self._redo: list[Step] = []
         self._limit = limit
         self.lock = asyncio.Lock()  # one change at a time, so steps never mix
+        # Told of each step done ("done"), undone ("undone") or redone ("redone").
+        self.journal: Callable[[Step, str], None] | None = None
 
     def view(self) -> HistoryView:
         return HistoryView(
@@ -190,6 +215,11 @@ class History:
             self._undo.append(step)
             del self._undo[: -self._limit]
             self._redo.clear()
+            self._tell(step, "done")
+
+    def _tell(self, step: Step, how: str) -> None:
+        if self.journal is not None and not step.arranging:
+            self.journal(step, how)
 
     def change(
         self, ctx: Context, people: Iterable[object] = (), links: Iterable[object] = ()
@@ -235,6 +265,8 @@ class History:
                     step.removed.append(pid)
             finally:
                 step.label = recorder.label
+                step.arranging = recorder.only is not None
+                step.sent_by = recorder.sent_by
                 self._push(step)  # all that was done, even if a removal failed
 
     @asynccontextmanager
@@ -295,6 +327,7 @@ class History:
                 raise
             source.pop()
             target.append(step)
+            self._tell(step, "redone" if forward else "undone")
             return step
 
 
@@ -435,11 +468,16 @@ async def _check_graph(tx: Tx, step: Step, *, forward: bool) -> None:
 
 
 async def _apply_graph(ctx: Context, step: Step, *, forward: bool) -> None:
-    # Anyone it would take out must have nothing of their own yet, such as a photo.
+    # Anyone it would take out must have nothing of their own yet, such as a photo. person.json
+    # and the journal only say who they are and who changed them.
     going = [pid for pid, image in step.people.items() if image.get(forward)[1] is None]
     for pid in going:
         folder = ctx.data_dir / "people" / pid
-        own = [p for p in folder.rglob("*") if p.is_file() and p.name != "person.json"]
+        own = [
+            p
+            for p in folder.rglob("*")
+            if p.is_file() and p.name not in ("person.json", "journal.json")
+        ]
         if folder.is_dir() and own:
             raise CantUndoError(f"{step.people[pid].name} has a photo or a story now")
 

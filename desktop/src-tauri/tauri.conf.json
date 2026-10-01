@@ -43,7 +43,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIyNkMwRkExMzY2Q0ZDMTYKUldRVy9HdzJvUTlzc3FTOXZFelRLOTA5S3ArZ3hNQnNPYjRqMWljcG1wUzNxa3NpOHRrY2VubkEK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENENkNGMjEwNUM3OEFCRTAKUldUZ3EzaGNFUEpzemZWZEtLdlI3QmY4eVVUeFdnWjZvdm9sMXZtU3kwT05KcGhsVzdQWWtxbHMK",
       "endpoints": ["https://raw.githubusercontent.com/khilfi/ancestree/main/updates/latest.json"],
       "requireSignedVersion": true,
       "windows": {

@@ -297,6 +297,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/persons/{person_id}/merge/{other_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Merge
+         * @description What merging someone entered twice into this person would do: rehearsed, then rolled
+         *     back. Nothing is written.
+         */
+        get: operations["preview_merge"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/persons/{person_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge Into
+         * @description Merge someone entered twice into this person: their details where this one has none,
+         *     their links through the rules, then them to the Trash. One Undo step.
+         */
+        post: operations["merge_into"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/persons/{person_id}/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Journal
+         * @description Who changed this person, and when, the newest first: as their journal keeps it, kept
+         *     by the keeper's computer and travelling with the family.
+         */
+        get: operations["get_journal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/persons/{person_id}/biography": {
         parameters: {
             query?: never;
@@ -765,6 +828,351 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/family-folder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Family Folder
+         * @description Where this computer stands: signed in or not, its part in a family folder, who's in
+         *     it, who's asking to join, and what's in the way, if anything.
+         */
+        get: operations["get_family_folder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign In To Google
+         * @description Start signing in to Google: open `url` in the browser, then watch the status.
+         */
+        post: operations["sign_in_to_google"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign Out Of Google
+         * @description Forget the sign-in here and give it back to Google. The family folder waits.
+         */
+        post: operations["sign_out_of_google"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Family Folder
+         * @description Start the family's folder in this Google account's Drive, as its keeper. The status
+         *     carries the recovery code, this once.
+         */
+        post: operations["start_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/recovery-seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recovery Code Seen
+         * @description The recovery code is kept safe: it's never shown again.
+         */
+        post: operations["recovery_code_seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Shared Family Folders
+         * @description Family folders shared with this Google account, to join.
+         */
+        get: operations["shared_family_folders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join Family Folder
+         * @description Ask to join the family in a shared folder. The status carries the code to read to the
+         *     keeper.
+         */
+        post: operations["join_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover Family Folder
+         * @description Be the family's keeper again on this computer, from the recovery code.
+         */
+        post: operations["recover_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite To Family Folder
+         * @description Share the family folder with a relative's Google account (the keeper's).
+         */
+        post: operations["invite_to_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/admit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admit To Family Folder
+         * @description Let a computer in, with a role, once its code matches (the keeper's).
+         */
+        post: operations["admit_to_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/refuse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refuse Family Folder
+         * @description Turn away a computer asking to join (the keeper's).
+         */
+        post: operations["refuse_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove From Family Folder
+         * @description Remove a computer from the family: it can't read what comes after (the keeper's).
+         */
+        post: operations["remove_from_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Family Folder
+         * @description Keep in step now, rather than within the minute.
+         */
+        post: operations["sync_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/answers-seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Family Folder Answers Seen
+         * @description The keeper's answers to this computer's changes, read: not shown again (a relative's).
+         */
+        post: operations["family_folder_answers_seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/changes/{device}/{proposal}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Family Folder Changes
+         * @description What a relative's computer sent, compared with the family it was made on and with the
+         *     tree now, for you to tick, as changes from a copy are (the keeper's). Nothing is written.
+         */
+        post: operations["review_family_folder_changes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/changes/{device}/bring-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring In Family Folder Changes
+         * @description Bring in what's ticked of a relative's computer's changes: a backup first, one Undo step,
+         *     and Take back later. It reaches everyone, and the computer hears what wasn't taken.
+         */
+        post: operations["bring_in_family_folder_changes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/changes/{device}/turn-down": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn Down Family Folder Changes
+         * @description Take none of a relative's computer's changes; it hears so, with your note.
+         */
+        post: operations["turn_down_family_folder_changes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/imports/template": {
         parameters: {
             query?: never;
@@ -987,6 +1395,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Admit */
+        Admit: {
+            /** Device */
+            device: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "trusted" | "contributor" | "viewer";
+        };
         /**
          * Anniversary
          * @description A birthday this month, or the anniversary of a death.
@@ -1187,6 +1605,25 @@ export interface components {
              * @description JSON crop in percent; centred if absent
              */
             crop?: string | null;
+        };
+        /**
+         * BringIn
+         * @description Bring in what's ticked of a computer's changes, with a note for what isn't.
+         */
+        BringIn: {
+            /** Proposal */
+            proposal: number;
+            /** Answers */
+            answers?: {
+                [key: string]: string;
+            };
+            /** Chosen */
+            chosen?: string[] | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** @enum {string} */
         ChangeKind: "add_person" | "set" | "add_link" | "remove_person" | "remove_link" | "change_link" | "fill_in" | "order" | "story" | "photo";
@@ -1495,6 +1932,46 @@ export interface components {
             this_month: components["schemas"]["Anniversary"][];
             to_fill_in: components["schemas"]["ToFillIn"];
         };
+        /** FamilyFolderStatus */
+        FamilyFolderStatus: {
+            /** Available */
+            available: boolean;
+            /** Email */
+            email: string | null;
+            /** Signing In */
+            signing_in: boolean;
+            /** Setup */
+            setup: ("keeper" | "member") | null;
+            /** Family */
+            family: string;
+            /** Role */
+            role: ("keeper" | "trusted" | "contributor" | "viewer" | "removed") | "waiting" | null;
+            /** Code */
+            code: string | null;
+            /** Members */
+            members?: components["schemas"]["FolderMember"][];
+            /** Asking */
+            asking?: components["schemas"]["FolderAsking"][];
+            /** Last Sync */
+            last_sync: string | null;
+            /** Received */
+            received: string | null;
+            /** Problem */
+            problem: string;
+            /** Recovery Code */
+            recovery_code: string | null;
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /** Sent At */
+            sent_at?: string | null;
+            /** Answers */
+            answers?: components["schemas"]["FolderAnswer"][];
+            /** Changes */
+            changes?: components["schemas"]["FolderChanges"][];
+        };
         /**
          * FamilyMap
          * @description Everyone but unknown parents, with where they live and were born, and the pins.
@@ -1513,6 +1990,75 @@ export interface components {
             person?: components["schemas"]["PersonInput"] | null;
             /** Existing */
             existing?: string | null;
+        };
+        /**
+         * FolderAnswer
+         * @description The keeper's answer to the changes this computer sent.
+         */
+        FolderAnswer: {
+            /** Proposal */
+            proposal: number;
+            /** Left Out */
+            left_out: string[];
+            /** Note */
+            note: string;
+        };
+        /**
+         * FolderAsking
+         * @description A computer asking to join: its code should match the one its owner reads out.
+         */
+        FolderAsking: {
+            /** Device */
+            device: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Code */
+            code: string;
+        };
+        /**
+         * FolderChanges
+         * @description A relative's computer with changes waiting for the keeper's review.
+         */
+        FolderChanges: {
+            /** Device */
+            device: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "keeper" | "trusted" | "contributor" | "viewer" | "removed";
+            /** Proposal */
+            proposal: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+        };
+        /**
+         * FolderMember
+         * @description A computer in the family.
+         */
+        FolderMember: {
+            /** Device */
+            device: string;
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "keeper" | "trusted" | "contributor" | "viewer" | "removed";
+            /** Email */
+            email: string;
+            /** You */
+            you: boolean;
         };
         /**
          * Gender
@@ -1907,7 +2453,7 @@ export interface components {
              * @default spreadsheet
              * @enum {string}
              */
-            kind: "spreadsheet" | "copy";
+            kind: "spreadsheet" | "copy" | "folder";
             /** File Name */
             file_name: string;
             /** For Name */
@@ -1988,6 +2534,39 @@ export interface components {
              * @default 0
              */
             photos: number;
+        };
+        /** Invite */
+        Invite: {
+            /** Email */
+            email: string;
+        };
+        /** JoinFamily */
+        JoinFamily: {
+            /** Folder */
+            folder: string;
+            /** Computer */
+            computer: string;
+        };
+        /**
+         * JournalEntry
+         * @description One change to someone, as their journal keeps it: who changed this, and when.
+         */
+        JournalEntry: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** What */
+            what: string;
+            /** By */
+            by: string;
+            /** From Computer */
+            from_computer?: string | null;
+            /** From Email */
+            from_email?: string | null;
+            /** Sent At */
+            sent_at?: string | null;
         };
         /**
          * KinExplanation
@@ -2290,6 +2869,80 @@ export interface components {
             person?: string | null;
         };
         /**
+         * MergeDetail
+         * @description A detail of the two, as the merge treats it.
+         */
+        MergeDetail: {
+            /** Label */
+            label: string;
+            /** Keep */
+            keep: string;
+            /** Other */
+            other: string;
+            /** Taken */
+            taken: boolean;
+        };
+        /**
+         * MergeLink
+         * @description A link of the one merged in, and what becomes of it.
+         */
+        MergeLink: {
+            /** Description */
+            description: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "moved" | "already" | "between" | "left_out";
+            /**
+             * Why
+             * @default
+             */
+            why: string;
+        };
+        /**
+         * MergePreview
+         * @description What merging `other` into `keep` would do. Nothing is written.
+         */
+        MergePreview: {
+            /**
+             * Keep
+             * Format: uuid
+             */
+            keep: string;
+            /** Keep Name */
+            keep_name: string;
+            /**
+             * Other
+             * Format: uuid
+             */
+            other: string;
+            /** Other Name */
+            other_name: string;
+            /** Details */
+            details: components["schemas"]["MergeDetail"][];
+            /** Links */
+            links: components["schemas"]["MergeLink"][];
+            /**
+             * Photo
+             * @enum {string}
+             */
+            photo: "none" | "kept" | "taken";
+            /**
+             * Story
+             * @enum {string}
+             */
+            story: "none" | "kept" | "taken" | "both";
+        };
+        /** MergeRequest */
+        MergeRequest: {
+            /**
+             * Other
+             * Format: uuid
+             */
+            other: string;
+        };
+        /**
          * NameCount
          * @description "Siti (3)", "Selangor (9)", with who they are.
          */
@@ -2327,6 +2980,11 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /** OneComputer */
+        OneComputer: {
+            /** Device */
+            device: string;
         };
         /**
          * Pair
@@ -2563,6 +3221,13 @@ export interface components {
             /** Positions */
             positions: components["schemas"]["Position"][];
         };
+        /** Recover */
+        Recover: {
+            /** Folder */
+            folder?: string | null;
+            /** Code */
+            code: string;
+        };
         /**
          * RelationshipCreate
          * @description Read as "`person_a` is `person_b`'s `a_is`": a is b's mother -> a_is "parent".
@@ -2658,6 +3323,16 @@ export interface components {
             skipped_links: number;
         };
         /**
+         * ReviewChanges
+         * @description The keeper's answers to the look-alike questions, so far.
+         */
+        ReviewChanges: {
+            /** Answers */
+            answers?: {
+                [key: string]: string;
+            };
+        };
+        /**
          * Seat
          * @description Where someone sits on the rings; the browser draws it.
          */
@@ -2676,6 +3351,16 @@ export interface components {
             branch: string | null;
         };
         /**
+         * SharedFolder
+         * @description A family folder someone has shared with this Google account.
+         */
+        SharedFolder: {
+            /** Id */
+            id: string;
+            /** Owner */
+            owner: string;
+        };
+        /**
          * SiblingGroup
          * @description Children of the same parents whose order isn't known yet.
          */
@@ -2685,11 +3370,23 @@ export interface components {
             /** Children */
             children: components["schemas"]["FactPerson"][];
         };
+        /** SignInStarted */
+        SignInStarted: {
+            /** Url */
+            url: string;
+        };
         /**
          * SpouseStatus
          * @enum {string}
          */
         SpouseStatus: "married" | "divorced" | "widowed";
+        /** StartFamily */
+        StartFamily: {
+            /** Family */
+            family: string;
+            /** Computer */
+            computer: string;
+        };
         /** Suggestion */
         Suggestion: {
             /**
@@ -2756,6 +3453,19 @@ export interface components {
              * @enum {string}
              */
             colours: "branch" | "generation" | "closeness" | "off";
+        };
+        /**
+         * TurnDown
+         * @description Take none of a computer's changes, with a note to say why.
+         */
+        TurnDown: {
+            /** Proposal */
+            proposal: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -3437,6 +4147,104 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_merge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+                other_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergePreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    merge_into: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonSaved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_journal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEntry"][];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -4269,6 +5077,483 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    sign_in_to_google: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInStarted"];
+                };
+            };
+        };
+    };
+    sign_out_of_google: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    start_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartFamily"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recovery_code_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    shared_family_folders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedFolder"][];
+                };
+            };
+        };
+    };
+    join_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JoinFamily"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recover_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Recover"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_to_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Invite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admit_to_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Admit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refuse_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OneComputer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_from_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OneComputer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    family_folder_answers_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    review_family_folder_changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device: string;
+                proposal: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewChanges"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopyPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bring_in_family_folder_changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BringIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportDone"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    turn_down_family_folder_changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TurnDown"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
                 };
             };
             /** @description Validation Error */

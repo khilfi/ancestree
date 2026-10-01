@@ -11,8 +11,8 @@ import { carriedOut, type Ticks, tickAll, tickedIds } from "./importTicks";
 import { count, day, Group, LeftOut, Question, Review, SecondLook } from "./review";
 
 /** "1 person added, 2 changes to details and links, 1 life story brought in": what bringing
- *  a copy's changes in did. */
-function brought(done: ImportDone): string {
+ *  a copy's changes in did, or a relative's computer's. */
+export function brought(done: ImportDone): string {
   const stories = done.stories ?? 0;
   const photos = done.photos ?? 0;
   const tail = [

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Annotated
 from uuid import UUID
@@ -8,6 +9,7 @@ from pydantic import ValidationError
 
 from ancestree.api.deps import Ctx, Hist
 from ancestree.domain.biography import Biography, BiographyUpdate, PictureAdded
+from ancestree.domain.merge import MergePreview, MergeRequest
 from ancestree.domain.requests import (
     ChildrenOrder,
     FillIn,
@@ -16,6 +18,7 @@ from ancestree.domain.requests import (
     PersonPatch,
 )
 from ancestree.domain.views import (
+    JournalEntry,
     PersonDetail,
     PersonSaved,
     PersonSummary,
@@ -23,7 +26,7 @@ from ancestree.domain.views import (
     TrashEntry,
 )
 from ancestree.media.photos import AVATAR_SIZES, MAX_UPLOAD_BYTES, Crop
-from ancestree.services import biography, people, photos
+from ancestree.services import biography, journal, merge, people, photos
 from ancestree.services.context import RuleError
 
 router = APIRouter(prefix="/persons", tags=["people"])
@@ -176,6 +179,27 @@ async def get_display_photo(ctx: Ctx, person_id: UUID, v: int | None = None) -> 
     """The whole photo, upright, for choosing a new crop."""
     path = photos.photo_path(ctx, person_id, "display.webp")
     return FileResponse(path, media_type="image/webp", headers=_cache(v))
+
+
+@router.get("/{person_id}/merge/{other_id}")
+async def preview_merge(ctx: Ctx, person_id: UUID, other_id: UUID) -> MergePreview:
+    """What merging someone entered twice into this person would do: rehearsed, then rolled
+    back. Nothing is written."""
+    return await merge.preview_merge(ctx, person_id, other_id)
+
+
+@router.post("/{person_id}/merge")
+async def merge_into(ctx: Ctx, history: Hist, person_id: UUID, body: MergeRequest) -> PersonSaved:
+    """Merge someone entered twice into this person: their details where this one has none,
+    their links through the rules, then them to the Trash. One Undo step."""
+    return await merge.merge_people(ctx, history, person_id, body.other)
+
+
+@router.get("/{person_id}/journal")
+async def get_journal(ctx: Ctx, person_id: UUID) -> list[JournalEntry]:
+    """Who changed this person, and when, the newest first: as their journal keeps it, kept
+    by the keeper's computer and travelling with the family."""
+    return await asyncio.to_thread(journal.journal_of, ctx.data_dir, str(person_id))
 
 
 @router.get("/{person_id}/biography")

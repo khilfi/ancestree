@@ -14,6 +14,7 @@ import { CopyBadge } from "./CopyBadge";
 import { CopyEditBar } from "./CopyEditBar";
 import { CanEdit, InAppOnly, useCopy, useCopyControls } from "./copy";
 import { DatabaseWarning } from "./DatabaseWarning";
+import { FamilyFolderBar } from "./FamilyFolderBar";
 import { UpdateBanner } from "./UpdateBanner";
 
 function tabClass({ isActive }: { isActive: boolean }): string {
@@ -129,6 +130,7 @@ export function AppLayout() {
         </header>
         {copy?.editing && controls && <CopyEditBar editing={copy.editing} controls={controls} />}
         {!copy && <UpdateBanner />}
+        {!copy && <FamilyFolderBar />}
         <main className="relative min-h-0 flex-1">
           <Outlet />
           {facts && <FamilyFactsPanel onClose={closeFacts} />}

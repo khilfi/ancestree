@@ -170,6 +170,19 @@ class _Snapshot(_Strict):
     photos: dict[UUID, ReturnedPhoto] = Field(default_factory=dict, max_length=50_000)
 
 
+class _Sent(_Strict):
+    """A relative's family as their computer sent it through the family folder: what a
+    copy to edit carries, without the copy around it."""
+
+    family: _Family
+    stories: dict[UUID, ReturnedStory] = Field(default_factory=dict, max_length=50_000)
+    files: dict[
+        Annotated[str, StringConstraints(max_length=300)],
+        Annotated[str, StringConstraints(max_length=MAX_PICTURE)],
+    ] = Field(default_factory=dict, max_length=200_000)
+    photos: dict[UUID, ReturnedPhoto] = Field(default_factory=dict, max_length=50_000)
+
+
 class _Lock(_Strict):
     salt: Annotated[str, StringConstraints(max_length=200)]
     iv: Annotated[str, StringConstraints(max_length=200)]
@@ -311,4 +324,30 @@ def read_returned(page: bytes, password: str | None = None) -> Returned:
         stories={str(pid): story for pid, story in snapshot.stories.items()},
         files=snapshot.files,
         photos={str(pid): photo for pid, photo in snapshot.photos.items()},
+    )
+
+
+def sent_family(found: object, sender: str, for_name: str, sent_at: datetime) -> Returned:
+    """A relative's family as their computer sent it through the family folder, read
+    as strictly as a copy that comes back: it's only ever offered for the keeper's review.
+    `sender` names the computer, `for_name` its owner, as the keeper's computer knows them."""
+    try:
+        sent = _Sent.model_validate(found)
+    except ValidationError as error:
+        where = ".".join(str(part) for part in error.errors()[0]["loc"][:3])
+        raise DamagedError(
+            f"What it sent is damaged: {where} isn't as AncesTree writes it."
+        ) from error
+    return Returned(
+        copy_id=sender,
+        for_name=for_name,
+        title="",
+        made_at=sent_at,
+        saved_at=sent_at,
+        locked=False,
+        people={str(person.id): person for person in sent.family.people},
+        links={str(link.id): link for link in sent.family.links},
+        stories={str(pid): story for pid, story in sent.stories.items()},
+        files=sent.files,
+        photos={str(pid): photo for pid, photo in sent.photos.items()},
     )

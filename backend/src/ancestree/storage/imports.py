@@ -3,8 +3,9 @@
 DATA_DIR/imports/<when>/ keeps the file as it came, the report, and a record: who the import
 added, what it changed and left out, and whether it has been taken back. A spreadsheet's is
 spreadsheet.json; changes from a copy to edit keep copy.json, and base.json.gz, what
-the copy was compared with, for Take back. The CSV and draw.io imports of M2 keep import.json
-beside them, which this never reads.
+the copy was compared with, for Take back; changes a relative's computer sent through the
+family folder keep folder.json, with what it sent and base.json.gz. The CSV and draw.io
+imports of M2 keep import.json beside them, which this never reads.
 """
 
 import json
@@ -17,7 +18,8 @@ from ancestree.storage.files import atomic_write, write_json
 
 RECORD = "spreadsheet.json"
 COPY_RECORD = "copy.json"
-_RECORDS = (RECORD, COPY_RECORD)
+SENT_RECORD = "folder.json"  # from a relative's computer, through the family folder
+_RECORDS = (RECORD, COPY_RECORD, SENT_RECORD)
 _ID = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d{1,4})?$")
 
 
@@ -116,3 +118,14 @@ def remove_folder(folder: Path) -> None:
     """An import folder whose import failed, before anything was kept in it."""
     if folder.is_dir() and not any(folder.iterdir()):
         folder.rmdir()
+
+
+def save_sent_import(
+    folder: Path, record: dict[str, Any], sent: bytes, report: bytes, base: bytes
+) -> None:
+    """Changes brought in from a relative's computer through the family folder: what it
+    sent, as it came, the report, what it was compared with, and the record."""
+    atomic_write(folder / "sent.json.gz", sent)
+    atomic_write(folder / "report.csv", report)
+    atomic_write(folder / "base.json.gz", base)
+    write_json(folder / SENT_RECORD, record)  # last: a folder without it holds no import

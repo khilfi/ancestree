@@ -150,6 +150,17 @@ class HistoryStep(BaseModel):
     at: datetime
 
 
+class JournalEntry(BaseModel):
+    """One change to someone, as their journal keeps it: who changed this, and when."""
+
+    at: datetime
+    what: str  # the change, as Undo names it: "Edit Hassan bin Ismail"
+    by: str  # the computer it was made or brought in on, by its name in the family
+    from_computer: str | None = None  # a relative's computer it came from, through the folder
+    from_email: str | None = None  # that computer's owner's Google account
+    sent_at: datetime | None = None  # when that computer sent it
+
+
 class HistoryView(BaseModel):
     """What Undo and Redo would do next."""
 

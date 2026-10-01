@@ -958,6 +958,162 @@
         }
       }
     },
+    "/api/persons/{person_id}/merge/{other_id}": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Preview Merge",
+        "description": "What merging someone entered twice into this person would do: rehearsed, then rolled\nback. Nothing is written.",
+        "operationId": "preview_merge",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "other_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Other Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergePreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/merge": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Merge Into",
+        "description": "Merge someone entered twice into this person: their details where this one has none,\ntheir links through the rules, then them to the Trash. One Undo step.",
+        "operationId": "merge_into",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/journal": {
+      "get": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Get Journal",
+        "description": "Who changed this person, and when, the newest first: as their journal keeps it, kept\nby the keeper's computer and travelling with the family.",
+        "operationId": "get_journal",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalEntry"
+                  },
+                  "title": "Response Get Journal"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/persons/{person_id}/biography": {
       "get": {
         "tags": [
@@ -2073,6 +2229,629 @@
         }
       }
     },
+    "/api/family-folder": {
+      "get": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Get Family Folder",
+        "description": "Where this computer stands: signed in or not, its part in a family folder, who's in\nit, who's asking to join, and what's in the way, if anything.",
+        "operationId": "get_family_folder",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/sign-in": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Sign In To Google",
+        "description": "Start signing in to Google: open `url` in the browser, then watch the status.",
+        "operationId": "sign_in_to_google",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/sign-out": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Sign Out Of Google",
+        "description": "Forget the sign-in here and give it back to Google. The family folder waits.",
+        "operationId": "sign_out_of_google",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/start": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Start Family Folder",
+        "description": "Start the family's folder in this Google account's Drive, as its keeper. The status\ncarries the recovery code, this once.",
+        "operationId": "start_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartFamily"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/recovery-seen": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Recovery Code Seen",
+        "description": "The recovery code is kept safe: it's never shown again.",
+        "operationId": "recovery_code_seen",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/shared": {
+      "get": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Shared Family Folders",
+        "description": "Family folders shared with this Google account, to join.",
+        "operationId": "shared_family_folders",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SharedFolder"
+                  },
+                  "type": "array",
+                  "title": "Response Shared Family Folders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/join": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Join Family Folder",
+        "description": "Ask to join the family in a shared folder. The status carries the code to read to the\nkeeper.",
+        "operationId": "join_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinFamily"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/recover": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Recover Family Folder",
+        "description": "Be the family's keeper again on this computer, from the recovery code.",
+        "operationId": "recover_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recover"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/invite": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Invite To Family Folder",
+        "description": "Share the family folder with a relative's Google account (the keeper's).",
+        "operationId": "invite_to_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Invite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/admit": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Admit To Family Folder",
+        "description": "Let a computer in, with a role, once its code matches (the keeper's).",
+        "operationId": "admit_to_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Admit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/refuse": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Refuse Family Folder",
+        "description": "Turn away a computer asking to join (the keeper's).",
+        "operationId": "refuse_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OneComputer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/remove": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Remove From Family Folder",
+        "description": "Remove a computer from the family: it can't read what comes after (the keeper's).",
+        "operationId": "remove_from_family_folder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OneComputer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/sync": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Sync Family Folder",
+        "description": "Keep in step now, rather than within the minute.",
+        "operationId": "sync_family_folder",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/answers-seen": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Family Folder Answers Seen",
+        "description": "The keeper's answers to this computer's changes, read: not shown again (a relative's).",
+        "operationId": "family_folder_answers_seen",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/changes/{device}/{proposal}/review": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Review Family Folder Changes",
+        "description": "What a relative's computer sent, compared with the family it was made on and with the\ntree now, for you to tick, as changes from a copy are (the keeper's). Nothing is written.",
+        "operationId": "review_family_folder_changes",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$",
+              "title": "Device"
+            }
+          },
+          {
+            "name": "proposal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Proposal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewChanges"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopyPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/changes/{device}/bring-in": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Bring In Family Folder Changes",
+        "description": "Bring in what's ticked of a relative's computer's changes: a backup first, one Undo step,\nand Take back later. It reaches everyone, and the computer hears what wasn't taken.",
+        "operationId": "bring_in_family_folder_changes",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$",
+              "title": "Device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BringIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDone"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/changes/{device}/turn-down": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Turn Down Family Folder Changes",
+        "description": "Take none of a relative's computer's changes; it hears so, with your note.",
+        "operationId": "turn_down_family_folder_changes",
+        "parameters": [
+          {
+            "name": "device",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$",
+              "title": "Device"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnDown"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/imports/template": {
       "get": {
         "tags": [
@@ -2571,6 +3350,29 @@
   },
   "components": {
     "schemas": {
+      "Admit": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "contributor",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "role"
+        ],
+        "title": "Admit"
+      },
       "Anniversary": {
         "properties": {
           "person": {
@@ -2985,6 +3787,53 @@
           "file"
         ],
         "title": "Body_upload_photo"
+      },
+      "BringIn": {
+        "properties": {
+          "proposal": {
+            "type": "integer",
+            "title": "Proposal"
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "maxLength": 100
+            },
+            "type": "object",
+            "maxProperties": 10000,
+            "title": "Answers"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "type": "array",
+                "maxItems": 100000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal"
+        ],
+        "title": "BringIn",
+        "description": "Bring in what's ticked of a computer's changes, with a note for what isn't."
       },
       "ChangeKind": {
         "type": "string",
@@ -3836,6 +4685,180 @@
         ],
         "title": "FamilyFacts"
       },
+      "FamilyFolderStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "signing_in": {
+            "type": "boolean",
+            "title": "Signing In"
+          },
+          "setup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "keeper",
+                  "member"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Setup"
+          },
+          "family": {
+            "type": "string",
+            "title": "Family"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "keeper",
+                  "trusted",
+                  "contributor",
+                  "viewer",
+                  "removed"
+                ]
+              },
+              {
+                "type": "string",
+                "const": "waiting"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/FolderMember"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "asking": {
+            "items": {
+              "$ref": "#/components/schemas/FolderAsking"
+            },
+            "type": "array",
+            "title": "Asking"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "received": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received"
+          },
+          "problem": {
+            "type": "string",
+            "title": "Problem"
+          },
+          "recovery_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Code"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "default": 0
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/FolderAnswer"
+            },
+            "type": "array",
+            "title": "Answers"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FolderChanges"
+            },
+            "type": "array",
+            "title": "Changes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "email",
+          "signing_in",
+          "setup",
+          "family",
+          "role",
+          "code",
+          "last_sync",
+          "received",
+          "problem",
+          "recovery_code"
+        ],
+        "title": "FamilyFolderStatus"
+      },
       "FamilyMap": {
         "properties": {
           "people": {
@@ -3889,6 +4912,150 @@
         "type": "object",
         "title": "FillIn",
         "description": "An unknown parent becomes a real person: someone new, or someone in the tree."
+      },
+      "FolderAnswer": {
+        "properties": {
+          "proposal": {
+            "type": "integer",
+            "title": "Proposal"
+          },
+          "left_out": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Left Out"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal",
+          "left_out",
+          "note"
+        ],
+        "title": "FolderAnswer",
+        "description": "The keeper's answer to the changes this computer sent."
+      },
+      "FolderAsking": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "name",
+          "email",
+          "code"
+        ],
+        "title": "FolderAsking",
+        "description": "A computer asking to join: its code should match the one its owner reads out."
+      },
+      "FolderChanges": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "keeper",
+              "trusted",
+              "contributor",
+              "viewer",
+              "removed"
+            ],
+            "title": "Role"
+          },
+          "proposal": {
+            "type": "integer",
+            "title": "Proposal"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "name",
+          "email",
+          "role",
+          "proposal",
+          "sent_at"
+        ],
+        "title": "FolderChanges",
+        "description": "A relative's computer with changes waiting for the keeper's review."
+      },
+      "FolderMember": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "keeper",
+              "trusted",
+              "contributor",
+              "viewer",
+              "removed"
+            ],
+            "title": "Role"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "you": {
+            "type": "boolean",
+            "title": "You"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "name",
+          "role",
+          "email",
+          "you"
+        ],
+        "title": "FolderMember",
+        "description": "A computer in the family."
       },
       "Gender": {
         "type": "string",
@@ -4957,7 +6124,8 @@
             "type": "string",
             "enum": [
               "spreadsheet",
-              "copy"
+              "copy",
+              "folder"
             ],
             "title": "Kind",
             "default": "spreadsheet"
@@ -5105,6 +6273,100 @@
           "gone"
         ],
         "title": "ImportTakenBack"
+      },
+      "Invite": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "Invite"
+      },
+      "JoinFamily": {
+        "properties": {
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "computer": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Computer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder",
+          "computer"
+        ],
+        "title": "JoinFamily"
+      },
+      "JournalEntry": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "what": {
+            "type": "string",
+            "title": "What"
+          },
+          "by": {
+            "type": "string",
+            "title": "By"
+          },
+          "from_computer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Computer"
+          },
+          "from_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Email"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "what",
+          "by"
+        ],
+        "title": "JournalEntry",
+        "description": "One change to someone, as their journal keeps it: who changed this, and when."
       },
       "KinExplanation": {
         "properties": {
@@ -5959,6 +7221,147 @@
         "title": "MeSettings",
         "description": "Which person you are, for \"Me\". None until you choose. Stored in\nDATA_DIR/settings/app.json under \"me\"; not an Undo step."
       },
+      "MergeDetail": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "keep": {
+            "type": "string",
+            "title": "Keep"
+          },
+          "other": {
+            "type": "string",
+            "title": "Other"
+          },
+          "taken": {
+            "type": "boolean",
+            "title": "Taken"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "keep",
+          "other",
+          "taken"
+        ],
+        "title": "MergeDetail",
+        "description": "A detail of the two, as the merge treats it."
+      },
+      "MergeLink": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "moved",
+              "already",
+              "between",
+              "left_out"
+            ],
+            "title": "Outcome"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "outcome"
+        ],
+        "title": "MergeLink",
+        "description": "A link of the one merged in, and what becomes of it."
+      },
+      "MergePreview": {
+        "properties": {
+          "keep": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Keep"
+          },
+          "keep_name": {
+            "type": "string",
+            "title": "Keep Name"
+          },
+          "other": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Other"
+          },
+          "other_name": {
+            "type": "string",
+            "title": "Other Name"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/MergeDetail"
+            },
+            "type": "array",
+            "title": "Details"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/MergeLink"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "photo": {
+            "type": "string",
+            "enum": [
+              "none",
+              "kept",
+              "taken"
+            ],
+            "title": "Photo"
+          },
+          "story": {
+            "type": "string",
+            "enum": [
+              "none",
+              "kept",
+              "taken",
+              "both"
+            ],
+            "title": "Story"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keep",
+          "keep_name",
+          "other",
+          "other_name",
+          "details",
+          "links",
+          "photo",
+          "story"
+        ],
+        "title": "MergePreview",
+        "description": "What merging `other` into `keep` would do. Nothing is written."
+      },
+      "MergeRequest": {
+        "properties": {
+          "other": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Other"
+          }
+        },
+        "type": "object",
+        "required": [
+          "other"
+        ],
+        "title": "MergeRequest"
+      },
       "NameCount": {
         "properties": {
           "name": {
@@ -6040,6 +7443,19 @@
         ],
         "title": "Notice",
         "description": "Something worth a second look that was still saved, e.g. an unlikely age gap."
+      },
+      "OneComputer": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device"
+        ],
+        "title": "OneComputer"
       },
       "Pair": {
         "properties": {
@@ -6945,6 +8361,32 @@
         ],
         "title": "Positions"
       },
+      "Recover": {
+        "properties": {
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 20,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "Recover"
+      },
       "RelationshipCreate": {
         "properties": {
           "person_a": {
@@ -7230,6 +8672,24 @@
         ],
         "title": "RestoreResult"
       },
+      "ReviewChanges": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "maxLength": 100
+            },
+            "type": "object",
+            "maxProperties": 10000,
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "title": "ReviewChanges",
+        "description": "The keeper's answers to the look-alike questions, so far."
+      },
       "Seat": {
         "properties": {
           "unit": {
@@ -7293,6 +8753,25 @@
         "title": "Seat",
         "description": "Where someone sits on the rings; the browser draws it."
       },
+      "SharedFolder": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner"
+        ],
+        "title": "SharedFolder",
+        "description": "A family folder someone has shared with this Google account."
+      },
       "SiblingGroup": {
         "properties": {
           "parents": {
@@ -7318,6 +8797,19 @@
         "title": "SiblingGroup",
         "description": "Children of the same parents whose order isn't known yet."
       },
+      "SignInStarted": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "SignInStarted"
+      },
       "SpouseStatus": {
         "type": "string",
         "enum": [
@@ -7326,6 +8818,28 @@
           "widowed"
         ],
         "title": "SpouseStatus"
+      },
+      "StartFamily": {
+        "properties": {
+          "family": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Family"
+          },
+          "computer": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Computer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "family",
+          "computer"
+        ],
+        "title": "StartFamily"
       },
       "Suggestion": {
         "properties": {
@@ -7460,6 +8974,26 @@
         "type": "object",
         "title": "TreeSettings",
         "description": "Stored in DATA_DIR/settings/app.json."
+      },
+      "TurnDown": {
+        "properties": {
+          "proposal": {
+            "type": "integer",
+            "title": "Proposal"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal"
+        ],
+        "title": "TurnDown",
+        "description": "Take none of a computer's changes, with a note to say why."
       },
       "ValidationError": {
         "properties": {

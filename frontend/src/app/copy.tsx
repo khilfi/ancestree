@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext } from "react";
+import { useKeptByTheKeeper } from "@/api/familyFolder";
 
 /** What relatives may do in a copy to edit, each switched on or off for it. */
 export type CopyPermissions = {
@@ -70,7 +71,9 @@ export function useCopyControls(): CopyControls | null {
  */
 export function useCanEdit(what?: CopyPermission): boolean {
   const copy = useContext(CopyContext);
-  if (copy === null) return true;
+  // A relative's computer keeps the family as its keeper sends it: nothing changes it.
+  const keptByTheKeeper = useKeptByTheKeeper(copy === null);
+  if (copy === null) return !keptByTheKeeper;
   if (!copy.editing) return false;
   return what === undefined || copy.editing.may[what];
 }

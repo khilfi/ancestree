@@ -257,6 +257,8 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
     const file = dataFile(`/api/persons/${id(asked)}/photo/display`);
     return file ? { file } : missing("That photo isn't in this copy.");
   },
+  "/api/persons/{person_id}/journal": () => ok([]), // a copy keeps no journal
+  "/api/persons/{person_id}/merge/{other_id}": NOT_IN_COPY,
   "/api/persons/{person_id}/biography": (asked) =>
     ok(book ? book.story(id(asked)) : (family().stories[id(asked)] ?? NO_STORY)),
   "/api/persons/{person_id}/media/{name}": ({ params }) => {
@@ -288,6 +290,9 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
   // Found when the copy was made: a copy carries the points, not the gazetteer.
   "/api/map": () => ok(book ? book.map() : family().map),
   "/api/sample/map": NOT_IN_COPY,
+  // Each computer's own part in the family folder: a copy has none.
+  "/api/family-folder": NOT_IN_COPY,
+  "/api/family-folder/shared": NOT_IN_COPY,
 };
 
 const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
@@ -439,6 +444,22 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "POST /api/imports/copy": REFUSED,
   "PUT /api/places/pins": REFUSED,
   "DELETE /api/places/pins": REFUSED,
+  "POST /api/family-folder/sign-in": REFUSED,
+  "POST /api/family-folder/sign-out": REFUSED,
+  "POST /api/family-folder/start": REFUSED,
+  "POST /api/family-folder/recovery-seen": REFUSED,
+  "POST /api/family-folder/join": REFUSED,
+  "POST /api/family-folder/recover": REFUSED,
+  "POST /api/family-folder/invite": REFUSED,
+  "POST /api/family-folder/admit": REFUSED,
+  "POST /api/family-folder/refuse": REFUSED,
+  "POST /api/family-folder/remove": REFUSED,
+  "POST /api/family-folder/sync": REFUSED,
+  "POST /api/family-folder/answers-seen": REFUSED,
+  "POST /api/persons/{person_id}/merge": REFUSED,
+  "POST /api/family-folder/changes/{device}/{proposal}/review": REFUSED,
+  "POST /api/family-folder/changes/{device}/bring-in": REFUSED,
+  "POST /api/family-folder/changes/{device}/turn-down": REFUSED,
 };
 
 type Route<T> = { method: string; parts: string[]; answer: T };

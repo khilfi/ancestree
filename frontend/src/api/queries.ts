@@ -204,6 +204,45 @@ export function useHistoryMove(direction: "undo" | "redo") {
   });
 }
 
+/** Who changed someone, and when: the newest first, from their journal. Asked again
+ *  with the person after any change. */
+export function usePersonJournal(id: string) {
+  return useQuery({
+    queryKey: [...keys.person(id), "journal"],
+    queryFn: () =>
+      unwrap(api.GET("/api/persons/{person_id}/journal", { params: { path: { person_id: id } } })),
+  });
+}
+
+/** What merging `other` into `keep` would change: rehearsed, nothing written. */
+export function useMergePreview(keep: string, other: string | null) {
+  return useQuery({
+    queryKey: ["merge", keep, other],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/persons/{person_id}/merge/{other_id}", {
+          params: { path: { person_id: keep, other_id: other ?? "" } },
+        }),
+      ),
+    enabled: other !== null,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+}
+
+/** Merge someone entered twice into a person: one Undo step, the other to the Trash. */
+export function useMergePeople() {
+  return useFamilyMutation(({ keep, other }: { keep: string; other: string }) =>
+    unwrap(
+      api.POST("/api/persons/{person_id}/merge", {
+        params: { path: { person_id: keep } },
+        body: { other },
+      }),
+    ),
+  );
+}
+
 export function usePerson(id: string | null) {
   return useQuery({
     queryKey: keys.person(id ?? ""),

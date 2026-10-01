@@ -389,11 +389,12 @@ async def run_import(
 def _summary(record: Mapping[str, Any], present: set[str]) -> ImportSummary:
     people = [str(pid) for pid in record["people"]]
     taken_back = record.get("taken_back_at")
-    copy = record.get("kind") == "copy"
+    kind = record.get("kind")
+    copy = kind in ("copy", "folder")  # from a copy to edit, or a relative's computer
     changes = [record.get(key, []) for key in ("relinked", "unlinked", "filled")] if copy else []
     return ImportSummary(
         id=record["id"],
-        kind="copy" if copy else "spreadsheet",
+        kind=kind if kind in ("copy", "folder") else "spreadsheet",
         file_name=record["file_name"],
         for_name=record.get("for") if copy else None,
         imported_at=datetime.fromisoformat(record["imported_at"]),
@@ -486,13 +487,14 @@ async def take_back(ctx: Context, history: History, import_id: str) -> ImportTak
     record = await asyncio.to_thread(_record, ctx, import_id)
     if record.get("taken_back_at"):
         raise RuleError("taken_back", "This import has been taken back already.")
-    if record.get("kind") == "copy":  # changes from a copy to edit
+    if record.get("kind") in ("copy", "folder"):  # from a copy, or a computer
         taken = await returns.take_back_copy(ctx, history, record)
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         await asyncio.to_thread(
             storage.update_import, ctx.data_dir, import_id, {"taken_back_at": now}
         )
-        await asyncio.to_thread(returns.restore_base, ctx, record)
+        if record.get("kind") == "copy":
+            await asyncio.to_thread(returns.restore_base, ctx, record)
         return taken
     people = [str(pid) for pid in record["people"]]
     async with history.lock:

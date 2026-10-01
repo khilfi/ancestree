@@ -1,6 +1,7 @@
 import {
   CameraIcon,
   LocateFixedIcon,
+  MergeIcon,
   PencilIcon,
   Trash2Icon,
   WaypointsIcon,
@@ -10,7 +11,7 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import { usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
 import type { PersonDetail } from "@/api/types";
-import { CanEdit, useCanEdit, useHiddenHere } from "@/app/copy";
+import { CanEdit, InAppOnly, useCanEdit, useHiddenHere } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
   AlertDialog,
@@ -30,10 +31,12 @@ import { YouLine } from "@/features/me/YouLine";
 import { ageOf } from "@/lib/dates";
 import { showNotices } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
+import { MergeDialog } from "./MergeDialog";
 import { PersonDetails } from "./PersonDetails";
 import { PersonForm } from "./PersonForm";
 import { PhotoDialog } from "./PhotoDialog";
 import { RelativesTab } from "./RelativesTab";
+import { WhoChanged } from "./WhoChanged";
 
 type Props = {
   personId: string | null; // null: adding someone new
@@ -156,6 +159,7 @@ function ExistingPerson({
   const [editing, setEditing] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [merging, setMerging] = useState(false);
 
   if (query.isPending) {
     return (
@@ -254,6 +258,9 @@ function ExistingPerson({
             ) : (
               <div className="space-y-4">
                 <PersonDetails person={person} />
+                <InAppOnly>
+                  <WhoChanged personId={person.id} />
+                </InAppOnly>
                 {(canEdit || onFindRelationship) && (
                   <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-4">
                     {!hidden && (
@@ -273,6 +280,16 @@ function ExistingPerson({
                     <CanEdit>
                       <CentreButton person={person} />
                     </CanEdit>
+                    {!person.placeholder && (
+                      <CanEdit what="remove">
+                        <InAppOnly>
+                          <Button variant="ghost" onClick={() => setMerging(true)}>
+                            <MergeIcon />
+                            Merge…
+                          </Button>
+                        </InAppOnly>
+                      </CanEdit>
+                    )}
                     <CanEdit what="remove">
                       <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
                         <Trash2Icon />
@@ -303,6 +320,7 @@ function ExistingPerson({
       </Tabs>
 
       {canPhoto && <PhotoDialog person={person} open={photoOpen} onOpenChange={setPhotoOpen} />}
+      {merging && <MergeDialog person={person} open={merging} onOpenChange={setMerging} />}
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

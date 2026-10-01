@@ -77,7 +77,12 @@ class Proposal(_Model):
     seq: int
     base: int  # the record's last change set when it was made
     made: str
-    changes: list[Change]
+    changes: list[Change] = Field(default_factory=list)  # the spike's: entries put or deleted
+    # The computer's family as it is, for the keeper's review: a copy to edit's family
+    # as exchange/returned.py reads it, as JSON, gzipped, in base64.
+    family: str = ""
+    answered: int = 0  # the newest of this computer's proposals it had heard back on
+    changed: int = 0  # the people and links it changed, as it counts them: none, withdrawn
 
 
 class JoinRequest(_Model):
@@ -108,6 +113,7 @@ class Note(_Model):
     taken: list[int]
     left: list[int]
     note: str
+    left_out: list[str] = Field(default_factory=list)  # what wasn't taken, in words
 
 
 class Snapshot(_Model):

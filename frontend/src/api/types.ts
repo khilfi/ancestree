@@ -16,6 +16,8 @@ export type Gender = Schemas["Gender"];
 export type PartialDate = Schemas["PartialDate"];
 export type Place = Schemas["Place"];
 export type PersonDetail = Schemas["PersonDetail"];
+export type JournalEntry = Schemas["JournalEntry"]; // who changed someone
+export type MergePreview = Schemas["MergePreview"]; // two people made one
 export type DateView = Schemas["DateView"];
 export type PersonSummary = Schemas["PersonSummary"];
 export type PersonInput = Schemas["PersonInput"];
@@ -98,3 +100,17 @@ export type Avatarable = {
   photo_version: number | null;
   placeholder: boolean;
 };
+
+// The family folder
+export type FamilyFolderStatus = Schemas["FamilyFolderStatus"];
+export type FolderMember = Schemas["FolderMember"];
+export type FolderAsking = Schemas["FolderAsking"];
+export type SharedFolder = Schemas["SharedFolder"];
+export type StartFamily = Schemas["StartFamily"];
+export type JoinFamily = Schemas["JoinFamily"];
+export type Recover = Schemas["Recover"];
+export type Admit = Schemas["Admit"];
+// Changes sent back through the family folder
+export type FolderAnswer = Schemas["FolderAnswer"];
+export type FolderChanges = Schemas["FolderChanges"];
+export type BringIn = Schemas["BringIn"];

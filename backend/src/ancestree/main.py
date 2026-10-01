@@ -2,17 +2,19 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from ancestree import __version__
 from ancestree.api import (
     dates,
     exports,
     family,
+    family_folder,
     graph,
     history,
     imports,
@@ -26,14 +28,16 @@ from ancestree.api import (
 )
 from ancestree.config import Settings, get_settings
 from ancestree.db import connect
-from ancestree.exchange.restore import ArchiveError
+from ancestree.exchange.restore import ArchiveError, restore_archive
 from ancestree.exchange.returned import ReturnedError
 from ancestree.importing.sheet import SheetError
 from ancestree.media.photos import PhotoError
 from ancestree.migrations.runner import apply_migrations
+from ancestree.services import journal
 from ancestree.services.automatic import keep_backing_up
 from ancestree.services.context import Context, NotFoundError, RuleError
-from ancestree.services.history import History
+from ancestree.services.familyfolder import FamilyFolder, keep_in_step
+from ancestree.services.history import History, Step
 from ancestree.storage.data_dir import ensure_data_dir
 from ancestree.storage.files import TRASH_DAYS, purge_trash
 
@@ -56,13 +60,37 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 log.info("Emptied %d Trash entries older than %d days", purged, TRASH_DAYS)
             app.state.settings = active
             app.state.driver = driver
+            context = Context(
+                driver,
+                active.neo4j_database,
+                active.data_dir,
+                active.backup_dir,
+                active.automatic_backups,
+            )
             backing_up = None
             if active.automatic_backups:
-                context = Context(
-                    driver, active.neo4j_database, active.data_dir, active.backup_dir, True
-                )
                 backing_up = asyncio.create_task(keep_backing_up(context))
+            history_now: History = app.state.history
+
+            async def take_in(archive: Path, backup_first: bool) -> object:
+                # As a restore by hand: no change slips in, and nothing before can be undone.
+                async with history_now.lock:
+                    restored = await restore_archive(context, archive, backup_first=backup_first)
+                    history_now.clear()
+                    return restored
+
+            folder = FamilyFolder(context, restore=take_in, history=history_now)
+            app.state.family_folder = folder
+
+            def journal_step(step: Step, how: str) -> None:
+                by = folder.journaling()
+                if by is not None:
+                    journal.record(context.data_dir, step, by, how)
+
+            history_now.journal = journal_step
+            keeping = asyncio.create_task(keep_in_step(app.state.family_folder))
             yield
+            keeping.cancel()
             if backing_up is not None:
                 backing_up.cancel()
         finally:
@@ -89,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         exports,
         history,
         family,
+        family_folder,
         imports,
         places,
     ):
@@ -121,7 +150,74 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(ArchiveError, bad_archive)
     app.add_exception_handler(SheetError, bad_spreadsheet)
     app.add_exception_handler(ReturnedError, bad_copy)
+
+    @app.middleware("http")
+    async def kept_by_the_keeper(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """On a relative's computer the family arrives from the family folder. One that
+        sends its changes to the keeper changes people, links, stories and photos, which wait
+        for the keeper; the family's own settings, imports and restoring a backup stay
+        the keeper's. Any other changes nothing: a change made there would be lost."""
+        folder: FamilyFolder | None = getattr(request.app.state, "family_folder", None)
+        if folder is None or folder.editing:
+            return await call_next(request)
+        if folder.proposing and _keepers_own(request):
+            return _error(
+                status.HTTP_409_CONFLICT,
+                "kept_by_the_keeper",
+                "That's for the family's keeper to change: it arrives here from the family folder.",
+            )
+        if not folder.proposing and _changes_family(request):
+            return _error(
+                status.HTTP_409_CONFLICT,
+                "kept_by_the_keeper",
+                "This family is kept by its keeper, and arrives from the family folder: "
+                "it can't be changed on this computer.",
+            )
+        return await call_next(request)
+
     return app
+
+
+# What changes the family itself, rather than this computer's own choices ("Me", the kinship
+# language, layouts) or making exports and backups.
+_FAMILY_CHANGES = (
+    "/api/persons",
+    "/api/relationships",
+    "/api/relationship-kinds",
+    "/api/trash",
+    "/api/history",
+    "/api/places/pins",
+)
+
+
+# Of those, what stays the keeper's even on a relative's computer that sends its changes to
+# the keeper, whose review takes people, links, stories and photos.
+_KEEPERS_OWN = ("/api/relationship-kinds", "/api/places/pins")
+
+
+def _changes_family(request: Request) -> bool:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return False
+    path = request.url.path
+    if path.startswith(_FAMILY_CHANGES):
+        return True
+    return _brings_in(path)
+
+
+def _keepers_own(request: Request) -> bool:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return False
+    path = request.url.path
+    return path.startswith(_KEEPERS_OWN) or _brings_in(path)
+
+
+def _brings_in(path: str) -> bool:
+    """An import, or a backup restored: a whole family's worth of changes at once."""
+    if path.startswith("/api/imports"):
+        return not path.endswith("/preview")
+    return path.startswith("/api/backups/") and path.endswith("/restore")
 
 
 def _error(status_code: int, code: str, message: str, **details: object) -> JSONResponse:

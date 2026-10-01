@@ -51,7 +51,8 @@ def write_snapshot(data_dir: Path, person_id: UUID | str, snapshot: dict[str, An
 
 
 def remove_bare_folders(data_dir: Path, person_ids: Iterable[str]) -> int:
-    """Remove the folders of people taken out of the tree, if they hold only person.json.
+    """Remove the folders of people taken out of the tree, if they hold only person.json, and
+    their journal.
 
     person.json is only a copy of what the database held; a folder with anything else in
     it (a photo, a biography) is left alone.
@@ -62,7 +63,7 @@ def remove_bare_folders(data_dir: Path, person_ids: Iterable[str]) -> int:
         if not folder.is_dir():
             continue
         files = [path for path in folder.rglob("*") if path.is_file()]
-        if all(path.name == "person.json" for path in files):
+        if all(path.name in ("person.json", "journal.json") for path in files):
             shutil.rmtree(folder)
             removed += 1
     return removed

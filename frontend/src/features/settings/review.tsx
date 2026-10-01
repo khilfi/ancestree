@@ -14,7 +14,23 @@ import { changeNames, heldBack, type Ticks, tickedIds } from "./importTicks";
  */
 
 /** Where the changes come from: a spreadsheet's rows, or a relative's copy. */
-export type Source = "spreadsheet" | "copy";
+// Where the changes come from: a spreadsheet, a copy to edit, or a relative's
+// computer, through the family folder.
+export type Source = "spreadsheet" | "copy" | "computer";
+
+const CLASHES: Record<Source, string> = {
+  spreadsheet:
+    "Changed in the app too since the file was exported. Unticked, the app's stays; ticked, the file's replaces it.",
+  copy: "Changed in the app too since the copy was made. Unticked, the app's stays; ticked, the copy's replaces it.",
+  computer:
+    "You changed this too since they made their change. Unticked, yours stays; ticked, theirs replaces it.",
+};
+const UNSURE: Record<Source, string> = {
+  spreadsheet:
+    "The file doesn't say what this was when it was exported, so it waits for your tick.",
+  copy: "The copy didn't start with this, so it waits for your tick.",
+  computer: "Their computer didn't start with this, so it waits for your tick.",
+};
 
 export function count(number: number, one: string, many = `${one}s`): string {
   return `${number} ${number === 1 ? one : many}`;
@@ -209,22 +225,8 @@ function ChangeNote({
 }) {
   const notes: [string, string][] = [];
   if (held) notes.push(["text-stone-500", `Can't be made: ${held}.`]);
-  if (change.clash) {
-    notes.push([
-      "text-amber-800",
-      source === "copy"
-        ? "Changed in the app too since the copy was made. Unticked, the app's stays; ticked, the copy's replaces it."
-        : "Changed in the app too since the file was exported. Unticked, the app's stays; ticked, the file's replaces it.",
-    ]);
-  }
-  if (change.unsure) {
-    notes.push([
-      "text-stone-500",
-      source === "copy"
-        ? "The copy didn't start with this, so it waits for your tick."
-        : "The file doesn't say what this was when it was exported, so it waits for your tick.",
-    ]);
-  }
+  if (change.clash) notes.push(["text-amber-800", CLASHES[source]]);
+  if (change.unsure) notes.push(["text-stone-500", UNSURE[source]]);
   if (change.kind === "set" && change.detail) notes.push(["text-stone-500", change.detail]);
   if (change.kind === "remove_person") {
     notes.push([

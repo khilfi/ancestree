@@ -8,7 +8,8 @@ family folder. It writes only files of its own into the family folder, and reads
     members/<computer>/<n>.mem         its place, with the family's keys locked for it
     record/<n>-<print>.chg             the record: the keeper's change sets, in order
     snapshots/<n>-<print>.snap         the whole family as of change set n
-    inbox/<computer>/<n>.prop          changes a computer sends the keeper
+    inbox/<computer>/<n>.prop          changes a computer sends the keeper (since M25, in that
+                                       computer's own folder, in its owner's Drive)
     notes/<computer>/<n>.note          the keeper's answer to one of them
     files/<name>.bin                   photos and pictures
     recovery/<n>.bin                   the keeper's keys, locked with the recovery code
@@ -45,6 +46,7 @@ from ancestree.familyfolder.models import (
     Snapshot,
     Source,
 )
+from ancestree.familyfolder.protect import read_secret, write_secret
 from ancestree.familyfolder.seals import (
     Kind,
     RefusedError,
@@ -69,6 +71,21 @@ def _now() -> str:
 
 def _public(key: Ed25519PrivateKey | X25519PrivateKey) -> bytes:
     return key.public_key().public_bytes_raw()
+
+
+def _apply_to(state: dict[str, Any], change: RecordChange) -> None:
+    """A change set's changes, made to the family and its members as `state` holds them."""
+    people: dict[str, Any] = state["people"]
+    members: dict[str, Any] = state["members"]
+    for op in change.changes:
+        if op.op == "put":
+            people[op.id] = op.data
+        elif op.op == "delete":
+            people.pop(op.id, None)
+        elif op.op == "joined":
+            members[op.device] = {"name": op.name, "role": op.role}
+        else:
+            members.setdefault(op.device, {"name": "", "role": "removed"})["role"] = "removed"
 
 
 @dataclass
@@ -167,16 +184,16 @@ class Computer:
         self.answers = {int(s): Note.model_validate(n) for s, n in saved["answers"].items()}
 
     def save(self) -> None:
-        self.data.mkdir(parents=True, exist_ok=True)
-        path = self.data / "computer.json"
-        partial = path.with_name(path.name + ".part")
-        partial.write_text(json.dumps(self._saved(), indent=1), encoding="utf-8")
-        os.replace(partial, path)
+        """This computer's keys and copy of the family, locked on this computer."""
+        write_secret(self.data / "computer.bin", json.dumps(self._saved()).encode())
 
     @classmethod
     def load(cls, folder: Path, data: Path) -> Self:
         computer = cls(folder, data)
-        computer._restore(json.loads((data / "computer.json").read_text(encoding="utf-8")))
+        saved = read_secret(data / "computer.bin")
+        if saved is None:
+            raise FileNotFoundError(data / "computer.bin")
+        computer._restore(json.loads(saved))
         return computer
 
     # The family folder
@@ -235,7 +252,13 @@ class Computer:
         return count
 
     def _next_change(self) -> tuple[bytes, RecordChange] | None:
-        seq = self.applied + 1
+        return self._change_at(self.applied + 1, self.last, note=self.role != "removed")
+
+    def _change_at(
+        self, seq: int, prev: str | None, *, note: bool = False
+    ) -> tuple[bytes, RecordChange] | None:
+        """Change set `seq` of the record, checked: signed by the keeper and naming the one
+        before it. With `note`, a file refused is noted."""
         for path in sorted((self.folder / "record").glob(f"{seq:08d}-*.chg")):
             blob = self._read(path)
             if blob is None:
@@ -246,30 +269,55 @@ class Computer:
                     self._read_membership()  # its key may be on its way
                 opened = unseal(blob, f"record/{seq}", Kind.RECORD, {self.keeper}, self._key(epoch))
                 change = RecordChange.model_validate_json(opened.payload)
-                if change.seq != seq or change.prev != self.last:
+                if change.seq != seq or change.prev != prev:
                     raise RefusedError("not the next change set in the record")
             except (RefusedError, ValidationError) as error:
-                if self.role != "removed":
+                if note:
                     self._refused(path, error)
                 continue
             self._cleared(path)
             return blob, change
         return None
 
+    def state_at(self, seq: int) -> dict[str, Any]:
+        """The family as the record had it after change set `seq`: from the newest
+        snapshot at or before it, then each change set after it, each checked as it's read."""
+        best: Snapshot | None = None
+        for path in (self.folder / "snapshots").glob("*.snap"):
+            try:
+                at = int(path.name.split("-")[0])
+            except ValueError:
+                continue
+            blob = self._read(path)
+            if blob is None or at > seq or (best is not None and at <= best.seq):
+                continue
+            try:
+                _, epoch, _ = peek(blob)
+                place = f"snapshot/{at}"
+                opened = unseal(blob, place, Kind.SNAPSHOT, {self.keeper}, self._key(epoch))
+                snapshot = Snapshot.model_validate_json(opened.payload)
+            except RefusedError, ValidationError:
+                continue
+            if snapshot.seq == at:
+                best = snapshot
+        state: dict[str, Any] = (
+            json.loads(json.dumps(best.state)) if best else {"people": {}, "members": {}}
+        )
+        last = best.hash if best else None
+        for at in range((best.seq if best else 0) + 1, seq + 1):
+            found = self._change_at(at, last)
+            if found is None:
+                raise RefusedError(f"change set {at} of the record isn't here")
+            blob, change = found
+            _apply_to(state, change)
+            last = fingerprint(blob)
+        return state
+
     def _apply(self, change: RecordChange) -> None:
-        people: dict[str, Any] = self.state["people"]
-        members: dict[str, Any] = self.state["members"]
+        _apply_to(self.state, change)
         for op in change.changes:
-            if op.op == "put":
-                people[op.id] = op.data
+            if op.op in ("put", "delete"):
                 self.changed[op.id] = change.seq
-            elif op.op == "delete":
-                people.pop(op.id, None)
-                self.changed[op.id] = change.seq
-            elif op.op == "joined":
-                members[op.device] = {"name": op.name, "role": op.role}
-            else:
-                members.setdefault(op.device, {"name": "", "role": "removed"})["role"] = "removed"
         source = change.source
         if source is not None and source.device == self.device and not source.note:
             self.waiting.pop(source.proposal, None)  # all taken; otherwise its note answers it
@@ -398,12 +446,29 @@ class Member(Computer):
         member.save()
         return member, join_code(member.keeper, _public(member.sign), _public(member.dh))
 
-    def send(self, changes: list[Change]) -> int:
-        """Send changes to the keeper; they wait here, marked, until answered."""
+    def send(
+        self,
+        changes: list[Change],
+        *,
+        family: str = "",
+        answered: int = 0,
+        base: int | None = None,
+        changed: int = 0,
+    ) -> int:
+        """Send changes to the keeper; they wait here, marked, until answered. Or rather the
+        computer's whole `family`, made on the record's change set `base`."""
         if self.role not in MAY_SEND:
             raise PermissionError(f"a {self.role} computer doesn't send changes")
         self.sent += 1
-        proposal = Proposal(seq=self.sent, base=self.applied, made=_now(), changes=changes)
+        proposal = Proposal(
+            seq=self.sent,
+            base=self.applied if base is None else base,
+            made=_now(),
+            changes=changes,
+            family=family,
+            answered=answered,
+            changed=changed,
+        )
         place = f"inbox/{self.device}/{self.sent}"
         blob = self._sealed(Kind.PROPOSAL, place, proposal.model_dump_json().encode())
         self._write(f"inbox/{self.device}/{self.sent:08d}.prop", blob)
@@ -615,6 +680,49 @@ class Keeper(Computer):
         self.decided.add(f"{arrived.device}/{proposal.seq}")
         self.save()
         return seq
+
+    def settle(self, device: str, proposal: int) -> None:
+        """A computer's proposal decided, and every one it sent before: none comes again."""
+        for path in (self.folder / "inbox" / device).glob("*.prop"):
+            try:
+                seq = int(path.stem)
+            except ValueError:
+                continue
+            if seq <= proposal:
+                self.decided.add(f"{device}/{seq}")
+        self.decided.add(f"{device}/{proposal}")
+        self.save()
+
+    def answer(self, device: str, proposal: int, left_out: list[str], note: str = "") -> None:
+        """The keeper's answer to a computer's proposal: what wasn't taken, in words,
+        and a note of the keeper's own. The proposal, and every one before it, is settled."""
+        answer = Note(proposal=proposal, taken=[], left=[], note=note, left_out=left_out)
+        place = f"note/{device}/{proposal}"
+        blob = self._sealed(Kind.NOTE, place, answer.model_dump_json().encode())
+        self._write(f"notes/{device}/{proposal:08d}.note", blob)
+        self.settle(device, proposal)
+
+    def last_decided(self, device: str) -> int:
+        return max(
+            (int(seq) for name in self.decided for who, _, seq in [name.partition("/")]
+             if who == device),
+            default=0,
+        )  # fmt: skip
+
+    def newest(self) -> list[Arrived]:
+        """Each computer's newest proposal not yet decided. Each is the computer's whole
+        family, so a newer one stands for those before it; one made before the computer heard
+        back on its last decided proposal waits for a fresher one, which it sends then."""
+        newest: dict[str, Arrived] = {}
+        for arrived in self.inbox():
+            if not arrived.proposal.family:
+                continue  # the spike's, entry by entry
+            if arrived.proposal.answered < self.last_decided(arrived.device):
+                continue
+            have = newest.get(arrived.device)
+            if have is None or arrived.proposal.seq > have.proposal.seq:
+                newest[arrived.device] = arrived
+        return sorted(newest.values(), key=lambda arrived: arrived.proposal.made)
 
     def approve_trusted(self) -> list[int]:
         """A trusted computer's proposals go through, unless they clash or take something out."""

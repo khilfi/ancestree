@@ -310,22 +310,26 @@ def _remove(folder: Path) -> None:
     shutil.rmtree(folder, ignore_errors=True)
 
 
-async def restore_archive(ctx: Context, path: Path) -> BackupRestored:
+async def restore_archive(ctx: Context, path: Path, *, backup_first: bool = True) -> BackupRestored:
     """Replace everything with what the archive at `path` holds. Everything as it was is
-    backed up first, with the other backups."""
+    backed up first, with the other backups, unless it can always be had again: a relative's
+    family, as the family folder brings it."""
     stamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S-%f")
     staging = ctx.data_dir / f".restore-{stamp}"
     previous = ctx.data_dir / f".replaced-{stamp}"
     done = False
+    backup_name = ""
     try:
         graph, manifest = await asyncio.to_thread(_stage, path, staging)
-        try:
-            backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups)
-        except OSError as error:
-            raise ArchiveError(
-                f"Nothing was restored: everything as it is now couldn't be backed up first "
-                f"to {ctx.backups} ({error.strerror or error})."
-            ) from error
+        if backup_first:
+            try:
+                backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups)
+            except OSError as error:
+                raise ArchiveError(
+                    f"Nothing was restored: everything as it is now couldn't be backed up first "
+                    f"to {ctx.backups} ({error.strerror or error})."
+                ) from error
+            backup_name = backup.path.name
         previous.mkdir()
         undo = await asyncio.to_thread(_swap_in, ctx.data_dir, staging, previous)
         try:
@@ -346,5 +350,5 @@ async def restore_archive(ctx: Context, path: Path) -> BackupRestored:
         people=sum(1 for person in graph["people"] if not person.get("placeholder")),
         links=len(graph["links"]),
         files=len(manifest.sha256) - 1,
-        backup=backup.path.name,
+        backup=backup_name,
     )

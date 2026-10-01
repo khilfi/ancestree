@@ -1,4 +1,5 @@
-"""Changes back from a copy to edit.
+"""Changes back from a copy to edit, and from a relative's
+computer through the family folder.
 
 A relative's copy comes back as a file. It's read safely (exchange/returned.py) and compared
 with what the app knows the copy started from, and with the tree now (importing/returned.py):
@@ -10,6 +11,10 @@ The import makes a backup first. The people, details and links come in as one Un
 each through the app's own rules; life stories and photos after, as in the app. It's kept in
 DATA_DIR/imports/, so Take back can later undo all of it; and the family as the file had it
 becomes what the next file from the same copy is compared with.
+
+A relative's computer sends its whole family through the family folder instead. It's
+compared with the family as the keeper's record had it when the relative made their changes,
+from the keeper's own record, and with the tree now: the same review, the same bringing in.
 """
 
 import asyncio
@@ -22,6 +27,7 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid7
 
@@ -79,6 +85,7 @@ from ancestree.storage import files
 from ancestree.storage import imports as storage
 
 TAG = "copy:"  # people brought in from a copy carry "copy:<the import's id>" as their source
+SENT_TAG = "folder:"  # and from a relative's computer, "folder:<the import's id>"
 UNKNOWN_PARENT = "Unknown parent"
 
 
@@ -187,6 +194,39 @@ async def _compare(
     tree = await _tree_now(ctx, asked_stories(base, returned))
     plan = plan_returned(base, returned, tree, answers)
     return _Compared(returned, base, about, brought, plan)
+
+
+@dataclass(frozen=True)
+class Sent:
+    """What a relative's computer sent through the family folder, and the family it was
+    made on, from the keeper's own record."""
+
+    returned: Returned
+    base: Base
+    device: str
+    proposal: int
+    computer: str  # its name, as the family knows it
+    email: str  # its owner's Google account
+    sent_at: datetime
+    packed: bytes  # what it sent, gzipped JSON: kept with the import
+
+    def about(self) -> CopyReturned:
+        return CopyReturned(
+            copy_id=self.device,
+            for_name=self.computer,
+            title="",
+            made_at=self.sent_at,
+            saved_at=self.sent_at,
+            brought_at=None,
+            locked=False,
+        )
+
+
+async def _compare_sent(ctx: Context, sent: Sent, answers: Mapping[str, str]) -> _Compared:
+    tree = await _tree_now(ctx, asked_stories(sent.base, sent.returned))
+    plan = plan_returned(sent.base, sent.returned, tree, answers)
+    about = {"for": sent.computer, "title": "", "made_at": sent.sent_at.isoformat()}
+    return _Compared(sent.returned, sent.base, about, None, plan)
 
 
 def _photos_shown(compared: _Compared) -> None:
@@ -570,6 +610,18 @@ async def preview_copy(
 ) -> CopyPreview:
     """What a copy to edit brings back, for you to tick. Nothing is written."""
     compared = await _compare(ctx, data, password, answers)
+    return await _previewed(ctx, compared, file_name, compared.about_copy())
+
+
+async def preview_sent(ctx: Context, sent: Sent, answers: Mapping[str, str]) -> CopyPreview:
+    """What a relative's computer sent, for you to tick. Nothing is written."""
+    compared = await _compare_sent(ctx, sent, answers)
+    return await _previewed(ctx, compared, sent.computer, sent.about())
+
+
+async def _previewed(
+    ctx: Context, compared: _Compared, file_name: str, about: CopyReturned
+) -> CopyPreview:
     plan = compared.plan
 
     async def rehearse(tx: Tx) -> _Done:
@@ -585,7 +637,7 @@ async def preview_copy(
     changes = [change for change in plan.changes if change.id not in done.refused_ids]
     return CopyPreview(
         file_name=file_name,
-        about=compared.about_copy(),
+        about=about,
         questions=plan.questions,
         changes=changes,
         left_out=[*plan.left_out, *done.refused],
@@ -735,6 +787,106 @@ def _label(for_name: str) -> str:
     return f"Changes from {for_name}'s copy"
 
 
+@dataclass(frozen=True)
+class _Brought:
+    """What bringing changes in did, and where it's kept."""
+
+    plan: CopyPlan
+    done: _Done
+    backup: str
+    import_id: str
+    folder: Path
+    at: datetime
+    tag: str
+
+    def left_out(self) -> list[ImportLeftOut]:
+        return [*self.plan.left_out, *self.done.refused]
+
+    def record(self) -> dict[str, Any]:
+        """The record's part every import from a copy or a computer keeps alike."""
+        done = self.done
+        return {
+            "format": 1,
+            "id": self.import_id,
+            "tag": self.tag,
+            "imported_at": self.at.isoformat(timespec="seconds"),
+            "backup": self.backup,
+            "people": done.created,
+            "placeholders": done.placeholders,
+            "links": len(done.link_ids),
+            "link_ids": done.link_ids,
+            "changed": done.changed,
+            "relinked": done.relinked,
+            "unlinked": done.unlinked,
+            "orphans": done.orphans,
+            "filled": done.filled,
+            "removed": done.removing,
+            "stories": done.stories,
+            "photos": done.photos,
+            "left_out": [item.model_dump(mode="json") for item in self.left_out()],
+            "second_look": [
+                item.model_dump(mode="json") for item in [*self.plan.second_look, *done.notices]
+            ],
+            "differences": [],
+            "taken_back_at": None,
+        }
+
+    def done_view(self, label: str) -> ImportDone:
+        done = self.done
+        return ImportDone(
+            id=self.import_id,
+            label=label,
+            people=len(done.created),
+            links=len(done.link_ids),
+            changed=len(done.changed) + len(done.relinked) + len(done.unlinked) + len(done.filled),
+            removed=len(done.removing),
+            stories=len(done.stories),
+            photos=len(done.photos),
+            left_out=len(self.left_out()),
+            backup=self.backup,
+        )
+
+
+async def _bring_in(
+    ctx: Context,
+    history: History,
+    compared: _Compared,
+    chosen: Collection[str] | None,
+    *,
+    label: str,
+    prefix: str,
+    nothing_new: str,
+    sent_by: dict[str, str] | None = None,
+) -> _Brought:
+    """What's chosen (None: what's ticked to begin with): a backup first, then the people,
+    details and links as one Undo step, the removals last; then stories and photos."""
+    plan, returned = compared.plan, compared.returned
+    if not plan.changes:
+        raise RuleError("nothing_to_import", nothing_new)
+    carried = plan.carried_out(chosen)
+    if not carried:
+        raise RuleError("nothing_chosen", "Nothing is ticked, so there's nothing to bring in.")
+    backup = await exports.make_export(ctx, ExportFormat.ARCHIVE)
+    now = datetime.now().astimezone()
+    import_id, folder = await asyncio.to_thread(storage.new_import_folder, ctx.data_dir, now)
+    tag = f"{prefix}{import_id}"
+    people, links = plan.reached(carried)
+    try:
+        async with history.change(ctx, people, links) as change:
+            done = await write(ctx, lambda tx: _carry_out(tx, plan, carried, tag))
+            change.people.update([*done.created, *done.placeholders])
+            change.removing = done.removing
+            change.label = label
+            change.sent_by = sent_by
+    except BaseException:
+        await asyncio.to_thread(storage.remove_folder, folder)
+        raise
+    await _stories(ctx, plan, done, returned)
+    await _photos(ctx, plan, done)
+    await refresh_snapshots(ctx, done.touched())
+    return _Brought(plan, done, backup.name, import_id, folder, now, tag)
+
+
 async def run_copy(
     ctx: Context,
     history: History,
@@ -747,89 +899,127 @@ async def run_copy(
     """Bring in what's chosen (None: what's ticked to begin with): a backup first, then the
     people, details and links as one Undo step, the removals last; then stories and photos."""
     compared = await _compare(ctx, data, password, answers)
-    plan, returned = compared.plan, compared.returned
+    returned = compared.returned
     for_name = str(compared.about["for"])
-    if not plan.changes:
-        raise RuleError(
-            "nothing_to_import",
-            f"There's nothing new in this copy: everything {for_name} changed is in the tree, "
-            "or was brought in before.",
-        )
-    carried = plan.carried_out(chosen)
-    if not carried:
-        raise RuleError("nothing_chosen", "Nothing is ticked, so there's nothing to bring in.")
-    backup = await exports.make_export(ctx, ExportFormat.ARCHIVE)
-    now = datetime.now().astimezone()
-    import_id, folder = await asyncio.to_thread(storage.new_import_folder, ctx.data_dir, now)
-    tag = f"{TAG}{import_id}"
-    people, links = plan.reached(carried)
-    try:
-        async with history.change(ctx, people, links) as change:
-            done = await write(ctx, lambda tx: _carry_out(tx, plan, carried, tag))
-            change.people.update([*done.created, *done.placeholders])
-            change.removing = done.removing
-            change.label = _label(for_name)
-    except BaseException:
-        await asyncio.to_thread(storage.remove_folder, folder)
-        raise
-    await _stories(ctx, plan, done, returned)
-    await _photos(ctx, plan, done)
-    await refresh_snapshots(ctx, done.touched())
+    brought = await _bring_in(
+        ctx,
+        history,
+        compared,
+        chosen,
+        label=_label(for_name),
+        prefix=TAG,
+        nothing_new=f"There's nothing new in this copy: everything {for_name} changed is in the "
+        "tree, or was brought in before.",
+    )
+    plan, done = brought.plan, brought.done
     base = copies_storage.read_brought(ctx.data_dir, returned.copy_id)
-    left_out = [*plan.left_out, *done.refused]
-    record = {
-        "format": 1,
+    record = brought.record() | {
         "kind": "copy",
-        "id": import_id,
-        "tag": tag,
         "file_name": file_name,
-        "imported_at": now.isoformat(timespec="seconds"),
-        "backup": backup.name,
         "copy_id": returned.copy_id,
         "for": for_name,
         "title": compared.about.get("title") or "",
         "saved_at": returned.saved_at.isoformat() if returned.saved_at else None,
-        "people": done.created,
-        "placeholders": done.placeholders,
-        "links": len(done.link_ids),
-        "link_ids": done.link_ids,
-        "changed": done.changed,
-        "relinked": done.relinked,
-        "unlinked": done.unlinked,
-        "orphans": done.orphans,
-        "filled": done.filled,
-        "removed": done.removing,
-        "stories": done.stories,
-        "photos": done.photos,
-        "left_out": [item.model_dump(mode="json") for item in left_out],
-        "second_look": [
-            item.model_dump(mode="json") for item in [*plan.second_look, *done.notices]
-        ],
-        "differences": [],
-        "taken_back_at": None,
     }
     was = gzip.compress(json.dumps(base).encode("utf-8"), mtime=0)
     await asyncio.to_thread(
-        storage.save_copy_import, folder, record, data, _report(plan, done), was
+        storage.save_copy_import, brought.folder, record, data, _report(plan, done), was
     )
     await asyncio.to_thread(
         copies_storage.keep_brought,
         ctx.data_dir,
         returned.copy_id,
-        _brought(returned, plan, done, import_id),
+        _brought(returned, plan, done, brought.import_id),
     )
-    return ImportDone(
-        id=import_id,
-        label=_label(for_name),
-        people=len(done.created),
-        links=len(done.link_ids),
-        changed=len(done.changed) + len(done.relinked) + len(done.unlinked) + len(done.filled),
-        removed=len(done.removing),
-        stories=len(done.stories),
-        photos=len(done.photos),
-        left_out=len(left_out),
-        backup=backup.name,
+    return brought.done_view(_label(for_name))
+
+
+@dataclass(frozen=True)
+class SentDone:
+    """What bringing in a computer's changes did, and what wasn't taken, in words, for
+    the keeper's answer to it."""
+
+    done: ImportDone
+    left_out: list[str]
+
+
+def _not_taken(brought: _Brought) -> list[str]:
+    """What wasn't taken, as the review named it: unticked, refused by the rules, or left out."""
+    plan, done = brought.plan, brought.done
+    words = [
+        f"{change.name}: {change.column or change.detail or change.kind.replace('_', ' ')}"
+        for change in plan.changes
+        if change.id not in done.carried and change.id not in done.refused_ids
+    ]
+    words += [f"{item.column}: {item.written}. {item.why}" for item in brought.left_out()]
+    return words
+
+
+async def run_sent(
+    ctx: Context,
+    history: History,
+    sent: Sent,
+    answers: Mapping[str, str],
+    chosen: Collection[str] | None = None,
+) -> SentDone:
+    """Bring in what's chosen of what a relative's computer sent, as from a copy: a
+    backup first, one Undo step, then stories and photos; kept for Take back."""
+    compared = await _compare_sent(ctx, sent, answers)
+    label = f"Changes from {sent.computer}"
+    brought = await _bring_in(
+        ctx,
+        history,
+        compared,
+        chosen,
+        label=label,
+        prefix=SENT_TAG,
+        nothing_new=f"There's nothing new from {sent.computer}: everything it changed is in the "
+        "tree already.",
+        sent_by={
+            "computer": sent.computer,
+            "email": sent.email,
+            "sent": sent.sent_at.isoformat(timespec="seconds"),
+        },
     )
+    record = brought.record() | {
+        "kind": "folder",
+        "file_name": sent.computer,
+        "device": sent.device,
+        "proposal": sent.proposal,
+        "for": sent.computer,
+        "email": sent.email,
+        "sent_at": sent.sent_at.isoformat(),
+    }
+    was = gzip.compress(
+        json.dumps(
+            {"people": sent.base.people, "links": sent.base.links, "stories": sent.base.stories}
+        ).encode("utf-8"),
+        mtime=0,
+    )
+    await asyncio.to_thread(
+        storage.save_sent_import,
+        brought.folder,
+        record,
+        sent.packed,
+        _report(brought.plan, brought.done),
+        was,
+    )
+    return SentDone(brought.done_view(label), _not_taken(brought))
+
+
+def everything_left(plan: CopyPlan) -> list[str]:
+    """Everything a computer sent, in words: what isn't taken when it's turned down."""
+    words = [
+        f"{change.name}: {change.column or change.detail or change.kind.replace('_', ' ')}"
+        for change in plan.changes
+    ]
+    return words + [f"{item.column}: {item.written}. {item.why}" for item in plan.left_out]
+
+
+async def plan_sent(ctx: Context, sent: Sent) -> CopyPlan:
+    """What a computer sent, compared, with no answers yet: for turning it down, and for a
+    trusted computer's changes."""
+    return (await _compare_sent(ctx, sent, {})).plan
 
 
 # --- Take back ---------------------------------------------------------------------------------

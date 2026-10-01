@@ -162,9 +162,10 @@ class ImportSummary(BaseModel):
     """An earlier import, for Settings → Import and What's missing."""
 
     id: str
-    kind: Literal["spreadsheet", "copy"] = "spreadsheet"
+    kind: Literal["spreadsheet", "copy", "folder"] = "spreadsheet"
     file_name: str
-    for_name: str | None = None  # a copy's: whom it was made for (M21)
+    # A copy's: whom it was made for (M21); a relative's computer's: its name.
+    for_name: str | None = None
     imported_at: datetime
     people: int
     people_present: int  # still in the tree: not undone, taken back or deleted since
