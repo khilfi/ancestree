@@ -1,19 +1,19 @@
 {
-  "version": "0.1.1",
-  "notes": "The first update, to check that updates reach every computer.\n\n- Nothing in the app changes.\n- It installs itself: when you choose **Restart to update**, or the next time AncesTree starts.\n",
-  "pub_date": "2026-09-30T02:56:25Z",
+  "version": "0.2.1",
+  "notes": "The family's own AncesTree, on each of its computers, kept in step through Google Drive.\n\nThis release replaces 0.2.0, which was withdrawn: its update key was lost, so it could never have received updates. 0.2.1 is the same app, with a new key.\n\n- **The family folder.** In **Settings \u2192 Family folder**, sign in to Google and start your family's folder in your Google Drive, as its keeper. On a relative's computer, join the folder the keeper shared with them. The keeper checks a short code with each computer before letting it in, and chooses what it may do.\n- **The family arrives by itself** on each relative's computer, photos and stories too, while AncesTree is open.\n- **Relatives' changes come to the keeper.** On a relative's computer, changes wait for the keeper, who reviews them and brings in what they tick, with a backup first and one step for Undo. What isn't taken goes back to them, with the keeper's note. A trusted computer's changes come in by themselves, unless they clash or take something out.\n- **Who changed this**, on each person: their last changes, and which computer they came from.\n- **Merge\u2026** makes someone entered twice into one.\n- **Everything in Google Drive is encrypted** on each computer first: Google keeps the files, but can't read them. See the [privacy policy](https://github.com/khilfi/ancestree/blob/main/PRIVACY.md).\n\nWhen you sign in to Google from AncesTree, Google says it hasn't verified the app: AncesTree is made for one family, so it isn't. Choose **Advanced**, then **Go to AncesTree**.\n\n**If you installed 0.1.0, 0.1.1 or 0.2.0**, install 0.2.1 from this page by hand. Updates are now signed with a new key, which those versions don't know, so they won't update themselves.\n",
+  "pub_date": "2026-10-02T12:24:25Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc29qZjQwUkNudUNYZjJDd1NMNG5lZmpJakFyQzQ0M0QrV2txdy8wYmxKWFZsNU96UzJWUlZRWmVBSHhDOFNGYU1qQ0ZlY0lEb0F1RGU5ckJkbm1JcXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzUyCWZpbGU6QW5jZXNUcmVlXzAuMS4xX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuMS4xCmhhbTlVR21iMlZSTjg3ejBTQzhhQXVQQTJ0NUY5MFJneENTUkViTUMyTERTU3c3MkNDcDg1cG1RM3ZiSEI4VVlZNlpNM2tucVVYQWlRSGpweUgzUUF3PT0K",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1o1eVVqVGNURUkxYnI2UGhVR3VzNERWb3RiL2VOaUJIcE9RVmVEVml6dXNLSFEvUDFKVTM2ZHZidzlFODZOMTB2ckZDUHdJdU5zSG5vRzBNcCtZRGc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwOTQ0NzMzCWZpbGU6QW5jZXNUcmVlXzAuMi4xX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuMi4xCnRVK2ZUWll1UXBmWmtZTjVFNlJ2Ym9iT2I5NDc0VlVSc1RwbGIraStyVnhTNk56NHNvQ0lIN0NqeVVEV2JnTTJnZmJKOFdGZlBTalVoK1NmWmp0NUFRPT0K",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.2.1/AncesTree_0.2.1_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc3J4UnJ2eTk4d2RHS2U2Y0c4REtiWHM3NWVZdTh6VjZWbWhKRTgvdzhmeFZjVGlzSlJiaElxejFBRXlwVEtBVW9ZSHZyRnhGK3dySEZBaXJUUDAzMnc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzY5CWZpbGU6QW5jZXNUcmVlXzAuMS4xX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4xLjEKdFcyUnlSUE9OZ2RNdFhrRW83bzRnV2tGN21EdGZQaWJrY0N4VUozN0t0eEtCSFArSy9mWWMvWnZaTWROMnV6L1hVSG5kUnpTS011bWJjRHNEQmwxQXc9PQo=",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1ExS1JqdDJ3V0QwSkZCTjNPRFVmdUNiRFZtUytJclFMUHlCalBoK3BWVWdHb29zeFI4QVF3TUdzMWpERFhTOS9GOFJBQjJYS1VsR3pKaFRPWnQ1NXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwOTQ2MDI3CWZpbGU6QW5jZXNUcmVlXzAuMi4xX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4yLjEKcllnaW1Fb2U1dFZ3WWFtWTdDNnEyL1FpbEM4YVYxUC81WUZscWYwMld6UzRMbkRYRWRobFRhK2k0UXQyUlEvWk1hWVRpbVNZa21iSGZEL2lJZSt3QXc9PQo=",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.2.1/AncesTree_0.2.1_amd64.AppImage"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRVy9HdzJvUTlzc3F1eEw3RE9hNWJzZWE1ZHNXaERaWXZSOWpRNnI3cFdXdXRDNXpUZjJUc0N3UHpuUWg3bWx6WHk2MElVdWppb2Y0M1VYaFJZRitBdzU5U3RKbG1yOUF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwNzM3NzQ1CWZpbGU6QW5jZXNUcmVlXzAuMS4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjEuMQo2U1Buby9SZ0xrY2lORWlQb3dnampuVVNtNE1WRjloNzJ1KzB6MnVCVm1wWW9CSVFMUVJneXdCRkFxbWovM3JscTM5YXRFZE1QRDAvd3FIRkllb29EUT09Cg==",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.1.1/AncesTree_0.1.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2FDbXd2SjlqZHUxTkkrc08wcElZcm5PVWZraDRnVGNxelFsME9SV1VFRWFwN1dlRks4Y0NpR0FUV1NXVHgxRWk0aWFiYzhpL0ZURDQ5Z0x2UGNMM1FnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwOTQ0NjUwCWZpbGU6QW5jZXNUcmVlXzAuMi4xX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjIuMQplQkNmamNNaHEyemZsSmlZVzJFOVh0dFJLZGM0Y1NpWXkwVEw1Z2tlNzRJdFFRWmE3RnE5Wm1rdGdlVnZWUTVBK25Qa3Nmak0vdDkvQUVuY3AzV21CZz09Cg==",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.2.1/AncesTree_0.2.1_x64-setup.exe"
     }
   }
 }
