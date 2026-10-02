@@ -10,9 +10,9 @@
 # doesn't know, for another version, or for none. The keys are made for this run and thrown
 # away with it, so no secret is kept anywhere.
 #
-# In a private repository, a Mac's minutes count ten times over against GitHub's monthly
-# allowance, so a commit can name the systems to run: "[only: macos linux]" in its message.
-# Otherwise, all three.
+# A commit can name the systems to run: "[only: macos linux]" in its message; otherwise, all
+# three. It saves minutes in a private repository, such as the test repository, where a Mac's
+# count ten times over against GitHub's monthly allowance. In a public one, they're free.
 
 name: Desktop app
 

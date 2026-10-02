@@ -366,3 +366,58 @@ def test_nothing_in_the_folder_names_the_family(drive: Drive, keeper: Keeper) ->
         if path.is_file():
             data = path.read_bytes()
             assert not [word for word in words if word in data], path.name
+
+
+# --- Put right in 0.3.1 -------------------------------------------------------------------------
+
+
+def test_a_change_set_written_but_not_counted_is_counted_after_a_restart(
+    drive: Drive, keeper: Keeper, tmp_path: Path
+) -> None:
+    """The app ended between writing a change set and counting it: it's counted when the app
+    starts again, so the next isn't numbered the same, and it's never taken for another
+    keeper's."""
+    data = tmp_path / "keeper-data"
+    counted = (data / "computer.bin").read_bytes()
+    seq = keeper.publish([person("Siti")])
+    (data / "computer.bin").write_bytes(counted)  # as if it ended before counting it
+    again = Keeper.load(drive.copies["keeper"], data)
+    assert again.applied == seq - 1
+    assert not again.overtaken()  # its own: counted now
+    assert again.applied == seq
+    assert again.publish([person("Ali")]) == seq + 1
+    member = join(drive, again, "salmah")
+    assert {"Siti", "Ali"} <= member.state["people"].keys()
+
+
+def test_another_computer_with_the_keepers_keys_is_noticed(tmp_path: Path) -> None:
+    """The keeper's keys brought back on another computer with the recovery code: once it adds
+    to the record, the first sees the record move on without it, and must stop."""
+    drive = Drive(tmp_path, ["first"])
+    first, code = Keeper.start(drive.copies["first"], tmp_path / "first-data", "Hassan")
+    first.publish([person("Siti")])
+    copy = drive.add("second")
+    drive.sync()
+    second = Keeper.recover(copy, tmp_path / "second-data", code)
+    assert not first.overtaken()
+    assert not second.overtaken()
+    second.publish([person("Ali")])
+    drive.sync()
+    assert first.overtaken()
+    assert not second.overtaken()
+
+
+def test_a_new_recovery_code_is_numbered_after_every_recovery_file(tmp_path: Path) -> None:
+    drive = Drive(tmp_path, ["keeper"])
+    keeper, old = Keeper.start(drive.copies["keeper"], tmp_path / "keeper-data", "Hassan")
+    new, older = keeper.new_recovery()
+    assert older == ["recovery/000001.bin"]
+    for path in older:
+        keeper.forget(path)  # out of the folder, as once it's in Drive's bin
+    assert keeper.repair() == []  # never put back
+    assert keeper._write_recovery() == "recovery/000003.bin"  # after them all, the gone one too
+    copy = drive.add("again")
+    drive.sync()
+    with pytest.raises(RefusedError):
+        Keeper.recover(copy, tmp_path / "old-code", old)
+    assert Keeper.recover(copy, tmp_path / "new-code", new).family == keeper.family

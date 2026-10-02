@@ -2,13 +2,18 @@
 
 Blocking calls over https, each with the account's access token. A file uploaded appears whole
 or not at all, so nobody ever reads half of one.
+
+When Drive says it's busy (too many requests, or a passing fault of its own), a call waits and
+tries again a few times, as Google asks, before the round gives up until the next minute.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import random
 import secrets
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,15 +29,27 @@ FOLDER = "application/vnd.google-apps.folder"
 FIELDS = "id,name,mimeType,md5Checksum,size,owners(emailAddress)"
 # Up to this size a file goes up in one request; larger, in a resumable upload.
 ONE_REQUEST = 5 * 1024 * 1024
+# Drive's "busy" answers, tried again after a wait: too many requests, and its own passing
+# faults. A 403 counts only when Drive gives a rate limit as its reason.
+BUSY = frozenset({429, 500, 502, 503, 504})
+RATE_LIMITED = frozenset({"rateLimitExceeded", "userRateLimitExceeded"})
+WAITS = (1.0, 2.0, 4.0)  # seconds before each try again, unless Drive says how long
+LONGEST_WAIT = 30.0
 
 
 class DriveError(Exception):
-    """Drive said no: `status` is its HTTP status."""
+    """Drive said no: `status` is its HTTP status; `why`, its reason's code, if it gave one."""
 
-    def __init__(self, status: int, reason: str) -> None:
+    def __init__(self, status: int, reason: str, why: str = "") -> None:
         super().__init__(f"Google Drive said no ({status}): {reason}")
         self.status = status
         self.reason = reason
+        self.why = why
+
+    @property
+    def busy(self) -> bool:
+        """Drive was too busy, or had a passing fault: worth trying again shortly."""
+        return self.status in BUSY or (self.status == 403 and self.why in RATE_LIMITED)
 
 
 @dataclass(frozen=True)
@@ -54,6 +71,7 @@ class DriveLike(Protocol):
     def create_folder(self, name: str, parent: str | None) -> RemoteFile: ...
     def upload(self, name: str, parent: str, data: bytes) -> RemoteFile: ...
     def replace(self, file_id: str, data: bytes) -> RemoteFile: ...
+    def trash(self, file_id: str) -> None: ...
     def share(self, file_id: str, email: str) -> None: ...
     def unshare(self, file_id: str, email: str) -> bool: ...
     def shared_with(self, file_id: str) -> list[str]: ...
@@ -77,16 +95,49 @@ def _quoted(text: str) -> str:
     return text.replace("\\", "\\\\").replace("'", "\\'")
 
 
+def _id(file_id: str) -> str:
+    """A file's id as part of an address. Drive's ids are letters, digits, - and _, but one
+    that isn't can't change the address it's in."""
+    return urllib.parse.quote(file_id, safe="")
+
+
 def md5(data: bytes) -> str:
     """Drive's own checksum, compared to see whether a file changed."""
     return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
 
+def _refused(error: urllib.error.HTTPError) -> DriveError:
+    """Drive's refusal, in its own words: its message, and its reason's code."""
+    raw = error.read()
+    try:
+        said = json.loads(raw)["error"]
+        reason = str(said["message"])
+        why = str((said.get("errors") or [{}])[0].get("reason", ""))
+    except ValueError, KeyError, TypeError, IndexError, AttributeError:
+        reason, why = raw[:200].decode(errors="replace"), ""
+    return DriveError(error.code, reason, why)
+
+
+def _wait_before(error: DriveError, headers: Any, attempt: int) -> float:
+    """How long to wait before trying again: as long as Drive asks, within reason, or a little
+    longer each time, never all at once with every other computer."""
+    asked = headers.get("Retry-After") if headers is not None else None
+    if asked is not None:
+        try:
+            return min(max(float(asked), 0.0), LONGEST_WAIT)
+        except ValueError:
+            pass  # a date rather than seconds: wait as usual
+    return WAITS[attempt] + random.uniform(0, WAITS[attempt] / 2)  # noqa: S311 - not for secrets
+
+
 class Drive:
     """One account's Google Drive, through `token()`: a fresh access token each time."""
 
-    def __init__(self, token: Callable[[], str]) -> None:
+    def __init__(
+        self, token: Callable[[], str], pause: Callable[[float], None] = time.sleep
+    ) -> None:
         self.token = token
+        self.pause = pause  # how a call waits before trying again: tests don't wait
 
     def _call(
         self,
@@ -96,22 +147,26 @@ class Drive:
         kind: str | None = None,
         headers: dict[str, str] | None = None,
     ) -> tuple[bytes, dict[str, str]]:
-        sent = {"Authorization": f"Bearer {self.token()}", **(headers or {})}
-        if kind:
-            sent["Content-Type"] = kind
-        request = urllib.request.Request(url, data=body, method=method, headers=sent)  # noqa: S310
-        try:
-            with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310 - https
-                return response.read(), dict(response.headers)
-        except urllib.error.HTTPError as error:
-            raw = error.read()
+        """One call to Drive, tried again while Drive says it's busy, a few times at most."""
+        attempt = 0
+        while True:
+            sent = {"Authorization": f"Bearer {self.token()}", **(headers or {})}
+            if kind:
+                sent["Content-Type"] = kind
+            request = urllib.request.Request(  # noqa: S310 - Drive's own addresses, https
+                url, data=body, method=method, headers=sent
+            )
             try:
-                reason = str(json.loads(raw)["error"]["message"])
-            except ValueError, KeyError, TypeError:
-                reason = raw[:200].decode(errors="replace")
-            raise DriveError(error.code, reason) from error
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
-            raise OfflineError("Google Drive can't be reached just now") from error
+                with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310
+                    return response.read(), dict(response.headers)
+            except urllib.error.HTTPError as error:
+                refused = _refused(error)
+                if not refused.busy or attempt >= len(WAITS):
+                    raise refused from error
+                self.pause(_wait_before(refused, error.headers, attempt))
+                attempt += 1
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+                raise OfflineError("Google Drive can't be reached just now") from error
 
     def _json(self, method: str, path: str, payload: object = None, **query: str) -> Any:
         url = f"{API}/{path}" + ("?" + urllib.parse.urlencode(query) if query else "")
@@ -126,7 +181,7 @@ class Drive:
     def get(self, file_id: str) -> RemoteFile:
         """A file or folder this account can reach. Drive says 404 for one it can't; so does
         this, for one in the trash."""
-        item = self._json("GET", f"files/{file_id}", fields=f"{FIELDS},trashed")
+        item = self._json("GET", f"files/{_id(file_id)}", fields=f"{FIELDS},trashed")
         if item.get("trashed"):
             raise DriveError(404, f"File in the trash: {file_id}.")
         return _remote(item)
@@ -147,10 +202,10 @@ class Drive:
 
     def children(self, folder_id: str) -> list[RemoteFile]:
         """What's in a folder: nothing, not a 404, for a folder this account can't reach."""
-        return self._search(f"'{folder_id}' in parents and trashed = false")
+        return self._search(f"'{_quoted(folder_id)}' in parents and trashed = false")
 
     def download(self, file_id: str) -> bytes:
-        raw, _ = self._call("GET", f"{API}/files/{file_id}?alt=media")
+        raw, _ = self._call("GET", f"{API}/files/{_id(file_id)}?alt=media")
         return raw
 
     def create_folder(self, name: str, parent: str | None) -> RemoteFile:
@@ -180,10 +235,11 @@ class Drive:
     def replace(self, file_id: str, data: bytes) -> RemoteFile:
         """New contents for a file this app made."""
         if len(data) <= ONE_REQUEST:
-            url = f"{UPLOAD}/files/{file_id}?uploadType=media&fields={FIELDS}"
+            url = f"{UPLOAD}/files/{_id(file_id)}?uploadType=media&fields={FIELDS}"
             raw, _ = self._call("PATCH", url, data, "application/octet-stream")
             return _remote(json.loads(raw))
-        return self._resumable("PATCH", f"{UPLOAD}/files/{file_id}?uploadType=resumable", {}, data)
+        url = f"{UPLOAD}/files/{_id(file_id)}?uploadType=resumable"
+        return self._resumable("PATCH", url, {}, data)
 
     def _resumable(self, method: str, url: str, meta: dict[str, object], data: bytes) -> RemoteFile:
         _, headers = self._call(
@@ -199,30 +255,33 @@ class Drive:
 
     def trash(self, file_id: str) -> None:
         """To the account's trash, where Drive keeps it 30 days: never deleted outright."""
-        self._json("PATCH", f"files/{file_id}", {"trashed": True}, fields="id")
+        self._json("PATCH", f"files/{_id(file_id)}", {"trashed": True}, fields="id")
 
     def share(self, file_id: str, email: str) -> None:
         """Let this Google account read the folder: only its owner writes in it. Google sends no
         email."""
         grant = {"role": "reader", "type": "user", "emailAddress": email}
-        self._json("POST", f"files/{file_id}/permissions", grant, sendNotificationEmail="false")
+        self._json(
+            "POST", f"files/{_id(file_id)}/permissions", grant, sendNotificationEmail="false"
+        )
 
     def unshare(self, file_id: str, email: str) -> bool:
         """Stop sharing with this account; whether it was shared with it."""
         answer = self._json(
-            "GET", f"files/{file_id}/permissions", fields="permissions(id,emailAddress,role)"
+            "GET", f"files/{_id(file_id)}/permissions", fields="permissions(id,emailAddress,role)"
         )
         for permission in answer.get("permissions", []):
             same = str(permission.get("emailAddress", "")).casefold() == email.casefold()
             if same and permission.get("role") != "owner":
-                self._call("DELETE", f"{API}/files/{file_id}/permissions/{permission['id']}")
+                gone = f"{API}/files/{_id(file_id)}/permissions/{_id(str(permission['id']))}"
+                self._call("DELETE", gone)
                 return True
         return False
 
     def shared_with(self, file_id: str) -> list[str]:
         """The Google accounts a file of this account's is shared with."""
         answer = self._json(
-            "GET", f"files/{file_id}/permissions", fields="permissions(emailAddress,role,type)"
+            "GET", f"files/{_id(file_id)}/permissions", fields="permissions(emailAddress,role,type)"
         )
         return [
             str(permission.get("emailAddress", ""))

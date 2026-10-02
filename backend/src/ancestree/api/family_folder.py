@@ -69,6 +69,25 @@ async def recovery_code_seen(request: Request) -> FamilyFolderStatus:
     return await folder.status()
 
 
+@router.post("/new-recovery-code")
+async def new_recovery_code(request: Request) -> FamilyFolderStatus:
+    """A new recovery code, for one lost or seen by someone else (the keeper's). The status
+    carries it, until it's kept safe; once it's in Drive, the old code opens nothing."""
+    folder = _folder(request)
+    await folder.new_recovery_code()
+    return await folder.status()
+
+
+@router.post("/leave")
+async def leave_family_folder(request: Request) -> FamilyFolderStatus:
+    """This computer out of its family folder: it keeps the family as it is. A relative's
+    may leave whenever it likes; the keeper's only once another computer keeps the family, or
+    its part can't be opened here."""
+    folder = _folder(request)
+    await folder.leave()
+    return await folder.status()
+
+
 @router.get("/shared")
 async def shared_family_folders(request: Request) -> list[SharedFolder]:
     """Family folders shared with this Google account, to join."""

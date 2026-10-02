@@ -21,12 +21,22 @@ from ancestree.domain.familyfolder import (
     JoinFamily,
     OneComputer,
     Recover,
+    ReviewChanges,
     StartFamily,
+    TurnDown,
 )
 from ancestree.familyfolder.computers import Keeper, Member
+from ancestree.familyfolder.drive import DriveError
 from ancestree.familyfolder.google import Client, SignedOutError, Tokens
-from ancestree.services.context import Context, RuleError
-from ancestree.services.familyfolder import FOLDER_NAME, OWN_FOLDER, FamilyFolder
+from ancestree.familyfolder.mirror import Mirror
+from ancestree.services.context import Context, NotFoundError, RuleError
+from ancestree.services.familyfolder import (
+    FOLDER_NAME,
+    OWN_FOLDER,
+    REPLACED,
+    UNREADABLE,
+    FamilyFolder,
+)
 from tests.fake_drive import Cloud
 
 pytestmark = pytest.mark.anyio
@@ -73,13 +83,14 @@ class Family:
         return copy.deepcopy(self.graph)
 
     async def restore(self, archive: Path, backup_first: bool) -> None:
-        """As a restore would: the archive's graph and its people's and settings' files."""
+        """As a restore would: the archive's graph and its people's, settings' and Trash's
+        files."""
         with ZipFile(archive) as opened:
             graph = json.loads(opened.read("graph.json"))
             files = {
                 name: opened.read(name)
                 for name in opened.namelist()
-                if name.startswith(("people/", "settings/"))
+                if name.startswith(("people/", "settings/", "trash/"))
             }
         for name, data in files.items():
             target = self.data_dir / name
@@ -318,6 +329,8 @@ async def test_a_computer_turned_away_is_no_longer_asking(tmp_path: Path, cloud:
     [asking] = (await keeper.status()).asking
     await keeper.refuse(OneComputer(device=asking.device))
     assert (await keeper.status()).asking == []
+    with pytest.raises(NotFoundError):  # turned away: it asks again as a new computer, if need be
+        await keeper.admit(Admit(device=asking.device, role="viewer"))
     with pytest.raises(RuleError):
         await keeper.start(StartFamily(family="Another", computer="PC"))  # one family here
     assert theirs.restores == []
@@ -360,11 +373,18 @@ async def test_offline_and_signed_out_are_said_plainly(tmp_path: Path, cloud: Cl
 
 
 async def test_what_is_kept_here_survives_a_restart(tmp_path: Path, cloud: Cloud) -> None:
-    _, ours, _, _, _ = await two_computers(tmp_path, cloud)
+    keeper, ours, _, _, _ = await two_computers(tmp_path, cloud)
+    code = keeper.recovery_code
+    assert code is not None
     again = computer(tmp_path, cloud, KEEPER, ours)
     status = await again.status()
     assert (status.setup, status.role, status.family) == ("keeper", "keeper", "Keluarga Contoh")
-    assert status.recovery_code is None  # shown once, never kept
+    assert status.recovery_code == code  # until the keeper says it's kept: no other copy
+    kept = (ours.data_dir / "familyfolder" / "recovery-code.bin").read_bytes()
+    assert code.encode() not in kept or sys.platform != "win32"  # locked, as the keys are
+    again.recovery_seen()
+    assert (await computer(tmp_path, cloud, KEEPER, ours).status()).recovery_code is None
+    assert not (ours.data_dir / "familyfolder" / "recovery-code.bin").exists()
     keys = (ours.data_dir / "familyfolder" / "computer" / "computer.bin").read_bytes()
     if sys.platform == "win32":  # locked by Windows: nothing in it can be read
         assert keys.startswith(b"AncesTree protected 1")
@@ -569,3 +589,283 @@ async def test_a_viewer_sends_nothing_nor_does_moving_people_on_the_tree(
     assert (await relative2.status()).pending == 0
     await keeper2.sync()
     assert (await keeper2.status()).changes == []
+
+
+# --- Put right in 0.3.1 -------------------------------------------------------------------------
+
+
+def records_in(cloud: Cloud) -> int:
+    """The change sets in the family's record, as Drive holds them."""
+    return sum(1 for item in cloud.items.values() if item.name.endswith(".chg"))
+
+
+async def test_the_keeper_back_on_a_new_computer_takes_over_and_the_old_one_stops(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, _, _, folder = await two_computers(tmp_path, cloud)
+    code = keeper.recovery_code
+    assert code is not None
+    await keeper.sync()  # the relative's request to join is gathered here
+
+    new_one = Family(tmp_path / "new-computer")
+    again = computer(tmp_path, cloud, KEEPER, new_one)
+    await again.recover(Recover(code=code))
+    await again.sync()
+    in_the_family_folder = [item for item in cloud.items.values() if cloud.inside(item, folder)]
+    paths = [cloud.path(item.id) for item in in_the_family_folder]
+    assert not [path for path in paths if "/join/" in path or "/inbox/" in path]  # relatives'
+    assert {item.owner for item in in_the_family_folder} == {KEEPER}
+    assert [ask.name for ask in (await again.status()).asking] == ["Mak Long's laptop"]
+
+    published = records_in(cloud)
+    someone(ours.graph, HASSAN)["full_name"] = "Haji Hassan bin Ismail"  # on the old computer
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.replaced, status.may_leave, status.problem) == (True, True, REPLACED)
+    assert (status.asking, status.changes) == ([], [])
+    assert records_in(cloud) == published  # nothing more from the old computer: no split
+    with pytest.raises(RuleError) as stopped:
+        await keeper.invite(Invite(email="cousin@example.com"))
+    assert stopped.value.code == "replaced"
+    assert (await again.status()).problem == ""  # the new keeper carries on
+
+    await keeper.leave()  # set aside; to keep the family there again, recover there
+    assert (await keeper.status()).setup is None
+
+
+async def test_a_keeper_back_before_every_photo_has_come_publishes_nothing_yet(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    ours = Family(tmp_path / "keeper-data", made_up_graph())
+    photo = ours.data_dir / "people" / HASSAN / "profile" / "original.jpg"
+    photo.parent.mkdir(parents=True)
+    photo.write_bytes(b"\xff\xd8 a made-up photo")
+    keeper = computer(tmp_path, cloud, KEEPER, ours)
+    code = await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+    blob = next(item for item in cloud.items.values() if "/files/" in cloud.path(item.id))
+    hidden = cloud.items.pop(blob.id)  # not listed yet, as Drive sometimes is for a while
+    published = records_in(cloud)
+
+    new_one = Family(tmp_path / "new-computer")  # nobody here yet
+    again = computer(tmp_path, cloud, KEEPER, new_one)
+    await again.recover(Recover(code=code))
+    assert new_one.restores == []
+    assert "still arriving" in (await again.status()).problem
+    assert records_in(cloud) == published + 1  # only the word that it keeps the family now
+    await again.sync()
+    assert records_in(cloud) == published + 1  # never everyone taken out, for want of a photo
+
+    cloud.items[hidden.id] = hidden
+    await again.sync()
+    [restore] = new_one.restores
+    assert restore["graph"] == ours.graph
+    assert restore["files"][f"people/{HASSAN}/profile/original.jpg"] == b"\xff\xd8 a made-up photo"
+    assert restore["backup_first"] is True
+    await again.sync()
+    assert records_in(cloud) == published + 1  # the family as it was: nothing to publish
+    assert (await again.status()).problem == ""
+
+
+async def test_a_new_recovery_code_and_the_old_one_opens_nothing(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    ours = Family(tmp_path / "keeper-data", made_up_graph())
+    keeper = computer(tmp_path, cloud, KEEPER, ours)
+    old = await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+    keeper.recovery_seen()
+    new = await keeper.new_recovery_code()
+    assert new != old
+    assert (await keeper.status()).recovery_code == new
+    assert (await computer(tmp_path, cloud, KEEPER, ours).status()).recovery_code == new  # kept
+    recovery = sorted(
+        cloud.path(item.id) for item in cloud.items.values() if "/recovery/" in cloud.path(item.id)
+    )
+    assert recovery == [f"{FOLDER_NAME}/recovery/000002.bin"]
+    assert [item.name for item in cloud.binned.values()] == ["000001.bin"]  # in the bin, a while
+    assert not (keeper.local / "recovery" / "000001.bin").exists()
+    await keeper.sync()  # not put back by repair
+    assert [item.name for item in cloud.items.values() if item.name == "000001.bin"] == []
+
+    with pytest.raises(RuleError) as wrong:
+        await computer(tmp_path, cloud, KEEPER, Family(tmp_path / "old-code")).recover(
+            Recover(code=old)
+        )
+    assert wrong.value.code == "not_recovered"
+    again = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "new-code"))
+    await again.recover(Recover(code=new))
+    assert (await again.status()).setup == "keeper"
+
+
+async def test_changes_that_cant_be_read_can_still_be_turned_down(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _, device = await admitted(tmp_path, cloud)
+    assert isinstance(relative.computer, Member)
+    assert relative.setup is not None
+    relative.computer.send(
+        [], family="bm90IGEgZmFtaWx5", answered=0, base=relative.setup.restored_seq, changed=1
+    )  # "not a family": damaged on its way
+    await relative.sync()  # sends it up
+    await keeper.sync()
+    [waiting] = (await keeper.status()).changes
+    with pytest.raises(RuleError) as unreadable:
+        await keeper.review(device, waiting.proposal, ReviewChanges())
+    assert unreadable.value.code == "unreadable_changes"
+    assert "Take none of it" in unreadable.value.message
+
+    await keeper.turn_down(device, TurnDown(proposal=waiting.proposal, note="Again, please"))
+    assert (await keeper.status()).changes == []
+    await relative.sync()
+    [answer] = (await relative.status()).answers
+    assert (answer.left_out, answer.note) == ([UNREADABLE], "Again, please")
+
+
+async def test_drive_trouble_comes_back_as_a_sentence(tmp_path: Path, cloud: Cloud) -> None:
+    keeper = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "keeper-data", made_up_graph()))
+    cloud.failing = {"create_folder"}
+    with pytest.raises(RuleError) as failed:
+        await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+    assert failed.value.code == "drive_said_no"
+    assert (await keeper.status()).setup is None
+    cloud.failing, cloud.offline = set(), True
+    with pytest.raises(RuleError) as offline:
+        await keeper.shared()
+    assert offline.value.code == "offline"
+    with pytest.raises(RuleError) as offline:
+        await keeper.recover(Recover(code="AAAA BBBB CCCC DDDD EEEE FFFF GG"))
+    assert offline.value.code == "offline"
+    cloud.offline = False
+    await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+
+    def ended(*_: object) -> None:
+        raise SignedOutError("ended")
+
+    assert keeper.drive is not None
+    keeper.drive.share = ended  # type: ignore[method-assign, assignment]
+    with pytest.raises(RuleError) as signed_out:
+        await keeper.invite(Invite(email=RELATIVE))
+    assert signed_out.value.code == "signed_out"
+    status = await keeper.status()
+    assert (status.email, status.setup) == (None, "keeper")  # signed out; the folder stays
+
+
+async def test_one_family_folder_to_a_google_account(tmp_path: Path, cloud: Cloud) -> None:
+    keeper = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "keeper-data", made_up_graph()))
+    await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+    another = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "another-computer"))
+    with pytest.raises(RuleError) as refused:
+        await another.start(StartFamily(family="Keluarga Contoh", computer="Laptop"))
+    assert refused.value.code == "family_folder_exists"
+    assert [item.name for item in cloud.items.values()].count(FOLDER_NAME) == 1
+
+
+async def test_one_relatives_folder_drive_wont_give_holds_up_no_one(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, theirs, _ = await admitted(tmp_path, cloud, role="viewer")
+    real = keeper._relatives_mirror
+
+    def refusing(drive: Any, folder: str, device: str) -> Mirror:
+        mirror = real(drive, folder, device)
+
+        def pull() -> int:
+            raise DriveError(403, "The user does not have sufficient permissions for this file.")
+
+        mirror.pull = pull  # type: ignore[method-assign]
+        return mirror
+
+    keeper._relatives_mirror = refusing  # type: ignore[method-assign]
+    someone(ours.graph, SITI)["full_name"] = "Siti Aminah binti Hassan"
+    await keeper.sync()
+    problem = (await keeper.status()).problem
+    assert "Mak Long's laptop" in problem
+    assert "(403)" in problem
+    await relative.sync()  # the family still reached everyone
+    assert someone(theirs.restores[-1]["graph"], SITI)["full_name"] == "Siti Aminah binti Hassan"
+
+
+async def test_a_relatives_own_trash_stays_when_the_family_arrives(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, theirs, _ = await two_computers(tmp_path, cloud)
+    tomb = theirs.data_dir / "trash" / "2026-10-03T10-00-00_someone" / "tombstone.json"
+    tomb.parent.mkdir(parents=True)
+    tomb.write_text('{"format": 1}', encoding="utf-8")
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role="contributor"))
+    await relative.sync()
+    in_trash = "trash/2026-10-03T10-00-00_someone/tombstone.json"
+    assert in_trash not in theirs.restores[0]["files"]  # the first time: its own family, backed up
+
+    someone(ours.graph, SITI)["full_name"] = "Siti Aminah binti Hassan"
+    await keeper.sync()
+    await relative.sync()
+    assert theirs.restores[-1]["files"][in_trash] == b'{"format": 1}'  # after: its own Trash
+
+
+async def test_a_viewers_own_arrangement_stays_when_the_family_arrives(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, theirs, _ = await admitted(tmp_path, cloud, role="viewer")
+    someone(theirs.graph, HASSAN).update(layout_x=120.0, layout_y=40.0)  # dragged on their tree
+    someone(ours.graph, SITI).update(
+        full_name="Siti Aminah binti Hassan", layout_x=-50.0, layout_y=10.0
+    )  # the keeper's
+    await keeper.sync()
+    await relative.sync()
+    latest = theirs.restores[-1]["graph"]
+    hassan, siti = someone(latest, HASSAN), someone(latest, SITI)
+    assert (hassan["layout_x"], hassan["layout_y"]) == (120.0, 40.0)
+    assert siti["layout_x"] == -50.0  # moved by the keeper, not here
+    assert siti["full_name"] == "Siti Aminah binti Hassan"
+
+
+async def test_a_relative_leaves_keeping_the_family_and_the_keeper_stays(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs, device = await admitted(tmp_path, cloud)
+    assert not (await keeper.status()).may_leave
+    with pytest.raises(RuleError) as stays:
+        await keeper.leave()
+    assert stays.value.code == "keeper_stays"
+
+    assert (await relative.status()).may_leave
+    await relative.leave()
+    status = await relative.status()
+    assert (status.setup, status.email, status.may_leave) == (None, None, False)
+    assert relative.editing  # its family is its own again
+    assert not (theirs.data_dir / "familyfolder").exists()
+    assert len(list(theirs.data_dir.glob("familyfolder-left-*"))) == 1  # set aside, never deleted
+    assert len(theirs.restores) == 1  # the family here stays as it was
+
+    relative._signed_in(Client("made-up-client", "made-up-secret"), Tokens("r", RELATIVE))
+    [shared] = await relative.shared()
+    await relative.join(JoinFamily(folder=shared.id, computer="Mak Long's laptop"))
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    assert asking.device != device  # asking afresh, as a new computer
+
+
+async def test_a_part_kept_elsewhere_never_stops_the_app(tmp_path: Path, cloud: Cloud) -> None:
+    _, _, _, theirs, _ = await admitted(tmp_path, cloud)
+    kept = theirs.data_dir / "familyfolder"
+    (kept / "computer" / "computer.bin").write_bytes(b"AncesTree protected 1\nanother computer's")
+    (kept / "google.bin").write_bytes(b"not a secret AncesTree kept")
+    again = FamilyFolder(
+        Context(None, "neo4j", theirs.data_dir),  # type: ignore[arg-type]
+        client=Client("made-up-client", "made-up-secret"),
+        drive=lambda session: cloud.as_account(session.email),
+        graph=theirs.export,
+        restore=theirs.restore,
+    )
+    status = await again.status()
+    assert (status.broken, status.may_leave, status.email) == (True, True, None)
+    assert "can't be opened here" in status.problem
+    await again.sync()  # nothing to do, and nothing fails
+    assert not again.editing  # a relative's family still isn't changed here
+
+    await again.leave()
+    status = await again.status()
+    assert (status.setup, status.broken, status.problem) == (None, False, "")
+    assert again.editing

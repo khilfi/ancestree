@@ -72,6 +72,12 @@ class FamilyFolderStatus(BaseModel):
     sent_at: datetime | None = None
     answers: list[FolderAnswer] = Field(default_factory=list)
     changes: list[FolderChanges] = Field(default_factory=list)  # the keeper's to review
+    # 0.3.1: this computer's part can't be opened here (kept by another Windows user, or on
+    # another computer); another computer keeps the family now, so this keeper's stopped; and
+    # whether this computer may leave its family folder.
+    broken: bool = False
+    replaced: bool = False
+    may_leave: bool = False
 
 
 class SignInStarted(BaseModel):

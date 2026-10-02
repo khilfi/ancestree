@@ -561,7 +561,8 @@ export interface paths {
         /**
          * Save Kinship Settings
          * @description Choose the kinship language; set the family's Malay birth-order titles. Not
-         *     a change to the tree, so there's no Undo step for it.
+         *     a change to the tree, so there's no Undo step for it. On a relative's computer, the
+         *     language is its own, but the titles are the family's: they arrive from the keeper.
          */
         put: operations["save_kinship_settings"];
         post?: never;
@@ -923,6 +924,49 @@ export interface paths {
          * @description The recovery code is kept safe: it's never shown again.
          */
         post: operations["recovery_code_seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/new-recovery-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * New Recovery Code
+         * @description A new recovery code, for one lost or seen by someone else (the keeper's). The status
+         *     carries it, until it's kept safe; once it's in Drive, the old code opens nothing.
+         */
+        post: operations["new_recovery_code"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave Family Folder
+         * @description This computer out of its family folder: it keeps the family as it is. A relative's
+         *     may leave whenever it likes; the keeper's only once another computer keeps the family, or
+         *     its part can't be opened here.
+         */
+        post: operations["leave_family_folder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1815,6 +1859,21 @@ export interface components {
             answers?: components["schemas"]["FolderAnswer"][];
             /** Changes */
             changes?: components["schemas"]["FolderChanges"][];
+            /**
+             * Broken
+             * @default false
+             */
+            broken: boolean;
+            /**
+             * Replaced
+             * @default false
+             */
+            replaced: boolean;
+            /**
+             * May Leave
+             * @default false
+             */
+            may_leave: boolean;
         };
         /**
          * FamilyMap
@@ -5028,6 +5087,46 @@ export interface operations {
         };
     };
     recovery_code_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    new_recovery_code: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    leave_family_folder: {
         parameters: {
             query?: never;
             header?: never;

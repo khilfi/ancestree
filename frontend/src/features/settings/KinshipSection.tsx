@@ -1,6 +1,7 @@
 import { PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useFamilyFolder } from "@/api/familyFolder";
 import { useKinshipSettings, useSaveKinshipSettings } from "@/api/queries";
 import type { KinshipLanguage, KinshipSettings } from "@/api/types";
 import { Button } from "@/components/ui/button";
@@ -33,10 +34,12 @@ function tidy(titles: string[]): string[] {
 }
 
 /** Settings → Kinship words: the language of the words for relatives, and the family's
- *  Malay birth-order titles. */
+ *  Malay birth-order titles. On a relative's computer the titles are the family's,
+ *  set by the keeper: shown, not changed (0.3.1). */
 export function KinshipSection() {
   const settings = useKinshipSettings();
   const save = useSaveKinshipSettings();
+  const keepers = useFamilyFolder().data?.setup === "member";
   const [titles, setTitles] = useState<string[]>([]);
   const [youngest, setYoungest] = useState("");
 
@@ -104,7 +107,11 @@ export function KinshipSection() {
           <p className="max-w-2xl text-sm text-stone-500">
             Malay calls uncles and aunts by their own place among their brothers and sisters: Pak
             Long, Mak Ngah, Pak Lang … Pak Su. The titles after the third differ by region and
-            family, so set your family's here. A place without a title is Pak Cik or Mak Cik.
+            family,{" "}
+            {keepers
+              ? "so the family's keeper sets them, for everyone: they arrive here from the family folder."
+              : "so set your family's here."}{" "}
+            A place without a title is Pak Cik or Mak Cik.
           </p>
         </div>
 
@@ -119,13 +126,14 @@ export function KinshipSection() {
                 lang="ms"
                 value={title}
                 maxLength={20}
+                disabled={keepers}
                 onChange={(event) =>
                   setTitles((now) => now.map((t, i) => (i === index ? event.target.value : t)))
                 }
               />
             </div>
           ))}
-          {titles.length < MOST_PLACES && (
+          {titles.length < MOST_PLACES && !keepers && (
             <Button
               variant="ghost"
               size="sm"
@@ -145,6 +153,7 @@ export function KinshipSection() {
               lang="ms"
               value={youngest}
               maxLength={20}
+              disabled={keepers}
               onChange={(event) => setYoungest(event.target.value)}
             />
           </div>
@@ -156,7 +165,7 @@ export function KinshipSection() {
           )}
         </p>
 
-        <div className="flex gap-2">
+        <div className={keepers ? "hidden" : "flex gap-2"}>
           <Button
             disabled={!changed || save.isPending}
             onClick={() =>

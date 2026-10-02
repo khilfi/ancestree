@@ -27,7 +27,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from ancestree.familyfolder.drive import DriveLike, md5
+from ancestree.familyfolder.drive import DriveError, DriveLike, md5
 
 # A file missing from Drive's listing this long is taken as gone: a file just sent may take a
 # moment to be listed.
@@ -91,6 +91,29 @@ class Mirror:
         """Whose Google account a file in the family folder belongs to; empty if unknown."""
         known = self.files.get(relative)
         return known.owner if known else ""
+
+    def sent(self, relative: str) -> bool:
+        """Whether a file here is in Drive just as it is here, as this copy last knew Drive."""
+        known = self.files.get(relative)
+        try:
+            data = (self.local / relative).read_bytes()
+        except OSError:
+            return False
+        return known is not None and known.md5 == md5(data)
+
+    def bin(self, relative: str) -> None:
+        """One of this account's files taken out of the folder for good: put in Drive's bin,
+        where it stays a while, and gone from here."""
+        known = self.files.get(relative)
+        if known is not None:
+            try:
+                self.drive.trash(known.id)
+            except DriveError as error:
+                if error.status != 404:
+                    raise
+            del self.files[relative]
+            self._save()
+        (self.local / relative).unlink(missing_ok=True)
 
     def _walk(self) -> dict[str, tuple[str, str | None, str]]:
         """Every file in the folder in Drive: its path here, with its id, checksum and owner.

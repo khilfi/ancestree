@@ -7,6 +7,8 @@ import {
   useFamilyFolder,
   useInvite,
   useJoinFamily,
+  useLeaveFamilyFolder,
+  useNewRecoveryCode,
   useRecoverFamily,
   useRecoverySeen,
   useRefuse,
@@ -476,6 +478,106 @@ function RecoverySheet({ code }: { code: string }) {
   );
 }
 
+/** A new recovery code, for the keeper who lost theirs, or fears someone saw it (0.3.1). */
+function NewRecoveryCode() {
+  const make = useNewRecoveryCode();
+  const [asking, setAsking] = useState(false);
+  return (
+    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">Lost your recovery code?</summary>
+      <div className="mt-3 space-y-3">
+        <p className="max-w-2xl text-stone-600">
+          Make a new one, and keep it as you kept the old. Once it's in your Google Drive, the old
+          code opens nothing. Make one too if someone else may have seen your code.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAsking(true)}
+          disabled={make.isPending}
+        >
+          {make.isPending ? "Making it…" : "Make a new recovery code"}
+        </Button>
+      </div>
+      <AlertDialog open={asking} onOpenChange={setAsking}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Make a new recovery code?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your old code stops working. Have a pen and paper, or a printer, ready: the new code
+              is shown until you say you've kept it safe.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => make.mutate(undefined, { onError: showError })}>
+              Make it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </details>
+  );
+}
+
+/** This computer out of its family folder (0.3.1): it keeps the family as it is. */
+function Leave({ keeper }: { keeper: boolean }) {
+  const leave = useLeaveFamilyFolder();
+  const [asking, setAsking] = useState(false);
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => setAsking(true)}
+        disabled={leave.isPending}
+      >
+        {leave.isPending ? "Leaving…" : "Leave the family folder…"}
+      </Button>
+      <AlertDialog open={asking} onOpenChange={setAsking}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave the family folder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {keeper
+                ? "This computer stops keeping the family folder. The family stays here, as it is now. To be the family's keeper on this computer again, use your recovery code afterwards."
+                : "The family stays here, as it is now, as this computer's own: nothing new arrives, and nothing you change goes to the keeper. Ask your keeper to remove this computer too. You can ask to join again later."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => leave.mutate(undefined, { onError: showError })}>
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+/** When this computer can't take part as it did (0.3.1): its part can't be opened here, or
+ *  another computer keeps the family now. What happened, and the way out. */
+function Stuck({ status }: { status: FamilyFolderStatus }) {
+  return (
+    <div className="space-y-4">
+      <Panel
+        title={
+          status.replaced
+            ? "Another computer keeps the family now"
+            : "This computer's part can't be opened here"
+        }
+      >
+        <p className="max-w-2xl text-sm text-amber-700" role="status">
+          {status.problem}
+        </p>
+        {status.may_leave && <Leave keeper={status.setup === "keeper"} />}
+      </Panel>
+      {status.email && <GoogleAccount status={status} />}
+    </div>
+  );
+}
+
 /** The keeper's inbox: the changes waiting from relatives' computers, each to review. */
 function ChangesWaiting({ changes }: { changes: FolderChanges[] }) {
   const [open, setOpen] = useState<string | null>(null);
@@ -542,6 +644,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         <Members members={status.members ?? []} keeper />
         <Invite />
       </Panel>
+      <NewRecoveryCode />
       <GoogleAccount status={status} />
     </div>
   );
@@ -606,6 +709,12 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
         </Panel>
         <InStep status={status} />
         <GoogleAccount status={status} />
+        {status.may_leave && (
+          <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+            <span>Asked the wrong family, or turned away? Leave, then ask again.</span>
+            <Leave keeper={false} />
+          </div>
+        )}
       </div>
     );
   }
@@ -631,6 +740,7 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
         <Members members={members} keeper={false} />
       </Panel>
       <GoogleAccount status={status} />
+      {status.may_leave && <Leave keeper={false} />}
     </div>
   );
 }
@@ -649,6 +759,8 @@ export function FamilyFolderSection() {
         This AncesTree was built without its Google client, so it can't keep a family folder.
       </p>
     );
+  } else if (status.broken || status.replaced) {
+    body = <Stuck status={status} />;
   } else if (!status.email && !status.setup) {
     body = <SignIn status={status} />;
   } else if (!status.email) {

@@ -65,8 +65,9 @@ class Client:
 
     @classmethod
     def find(cls) -> Client | None:
-        """The client built into this app, else the one named by ANCESTREE_GOOGLE_CLIENT, else
-        the maintainer's own copy; None if there's none."""
+        """The client named by ANCESTREE_GOOGLE_CLIENT, if that's set (to try another client);
+        else the one built into this app; else the maintainer's own copy. None if there's
+        none."""
         named = os.environ.get("ANCESTREE_GOOGLE_CLIENT")
         for path in (Path(named) if named else None, BUILT_IN, OWN_COPY):
             if path is not None and path.is_file():

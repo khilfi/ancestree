@@ -94,12 +94,16 @@ def unprotect(stored: bytes) -> bytes:
 
 
 def write_secret(path: Path, data: bytes) -> None:
-    """Write whole, readable by this user alone, and locked where the system can lock it."""
+    """Write whole, readable by this user alone from its first byte, and locked where the
+    system can lock it."""
     path.parent.mkdir(parents=True, exist_ok=True)
     partial = path.with_name(path.name + ".part")
-    partial.write_bytes(protect(data))
-    if sys.platform != "win32":
-        partial.chmod(0o600)
+    partial.unlink(missing_ok=True)  # made afresh, so it's never another's, nor readable to all
+    handle = os.open(
+        partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600
+    )
+    with os.fdopen(handle, "wb") as written:
+        written.write(protect(data))
     os.replace(partial, path)
 
 

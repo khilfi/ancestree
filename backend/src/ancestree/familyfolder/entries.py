@@ -106,11 +106,17 @@ def changes_between(published: Entries, now: Entries) -> list[Put | Delete]:
 
 
 def build_archive(
-    entries: Entries, fetch: Callable[[str], bytes | None], data_dir: Path, dest: Path
+    entries: Entries,
+    fetch: Callable[[str], bytes | None],
+    data_dir: Path,
+    dest: Path,
+    *,
+    keep_trash: bool = False,
 ) -> Path | None:
     """A backup archive of the family the entries hold, to restore on this computer: its own
-    "Me", language and tree settings kept, the family's titles and places taken. None while a
-    file hasn't reached this computer yet."""
+    "Me", language and tree settings kept, the family's titles and places taken; and, with
+    `keep_trash`, its own Trash, which never travels. None while a file hasn't reached this
+    computer yet."""
     schema = entries.get("schema", {}).get("version", 0)
     graph: dict[str, Any] = {
         "schema_version": schema,
@@ -141,6 +147,9 @@ def build_archive(
         kinship = {**(settings.get("kinship") or {}), **entries.get("setting/kinship", {})}
         family_settings = {"kinship": kinship, "places": entries.get("setting/places", {})}
         write_json(staging / "settings" / "app.json", settings | family_settings)
+        trash = data_dir / "trash"
+        if keep_trash and trash.is_dir():
+            shutil.copytree(trash, staging / "trash")
         return write_archive(graph, staging, dest).path
     finally:
         shutil.rmtree(staging, ignore_errors=True)

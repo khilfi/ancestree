@@ -38,6 +38,7 @@ _WEBP = "data:image/webp;base64,"
 # person's folder to someone reading it without the app, and journal.json, which only the
 # keeper's computer writes.
 HERE_ONLY = frozenset({"layout_x", "layout_y", "updated_at"})
+PLACED = ("layout_x", "layout_y")  # where someone was dragged to on this computer's tree
 _EXPLAINS = ("/person.json", "/journal.json")
 
 
@@ -66,6 +67,29 @@ def rebased(
             }
             if moved:
                 family[key] = {**value, **moved}
+    return family
+
+
+def arranged(now: Entries, was: Entries, mine: Entries) -> Entries:
+    """The family as received `now`, with people where this computer's tree has them, for
+    those moved here since the family last arrived (`was`): on a computer that sends no
+    changes, its own arrangement stays (0.3.1). Everyone else sits where the keeper put them,
+    as the keeper moves them."""
+    family = dict(now)
+    for key, value in now.items():
+        then, here = was.get(key), mine.get(key)
+        if not key.startswith("person/") or then is None or here is None:
+            continue
+        moved = [name for name in PLACED if then.get(name) != here.get(name)]
+        if not moved:
+            continue
+        person = dict(value)
+        for name in moved:
+            if name in here:
+                person[name] = here[name]
+            else:
+                person.pop(name, None)  # put back on the rings here
+        family[key] = person
     return family
 
 

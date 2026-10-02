@@ -101,6 +101,12 @@ export const useRemoveComputer = () =>
 export const useSyncNow = () => useFolderAction(() => unwrap(api.POST("/api/family-folder/sync")));
 export const useAnswersSeen = () =>
   useFolderAction(() => unwrap(api.POST("/api/family-folder/answers-seen")));
+/** A new recovery code, for one lost or seen by someone else (0.3.1): shown until it's kept. */
+export const useNewRecoveryCode = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/new-recovery-code")));
+/** This computer out of its family folder (0.3.1): it keeps the family as it is. */
+export const useLeaveFamilyFolder = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/leave")));
 
 /** What a relative's computer sent, compared with the family it was made on and with the tree
  *  now, for the keeper to tick, as changes from a copy to edit were. Nothing is

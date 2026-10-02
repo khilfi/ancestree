@@ -40,6 +40,7 @@ class Cloud:
 
     def __init__(self) -> None:
         self.items: dict[str, _Item] = {}
+        self.binned: dict[str, _Item] = {}  # put in the bin: kept a while, no longer there
         self._ids = itertools.count(1)
         self.offline = False
         self.failing: set[str] = set()  # calls that fail, as when Drive has trouble
@@ -168,6 +169,14 @@ class FakeDrive:
             raise DriveError(403, NOT_ALLOWED)
         item.data = data
         return self._remote(item)
+
+    def trash(self, file_id: str) -> None:
+        """To the owner's bin, where Drive keeps it a while: no longer listed or reachable."""
+        self._touch("trash")
+        item = self._item(file_id)
+        if item.owner != self.email:
+            raise DriveError(403, NOT_ALLOWED)
+        self.cloud.binned[file_id] = self.cloud.items.pop(file_id)
 
     def share(self, file_id: str, email: str, role: str = "reader") -> None:
         """As AncesTree shares, to read; to edit only as Drive's own page could."""

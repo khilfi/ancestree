@@ -29,6 +29,10 @@ from ancestree.api import (
 from ancestree.config import Settings, get_settings
 from ancestree.db import connect
 from ancestree.exchange.restore import ArchiveError, restore_archive
+from ancestree.familyfolder.drive import DriveError
+from ancestree.familyfolder.google import GoogleError, OfflineError
+from ancestree.familyfolder.protect import ProtectError
+from ancestree.familyfolder.seals import RefusedError
 from ancestree.importing.sheet import SheetError
 from ancestree.media.photos import PhotoError
 from ancestree.migrations.runner import apply_migrations
@@ -139,11 +143,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def bad_spreadsheet(request: Request, error: Exception) -> JSONResponse:
         return _error(status.HTTP_422_UNPROCESSABLE_CONTENT, "bad_spreadsheet", str(error))
 
+    # The family folder's own troubles, should one reach here unsaid (0.3.1): a sentence,
+    # never a failure without one.
+    async def family_folder_trouble(request: Request, error: Exception) -> JSONResponse:
+        if isinstance(error, OfflineError):
+            code, message = "offline", "Google Drive can't be reached: check the internet."
+        elif isinstance(error, DriveError):
+            code, message = "drive_said_no", str(error)
+        elif isinstance(error, GoogleError):
+            code, message = "google_said_no", str(error)
+        elif isinstance(error, RefusedError):
+            code = "didnt_check_out"
+            message = f"Something in the family folder didn't check out ({error})."
+        else:
+            code = "cant_be_locked"
+            message = f"This computer's keys couldn't be locked or opened here ({error})."
+        return _error(status.HTTP_409_CONFLICT, code, message)
+
     app.add_exception_handler(NotFoundError, not_found)
     app.add_exception_handler(RuleError, rule_broken)
     app.add_exception_handler(PhotoError, bad_photo)
     app.add_exception_handler(ArchiveError, bad_archive)
     app.add_exception_handler(SheetError, bad_spreadsheet)
+    for trouble in (OfflineError, DriveError, GoogleError, RefusedError, ProtectError):
+        app.add_exception_handler(trouble, family_folder_trouble)
 
     @app.middleware("http")
     async def kept_by_the_keeper(

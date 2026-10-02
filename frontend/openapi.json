@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.2.1"
+    "version": "0.3.1"
   },
   "paths": {
     "/api/health": {
@@ -1692,7 +1692,7 @@
           "kinship"
         ],
         "summary": "Save Kinship Settings",
-        "description": "Choose the kinship language; set the family's Malay birth-order titles. Not\na change to the tree, so there's no Undo step for it.",
+        "description": "Choose the kinship language; set the family's Malay birth-order titles. Not\na change to the tree, so there's no Undo step for it. On a relative's computer, the\nlanguage is its own, but the titles are the family's: they arrive from the keeper.",
         "operationId": "save_kinship_settings",
         "requestBody": {
           "content": {
@@ -2345,6 +2345,50 @@
         "summary": "Recovery Code Seen",
         "description": "The recovery code is kept safe: it's never shown again.",
         "operationId": "recovery_code_seen",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/new-recovery-code": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "New Recovery Code",
+        "description": "A new recovery code, for one lost or seen by someone else (the keeper's). The status\ncarries it, until it's kept safe; once it's in Drive, the old code opens nothing.",
+        "operationId": "new_recovery_code",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/leave": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Leave Family Folder",
+        "description": "This computer out of its family folder: it keeps the family as it is. A relative's\nmay leave whenever it likes; the keeper's only once another computer keeps the family, or\nits part can't be opened here.",
+        "operationId": "leave_family_folder",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4563,6 +4607,21 @@
             },
             "type": "array",
             "title": "Changes"
+          },
+          "broken": {
+            "type": "boolean",
+            "title": "Broken",
+            "default": false
+          },
+          "replaced": {
+            "type": "boolean",
+            "title": "Replaced",
+            "default": false
+          },
+          "may_leave": {
+            "type": "boolean",
+            "title": "May Leave",
+            "default": false
           }
         },
         "type": "object",

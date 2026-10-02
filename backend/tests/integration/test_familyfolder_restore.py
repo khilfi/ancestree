@@ -80,9 +80,12 @@ async def test_a_relatives_computer_restores_the_family_as_the_keeper_has_it(
         "MATCH (n) WHERE n:Person OR n:RelationshipKind DETACH DELETE n",
         database_=settings.neo4j_database,
     )
+    tomb = relative_dir / "trash" / "2026-10-03T10-00-00_someone" / "tombstone.json"
+    tomb.parent.mkdir(parents=True)
+    tomb.write_text('{"format": 1}', encoding="utf-8")  # someone this computer deleted
     received = tmp_path / "received"
     received.mkdir()
-    archive = build_archive(entries, blobs.get, relative_dir, received)
+    archive = build_archive(entries, blobs.get, relative_dir, received, keep_trash=True)
     assert archive is not None
     ctx = Context(driver, settings.neo4j_database, relative_dir)
     restored = await restore_archive(ctx, archive, backup_first=False)
@@ -102,6 +105,7 @@ async def test_a_relatives_computer_restores_the_family_as_the_keeper_has_it(
     }
     assert kept["tree"] == {"colours": "generation"}
     assert "me" not in kept  # the keeper's "Me" never travels
+    assert tomb.read_text(encoding="utf-8") == '{"format": 1}'  # its own Trash stays (0.3.1)
 
 
 def test_an_archive_waits_for_every_file(tmp_path: Path) -> None:

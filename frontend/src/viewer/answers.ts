@@ -313,6 +313,8 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "POST /api/family-folder/sign-out": REFUSED,
   "POST /api/family-folder/start": REFUSED,
   "POST /api/family-folder/recovery-seen": REFUSED,
+  "POST /api/family-folder/new-recovery-code": REFUSED,
+  "POST /api/family-folder/leave": REFUSED,
   "POST /api/family-folder/join": REFUSED,
   "POST /api/family-folder/recover": REFUSED,
   "POST /api/family-folder/invite": REFUSED,

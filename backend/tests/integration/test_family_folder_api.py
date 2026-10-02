@@ -40,6 +40,11 @@ async def test_a_new_computer_takes_part_in_no_family_folder(client: httpx.Async
         "/api/family-folder/start", json={"family": "Keluarga Contoh", "computer": "PC"}
     )
     assert start.json()["detail"]["code"] == "signed_out"
+    leave = await client.post("/api/family-folder/leave")
+    assert (leave.status_code, leave.json()["detail"]["code"]) == (409, "no_family_folder")
+    code = await client.post("/api/family-folder/new-recovery-code")
+    assert (code.status_code, code.json()["detail"]["code"]) == (409, "signed_out")
+    assert body["may_leave"] is False
 
 
 async def test_a_relatives_computer_changes_only_its_own_choices(
@@ -118,3 +123,26 @@ async def test_who_changed_someone_is_in_their_journal(client: httpx.AsyncClient
     await client.post("/api/history/undo")
     lines = (await client.get(f"/api/persons/{ali['id']}/journal")).json()
     assert lines[0]["what"].startswith("Undid: ")
+
+
+async def test_the_familys_titles_are_the_keepers_and_the_language_each_computers(
+    client: httpx.AsyncClient,
+) -> None:
+    """On a relative's computer, the Malay titles arrive from the keeper, as the family's;
+    the kinship language is its own (0.3.1)."""
+    app_folder(client).setup = Setup(
+        "member", "folder-id", "Keluarga Contoh", "PC", "x@example.com"
+    )
+    now = (await client.get("/api/kinship/settings")).json()
+    titles = await client.put(
+        "/api/kinship/settings", json={**now, "titles": ["long", "ngah", "andak"]}
+    )
+    assert (titles.status_code, titles.json()["detail"]["code"]) == (409, "kept_by_the_keeper")
+    language = await client.put("/api/kinship/settings", json={**now, "language": "ms"})
+    assert (language.status_code, language.json()["language"]) == (200, "ms")
+
+    app_folder(client).setup = None  # the keeper's, or no family folder: the titles are its own
+    titles = await client.put(
+        "/api/kinship/settings", json={**now, "titles": ["long", "ngah", "andak"]}
+    )
+    assert titles.status_code == 200

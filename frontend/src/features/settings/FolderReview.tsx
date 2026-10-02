@@ -104,9 +104,29 @@ export function FolderReview({
         {changes.email ? ` (${changes.email})` : ""}, sent {when(changes.sent_at)}.
       </p>
       {review.isError ? (
-        <p role="alert" className="text-sm text-red-600">
-          {review.error.message}
-        </p>
+        <>
+          <p role="alert" className="text-sm text-red-600">
+            {review.error.message}
+          </p>
+          <div className="max-w-xl space-y-1">
+            <Label htmlFor={`note-${changes.device}`}>A note for {changes.name}, if you like</Label>
+            <Textarea
+              id={`note-${changes.device}`}
+              rows={2}
+              maxLength={2000}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={down} disabled={busy}>
+              {turnDown.isPending ? "Turning down…" : "Take none"}
+            </Button>
+            <Button variant="ghost" onClick={onClose} disabled={busy}>
+              Not now
+            </Button>
+          </div>
+        </>
       ) : !shown ? (
         <p className="text-sm text-stone-500">Comparing what they sent with your tree…</p>
       ) : (

@@ -22,7 +22,10 @@ from ancestree.domain.familyfolder import (
     StartFamily,
     TurnDown,
 )
+from ancestree.familyfolder.computers import Keeper
 from ancestree.familyfolder.google import Client, Tokens
+from ancestree.familyfolder.models import RecordChange
+from ancestree.familyfolder.seals import Kind, peek, unseal
 from ancestree.migrations.runner import apply_migrations
 from ancestree.repo.export import export_graph
 from ancestree.seed.loader import load_seed
@@ -239,3 +242,48 @@ async def test_a_trusted_computers_changes_come_in_unless_they_take_something_ou
     await keeper.sync()
     [waiting] = (await keeper.status()).changes  # taking someone out waits for the keeper
     assert waiting.role == "trusted"
+
+
+def sources_of(keeper: FamilyFolder) -> dict[int, str | None]:
+    """Each change set in the keeper's record: the relative's computer it came from, if any."""
+    computer = keeper.computer
+    assert isinstance(computer, Keeper)
+    found: dict[int, str | None] = {}
+    for path in (keeper.local / "record").glob("*.chg"):
+        blob = path.read_bytes()
+        seq = int(path.name.split("-")[0])
+        _, epoch, _ = peek(blob)
+        opened = unseal(blob, f"record/{seq}", Kind.RECORD, {computer.keeper}, computer.keys[epoch])
+        change = RecordChange.model_validate_json(opened.payload)
+        found[seq] = change.source.device if change.source else None
+    return found
+
+
+async def test_the_keepers_own_changes_go_out_first_and_as_the_keepers(
+    driver: AsyncDriver, settings: Settings, tmp_path: Path
+) -> None:
+    """Bringing in a relative's changes publishes them as theirs, in a change set of their
+    own: what the keeper changed meanwhile goes out first, as the keeper's (0.3.1)."""
+    keeper, relative, theirs, device, _ = await two_computers(driver, settings, tmp_path)
+    who = someone_real(theirs.graph)
+    who["nickname"] = "Tok Su"
+    await relative.sync()
+    await keeper.sync()
+    [waiting] = (await keeper.status()).changes
+    other = next(
+        p
+        for p in sorted(theirs.graph["people"], key=lambda p: p["id"])
+        if not p.get("placeholder") and p["id"] != who["id"]
+    )
+    await driver.execute_query(
+        "MATCH (p:Person {id: $id}) SET p.occupation = 'Teacher'",
+        id=other["id"],
+        database_=settings.neo4j_database,
+    )  # the keeper's own, not published yet
+    await keeper.bring_in(device, BringIn(proposal=waiting.proposal))
+    assert isinstance(keeper.computer, Keeper)
+    changed = keeper.computer.changed
+    mine, brought = changed[f"person/{other['id']}"], changed[f"person/{who['id']}"]
+    assert mine < brought
+    sources = sources_of(keeper)
+    assert (sources[mine], sources[brought]) == (None, device)

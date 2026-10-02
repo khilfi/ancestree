@@ -29,19 +29,25 @@ Once a minute while the app runs, `sync()`:
   a trusted computer's unless they clash, take something out or ask about a look-alike; then
   stops sharing the family folder with the accounts it removed.
 
-What Drive can't do just then waits for the next round, with the reason in `problem`.
+What Drive can't do just then waits for the next round, with the reason in `problem`. What a
+person asks for that Google, Drive or this computer can't do comes back as a plain sentence.
+
+Only one computer keeps the family at a time. One brought back as the keeper with the recovery
+code says so in the record at once; the keeper's computer it replaces sees the record move on
+without it, and stops publishing (`replaced`), so the record never splits in two.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import hashlib
 import json
 import logging
 import re
 import shutil
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -69,6 +75,7 @@ from ancestree.exchange.restore import restore_archive
 from ancestree.exchange.returned import ReturnedError, sent_family
 from ancestree.familyfolder.changes import (
     UnpackError,
+    arranged,
     family_to_send,
     own_changes,
     pack,
@@ -89,7 +96,8 @@ from ancestree.familyfolder.google import (
     Tokens,
 )
 from ancestree.familyfolder.mirror import Mirror
-from ancestree.familyfolder.models import Source
+from ancestree.familyfolder.models import Joined, Source
+from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.familyfolder.seals import RefusedError, join_code
 from ancestree.importing.returned import Base
 from ancestree.repo.export import export_graph
@@ -110,6 +118,21 @@ OWN_FOLDER_NAMED = re.compile(re.escape(OWN_FOLDER) + r" \(([0-9a-f]{16})\)")
 RELATIVES = ("join/", "inbox/")
 EVERY = 60.0  # seconds between syncs while the app runs
 SNAPSHOT_EVERY = 10  # change sets between snapshots of the whole family
+
+BROKEN = (
+    "This computer's part in the family folder can't be opened here: its keys were kept by "
+    "another Windows user, or on another computer. Leave the family folder here, then join it "
+    "again; or, as the keeper, be the keeper again with your recovery code."
+)
+REPLACED = (
+    "Another computer is the family's keeper now: the family's record has moved on without "
+    "this one, as when the keeper comes back on a new computer with the recovery code. This "
+    "computer no longer keeps the family folder: leave it here, and keep the family on the "
+    "other computer. To keep it on this one instead, leave it here, then be the keeper again "
+    "with your recovery code."
+)
+# What a relative hears when what it sent couldn't be read, and was turned down.
+UNREADABLE = "Everything you sent: it couldn't be read on the keeper's computer"
 
 log = logging.getLogger("uvicorn.error")
 
@@ -140,6 +163,14 @@ class Setup:
     rebuilt: int = 0
     seen: int = 0
     sent_at: str = ""
+    # The keeper's: when it saw another computer keeping the family, and stopped (0.3.1).
+    replaced: str = ""
+    # The keeper's: recovery files locked with a code no longer in use, to take out of the
+    # folder in Drive once the newest is there (0.3.1).
+    retire: list[str] = field(default_factory=list)
+    # The keeper's, brought back with the recovery code: until the family has arrived here
+    # whole, nothing is published, or what's missing here would be taken out for everyone.
+    recovering: bool = False
 
 
 def _fingerprint(entries: Entries) -> str:
@@ -203,9 +234,12 @@ class FamilyFolder:
         self.mirror: Mirror | None = None
         self.last_sync: datetime | None = None
         self.problem = ""
-        self.recovery_code: str | None = None  # shown once, never kept
+        # The keeper's new recovery code, until they've kept it: shown until then, even after
+        # a restart, and then never again.
+        self.recovery_code: str | None = None
         self.pending = 0  # a relative's: the people and links it changed, as last counted
         self.waiting: list[FolderChanges] = []  # the keeper's: changes to review, as last read
+        self.broken = ""  # why this computer's part can't be opened here, if it can't
         self._load()
 
     # Where things are kept
@@ -219,21 +253,63 @@ class FamilyFolder:
         return self.dir / "computer"  # its keys and copy of the family, locked
 
     def _load(self) -> None:
-        if self.client is not None and (tokens := Tokens.load(self.dir / "google.bin")):
-            self._signed_in(self.client, tokens)
+        """What this computer kept, as the app starts. What can't be opened here (kept by
+        another Windows user, or on another computer) never stops the app: it's said instead,
+        and the family folder waits to be left."""
+        if self.client is not None:
+            try:
+                tokens = Tokens.load(self.dir / "google.bin")
+            except (ProtectError, OSError, ValueError, KeyError) as error:
+                log.warning("The Google sign-in kept here can't be opened: %s", error)
+                tokens = None
+                self.problem = (
+                    "The sign-in to Google kept here can't be opened on this computer: sign in "
+                    "again."
+                )
+            if tokens is not None:
+                self._signed_in(self.client, tokens)
         setup = self.dir / "setup.json"
         if setup.is_file():
-            self.setup = Setup(**json.loads(setup.read_text(encoding="utf-8")))
-            kind = Keeper if self.setup.role == "keeper" else Member
-            self.computer = kind.load(self.local, self.data)
+            try:
+                self.setup = Setup(**json.loads(setup.read_text(encoding="utf-8")))
+                kind = Keeper if self.setup.role == "keeper" else Member
+                self.computer = kind.load(self.local, self.data)
+            except (ProtectError, OSError, ValueError, KeyError, TypeError) as error:
+                log.warning("This computer's part in the family folder can't be opened: %s", error)
+                self.computer = None
+                self.broken = BROKEN
+                return
             self._make_mirror()
+        try:
+            code = read_secret(self.dir / "recovery-code.bin")
+        except (ProtectError, OSError) as error:
+            log.warning("The recovery code kept to show can't be opened: %s", error)
+            code = None
+        if code is not None and isinstance(self.computer, Keeper):
+            self.recovery_code = code.decode()
+
+    @staticmethod
+    def _write_text(path: Path, text: str) -> None:
+        """A file written whole: under a temporary name, then renamed, so a power cut never
+        leaves half of it."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_name(path.name + ".part")
+        partial.write_text(text, encoding="utf-8")
+        partial.replace(path)
 
     def _save_setup(self) -> None:
         if self.setup is None:
             return
-        self.dir.mkdir(parents=True, exist_ok=True)
-        path = self.dir / "setup.json"
-        path.write_text(json.dumps(asdict(self.setup), indent=1), encoding="utf-8")
+        self._write_text(self.dir / "setup.json", json.dumps(asdict(self.setup), indent=1))
+
+    def _keep_code(self, code: str) -> None:
+        """A new recovery code, shown until the keeper has kept it, even after a restart: it's
+        locked here as the keys are, and forgotten once they say so."""
+        self.recovery_code = code  # shown whatever happens next: there's no other copy
+        try:
+            write_secret(self.dir / "recovery-code.bin", code.encode())
+        except (ProtectError, OSError) as error:
+            log.warning("The new recovery code couldn't be kept to show after a restart: %s", error)
 
     def _signed_in(self, client: Client, tokens: Tokens) -> None:
         self.session = Session(client, tokens)
@@ -259,9 +335,9 @@ class FamilyFolder:
         keys yet: this computer takes part in no family."""
         for name in ("folder", "computer", "received", "relatives", "sent"):
             shutil.rmtree(self.dir / name, ignore_errors=True)
-        for name in ("mirror.json", "named.json", "received.json"):
+        for name in ("mirror.json", "named.json", "received.json", "recovery-code.bin"):
             (self.dir / name).unlink(missing_ok=True)
-        self.pending, self.waiting = 0, []
+        self.pending, self.waiting, self.recovery_code = 0, [], None
 
     # Signing in to Google
 
@@ -306,10 +382,14 @@ class FamilyFolder:
                 f"{self.setup.account}: sign in with that account."
             )
             return
-        tokens.save(self.dir / "google.bin")
+        try:
+            tokens.save(self.dir / "google.bin")
+        except (ProtectError, OSError) as error:
+            self.problem = f"The sign-in to Google couldn't be kept on this computer ({error})."
+            return
         self._signed_in(client, tokens)
         self._make_mirror()
-        self.problem = ""
+        self.problem = self.broken
 
     async def sign_out(self) -> None:
         async with self.lock:
@@ -324,6 +404,8 @@ class FamilyFolder:
     def _ready(self, *, set_up: bool) -> tuple[DriveLike, Session]:
         """Drive and the sign-in, when this computer is signed in and does (or doesn't
         yet) take part in a family folder."""
+        if self.broken:
+            raise RuleError("cant_be_opened", self.broken)
         if self.drive is None or self.session is None:
             raise RuleError("signed_out", "Sign in to Google first.")
         if set_up and self.setup is None:
@@ -338,7 +420,46 @@ class FamilyFolder:
         drive, _ = self._ready(set_up=True)
         if not isinstance(self.computer, Keeper) or self.setup is None:
             raise RuleError("not_the_keeper", "Only the family's keeper can do that.")
+        if self.setup.replaced:
+            raise RuleError("replaced", REPLACED)
         return self.computer, drive, self.setup
+
+    def _signed_out(self) -> None:
+        """The sign-in has ended (taken back in the Google account, or expired): forgotten
+        here. The family folder stays, waiting for a new one."""
+        (self.dir / "google.bin").unlink(missing_ok=True)
+        self.session = self.drive = self.mirror = None
+
+    @contextlib.contextmanager
+    def _plainly(self) -> Iterator[None]:
+        """What Google, Drive, the family folder's files or this computer's own lock can say,
+        as a plain sentence for the person who asked: never a failure without one."""
+        try:
+            yield
+        except OfflineError as error:
+            raise RuleError(
+                "offline", "Google Drive can't be reached: check the internet."
+            ) from error
+        except SignedOutError as error:
+            self._signed_out()
+            raise RuleError(
+                "signed_out", "The sign-in to Google has ended: sign in again."
+            ) from error
+        except GoogleError as error:
+            raise RuleError("google_said_no", str(error)) from error
+        except DriveError as error:
+            raise RuleError("drive_said_no", str(error)) from error
+        except RefusedError as error:
+            raise RuleError(
+                "didnt_check_out",
+                f"Something in the family folder didn't check out ({error}), so nothing here "
+                "changed.",
+            ) from error
+        except ProtectError as error:
+            raise RuleError(
+                "cant_be_locked",
+                f"This computer's keys couldn't be locked or opened here ({error}).",
+            ) from error
 
     # What the app shows
 
@@ -381,6 +502,7 @@ class FamilyFolder:
         members: list[FolderMember] = []
         asking: list[FolderAsking] = []
         code = None
+        replaced = isinstance(computer, Keeper) and setup is not None and bool(setup.replaced)
         if isinstance(computer, Keeper) and setup is not None:
             for device, known in computer.known.items():
                 members.append(
@@ -392,16 +514,16 @@ class FamilyFolder:
                         you=device == computer.device,
                     )
                 )
-            for ask in await asyncio.to_thread(computer.asking):
-                if ask.device not in setup.refused:
-                    asking.append(
-                        FolderAsking(
-                            device=ask.device,
-                            name=ask.name,
-                            email=self._email_of(ask.device),
-                            code=ask.code,
-                        )
+            refused = frozenset(setup.refused)
+            for ask in [] if replaced else await asyncio.to_thread(computer.asking, refused):
+                asking.append(
+                    FolderAsking(
+                        device=ask.device,
+                        name=ask.name,
+                        email=self._email_of(ask.device),
+                        code=ask.code,
                     )
+                )
         elif isinstance(computer, Member):
             for device, info in computer.state["members"].items():
                 members.append(
@@ -436,16 +558,31 @@ class FamilyFolder:
             asking=asking,
             last_sync=self.last_sync,
             received=datetime.fromisoformat(setup.received) if setup and setup.received else None,
-            problem=self.problem,
+            problem=self.broken or self.problem,
             recovery_code=self.recovery_code,
             pending=self.pending if self.proposing else 0,
             sent_at=datetime.fromisoformat(setup.sent_at) if setup and setup.sent_at else None,
             answers=answers,
-            changes=list(self.waiting) if isinstance(computer, Keeper) else [],
+            changes=list(self.waiting) if isinstance(computer, Keeper) and not replaced else [],
+            broken=bool(self.broken),
+            replaced=replaced,
+            may_leave=self._may_leave(),
         )
+
+    def _may_leave(self) -> bool:
+        """Whether this computer may leave its family folder: a relative's, whenever it likes;
+        the keeper's only once another computer keeps the family, or its part can't be opened
+        here. Otherwise the family would stop reaching everyone."""
+        setup = self.setup
+        if self.broken:
+            return True
+        if setup is None:
+            return False
+        return setup.role == "member" or bool(setup.replaced)
 
     def recovery_seen(self) -> None:
         self.recovery_code = None
+        (self.dir / "recovery-code.bin").unlink(missing_ok=True)
 
     def answers_seen(self) -> None:
         """The keeper's answers read, on a relative's computer: they're not shown again."""
@@ -459,92 +596,121 @@ class FamilyFolder:
     async def start(self, request: StartFamily) -> str:
         """Start the family's folder, with this computer as its keeper; the recovery code."""
         async with self.lock:
-            drive, session = self._ready(set_up=False)
-            root = await asyncio.to_thread(drive.create_folder, FOLDER_NAME, None)
-            for name in SUBFOLDERS:
-                await asyncio.to_thread(drive.create_folder, name, root.id)
-            self._clear_local()
-            keeper, code = await asyncio.to_thread(
-                Keeper.start, self.local, self.data, request.computer
-            )
-            self.computer = keeper
-            self.setup = Setup("keeper", root.id, request.family, request.computer, session.email)
-            self._save_setup()
-            self._make_mirror()
-            self.recovery_code = code  # shown even if Drive fails just now: there's no other copy
+            with self._plainly():
+                drive, session = self._ready(set_up=False)
+                if await self._family_folders(drive):
+                    raise RuleError(
+                        "family_folder_exists",
+                        f"There's an {FOLDER_NAME} folder in this Google account's Drive "
+                        "already. To keep it on this computer, be the keeper again with your "
+                        "recovery code. To start afresh, rename the old one in Google Drive "
+                        "first.",
+                    )
+                root = await asyncio.to_thread(drive.create_folder, FOLDER_NAME, None)
+                for name in SUBFOLDERS:
+                    await asyncio.to_thread(drive.create_folder, name, root.id)
+                self._clear_local()
+                keeper, code = await asyncio.to_thread(
+                    Keeper.start, self.local, self.data, request.computer
+                )
+                self.computer = keeper
+                self.setup = Setup(
+                    "keeper", root.id, request.family, request.computer, session.email
+                )
+                self._save_setup()
+                self._make_mirror()
+                # Shown even if Drive fails just now, and after a restart until it's kept:
+                # there's no other copy of it.
+                self._keep_code(code)
             await self._in_step()
             return code
 
     async def shared(self) -> list[SharedFolder]:
         """Family folders shared with this Google account."""
-        drive, _ = self._ready(set_up=False)
-        found: list[SharedFolder] = []
-        for folder in await asyncio.to_thread(drive.shared_folders):
-            children = await asyncio.to_thread(drive.children, folder.id)
-            if any(child.name == "family.json" and not child.folder for child in children):
-                found.append(SharedFolder(id=folder.id, owner=folder.owner))
-        return found
+        with self._plainly():
+            drive, _ = self._ready(set_up=False)
+            found: list[SharedFolder] = []
+            for folder in await asyncio.to_thread(drive.shared_folders):
+                children = await asyncio.to_thread(drive.children, folder.id)
+                if any(child.name == "family.json" and not child.folder for child in children):
+                    found.append(SharedFolder(id=folder.id, owner=folder.owner))
+            return found
 
     async def join(self, request: JoinFamily) -> None:
         """Ask to join the family in a folder shared with this account. The request goes in a
         folder of this computer's own, in this account's Drive, shared with the keeper's."""
         async with self.lock:
-            drive, session = self._ready(set_up=False)
-            self._clear_local()
-            mirror = self._family_mirror(drive, request.folder, session.email)
-            await self._reach(mirror.pull)
-            if not (self.local / "family.json").is_file():
-                raise RuleError("not_a_family_folder", "That folder holds no AncesTree family.")
-            keeper = mirror.owner("family.json")
-            member, _ = await asyncio.to_thread(
-                Member.ask_to_join, self.local, self.data, request.computer
-            )
-            own = await self._reach(
-                lambda: drive.create_folder(f"{OWN_FOLDER} ({member.device})", None)
-            )
-            await self._reach(lambda: drive.share(own.id, keeper))
-            await self._reach(self._relatives_mirror(drive, own.id, member.device).push)
-            self.computer, self.mirror = member, mirror
-            self.setup = Setup(
-                "member", request.folder, "", request.computer, session.email, own_folder=own.id
-            )
-            self._save_setup()
-            self.last_sync, self.problem = datetime.now(UTC), ""
+            with self._plainly():
+                drive, session = self._ready(set_up=False)
+                self._clear_local()
+                mirror = self._family_mirror(drive, request.folder, session.email)
+                await self._reach(mirror.pull)
+                if not (self.local / "family.json").is_file():
+                    raise RuleError("not_a_family_folder", "That folder holds no AncesTree family.")
+                keeper = mirror.owner("family.json")
+                member, _ = await asyncio.to_thread(
+                    Member.ask_to_join, self.local, self.data, request.computer
+                )
+                own = await self._reach(
+                    lambda: drive.create_folder(f"{OWN_FOLDER} ({member.device})", None)
+                )
+                await self._reach(lambda: drive.share(own.id, keeper))
+                await self._reach(self._relatives_mirror(drive, own.id, member.device).push)
+                self.computer, self.mirror = member, mirror
+                self.setup = Setup(
+                    "member", request.folder, "", request.computer, session.email, own_folder=own.id
+                )
+                self._save_setup()
+                self.last_sync, self.problem = datetime.now(UTC), ""
 
     async def recover(self, request: Recover) -> None:
         """This computer as the keeper again, from the recovery code: the family comes back
-        from the folder."""
+        from the folder. It says so in the record at once, so the computer it replaces sees
+        the record move on, and stops keeping the family."""
         async with self.lock:
-            drive, session = self._ready(set_up=False)
-            folder = request.folder or await self._own_family_folder(drive)
-            self._clear_local()
-            mirror = Mirror(drive, folder, self.local, self.dir / "mirror.json", session.email)
-            await self._reach(mirror.pull)
-            try:
-                keeper = await asyncio.to_thread(
-                    Keeper.recover, self.local, self.data, request.code
-                )
-            except (RefusedError, ValueError, OSError) as error:
+            with self._plainly():
+                drive, session = self._ready(set_up=False)
+                folder = request.folder or await self._own_family_folder(drive)
                 self._clear_local()
-                raise RuleError(
-                    "not_recovered",
-                    "That recovery code doesn't open this family folder. Check it, and try again.",
-                ) from error
-            name = keeper.state["members"].get(keeper.device, {}).get("name", "")
-            family = keeper.state["people"].get("about", {}).get("name", "")
-            self.computer, self.mirror = keeper, mirror
-            self.setup = Setup("keeper", folder, family, name, session.email)
-            self._save_setup()
-            await self._take_in(backup_first=True)
+                # The family folder's files alone: relatives' requests and changes, gathered
+                # here later beside them, are never sent up into it as the keeper's.
+                mirror = self._family_mirror(drive, folder, session.email)
+                await self._reach(mirror.pull)
+                try:
+                    keeper = await asyncio.to_thread(
+                        Keeper.recover, self.local, self.data, request.code
+                    )
+                except (RefusedError, ValueError, OSError) as error:
+                    self._clear_local()
+                    raise RuleError(
+                        "not_recovered",
+                        "That recovery code doesn't open this family folder. Check it, and try "
+                        "again.",
+                    ) from error
+                name = keeper.state["members"].get(keeper.device, {}).get("name", "")
+                family = keeper.state["people"].get("about", {}).get("name", "")
+                await asyncio.to_thread(
+                    keeper.publish, [Joined(device=keeper.device, name=name, role="keeper")]
+                )
+                self.computer, self.mirror = keeper, mirror
+                self.setup = Setup("keeper", folder, family, name, session.email, recovering=True)
+                self._save_setup()
+                await self._take_in(backup_first=True)  # if a photo's still to come: next round
             await self._in_step()
 
-    async def _own_family_folder(self, drive: DriveLike) -> str:
-        """The family folder in this account's own Drive, when there's just the one."""
+    async def _family_folders(self, drive: DriveLike) -> list[str]:
+        """The family folders in this account's own Drive: its folders of that name that
+        hold a family."""
         found: list[str] = []
         for folder in await asyncio.to_thread(drive.own_folders, FOLDER_NAME):
             children = await asyncio.to_thread(drive.children, folder.id)
             if any(child.name == "family.json" and not child.folder for child in children):
                 found.append(folder.id)
+        return found
+
+    async def _own_family_folder(self, drive: DriveLike) -> str:
+        """The family folder in this account's own Drive, when there's just the one."""
+        found = await self._family_folders(drive)
         if not found:
             raise RuleError(
                 "no_family_folder_found",
@@ -560,35 +726,34 @@ class FamilyFolder:
 
     async def _reach[T](self, work: Callable[[], T]) -> T:
         """Drive's work, with its errors in plain words."""
-        try:
+        with self._plainly():
             return await asyncio.to_thread(work)
-        except OfflineError as error:
-            raise RuleError(
-                "offline", "Google Drive can't be reached: check the internet."
-            ) from error
-        except DriveError as error:
-            raise RuleError("drive_said_no", str(error)) from error
 
     # The keeper's
 
     async def invite(self, request: Invite) -> None:
         """Share the family folder with a relative's Google account."""
         async with self.lock:
-            _, drive, setup = self._keeper()
-            await self._reach(lambda: drive.share(setup.folder, request.email))
-            # Asked back before Drive stopped sharing with it after a removal: it stays shared.
-            wanted = request.email.casefold()
-            setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
-            self._save_setup()
+            with self._plainly():
+                _, drive, setup = self._keeper()
+                await self._reach(lambda: drive.share(setup.folder, request.email))
+                # Asked back before Drive stopped sharing with it after a removal: it stays
+                # shared.
+                wanted = request.email.casefold()
+                setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
+                self._save_setup()
 
     async def admit(self, request: Admit) -> None:
+        """Let a computer in, with a role. One turned away isn't asking any more: it asks
+        again, as a new computer, if it was turned away by mistake."""
         async with self.lock:
-            keeper, _, _ = self._keeper()
-            asks = await asyncio.to_thread(keeper.asking)
-            ask = next((ask for ask in asks if ask.device == request.device), None)
-            if ask is None:
-                raise NotFoundError("That computer isn't asking to join.")
-            await asyncio.to_thread(keeper.admit, ask, request.role)
+            with self._plainly():
+                keeper, _, setup = self._keeper()
+                asks = await asyncio.to_thread(keeper.asking, frozenset(setup.refused))
+                ask = next((ask for ask in asks if ask.device == request.device), None)
+                if ask is None:
+                    raise NotFoundError("That computer isn't asking to join.")
+                await asyncio.to_thread(keeper.admit, ask, request.role)
             await self._in_step()
 
     async def refuse(self, request: OneComputer) -> None:
@@ -603,25 +768,72 @@ class FamilyFolder:
         its Google account's computers, the folder isn't shared with that account any more.
         What Drive can't do just now, the next round does."""
         async with self.lock:
-            keeper, _, setup = self._keeper()
-            known = keeper.known.get(request.device)
-            if known is None or request.device == keeper.device:
-                raise NotFoundError("That computer isn't in the family.")
-            if known.role == "removed":
-                return
-            email = self._email_of(request.device)
-            others = [
-                device
-                for device, other in keeper.known.items()
-                if device not in (request.device, keeper.device)
-                and other.role != "removed"
-                and self._email_of(device).casefold() == email.casefold()
-            ]
-            if email and not others:
-                setup.unshare.append(email)  # noted before the removal, so it's never forgotten
-                self._save_setup()
-            await asyncio.to_thread(keeper.remove, request.device)
+            with self._plainly():
+                keeper, _, setup = self._keeper()
+                known = keeper.known.get(request.device)
+                if known is None or request.device == keeper.device:
+                    raise NotFoundError("That computer isn't in the family.")
+                if known.role == "removed":
+                    return
+                email = self._email_of(request.device)
+                others = [
+                    device
+                    for device, other in keeper.known.items()
+                    if device not in (request.device, keeper.device)
+                    and other.role != "removed"
+                    and self._email_of(device).casefold() == email.casefold()
+                ]
+                if email and not others:
+                    setup.unshare.append(email)  # noted before the removal: never forgotten
+                    self._save_setup()
+                await asyncio.to_thread(keeper.remove, request.device)
             await self._in_step()
+
+    async def new_recovery_code(self) -> str:
+        """A new recovery code, for one lost or seen by someone else (0.3.1): the keeper's keys
+        locked with it in the newest recovery file, which a new computer opens. Once that's in
+        Drive, the older files, locked with the old code, go to Drive's bin, and the old code
+        opens nothing."""
+        async with self.lock:
+            with self._plainly():
+                keeper, _, setup = self._keeper()
+                code, older = await asyncio.to_thread(keeper.new_recovery)
+                setup.retire = sorted(set(setup.retire) | set(older))
+                self._save_setup()
+                self._keep_code(code)
+            await self._in_step()
+            return code
+
+    async def leave(self) -> None:
+        """This computer out of its family folder (0.3.1): it keeps the family as it is, and
+        can change it as its own again; it can join a family folder afresh, or start one.
+        What it kept for the family folder is set aside, never deleted: its keys go with it.
+        The keeper's computer may leave only once another keeps the family, or its part can't
+        be opened here: otherwise the family would stop reaching everyone."""
+        async with self.lock:
+            if self.setup is None and not self.broken:
+                raise RuleError("no_family_folder", "This computer takes part in no family folder.")
+            if not self._may_leave():
+                raise RuleError(
+                    "keeper_stays",
+                    "The keeper's computer can't leave the family folder: the family would stop "
+                    "reaching everyone.",
+                )
+            if self.signing_in is not None:
+                self.signing_in.close()
+                self.signing_in = None
+            if self.dir.exists():
+                stamp = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
+                aside = self.dir.with_name(f"familyfolder-left-{stamp}")
+                number = 1
+                while aside.exists():
+                    number += 1
+                    aside = self.dir.with_name(f"familyfolder-left-{stamp}-{number}")
+                await asyncio.to_thread(self.dir.rename, aside)
+            self.session = self.drive = self.mirror = None
+            self.setup, self.computer = None, None
+            self.recovery_code, self.broken, self.problem = None, "", ""
+            self.pending, self.waiting, self.last_sync = 0, [], None
 
     async def _entries_here(self) -> Entries:
         """The family as this computer's database holds it, as entries, its files named as the
@@ -645,7 +857,7 @@ class FamilyFolder:
             computer.put_file,
             named,
         )
-        named_path.write_text(json.dumps(named), encoding="utf-8")
+        await asyncio.to_thread(self._write_text, named_path, json.dumps(named))
         return entries
 
     async def _publish(self, source: Source | None = None) -> int:
@@ -688,7 +900,9 @@ class FamilyFolder:
         a story hasn't arrived yet. The first time, what was here is backed up first: a family
         of its own, entered before it joined, isn't in the folder. On a computer that sends its
         changes, its own changes go back on top: those since the family last arrived, or,
-        once the keeper has answered what it sent, only those made since it sent them."""
+        once the keeper has answered what it sent, only those made since it sent them. On any
+        other, where people were moved on its tree since the family last arrived stays (0.3.1).
+        After the first time, this computer's Trash stays too: it never travels."""
         computer, setup = self.computer, self.setup
         if computer is None or setup is None:
             return True
@@ -710,10 +924,17 @@ class FamilyFolder:
                 if isinstance(sent, dict):
                     since, arranged_on = sent["family"], was
             family = rebased(since, mine, entries, arranged_on=arranged_on)
+        elif was is not None and isinstance(computer, Member):
+            family = arranged(entries, was, await self._entries_here())
         received = self.dir / "received"
         received.mkdir(parents=True, exist_ok=True)
         archive = await asyncio.to_thread(
-            build_archive, family, self._fetch, self.ctx.data_dir, received
+            build_archive,
+            family,
+            self._fetch,
+            self.ctx.data_dir,
+            received,
+            keep_trash=bool(setup.restored),
         )
         if archive is None:
             return False
@@ -727,6 +948,7 @@ class FamilyFolder:
         setup.restored_seq = computer.applied
         setup.received = datetime.now(UTC).isoformat(timespec="seconds")
         setup.rebuilt = setup.answered
+        setup.recovering = False
         self._save_setup()
         for path in (self.dir / "sent").glob("*.json"):
             if path.stem.isdigit() and int(path.stem) <= setup.answered:
@@ -836,28 +1058,29 @@ class FamilyFolder:
 
     def _read_sent(self, keeper: Keeper, setup: Setup, arrived: Arrived) -> returns.Sent:
         """What a computer sent, read strictly, and the family it was made on, from the
-        keeper's own record: what it's compared with."""
+        keeper's own record: what it's compared with. What can't be read, or compared, can
+        still be turned down."""
         proposal = arrived.proposal
         try:
             found = unpack(proposal.family)
             sent_at = datetime.fromisoformat(proposal.made)
             returned = sent_family(found, arrived.device)
-        except (UnpackError, ReturnedError, ValueError) as error:
+            entries: Entries = keeper.state_at(proposal.base)["people"]
+            stories: dict[str, Any] = {}
+            for key, value in entries.items():
+                parts = key.split("/")
+                if len(parts) == 4 and parts[:2] == ["file", "people"] and parts[3] == BIOGRAPHY:
+                    data = keeper.get_file(value["blob"])
+                    if data is not None:
+                        text = data.decode("utf-8", errors="replace")
+                        stories[parts[2]] = biography_from(text).model_dump(mode="json")
+        except (UnpackError, ReturnedError, RefusedError, ValueError) as error:
             raise RuleError(
                 "unreadable_changes",
-                f"What {arrived.name} sent can't be read ({error}). Turn it down, and their "
-                "computer sends it again.",
+                f"What {arrived.name} sent can't be read here ({error}). Take none of it: "
+                "their computer hears so, and they can make their changes again.",
             ) from error
-        entries: Entries = keeper.state_at(proposal.base)["people"]
         people, links = records(entries)
-        stories: dict[str, Any] = {}
-        for key, value in entries.items():
-            parts = key.split("/")
-            if len(parts) == 4 and parts[:2] == ["file", "people"] and parts[3] == BIOGRAPHY:
-                data = keeper.get_file(value["blob"])
-                if data is not None:
-                    text = data.decode("utf-8", errors="replace")
-                    stories[parts[2]] = biography_from(text).model_dump(mode="json")
         base = Base(people=people, links=links, stories=stories, ids={})
         return returns.Sent(
             returned=returned,
@@ -870,8 +1093,8 @@ class FamilyFolder:
             packed=base64.b64decode(proposal.family),
         )
 
-    async def _sent(self, device: str, proposal: int) -> returns.Sent:
-        keeper, _, setup = self._keeper()
+    async def _arrived(self, keeper: Keeper, device: str, proposal: int) -> Arrived:
+        """A computer's newest changes, when they're the ones the keeper is looking at."""
         arrived = next(
             (found for found in await asyncio.to_thread(keeper.newest) if found.device == device),
             None,
@@ -883,6 +1106,11 @@ class FamilyFolder:
                 "newer_changes",
                 f"{arrived.name} has sent newer changes since: look at them again.",
             )
+        return arrived
+
+    async def _sent(self, device: str, proposal: int) -> returns.Sent:
+        keeper, _, setup = self._keeper()
+        arrived = await self._arrived(keeper, device, proposal)
         return await asyncio.to_thread(self._read_sent, keeper, setup, arrived)
 
     async def _answered(
@@ -900,32 +1128,45 @@ class FamilyFolder:
 
     async def review(self, device: str, proposal: int, request: ReviewChanges) -> ChangesPreview:
         """What a relative's computer sent, for the keeper to tick. Nothing is written."""
-        sent = await self._sent(device, proposal)
-        return await returns.preview_sent(self.ctx, sent, request.answers)
+        with self._plainly():
+            sent = await self._sent(device, proposal)
+            return await returns.preview_sent(self.ctx, sent, request.answers)
 
     async def bring_in(self, device: str, request: BringIn) -> ImportDone:
         """Bring in what's ticked of a computer's changes (a backup first, one Undo step, Take
-        back later); publish it to everyone, and answer the computer."""
+        back later); publish it to everyone, and answer the computer. The keeper's own changes
+        not yet published go first, as the keeper's: the relative's come in a change set of
+        their own, marked as theirs."""
         async with self.lock:
-            keeper, _, _ = self._keeper()
-            sent = await self._sent(device, request.proposal)
-            result = await returns.run_sent(
-                self.ctx, self.history, sent, request.answers, request.chosen
-            )
-            await self._answered(keeper, sent, result.left_out, request.note)
+            with self._plainly():
+                keeper, _, _ = self._keeper()
+                sent = await self._sent(device, request.proposal)
+                await self._publish()
+                result = await returns.run_sent(
+                    self.ctx, self.history, sent, request.answers, request.chosen
+                )
+                await self._answered(keeper, sent, result.left_out, request.note)
             await self._in_step()
             return result.done
 
     async def turn_down(self, device: str, request: TurnDown) -> None:
-        """Take none of a computer's changes, and tell it so, with the keeper's note."""
+        """Take none of a computer's changes, and tell it so, with the keeper's note. Changes
+        that can't be read here are turned down too: the computer hears that none was taken."""
         async with self.lock:
-            keeper, _, _ = self._keeper()
-            sent = await self._sent(device, request.proposal)
-            plan = await returns.plan_sent(self.ctx, sent)
-            await asyncio.to_thread(
-                keeper.answer, device, sent.proposal, returns.everything_left(plan), request.note
-            )
-            self.waiting = [changes for changes in self.waiting if changes.device != device]
+            with self._plainly():
+                keeper, _, setup = self._keeper()
+                arrived = await self._arrived(keeper, device, request.proposal)
+                try:
+                    sent = await asyncio.to_thread(self._read_sent, keeper, setup, arrived)
+                    left = returns.everything_left(await returns.plan_sent(self.ctx, sent))
+                except RuleError as error:
+                    if error.code != "unreadable_changes":
+                        raise
+                    left = [UNREADABLE]
+                await asyncio.to_thread(
+                    keeper.answer, device, arrived.proposal.seq, left, request.note
+                )
+                self.waiting = [changes for changes in self.waiting if changes.device != device]
             await self._in_step()
 
     # Keeping in step
@@ -942,15 +1183,39 @@ class FamilyFolder:
         note = ""
         await asyncio.to_thread(mirror.pull)
         if isinstance(computer, Keeper):
-            await self._gather(mirror.drive, setup)
+            overtaken = bool(setup.replaced) or await asyncio.to_thread(computer.overtaken)
+            if overtaken:
+                # Another computer keeps the family now: this one writes nothing more, so the
+                # record never splits in two.
+                if not setup.replaced:
+                    setup.replaced = datetime.now(UTC).isoformat(timespec="seconds")
+                    self._save_setup()
+                    log.warning("Another computer keeps the family now: this one stopped")
+                self.waiting = []
+                self.last_sync, self.problem = datetime.now(UTC), REPLACED
+                return
+            unread = await self._gather(mirror.drive, setup)
             await asyncio.to_thread(computer.repair)
-            await self._gather_changes(computer, setup)
-            await self._publish()
+            if setup.recovering and not await self._take_in(backup_first=True):
+                note = "Photos and stories are still arriving: the family comes when they have."
+            else:
+                await self._publish()  # the keeper's own, before any relative's comes in
+                await self._gather_changes(computer, setup)
             await asyncio.to_thread(mirror.push)
+            await asyncio.to_thread(self._retire, mirror, computer, setup)
             for email in list(setup.unshare):
                 await asyncio.to_thread(mirror.drive.unshare, setup.folder, email)
                 setup.unshare.remove(email)
                 self._save_setup()
+            if unread and not note:
+                names = ", ".join(
+                    computer.known[device].name if device in computer.known else "A new computer"
+                    for device, _ in unread
+                )
+                note = (
+                    f"What {names} sends you couldn't be fetched just now ({unread[0][1]}). "
+                    "The rest of the family is in step: AncesTree tries again every minute."
+                )
         else:
             waiting = set(computer.waiting)
             await asyncio.to_thread(computer.receive)
@@ -966,9 +1231,31 @@ class FamilyFolder:
                 await asyncio.to_thread(own.push)
         self.last_sync, self.problem = datetime.now(UTC), note
 
-    async def _gather(self, drive: DriveLike, setup: Setup) -> None:
+    def _retire(self, mirror: Mirror, keeper: Keeper, setup: Setup) -> None:
+        """Recovery files locked with an old recovery code: put in Drive's bin, and gone from
+        here, once the newest recovery file, locked with the new code, is in Drive. Until then
+        the old code still opens the newest file there."""
+        if not setup.retire:
+            return
+        recovery = self.local / "recovery"
+        versions = [path for path in recovery.glob("*.bin") if path.stem.isdigit()]
+        newest = max(versions, key=lambda path: int(path.stem), default=None)
+        if newest is None:
+            return
+        relative = newest.relative_to(self.local).as_posix()
+        if relative in setup.retire or not mirror.sent(relative):
+            return
+        for path in list(setup.retire):
+            mirror.bin(path)
+            keeper.forget(path)
+            setup.retire.remove(path)
+            self._save_setup()
+
+    async def _gather(self, drive: DriveLike, setup: Setup) -> list[tuple[str, DriveError]]:
         """Bring down what relatives' computers wrote in their own folders: the folders of the
-        accounts the family folder is shared with, and each computer's from one account only."""
+        accounts the family folder is shared with, and each computer's from one account only.
+        A folder Drive won't give just now is passed over, and named: one relative's trouble
+        never holds up the rest of the family."""
         sharing = {
             email.casefold() for email in await asyncio.to_thread(drive.shared_with, setup.folder)
         }
@@ -985,19 +1272,22 @@ class FamilyFolder:
                 self._save_setup()
             if setup.accounts[device].casefold() == folder.owner.casefold():
                 folders.setdefault(device, folder.id)  # another account can't speak for it
+        unread: list[tuple[str, DriveError]] = []
         for device, folder_id in folders.items():
             try:
                 await asyncio.to_thread(self._relatives_mirror(drive, folder_id, device).pull)
             except DriveError as error:
-                if error.status != 404:
-                    raise
-                # Gone, or no longer shared with this account, since Drive's search last looked.
+                if error.status == 404:
+                    continue  # gone, or no longer shared with this account, since the search
+                log.warning("A relative's own folder couldn't be read: %s", error)
+                unread.append((device, error))
+        return unread
 
     async def sync(self) -> None:
         """Keep in step now, if this computer takes part; what's in the way goes in `problem`."""
         async with self.lock:
             await self._finish_sign_in()
-            if self.setup is None:
+            if self.setup is None or self.broken:
                 return
             if self.mirror is None:
                 self.problem = "Sign in to Google, so AncesTree can keep the family in step."
@@ -1012,9 +1302,12 @@ class FamilyFolder:
         except OfflineError:
             self.problem = "No internet just now: AncesTree tries again every minute."
         except SignedOutError:
-            (self.dir / "google.bin").unlink(missing_ok=True)
-            self.session = self.drive = self.mirror = None
+            self._signed_out()
             self.problem = "The sign-in to Google has ended: sign in again."
+        except GoogleError as error:
+            self.problem = str(error)
+        except ProtectError as error:
+            self.problem = f"This computer's keys couldn't be locked or opened here ({error})."
         except DriveError as error:
             if error.status == 404 and self.setup is not None and self.setup.role == "member":
                 self.problem = "The family folder isn't shared with this Google account any more."

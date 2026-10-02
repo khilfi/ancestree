@@ -45,6 +45,9 @@ const SIGNED_OUT: FamilyFolderStatus = {
   sent_at: null,
   answers: [],
   changes: [],
+  broken: false,
+  replaced: false,
+  may_leave: false,
 };
 const SIGNED_IN = { ...SIGNED_OUT, email: "keeper@example.com" };
 const KEEPER: FamilyFolderStatus = {
@@ -67,7 +70,7 @@ function answer(
   status: FamilyFolderStatus,
   shared: object[] = [],
   after?: FamilyFolderStatus,
-  other: Record<string, object> = {}, // what other addresses answer, by how they end
+  other: Record<string, object | Response> = {}, // what other addresses answer, by their ends
 ) {
   asked = [];
   let now = status; // after a change, the app answers with what it became
@@ -84,7 +87,10 @@ function answer(
     asked.push({ method: request.method, path, body });
     if (path === "/api/family-folder/shared") return Response.json(shared);
     const ending = Object.keys(other).find((end) => path.endsWith(end));
-    if (ending) return Response.json(other[ending]);
+    if (ending) {
+      const found = other[ending];
+      return found instanceof Response ? found.clone() : Response.json(found);
+    }
     if (request.method === "POST" && after) now = after;
     if (path === "/api/family-folder/sign-in") return Response.json({ url: "https://example.org" });
     if (path.startsWith("/api/family-folder")) return Response.json(now);
@@ -318,5 +324,76 @@ describe("Settings → Family folder", () => {
     expect(document.body.textContent).toContain("Aminah binti Ali: Born");
     act(() => button("Got it").click());
     await askedFor("/api/family-folder/answers-seen");
+  });
+  it("lets a relative leave the family folder, once they're sure", async () => {
+    const relative: FamilyFolderStatus = {
+      ...SIGNED_IN,
+      setup: "member",
+      role: "contributor",
+      family: "Keluarga Contoh",
+      may_leave: true,
+    };
+    answer(relative, [], SIGNED_IN);
+    await show(<FamilyFolderSection />, "Leave the family folder…");
+    act(() => button("Leave the family folder…").click());
+    await until("Ask your keeper to remove this computer too");
+    act(() => button("Leave").click());
+    await askedFor("/api/family-folder/leave");
+  });
+
+  it("makes the keeper a new recovery code, once they're sure", async () => {
+    answer({ ...KEEPER, asking: [] });
+    await show(<FamilyFolderSection />, "Lost your recovery code?");
+    act(() => button("Make a new recovery code").click());
+    await until("Your old code stops working");
+    act(() => button("Make it").click());
+    await askedFor("/api/family-folder/new-recovery-code");
+  });
+
+  it("shows a keeper's computer another keeps the family now, and the way out", async () => {
+    const problem = "Another computer is the family's keeper now: leave it here.";
+    answer({ ...KEEPER, asking: [], replaced: true, may_leave: true, problem });
+    await show(<FamilyFolderSection />, "Another computer keeps the family now");
+    expect(document.body.textContent).toContain(problem);
+    expect(document.body.textContent).not.toContain("Invite a relative");
+    act(() => button("Leave the family folder…").click());
+    await until("use your recovery code afterwards");
+  });
+
+  it("lets the keeper turn down changes that can't be read", async () => {
+    const waiting: FamilyFolderStatus = {
+      ...KEEPER,
+      asking: [],
+      changes: [
+        {
+          device: "d2",
+          name: "Mak Long's laptop",
+          email: "r@example.com",
+          role: "contributor",
+          proposal: 5,
+          sent_at: new Date().toISOString(),
+        },
+      ],
+    };
+    const unreadable = Response.json(
+      {
+        detail: {
+          code: "unreadable_changes",
+          message: "What Mak Long's laptop sent can't be read here. Take none of it.",
+        },
+      },
+      { status: 409 },
+    );
+    answer(waiting, [], { ...waiting, changes: [] }, { "/review": unreadable });
+    await show(<FamilyFolderSection />, "Changes waiting (1)");
+    act(() => button("Review").click());
+    await until("can't be read here");
+    act(() => button("Take none").click());
+    await askedFor("/api/family-folder/changes/d2/turn-down");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/changes/d2/turn-down",
+      body: { proposal: 5, note: "" },
+    });
   });
 });

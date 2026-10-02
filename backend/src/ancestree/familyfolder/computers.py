@@ -557,8 +557,19 @@ class Keeper(Computer):
         blob = seal(Kind.MEMBER, place, member.model_dump_json().encode(), self.sign, None)
         self._write(f"members/{device}/{known.version:06d}.mem", blob)
 
-    def _write_recovery(self) -> None:
-        version = len(list((self.folder / "recovery").glob("*.bin"))) + 1
+    def _recovery_versions(self) -> set[int]:
+        """The recovery files' numbers, in the folder here and among those this computer wrote:
+        a new one is numbered after them all, even with some taken out of the folder since."""
+        versions: set[int] = set()
+        for folder in (self.folder / "recovery", self.data / "published" / "recovery"):
+            for path in folder.glob("*.bin"):
+                if path.stem.isdigit():
+                    versions.add(int(path.stem))
+        return versions
+
+    def _write_recovery(self) -> str:
+        """The keeper's keys, locked with the recovery code, in a new recovery file; its path."""
+        version = max(self._recovery_versions(), default=0) + 1
         keys = Recovery(
             device=self.device,
             sign=self.sign.private_bytes_raw().hex(),
@@ -568,10 +579,84 @@ class Keeper(Computer):
         )
         place = f"recovery/{version}"
         blob = seal(Kind.RECOVERY, place, keys.model_dump_json().encode(), self.sign, self.recovery)
-        self._write(f"recovery/{version:06d}.bin", blob)
+        written = f"recovery/{version:06d}.bin"
+        self._write(written, blob)
+        return written
+
+    def new_recovery(self) -> tuple[str, list[str]]:
+        """A new recovery code, for one lost or seen by someone else: the keeper's keys locked
+        with it in a new recovery file, the newest, which a new computer opens. The code, and
+        the older recovery files, locked with the old code: to take out of the folder once the
+        new one is there."""
+        older = sorted(
+            path.relative_to(self.folder).as_posix()
+            for path in (self.folder / "recovery").glob("*.bin")
+        )
+        code = recovery_code()
+        self.recovery = recovery_key(code, self.family)
+        self._write_recovery()
+        self.save()
+        return code, older
+
+    def forget(self, relative: str) -> None:
+        """A file of the keeper's taken out of the folder for good: not put back by repair."""
+        (self.folder / relative).unlink(missing_ok=True)
+        (self.data / "published" / relative).unlink(missing_ok=True)
+
+    def _adopt_own(self) -> None:
+        """A change set this computer wrote but stopped before counting (the app ended just
+        then): counted now, as it may have reached the folder in Drive already, so the next
+        isn't numbered the same."""
+        adopted = False
+        while True:
+            seq = self.applied + 1
+            found = sorted((self.data / "published" / "record").glob(f"{seq:08d}-*.chg"))
+            if not found:
+                break
+            blob = found[0].read_bytes()
+            try:
+                _, epoch, _ = peek(blob)
+                opened = unseal(blob, f"record/{seq}", Kind.RECORD, {self.keeper}, self._key(epoch))
+                change = RecordChange.model_validate_json(opened.payload)
+            except RefusedError, ValidationError:
+                break
+            if change.seq != seq or change.prev != self.last:
+                break
+            self._apply(change)
+            self.applied = seq
+            self.last = fingerprint(blob)
+            adopted = True
+        if adopted:
+            self.save()
+
+    def overtaken(self) -> bool:
+        """Whether the record has moved on without this computer: a change set signed with the
+        keeper's key that this computer didn't write, numbered as its newest or after. The
+        keeper's keys are at work on another computer, brought back there with the recovery
+        code; this one must stop publishing, or the record would split in two."""
+        self._adopt_own()
+        mine = self.data / "published" / "record"
+        newest = f"{self.applied:08d}-{(self.last or '')[:8]}.chg"  # the last it applied
+        for path in (self.folder / "record").glob("*.chg"):
+            try:
+                seq = int(path.name.split("-")[0])
+            except ValueError:
+                continue
+            if seq < self.applied or path.name == newest or (mine / path.name).is_file():
+                continue
+            blob = self._read(path)
+            if blob is None:
+                continue
+            try:  # the signature alone: its key may be one this computer never had
+                unseal(blob, f"record/{seq}", Kind.RECORD, {self.keeper}, None)
+            except RefusedError:
+                continue  # not the keeper's: refused by every computer, put right by repair
+            return True
+        return False
 
     def publish(self, changes: list[RecordOp], source: Source | None = None) -> int:
         """Add a change set to the record, for every computer in the family."""
+        self._adopt_own()
         seq = self.applied + 1
         change = RecordChange(seq=seq, prev=self.last, made=_now(), source=source, changes=changes)
         blob = self._sealed(Kind.RECORD, f"record/{seq}", change.model_dump_json().encode())
@@ -595,12 +680,16 @@ class Keeper(Computer):
 
     # Joining and leaving
 
-    def asking(self) -> list[Asking]:
+    def asking(self, passed_over: set[str] | frozenset[str] = frozenset()) -> list[Asking]:
+        """The computers asking to join, each checked: all but those let in already, and those
+        `passed_over` (turned away), which aren't even read."""
         asks: list[Asking] = []
         for path in sorted((self.folder / "join").glob("*.req")):
             device = path.stem
+            if device in self.known or device in passed_over:
+                continue
             blob = self._read(path)
-            if device in self.known or blob is None:
+            if blob is None:
                 continue
             try:
                 opened = unseal(blob, f"join/{device}", Kind.JOIN, None, None)
