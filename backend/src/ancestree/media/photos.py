@@ -74,7 +74,7 @@ def process_picture(data: bytes) -> bytes:
 
 def thumbnail(data: bytes, size: int = 96) -> bytes:
     """A small square of a photo, made again from its pixels: for showing a picture that came
-    in a file from elsewhere, such as a copy to edit's, never the bytes as they came."""
+    from elsewhere, such as a relative's computer, never the bytes as they came."""
     _, upright = _decode(data)
     face = upright.crop(crop_box(upright.size, centred_square(*upright.size)))
     return _webp(face.resize((size, size), Image.Resampling.LANCZOS))

@@ -4,13 +4,12 @@ up online."""
 
 import asyncio
 import random
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from uuid import UUID
 
 from ancestree.domain.map import FamilyMap, Located, MapPerson, MapPins, Pin
 from ancestree.domain.person import Place
 from ancestree.places.gazetteer import Gazetteer, Pinned, gazetteer, pin_key
-from ancestree.places.names import COUNTRIES, STATES
 from ancestree.repo.places import read_places
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import Context, RuleError, read
@@ -48,37 +47,6 @@ class _Finder:
                 )
             )
         return self.found[place]
-
-
-def rough_places() -> dict[str, Located]:
-    """The middle of each of Malaysia's states and of the usual countries, under every name the
-    app takes for them ("state:penang", "country:singapura"): for a copy to edit, which has no
-    gazetteer, to place a place typed in it roughly until the app finds its town."""
-    places = gazetteer()
-    found: dict[str, Located] = {}
-
-    def keep(keys: Iterable[str], place: Place) -> None:
-        spot = places.locate(place, {})
-        if spot is None:
-            return
-        located = Located(
-            place=place,
-            lat=spot.lat,
-            lon=spot.lon,
-            found=spot.found,
-            name=spot.name,
-            state=spot.state,
-            country=spot.country,
-        )
-        for key in keys:
-            found[key] = located
-
-    for state, aliases in STATES.items():
-        keep((f"state:{name.casefold()}" for name in (state, *aliases)), Place(state=state))
-    for country in sorted(set(COUNTRIES.values())):
-        names = [alias for alias, named in COUNTRIES.items() if named == country]
-        keep((f"country:{name}" for name in {country.casefold(), *names}), Place(country=country))
-    return found
 
 
 async def family_map(ctx: Context) -> FamilyMap:

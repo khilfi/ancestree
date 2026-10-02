@@ -6,7 +6,6 @@ import { toApiError, unwrap } from "./errors";
 import type {
   Backup,
   BiographyUpdate,
-  CopyPreview,
   Crop,
   ExportFormat,
   ExportRequest,
@@ -578,8 +577,6 @@ export function useMakeExport() {
                   title: "",
                   hide_living: false,
                   archive: true,
-                  editable: false,
-                  for_name: "",
                 }
               : request,
         }),
@@ -713,68 +710,6 @@ export function useRunImport() {
       const form = importForm(file, answers);
       form.append("chosen", JSON.stringify(chosen));
       return sendForm<ImportDone>("/api/imports", "POST", form);
-    },
-    onSuccess: () => refresh(),
-    onSettled: () =>
-      Promise.all(
-        [keys.imports, keys.backups].map((queryKey) => client.invalidateQueries({ queryKey })),
-      ),
-  });
-}
-
-function copyForm(file: File, password: string, answers: Record<string, string>): FormData {
-  const form = new FormData();
-  form.append("file", file);
-  if (password) form.append("password", password);
-  form.append("answers", JSON.stringify(answers));
-  return form;
-}
-
-/** What a copy to edit brings back, for you to tick; nothing is written. `token` changes
- *  with every file chosen. The password, when it's locked, is read when asked: typed, it's
- *  sent by refetching, so it's never part of the key. */
-export function useCopyPreview(
-  file: File | null,
-  token: number,
-  password: () => string,
-  answers: Record<string, string>,
-) {
-  return useQuery({
-    queryKey: ["copy-preview", token, answers],
-    queryFn: () =>
-      sendForm<CopyPreview>(
-        "/api/imports/copy/preview",
-        "POST",
-        copyForm(file as File, password(), answers),
-      ),
-    enabled: file !== null,
-    placeholderData: keepPreviousData, // answering a question keeps the review on screen
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 0,
-    retry: false,
-  });
-}
-
-/** Bring in what's ticked from a copy: a backup first, then one Undo step for the people,
- *  details and links; stories and photos after. */
-export function useRunCopyImport() {
-  const refresh = useRefreshFamily();
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      file,
-      password,
-      answers,
-      chosen,
-    }: {
-      file: File;
-      password: string;
-      answers: Record<string, string>;
-      chosen: string[];
-    }) => {
-      const form = copyForm(file, password, answers);
-      form.append("chosen", JSON.stringify(chosen));
-      return sendForm<ImportDone>("/api/imports/copy", "POST", form);
     },
     onSuccess: () => refresh(),
     onSettled: () =>

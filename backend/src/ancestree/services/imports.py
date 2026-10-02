@@ -487,14 +487,12 @@ async def take_back(ctx: Context, history: History, import_id: str) -> ImportTak
     record = await asyncio.to_thread(_record, ctx, import_id)
     if record.get("taken_back_at"):
         raise RuleError("taken_back", "This import has been taken back already.")
-    if record.get("kind") in ("copy", "folder"):  # from a copy, or a computer
-        taken = await returns.take_back_copy(ctx, history, record)
+    if record.get("kind") in ("copy", "folder"):  # from a copy to edit, or a computer
+        taken = await returns.take_back_changes(ctx, history, record)
         now = datetime.now().astimezone().isoformat(timespec="seconds")
         await asyncio.to_thread(
             storage.update_import, ctx.data_dir, import_id, {"taken_back_at": now}
         )
-        if record.get("kind") == "copy":
-            await asyncio.to_thread(returns.restore_base, ctx, record)
         return taken
     people = [str(pid) for pid in record["people"]]
     async with history.lock:

@@ -2,10 +2,11 @@
 
 DATA_DIR/imports/<when>/ keeps the file as it came, the report, and a record: who the import
 added, what it changed and left out, and whether it has been taken back. A spreadsheet's is
-spreadsheet.json; changes from a copy to edit keep copy.json, and base.json.gz, what
-the copy was compared with, for Take back; changes a relative's computer sent through the
-family folder keep folder.json, with what it sent and base.json.gz. The CSV and draw.io
-imports of M2 keep import.json beside them, which this never reads.
+spreadsheet.json; changes a relative's computer sent through the family folder keep
+folder.json, with what it sent and base.json.gz, what it was compared with (M26). Changes from a
+copy to edit, brought in before it retired, kept copy.json: still listed, and taken back
+the same way. The CSV and draw.io imports of M2 keep import.json beside them, which this never
+reads.
 """
 
 import json
@@ -17,7 +18,7 @@ from typing import Any
 from ancestree.storage.files import atomic_write, write_json
 
 RECORD = "spreadsheet.json"
-COPY_RECORD = "copy.json"
+COPY_RECORD = "copy.json"  # from a copy to edit, before it retired
 SENT_RECORD = "folder.json"  # from a relative's computer, through the family folder
 _RECORDS = (RECORD, COPY_RECORD, SENT_RECORD)
 _ID = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d{1,4})?$")
@@ -45,17 +46,6 @@ def save_import(folder: Path, record: dict[str, Any], source: bytes, report: byt
     write_json(folder / RECORD, record)  # last: a folder without it holds no import
 
 
-def save_copy_import(
-    folder: Path, record: dict[str, Any], source: bytes, report: bytes, base: bytes
-) -> None:
-    """Changes brought in from a copy to edit: the file as it came (locked, if it was),
-    the report, what it was compared with, and the record."""
-    atomic_write(folder / "source.html", source)
-    atomic_write(folder / "report.csv", report)
-    atomic_write(folder / "base.json.gz", base)
-    write_json(folder / COPY_RECORD, record)  # last: a folder without it holds no import
-
-
 def _record_file(folder: Path) -> Path | None:
     return next((folder / name for name in _RECORDS if (folder / name).is_file()), None)
 
@@ -70,7 +60,7 @@ def _folder(data_dir: Path, import_id: str) -> Path:
 
 
 def read_imports(data_dir: Path) -> list[dict[str, Any]]:
-    """Every import of a spreadsheet or from a copy, newest first."""
+    """Every import, of a spreadsheet or of a relative's changes, newest first."""
     root = _root(data_dir)
     if not root.is_dir():
         return []
@@ -102,12 +92,6 @@ def read_import(data_dir: Path, import_id: str) -> dict[str, Any]:
 def update_import(data_dir: Path, import_id: str, changes: dict[str, Any]) -> None:
     path = _record_path(data_dir, import_id)
     write_json(path, read_import(data_dir, import_id) | changes)
-
-
-def import_base(data_dir: Path, import_id: str) -> bytes | None:
-    """What a copy's import was compared with, as saved with it."""
-    path = _folder(data_dir, import_id) / "base.json.gz"
-    return path.read_bytes() if path.is_file() else None
 
 
 def report_file(data_dir: Path, import_id: str) -> Path:

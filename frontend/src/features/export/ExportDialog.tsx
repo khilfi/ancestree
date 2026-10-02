@@ -6,8 +6,6 @@ import {
   FileTextIcon,
   ImageIcon,
   type LucideIcon,
-  PencilIcon,
-  SaveIcon,
   Share2Icon,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -15,8 +13,7 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 import { downloadExport, downloadTemplate, useMakeExport } from "@/api/queries";
 import type { ExportFormat } from "@/api/types";
-import { useSaveCopy } from "@/app/CopyEditBar";
-import { type CopyControls, InAppOnly, useCopy, useCopyControls } from "@/app/copy";
+import { InAppOnly, useCopy } from "@/app/copy";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,45 +61,14 @@ function Choice({
   );
 }
 
-/** A copy to edit's own export: itself, with the changes inside. */
-function SaveCopyChoice({ controls, onSaved }: { controls: CopyControls; onSaved: () => void }) {
-  const { save, saving } = useSaveCopy(controls);
-  return (
-    <Choice
-      icon={SaveIcon}
-      title="Save a new copy"
-      kind=".html"
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={saving}
-          onClick={() => {
-            onSaved();
-            save();
-          }}
-        >
-          {saving ? "Saving…" : "Save"}
-        </Button>
-      }
-    >
-      This copy with your changes inside, as a new file: send it back to whoever gave you this copy.
-    </Choice>
-  );
-}
-
 /** The top bar's Export: the whole family in each of its forms. In a view-only
- *  copy, the files made with the copy, and the import template for sending additions.
- *  In a copy to edit, the copy itself with its changes, and a picture of the tree: the
- *  files made with it would be out of date after its first change. */
+ *  copy, the files made with the copy, and the import template for sending additions. */
 export function ExportButton() {
   const [open, setOpen] = useState(false);
-  const [copying, setCopying] = useState<"view" | "edit" | null>(null);
+  const [copying, setCopying] = useState(false);
   const make = useMakeExport();
   const picture = useTreePicture();
   const copy = useCopy();
-  const controls = useCopyControls();
-  const editing = copy?.editing ?? null;
   const [busy, setBusy] = useState<string | null>(null);
 
   async function exportFile(format: ExportFormat) {
@@ -168,17 +134,12 @@ export function ExportButton() {
           <DialogHeader>
             <DialogTitle>Export</DialogTitle>
             <DialogDescription>
-              {editing
-                ? "This copy with your changes, to send back, or a picture of the tree."
-                : copy
-                  ? "The family in this copy, in files that open without AncesTree."
-                  : "Everything you've put into AncesTree, in files that open without it."}
+              {copy
+                ? "The family in this copy, in files that open without AncesTree."
+                : "Everything you've put into AncesTree, in files that open without it."}
             </DialogDescription>
           </DialogHeader>
           <ul className="divide-y divide-stone-100">
-            {editing && controls && (
-              <SaveCopyChoice controls={controls} onSaved={() => setOpen(false)} />
-            )}
             <InAppOnly>
               <Choice
                 icon={Share2Icon}
@@ -191,7 +152,7 @@ export function ExportButton() {
                     disabled={busy !== null}
                     onClick={() => {
                       setOpen(false);
-                      setCopying("view");
+                      setCopying(true);
                     }}
                   >
                     Make a copy…
@@ -201,72 +162,47 @@ export function ExportButton() {
                 The app with your family inside, to give to relatives: it opens in any browser, and
                 nothing in it can be changed.
               </Choice>
-              <Choice
-                icon={PencilIcon}
-                title="Copy to edit"
-                kind=".html"
-                actions={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy !== null}
-                    onClick={() => {
-                      setOpen(false);
-                      setCopying("edit");
-                    }}
-                  >
-                    Make a copy…
-                  </Button>
-                }
-              >
-                The same, made for one relative, who can add and correct people in it and send it
-                back to you. Nothing in it reaches the family until you approve it.
-              </Choice>
             </InAppOnly>
-            {!editing && (
-              <>
-                <Choice
-                  icon={ArchiveIcon}
-                  title="Full archive"
-                  kind=".zip"
-                  actions={button(
-                    "Download",
-                    "archive",
-                    "Download the full archive",
-                    () => exportFile("archive"),
-                    copy !== null && !copy.archive,
-                  )}
-                >
-                  {!copy
-                    ? "Everything: people, links, photos, stories and settings. For backups and moving to a new PC; restore it in Settings."
-                    : copy.archive
-                      ? "Everything, as it was when this copy was made: people, links, photos, stories and settings. It can be restored in AncesTree."
-                      : "Not in this copy."}
-                </Choice>
-                <Choice
-                  icon={FileTextIcon}
-                  title="GEDCOM"
-                  kind=".ged"
-                  actions={button("Download", "gedcom", "Download a GEDCOM file", () =>
-                    exportFile("gedcom"),
-                  )}
-                >
-                  {copy?.hidden_living
-                    ? "For other family-history programs, such as Gramps: people and families, with living people's details left out as they are here. Photos aren't in it."
-                    : `For other family-history programs, such as Gramps: people, families, dates, places, notes and stories. ${copy && !copy.archive ? "Photos aren't in it." : "Photos stay in the full archive."}`}
-                </Choice>
-                <Choice
-                  icon={FileSpreadsheetIcon}
-                  title="Spreadsheet"
-                  kind=".csv"
-                  actions={button("Download", "csv", "Download the spreadsheet", () =>
-                    exportFile("csv"),
-                  )}
-                >
-                  One row per person, for Excel.
-                </Choice>
-              </>
-            )}
+            <Choice
+              icon={ArchiveIcon}
+              title="Full archive"
+              kind=".zip"
+              actions={button(
+                "Download",
+                "archive",
+                "Download the full archive",
+                () => exportFile("archive"),
+                copy !== null && !copy.archive,
+              )}
+            >
+              {!copy
+                ? "Everything: people, links, photos, stories and settings. For backups and moving to a new PC; restore it in Settings."
+                : copy.archive
+                  ? "Everything, as it was when this copy was made: people, links, photos, stories and settings. It can be restored in AncesTree."
+                  : "Not in this copy."}
+            </Choice>
+            <Choice
+              icon={FileTextIcon}
+              title="GEDCOM"
+              kind=".ged"
+              actions={button("Download", "gedcom", "Download a GEDCOM file", () =>
+                exportFile("gedcom"),
+              )}
+            >
+              {copy?.hidden_living
+                ? "For other family-history programs, such as Gramps: people and families, with living people's details left out as they are here. Photos aren't in it."
+                : `For other family-history programs, such as Gramps: people, families, dates, places, notes and stories. ${copy && !copy.archive ? "Photos aren't in it." : "Photos stay in the full archive."}`}
+            </Choice>
+            <Choice
+              icon={FileSpreadsheetIcon}
+              title="Spreadsheet"
+              kind=".csv"
+              actions={button("Download", "csv", "Download the spreadsheet", () =>
+                exportFile("csv"),
+              )}
+            >
+              One row per person, for Excel.
+            </Choice>
             <Choice
               icon={ImageIcon}
               title="Picture of the tree"
@@ -302,7 +238,7 @@ export function ExportButton() {
                 </>
               )}
             </Choice>
-            {copy && !editing && (
+            {copy && (
               <Choice
                 icon={FilePlusIcon}
                 title="Import template"
@@ -318,13 +254,7 @@ export function ExportButton() {
           </ul>
         </DialogContent>
       </Dialog>
-      {copying && (
-        <CopyDialog
-          toEdit={copying === "edit"}
-          open
-          onOpenChange={(next) => !next && setCopying(null)}
-        />
-      )}
+      {copying && <CopyDialog open onOpenChange={(next) => !next && setCopying(false)} />}
     </>
   );
 }

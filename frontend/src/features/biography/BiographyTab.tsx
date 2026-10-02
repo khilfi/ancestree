@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ApiError } from "@/api/errors";
 import { keys, useBiography, useSaveBiography } from "@/api/queries";
 import type { Biography, PersonDetail } from "@/api/types";
-import { useCanEdit, useCopy, useHiddenHere } from "@/app/copy";
+import { useCanEdit, useCopy } from "@/app/copy";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,7 @@ const IDLE_MS = 2000; // a pause this long saves
 
 /** The Biography tab: a life story and its Sources, saved to biography.md while writing. */
 export function BiographyTab({ person }: { person: PersonDetail }) {
-  const canEdit = useCanEdit("add");
+  const canEdit = useCanEdit();
   if (person.placeholder) {
     return (
       <p className="px-4 pt-3 text-sm text-stone-500">
@@ -35,10 +35,7 @@ export function BiographyTab({ person }: { person: PersonDetail }) {
 
 function OpenStory({ person }: { person: PersonDetail }) {
   const opened = useOpenedStory(person.id);
-  // In a copy to edit, only where it allows stories, and not for those whose it leaves out.
-  const mayWrite = useCanEdit("stories");
-  const hidden = useHiddenHere(person.id);
-  const canEdit = mayWrite && !hidden;
+  const canEdit = useCanEdit();
   if (opened.error)
     return <p className="px-4 pt-3 text-sm text-stone-600">{opened.error.message}</p>;
   if (!opened.story) return <StorySkeleton />;

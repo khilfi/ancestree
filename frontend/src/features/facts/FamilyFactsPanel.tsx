@@ -483,7 +483,6 @@ export function FamilyFactsPanel({ onClose }: { onClose: () => void }) {
                 year: "numeric",
               })}
               , when this copy was made
-              {copy.editing ? ": changes made in it aren't counted" : ""}
             </p>
           )}
         </div>

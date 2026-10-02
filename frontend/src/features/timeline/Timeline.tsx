@@ -75,7 +75,7 @@ export function Timeline({
   onFilter?: (filter: TreeFilter) => void;
 }) {
   const settings = useTreeSettings();
-  const canEdit = useCanEdit("change");
+  const canEdit = useCanEdit();
   const touch = useTouch();
   const colours = settings.data?.colours ?? "branch";
   const [grouping, setGrouping] = useState<Grouping>("generation");
@@ -584,7 +584,7 @@ function UndatedTray({
   onSelect?: (id: string) => void;
   faded?: ReadonlySet<string> | null; // whom the filter keeps; the others are faded
 }) {
-  const canEdit = useCanEdit("change");
+  const canEdit = useCanEdit();
   if (!people.length) return null;
   const rank = (person: GraphPerson) => {
     const where = standing.get(person.id);

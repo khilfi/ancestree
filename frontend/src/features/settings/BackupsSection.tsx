@@ -85,7 +85,9 @@ export function BackupsSection() {
           `Restored the backup from ${when(result.made_at)}: ${result.people} people, ` +
             `${result.links} links, ${result.files} files.`,
           {
-            description: `Everything as it was just before is in ${result.backup}.`,
+            description: result.backup
+              ? `Everything as it was just before is in ${result.backup}.`
+              : undefined,
             duration: ACTION_MS,
             action: { label: "Open the tree", onClick: () => navigate("/tree") },
           },

@@ -1,18 +1,37 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useBringIn, useFolderReview, useTurnDown } from "@/api/familyFolder";
-import type { FolderChanges } from "@/api/types";
+import type { FolderChanges, ImportDone } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ACTION_MS, showError } from "@/lib/notify";
-import { brought } from "./CopyImport";
 import { carriedOut, type Ticks, tickAll, tickedIds } from "./importTicks";
 import { count, Group, LeftOut, Question, Review, SecondLook, when } from "./review";
 
+/** "1 person added, 2 changes to details and links, 1 life story brought in": what bringing
+ *  a relative's changes in did. */
+function brought(done: ImportDone): string {
+  const stories = done.stories ?? 0;
+  const photos = done.photos ?? 0;
+  const tail = [
+    stories > 0 && count(stories, "life story", "life stories"),
+    photos > 0 && count(photos, "photo"),
+  ].filter(Boolean);
+  const parts = [
+    done.people > 0 && `${count(done.people, "person", "people")} added`,
+    done.links > 0 && `${count(done.links, "link")} made`,
+    done.changed > 0 && `${count(done.changed, "change")} to details and links`,
+    done.removed > 0 && `${count(done.removed, "person", "people")} moved to the Trash`,
+    tail.length > 0 && `${tail.join(" and ")} brought in`,
+  ].filter(Boolean);
+  return parts.join(", ") || "nothing new";
+}
+
 /**
  * The keeper's review of what a relative's computer sent through the family folder:
- * the review of M19 and M21. What they changed is compared with the family as your
+ * the review of M19, as it was for a copy to edit. What they changed is compared with
+ * the family as your
  * record had it when they made their change, and with the tree now. A clash keeps yours unless
  * you tick theirs, look-alikes are asked about, and anything that takes something out waits for
  * its own tick. What you bring in reaches everyone; what you don't goes back to them, with your

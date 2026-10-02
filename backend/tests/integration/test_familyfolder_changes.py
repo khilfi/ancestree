@@ -1,6 +1,6 @@
 """Changes sent back through the family folder, with a real database on the keeper's
-computer: the keeper's review of what a relative's computer sent, as changes from a copy are
-reviewed; bringing them in, turning them down, a trusted computer's coming in by
+computer: the keeper's review of what a relative's computer sent, as changes from a copy to edit
+were reviewed; bringing them in, turning them down, a trusted computer's coming in by
 themselves, and Take back. The relative's computer stands in for its database, as in the unit
 tests. The made-up family, Keluarga Contoh."""
 
@@ -118,7 +118,6 @@ async def test_the_keeper_reviews_and_brings_in_what_a_relative_sent(
     [waiting] = (await keeper.status()).changes
 
     preview = await keeper.review(device, waiting.proposal, ReviewChanges())
-    assert preview.about.for_name == "Mak Long's laptop"
     kinds = sorted(change.kind for change in preview.changes)
     assert kinds == ["add_link", "add_person", "set"]
     assert all(change.ticked for change in preview.changes)

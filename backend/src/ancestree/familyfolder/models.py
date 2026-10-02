@@ -78,8 +78,8 @@ class Proposal(_Model):
     base: int  # the record's last change set when it was made
     made: str
     changes: list[Change] = Field(default_factory=list)  # the spike's: entries put or deleted
-    # The computer's family as it is, for the keeper's review: a copy to edit's family
-    # as exchange/returned.py reads it, as JSON, gzipped, in base64.
+    # The computer's family as it is, for the keeper's review, as exchange/returned.py
+    # reads it: JSON, gzipped, in base64.
     family: str = ""
     answered: int = 0  # the newest of this computer's proposals it had heard back on
     changed: int = 0  # the people and links it changed, as it counts them: none, withdrawn

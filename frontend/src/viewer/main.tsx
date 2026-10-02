@@ -1,7 +1,7 @@
 /**
  * A copy's page: the app itself, built as a copy, with the family it carries in
  * place of the API. Addresses come after a #, so every page works when the file is opened
- * straight from the disk. A copy to edit also keeps its changes and saves them.
+ * straight from the disk.
  */
 import "@xyflow/react/dist/style.css";
 import "@/index.css";
@@ -10,33 +10,20 @@ import { createRoot } from "react-dom/client";
 import { createHashRouter } from "react-router";
 import { z } from "zod";
 import { Root } from "@/app/Root";
-import { openEditable, pageTemplate } from "@/copyedit/open";
-import type { Sealer } from "@/copyedit/seal";
-import { installCopy, viewerLanguage } from "./answers";
+import { installCopy } from "./answers";
 import { LockScreen } from "./LockScreen";
 import { copyRoutes } from "./routes";
-import { type CopySnapshot, openSealed, readSealed } from "./snapshot";
+import { type CopySnapshot, openCopy, readSealed } from "./snapshot";
 
 // The copy allows no eval (its Content-Security-Policy): zod's forms check without trying it,
 // which the browser would report as a violation.
 z.config({ jitless: true });
 
-// The page as it came, before anything is drawn in it: a copy to edit saves itself from this.
-const template = pageTemplate();
-
 const element = document.getElementById("root");
 if (!element) throw new Error("The copy's page has no #root element");
 const root = createRoot(element);
 
-async function start(snapshot: CopySnapshot, sealer: Sealer | null) {
-  if (snapshot.about.editing && snapshot.family) {
-    const { book, controls } = await openEditable(snapshot, sealer, template, viewerLanguage);
-    installCopy(snapshot, book);
-    root.render(
-      <Root router={createHashRouter(copyRoutes)} copy={snapshot.about} controls={controls} />,
-    );
-    return;
-  }
+function start(snapshot: CopySnapshot) {
   installCopy(snapshot);
   root.render(<Root router={createHashRouter(copyRoutes)} copy={snapshot.about} />);
 }
@@ -53,17 +40,10 @@ const sealed = readSealed();
 if (!sealed) {
   broken("This copy's family isn't in it: the file may be damaged. Ask for a new copy.");
 } else if (sealed.locked) {
-  root.render(
-    <LockScreen
-      onOpen={async (password) => {
-        const { snapshot, sealer } = await openSealed(sealed, password);
-        await start(snapshot, sealer);
-      }}
-    />,
-  );
+  root.render(<LockScreen onOpen={async (password) => start(await openCopy(sealed, password))} />);
 } else {
-  openSealed(sealed)
-    .then(({ snapshot, sealer }) => start(snapshot, sealer))
+  openCopy(sealed)
+    .then(start)
     .catch((error: unknown) =>
       broken(error instanceof Error ? error.message : "This copy couldn't be opened."),
     );

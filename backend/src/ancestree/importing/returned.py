@@ -1,19 +1,17 @@
-"""What a copy to edit brings back: a three-way comparison.
+"""What a relative's computer sends back: a three-way
+comparison, first made for the copy to edit, which it outlived.
 
-Pure: what the copy started from, what came back, the tree now and your answers in; the
-changes to review, and how to carry out each, out. Nothing here writes: every change is
+Pure: the family their changes were made on, what they sent, the tree now and your answers in;
+the changes to review, and how to carry out each, out. Nothing here writes: every change is
 carried out later through the app's own rules (services/returns.py).
 
-- What the copy started from is the app's own record of it (storage/copies.py), never what
-  the file says. After an import it's what that import brought in, so a later file from the
-  same copy shows only what's new since, and the same file again shows nothing.
-- What only the copy changed is offered, ticked. What the tree has changed too since, and
-  differently, is a clash: the tree's stays unless you tick the copy's. Whatever takes
-  something out waits for its own tick.
-- Only what the copy was made to allow is offered (its record's "may"); anything else it
-  carries is left out, and said so. Details it hid are "not known" there, never "cleared".
-- Someone new in the copy who looks like someone already in the tree is asked about, as a
-  spreadsheet's rows are (importing/matching.py).
+- The family their changes were made on is the keeper's own record of it, never what was
+  sent: the family folder's record as it was then (familyfolder/computers.py).
+- What only they changed is offered, ticked. What the tree has changed too since, and
+  differently, is a clash: the tree's stays unless you tick theirs. Whatever takes something
+  out waits for its own tick.
+- Someone new who looks like someone already in the tree is asked about, as a spreadsheet's
+  rows are (importing/matching.py).
 """
 
 from collections import defaultdict
@@ -25,7 +23,6 @@ from uuid import UUID
 
 from pydantic import ValidationError
 
-from ancestree.domain.exports import CopyPermissions
 from ancestree.domain.imports import (
     ImportChange,
     ImportLeftOut,
@@ -47,29 +44,8 @@ from ancestree.storage.biography import pictures_in
 type Props = dict[str, Any]
 
 _DETAILS = {name: label for label, name in VERSIONED}  # "birth_date" -> "Born"
-# What a copy that hides living people leaves out of their records (exchange/copies.py).
-_HIDDEN_DETAILS = frozenset({"birth_date", "birth_place", "residence", "occupation", "notes"})
 _MOST_OPTIONS = 8  # people offered for a look-alike, as for a spreadsheet's rows
 _SKELETON_AT_LEAST = 6
-_ALLOWED: dict[str, Literal["add", "change", "remove", "stories", "photos"]] = {
-    "add_person": "add",
-    "add_link": "add",
-    "fill_in": "add",
-    "set": "change",
-    "change_link": "change",
-    "order": "change",
-    "remove_person": "remove",
-    "remove_link": "remove",
-    "story": "stories",
-    "photo": "photos",
-}
-_DOING = {
-    "add": "add people or links",
-    "change": "change details",
-    "remove": "remove people or links",
-    "stories": "write life stories",
-    "photos": "add photos",
-}
 _SPOUSE_WORDS = {
     SpouseStatus.MARRIED: "married to {}",
     SpouseStatus.DIVORCED: "formerly married to {}",
@@ -84,22 +60,19 @@ _LAST = 10_000  # where someone with no birth order goes
 
 @dataclass(frozen=True)
 class Base:
-    """What a copy started from, as the app keeps it: the family and stories it carried when
-    it was made, or as an import last brought them in; and how its people are known here."""
+    """The family their changes were made on, from the keeper's own record: everyone, every
+    link and the stories; and how their people are known here."""
 
     people: dict[str, Props]  # records by id (exchange/records.py)
     links: dict[str, Props]  # {id, type, source, target, kind, status, order} by id
     stories: dict[str, Props]  # {story, sources} by person
-    ids: dict[str, str]  # a copy's person id -> theirs in the tree, where the two differ
-    may: CopyPermissions
-    hidden: frozenset[str]  # whose details the copy hid: they're "not known" in it
-    for_name: str
+    ids: dict[str, str]  # their person id -> the tree's, where the two differ
 
 
 @dataclass(frozen=True)
 class TreeNow:
     """The tree as it is: everyone's properties (unknown parents too), every link, the kinds,
-    and the stories of those whose story the copy may change (asked_stories)."""
+    and the stories of those whose story they may have changed (asked_stories)."""
 
     people: dict[str, Props]
     links: list[Props]  # {id, type ("parent" or "spouse"), source, target, kind, status}
@@ -108,7 +81,7 @@ class TreeNow:
 
 
 def asked_stories(base: Base, returned: Returned) -> set[str]:
-    """Whose stories to read from the tree: those the copy may have changed, by tree id."""
+    """Whose stories to read from the tree: those they may have changed, by tree id."""
     people = returned.stories.keys() | base.stories.keys()
     return {base.ids.get(pid, pid) for pid in people}
 
@@ -118,7 +91,7 @@ def asked_stories(base: Base, returned: Returned) -> set[str]:
 
 @dataclass(frozen=True)
 class AddPerson:
-    person: str  # their id in the tree to be: the copy's own
+    person: str  # their id in the tree to be: the one they have there
     props: Props  # all a new person holds
 
 
@@ -136,23 +109,23 @@ class AddLink:
     b: str  # the child, or the other spouse
     kind: str
     status: SpouseStatus
-    link: str  # the copy's id for it, kept when it's free
+    link: str  # their id for it, kept when it's free
 
 
 @dataclass(frozen=True)
 class Siblings:
-    """Brothers and sisters joined under an unknown parent, as the copy did."""
+    """Brothers and sisters joined under an unknown parent, as they did."""
 
-    placeholder: str  # the copy's id for the unknown parent, kept when it's free
+    placeholder: str  # their id for the unknown parent, kept when it's free
     children: tuple[str, ...]
-    links: tuple[str, ...]  # the copy's ids for their links, in the same order
+    links: tuple[str, ...]  # their ids for the links, in the same order
 
 
 @dataclass(frozen=True)
 class FillIn:
     placeholder: str  # the unknown parent, in the tree
     parent: str  # who fills them in
-    children: tuple[str, ...]  # as the copy had them
+    children: tuple[str, ...]  # as they had them
 
 
 @dataclass(frozen=True)
@@ -192,7 +165,7 @@ class Photo:
     person: str
     display: str | None  # the photo, as a data: address; None takes the photo out
     crop: Crop | None
-    avatar: str | None  # the copy's small one, by its address: shown in the review
+    avatar: str | None  # their small one, by its address: shown in the review
     version: int | None  # the tree's photo_version when compared: if it's changed since, stays
 
 
@@ -203,13 +176,13 @@ type Operation = (
 
 
 @dataclass
-class CopyPlan:
+class ReturnedPlan:
     changes: list[ImportChange]
     questions: list[ImportQuestion]
     left_out: list[ImportLeftOut]
     second_look: list[ImportSecondLook]
     operations: dict[str, Operation]  # by change id
-    ids: dict[str, str]  # a copy's person id -> theirs in the tree, where the two differ
+    ids: dict[str, str]  # their person id -> the tree's, where the two differ
 
     def carried_out(self, chosen: Collection[str] | None) -> set[str]:
         """The changes that happen when these are ticked (None: those ticked to begin with):
@@ -296,7 +269,7 @@ def detail_props(name: str, value: Any) -> Props:
 
 
 def new_person_props(data: PersonInput) -> Props:
-    """All a new person holds, from the copy's details, as the app's own create makes it."""
+    """All a new person holds, from the details they sent, as the app's own create makes it."""
     props: Props = {
         "full_name": data.full_name,
         "nickname": data.nickname,
@@ -371,7 +344,7 @@ class _Planner:
         self.tree = tree
         self.answers = answers
         self.ids = dict(base.ids)
-        # The copy's links, the same shape as the base's: {id, type, source, target, kind, status}
+        # Their links, the same shape as the base's: {id, type, source, target, kind, status}
         self.links: dict[str, Props] = {
             lid: link.model_dump(mode="json") for lid, link in returned.links.items()
         }
@@ -381,8 +354,8 @@ class _Planner:
         self.second_look: list[ImportSecondLook] = []
         self.operations: dict[str, Operation] = {}
         self.look = Tree(list(tree.people.values()), tree.links, tree.kinds)
-        self.new: set[str] = set()  # the copy's ids of people it adds
-        self.removing: set[str] = set()  # the copy's ids of people it takes out
+        self.new: set[str] = set()  # their ids of people they add
+        self.removing: set[str] = set()  # their ids of people they take out
         self.values: dict[str, dict[str, object]] = {}  # each returned person's details, read
         self.parent_links: dict[tuple[str, str], Props] = {}
         self.spouse_links: dict[frozenset[str], Props] = {}
@@ -396,11 +369,11 @@ class _Planner:
     # --- Who is who ---
 
     def tid(self, pid: str) -> str:
-        """Someone of the copy's, by their id in the tree."""
+        """Someone of theirs, by their id in the tree."""
         return self.ids.get(pid, pid)
 
     def name(self, pid: str) -> str:
-        """Their name in the copy; or as the copy started; or in the tree."""
+        """Their name as sent; or as their changes started; or in the tree."""
         if (person := self.returned.people.get(pid)) is not None:
             return person.full_name
         if (record := self.base.people.get(pid)) is not None:
@@ -449,7 +422,7 @@ class _Planner:
                 self.leave_out(
                     person.full_name,
                     label,
-                    f"The copy's {label.lower()} for them isn't one the app can read.",
+                    f"The {label.lower()} sent for them isn't one the app can read.",
                 )
         try:
             PersonInput.model_validate({k: v for k, v in values.items() if v is not None})
@@ -462,7 +435,7 @@ class _Planner:
         self.values[str(person.id)] = values
 
     def _look_alike(self, pid: str) -> str | None:
-        """Someone new in the copy may be someone already in the tree: ask, as an import does.
+        """Someone new they sent may be someone already in the tree: ask, as an import does.
         Their id in the tree when you say they are, else None."""
         person = self.returned.people[pid]
         key = name_key(person.full_name)
@@ -521,12 +494,11 @@ class _Planner:
         return answer.removeprefix("person:") if answer.startswith("person:") else None
 
     def _details(self, pid: str, now: Props, then: Props | None) -> None:
-        """What the copy changed about someone in the tree, detail by detail. `then` is them
-        as the copy started; None when it didn't start with them, so it can't say what it
-        changed: then what it says differently waits for your tick, and blanks say nothing."""
+        """What they changed about someone in the tree, detail by detail. `then` is them as
+        their changes started; None when they didn't start with them, so it can't say what they
+        changed: then what they say differently waits for your tick, and blanks say nothing."""
         tid = self.tid(pid)
         values = self.values[pid]
-        hidden = pid in self.base.hidden
         for detail, label in _DETAILS.items():
             if detail not in values:
                 continue  # it couldn't be read: left out
@@ -534,14 +506,14 @@ class _Planner:
             tree = _detail_or_none(now, detail)
             before = _detail_or_none(then, detail) if then is not None else None
             if then is not None and after == before:
-                continue  # unchanged in the copy (a hidden detail too: still not known there)
+                continue  # unchanged there
             if then is None and _empty(after):
                 continue  # a blank in someone it didn't start with says nothing
             if after == tree:
                 continue  # the tree says so already
             if detail == "living" and after is None:
                 continue  # worked out from the dates
-            known = then is not None and not (hidden and detail in _HIDDEN_DETAILS)
+            known = then is not None
             clash = known and tree != before
             self.add(
                 ImportChange(
@@ -553,9 +525,6 @@ class _Planner:
                     column=label,
                     before=shown(tree),
                     after=shown(after),
-                    detail="Hidden in the copy, so it didn't show what the tree has."
-                    if hidden and detail in _HIDDEN_DETAILS
-                    else None,
                     clash=clash,
                     unsure=not known,
                     ticked=known and not clash,
@@ -601,7 +570,7 @@ class _Planner:
             if now is None:
                 self._new_person(pid)
             elif not now.get("placeholder"):
-                # Someone the copy didn't start with, but the tree has.
+                # Someone their changes didn't start with, but the tree has.
                 self._details(pid, now, None)
         for pid in sorted(returned.people.keys() & base.people.keys()):
             if returned.people[pid].placeholder:
@@ -616,8 +585,7 @@ class _Planner:
                 self.leave_out(
                     self.name(pid),
                     "",
-                    "Taken out of the tree since the copy was made, so what the copy changed "
-                    "about them is left out.",
+                    "Taken out of the tree since, so what was changed about them is left out.",
                 )
         for pid in sorted(base.people.keys() - returned.people.keys()):
             if base.people[pid].get("placeholder"):
@@ -669,7 +637,7 @@ class _Planner:
         ]
 
     def _fill_ins(self) -> set[str]:
-        """Unknown parents the copy filled in: gone from it, with a new parent standing where
+        """Unknown parents they filled in: gone from theirs, with a new parent standing where
         they stood for each of their children. Returns the links that stand for it."""
         base, returned = self.base, self.returned
         new_links = sorted(self.links.keys() - base.links.keys())
@@ -709,8 +677,8 @@ class _Planner:
                 self.leave_out(
                     self.name(parent),
                     "",
-                    f"The copy filled in the unknown parent of {who}, who has been filled in "
-                    "or taken out in the tree since.",
+                    f"The unknown parent of {who} was filled in with them, but has been "
+                    "filled in or taken out in the tree since.",
                 )
                 continue
             self.add(
@@ -734,7 +702,7 @@ class _Planner:
         return used
 
     def _siblings(self) -> set[str]:
-        """Brothers and sisters the copy joined under an unknown parent of its own. Returns
+        """Brothers and sisters they joined under an unknown parent of their own. Returns
         the links that stand for it."""
         base, returned = self.base, self.returned
         used: set[str] = set()
@@ -804,8 +772,8 @@ class _Planner:
             self.leave_out(
                 self.name(a),
                 "",
-                f"The copy linked them to {self.name(b)} as '{kind}', a kind the app doesn't "
-                "have, so the link is left out.",
+                f"Linked to {self.name(b)} as '{kind}', a kind the app doesn't have here, so "
+                "the link is left out.",
             )
             return
         kind = kind if link["type"] == "parent" else ""
@@ -853,7 +821,7 @@ class _Planner:
         was_a, was_b = str(then["source"]), str(then["target"])
         swap = link["type"] == "parent" and (a, b) == (was_b, was_a)
         if (a, b) != (was_a, was_b) and not swap:
-            return  # the copy never moves a link to other people
+            return  # a link is never moved to other people
         kind, was_kind = link.get("kind") or BIOLOGICAL, then.get("kind") or BIOLOGICAL
         status = SpouseStatus(link.get("status") or SpouseStatus.MARRIED)
         was_status = SpouseStatus(then.get("status") or SpouseStatus.MARRIED)
@@ -864,7 +832,7 @@ class _Planner:
         if now is None:
             if swap and self._tree_link("parent", a, b) is not None:
                 return  # turned round in the tree already
-            self.leave_out(pair, "", "The copy changed their link, which is no longer in the tree.")
+            self.leave_out(pair, "", "Their link was changed, but it's no longer in the tree.")
             return
         if swap:
             label = self._kind_label(kind)
@@ -936,7 +904,7 @@ class _Planner:
         return frozenset(found)
 
     def _orders(self) -> None:
-        """Brothers and sisters the copy put in a new birth order: a change for each family."""
+        """Brothers and sisters put in a new birth order: a change for each family."""
         base, returned = self.base, self.returned
         families: dict[frozenset[str], list[str]] = defaultdict(list)
         for pid, person in returned.people.items():
@@ -1000,11 +968,6 @@ class _Planner:
             then = _story_text(base.stories.get(pid))
             if text == then or pid not in returned.people:
                 continue  # unchanged, or goes with the person taken out
-            if pid in base.hidden:
-                self.leave_out(
-                    self.name(pid), "Life story", "Their story wasn't in the copy, so it's kept."
-                )
-                continue
             tid = self.tid(pid)
             if pid not in self.new and tid not in self.tree.people:
                 continue  # taken out of the tree since: said so with their details
@@ -1020,8 +983,8 @@ class _Planner:
                     self.second_look.append(
                         ImportSecondLook(
                             row=None,
-                            message=f"A picture in {self.name(pid)}'s story wasn't in the copy, "
-                            "so the story comes in without it.",
+                            message=f"A picture in {self.name(pid)}'s story wasn't sent, so "
+                            "the story comes in without it.",
                         )
                     )
                 else:
@@ -1101,45 +1064,13 @@ class _Planner:
                     Photo(tid, None, None, None, tree_version),
                 )
 
-    # --- What the copy was allowed ---
-
-    def _allowed(self) -> None:
-        """Only what the copy was made to allow; and only what can happen: a change that
-        needs one left out is left out too."""
-        kept: list[ImportChange] = []
-        dropped: set[str] = set()
-        for change in self.changes:
-            what = _ALLOWED[change.kind]
-            if getattr(self.base.may, what):
-                kept.append(change)
-                continue
-            dropped.add(change.id)
-            self.operations.pop(change.id, None)
-            self.leave_out(
-                change.name,
-                change.column or "",
-                f"This copy didn't let {self.base.for_name} {_DOING[what]}, so it's left out.",
-            )
-        while held := [c for c in kept if any(need in dropped for need in c.needs)]:
-            for change in held:
-                kept.remove(change)
-                dropped.add(change.id)
-                self.operations.pop(change.id, None)
-                self.leave_out(
-                    change.name,
-                    change.column or "",
-                    "It needs someone who is left out, so it's left out too.",
-                )
-        self.changes = kept
-
-    def plan(self) -> CopyPlan:
+    def plan(self) -> ReturnedPlan:
         self._people()
         self._links()
         self._orders()
         self._stories()
         self._photos()
-        self._allowed()
-        return CopyPlan(
+        return ReturnedPlan(
             changes=self.changes,
             questions=self.questions,
             left_out=self.left_out,
@@ -1151,5 +1082,5 @@ class _Planner:
 
 def plan_returned(
     base: Base, returned: Returned, tree: TreeNow, answers: Mapping[str, str]
-) -> CopyPlan:
+) -> ReturnedPlan:
     return _Planner(base, returned, tree, answers).plan()

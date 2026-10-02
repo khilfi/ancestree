@@ -643,8 +643,7 @@ export interface paths {
         /**
          * Make Export
          * @description Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or
-         *     a copy of the app with the family inside, following its choices: view-only, or to
-         *     edit and send back, for someone.
+         *     a view-only copy of the app with the family inside, following its choices.
          */
         post: operations["make_export"];
         delete?: never;
@@ -1123,7 +1122,7 @@ export interface paths {
         /**
          * Review Family Folder Changes
          * @description What a relative's computer sent, compared with the family it was made on and with the
-         *     tree now, for you to tick, as changes from a copy are (the keeper's). Nothing is written.
+         *     tree now, for you to tick (the keeper's). Nothing is written.
          */
         post: operations["review_family_folder_changes"];
         delete?: never;
@@ -1224,7 +1223,8 @@ export interface paths {
         };
         /**
          * List Imports
-         * @description Earlier imports, of spreadsheets and from copies, newest first.
+         * @description Earlier imports, newest first: of spreadsheets, and of changes from relatives, from a
+         *     copy to edit as it once was, or from their computers.
          */
         get: operations["list_imports"];
         put?: never;
@@ -1234,51 +1234,6 @@ export interface paths {
          *     Undo step.
          */
         post: operations["run_import"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/imports/copy/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Preview Copy
-         * @description What a copy to edit brings back, compared with what the app knows it started from and
-         *     with the tree now: each change for you to tick. The file is only read, never run.
-         *     Refused (422) when it isn't a copy to edit ("not_a_copy", "not_to_edit"), is locked without
-         *     its password ("locked"), has another ("wrong_password") or is damaged ("damaged"); (409)
-         *     when it wasn't made here ("unknown_copy") or is older than one brought in ("older_copy").
-         */
-        post: operations["preview_copy"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/imports/copy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Run Copy
-         * @description Bring in the changes ticked: a backup first, then the people, details and links as one
-         *     Undo step, then stories and photos. Take back undoes it all later.
-         */
-        post: operations["run_copy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1517,25 +1472,6 @@ export interface components {
              */
             file: string;
         };
-        /** Body_preview_copy */
-        Body_preview_copy: {
-            /**
-             * File
-             * @description A copy to edit, as it came back (.html)
-             */
-            file: string;
-            /**
-             * Password
-             * @description The copy's password, when it's locked. Used to open it, then forgotten.
-             */
-            password?: string | null;
-            /**
-             * Answers
-             * @description Your answers so far, as JSON: each question's id -> an option's id
-             * @default {}
-             */
-            answers: string;
-        };
         /** Body_preview_import */
         Body_preview_import: {
             /**
@@ -1549,30 +1485,6 @@ export interface components {
              * @default {}
              */
             answers: string;
-        };
-        /** Body_run_copy */
-        Body_run_copy: {
-            /**
-             * File
-             * @description A copy to edit, as it came back (.html)
-             */
-            file: string;
-            /**
-             * Password
-             * @description The copy's password, when it's locked. Used to open it, then forgotten.
-             */
-            password?: string | null;
-            /**
-             * Answers
-             * @description Your answers so far, as JSON: each question's id -> an option's id
-             * @default {}
-             */
-            answers: string;
-            /**
-             * Chosen
-             * @description The changes ticked, as a JSON list of their ids. Left out: those ticked to begin with.
-             */
-            chosen?: string | null;
         };
         /** Body_run_import */
         Body_run_import: {
@@ -1628,6 +1540,20 @@ export interface components {
         /** @enum {string} */
         ChangeKind: "add_person" | "set" | "add_link" | "remove_person" | "remove_link" | "change_link" | "fill_in" | "order" | "story" | "photo";
         /**
+         * ChangesPreview
+         * @description What a relative's computer sent, for you to tick. Nothing is written.
+         */
+        ChangesPreview: {
+            /** Questions */
+            questions: components["schemas"]["ImportQuestion"][];
+            /** Changes */
+            changes: components["schemas"]["ImportChange"][];
+            /** Left Out */
+            left_out: components["schemas"]["ImportLeftOut"][];
+            /** Second Look */
+            second_look: components["schemas"]["ImportSecondLook"][];
+        };
+        /**
          * ChildGroup
          * @description Children of the same parents, eldest first when that is known.
          *
@@ -1651,77 +1577,6 @@ export interface components {
         ChildrenOrder: {
             /** Child Ids */
             child_ids: string[];
-        };
-        /**
-         * CopyPermissions
-         * @description What relatives may do in a copy to edit: all of it unless switched off.
-         */
-        CopyPermissions: {
-            /**
-             * Add
-             * @default true
-             */
-            add: boolean;
-            /**
-             * Change
-             * @default true
-             */
-            change: boolean;
-            /**
-             * Remove
-             * @default true
-             */
-            remove: boolean;
-            /**
-             * Stories
-             * @default true
-             */
-            stories: boolean;
-            /**
-             * Photos
-             * @default true
-             */
-            photos: boolean;
-        };
-        /**
-         * CopyPreview
-         * @description What a copy to edit brings back, for you to tick. Nothing is written.
-         */
-        CopyPreview: {
-            /** File Name */
-            file_name: string;
-            about: components["schemas"]["CopyReturned"];
-            /** Questions */
-            questions: components["schemas"]["ImportQuestion"][];
-            /** Changes */
-            changes: components["schemas"]["ImportChange"][];
-            /** Left Out */
-            left_out: components["schemas"]["ImportLeftOut"][];
-            /** Second Look */
-            second_look: components["schemas"]["ImportSecondLook"][];
-        };
-        /**
-         * CopyReturned
-         * @description Which copy to edit came back, as the app recorded it when it made it.
-         */
-        CopyReturned: {
-            /** Copy Id */
-            copy_id: string;
-            /** For Name */
-            for_name: string;
-            /** Title */
-            title: string;
-            /**
-             * Made At
-             * Format: date-time
-             */
-            made_at: string;
-            /** Saved At */
-            saved_at: string | null;
-            /** Brought At */
-            brought_at: string | null;
-            /** Locked */
-            locked: boolean;
         };
         /**
          * Counts
@@ -1875,17 +1730,6 @@ export interface components {
              * @default true
              */
             archive: boolean;
-            /**
-             * Editable
-             * @default false
-             */
-            editable: boolean;
-            /**
-             * For Name
-             * @default
-             */
-            for_name: string;
-            may?: components["schemas"]["CopyPermissions"];
         };
         /** FactPerson */
         FactPerson: {
@@ -2341,7 +2185,7 @@ export interface components {
         /**
          * ImportLeftOut
          * @description A value or a link that didn't come in, and why; the rest of the row still did. For a
-         *     copy: whose it was, in `column`, with no row.
+         *     relative's changes: whose it was, in `column`, with no row.
          */
         ImportLeftOut: {
             /** Row */
@@ -5483,7 +5327,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CopyPreview"];
+                    "application/json": components["schemas"]["ChangesPreview"];
                 };
             };
             /** @description Validation Error */
@@ -5661,72 +5505,6 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": components["schemas"]["Body_run_import"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportDone"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    preview_copy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_preview_copy"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CopyPreview"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    run_copy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_run_copy"];
             };
         };
         responses: {

@@ -22,7 +22,7 @@ Once a minute while the app runs, `sync()`:
   it here, keeping this computer's own "Me", language and layout, and its own changes on top
   until the keeper has answered them;
 - on a relative's that may send changes, sends its family when it changed since: the keeper
-  reviews it as changes from a copy are reviewed;
+  reviews it, as a copy to edit's changes were reviewed;
 - sends up what this computer wrote: the keeper's to the family folder, a relative's to its
   own;
 - on the keeper's computer, lists the changes waiting from relatives' computers, and brings in
@@ -47,7 +47,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from ancestree.domain.exports import CopyPermissions
 from ancestree.domain.familyfolder import (
     Admit,
     BringIn,
@@ -65,7 +64,7 @@ from ancestree.domain.familyfolder import (
     StartFamily,
     TurnDown,
 )
-from ancestree.domain.imports import CopyPreview, ImportDone
+from ancestree.domain.imports import ChangesPreview, ImportDone
 from ancestree.exchange.restore import restore_archive
 from ancestree.exchange.returned import ReturnedError, sent_family
 from ancestree.familyfolder.changes import (
@@ -686,9 +685,10 @@ class FamilyFolder:
 
     async def _take_in(self, *, backup_first: bool = False) -> bool:
         """Restore the family the record holds, if it changed since; False while a photo or
-        a story hasn't arrived yet. On a computer that sends its changes, its own changes go
-        back on top: those since the family last arrived, or, once the keeper has
-        answered what it sent, only those made since it sent them."""
+        a story hasn't arrived yet. The first time, what was here is backed up first: a family
+        of its own, entered before it joined, isn't in the folder. On a computer that sends its
+        changes, its own changes go back on top: those since the family last arrived, or,
+        once the keeper has answered what it sent, only those made since it sent them."""
         computer, setup = self.computer, self.setup
         if computer is None or setup is None:
             return True
@@ -718,7 +718,7 @@ class FamilyFolder:
         if archive is None:
             return False
         try:
-            await self._restore(archive, backup_first)
+            await self._restore(archive, backup_first or not setup.restored)
         finally:
             archive.unlink(missing_ok=True)
         await asyncio.to_thread(self._write, received_path, entries)
@@ -835,13 +835,13 @@ class FamilyFolder:
         return True
 
     def _read_sent(self, keeper: Keeper, setup: Setup, arrived: Arrived) -> returns.Sent:
-        """What a computer sent, read as strictly as a copy that comes back, and the family it
-        was made on, from the keeper's own record: what it's compared with."""
+        """What a computer sent, read strictly, and the family it was made on, from the
+        keeper's own record: what it's compared with."""
         proposal = arrived.proposal
         try:
             found = unpack(proposal.family)
             sent_at = datetime.fromisoformat(proposal.made)
-            returned = sent_family(found, arrived.device, arrived.name, sent_at)
+            returned = sent_family(found, arrived.device)
         except (UnpackError, ReturnedError, ValueError) as error:
             raise RuleError(
                 "unreadable_changes",
@@ -858,15 +858,7 @@ class FamilyFolder:
                 if data is not None:
                     text = data.decode("utf-8", errors="replace")
                     stories[parts[2]] = biography_from(text).model_dump(mode="json")
-        base = Base(
-            people=people,
-            links=links,
-            stories=stories,
-            ids={},
-            may=CopyPermissions(),
-            hidden=frozenset(),
-            for_name=arrived.name,
-        )
+        base = Base(people=people, links=links, stories=stories, ids={})
         return returns.Sent(
             returned=returned,
             base=base,
@@ -906,14 +898,14 @@ class FamilyFolder:
             await asyncio.to_thread(keeper.settle, sent.device, sent.proposal)
         self.waiting = [changes for changes in self.waiting if changes.device != sent.device]
 
-    async def review(self, device: str, proposal: int, request: ReviewChanges) -> CopyPreview:
+    async def review(self, device: str, proposal: int, request: ReviewChanges) -> ChangesPreview:
         """What a relative's computer sent, for the keeper to tick. Nothing is written."""
         sent = await self._sent(device, proposal)
         return await returns.preview_sent(self.ctx, sent, request.answers)
 
     async def bring_in(self, device: str, request: BringIn) -> ImportDone:
-        """Bring in what's ticked of a computer's changes, as from a copy (a backup first, one
-        Undo step, Take back later); publish it to everyone, and answer the computer."""
+        """Bring in what's ticked of a computer's changes (a backup first, one Undo step, Take
+        back later); publish it to everyone, and answer the computer."""
         async with self.lock:
             keeper, _, _ = self._keeper()
             sent = await self._sent(device, request.proposal)

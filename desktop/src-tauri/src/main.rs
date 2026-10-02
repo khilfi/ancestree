@@ -687,6 +687,9 @@ fn main() {
                 code: None, api, ..
             } => api.prevent_exit(),
             RunEvent::Exit => stop_engine(app),
+            // On a Mac, choosing AncesTree in the Dock with its window closed opens it again.
+            #[cfg(target_os = "macos")]
+            RunEvent::Reopen { .. } => show_main(app),
             _ => {}
         });
 }

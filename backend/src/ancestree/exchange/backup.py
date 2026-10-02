@@ -19,9 +19,6 @@ ARCHIVE_FORMAT = 1
 
 # DATA_DIR folders worth keeping. `exports/` is left out: it holds the archives themselves.
 DATA_FOLDERS = ("people", "settings", "trash")
-# Kept too, but never replaced by a restore, only added to: what each copy to edit started
-# from, which a copy made since the backup still needs to come back.
-KEPT_FOLDERS = ("copies",)
 
 _README = """\
 AncesTree backup archive
@@ -31,7 +28,6 @@ graph.json     every person, relationship and relationship kind
 people/        one folder per person, named by ID: photos, biography.md, documents
 settings/      app settings
 trash/         deleted people that can still be restored
-copies/        what each copy to edit started from, to compare what comes back with
 manifest.json  when and by which version this was made, counts, and a SHA-256 per file
 
 Everything inside is plain JSON, Markdown and images: readable without AncesTree.
@@ -111,7 +107,7 @@ def write_archive(
 
 def _data_files(data_dir: Path) -> list[Path]:
     files: list[Path] = []
-    for folder in (*DATA_FOLDERS, *KEPT_FOLDERS):
+    for folder in DATA_FOLDERS:
         root = data_dir / folder
         if root.is_dir():
             files.extend(path for path in root.rglob("*") if path.is_file())

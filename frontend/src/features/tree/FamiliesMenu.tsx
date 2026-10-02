@@ -27,8 +27,7 @@ export function FamiliesMenu({
 }) {
   const settings = useTreeSettings();
   const save = useSaveTreeSettings();
-  // A view-only copy moves its centre only where it carries the seats for it; a copy
-  // to edit seats anyone itself.
+  // A view-only copy moves its centre only where it carries the seats for it.
   const copy = useCopy();
   const [open, setOpen] = useState(false);
   const current: TreeSettings = settings.data ?? { centre: null, colours: "branch" };
@@ -38,7 +37,7 @@ export function FamiliesMenu({
     return person ? shortName(person) : "someone";
   };
   const { families, branches } = familiesOf(graph);
-  const canCentre = (id: string) => !copy || !!copy.editing || (copy.centres ?? []).includes(id);
+  const canCentre = (id: string) => !copy || (copy.centres ?? []).includes(id);
   const light = (ids: string[]) => onHighlight(new Set(ids));
 
   function close() {

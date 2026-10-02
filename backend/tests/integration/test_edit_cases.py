@@ -1,26 +1,26 @@
 """Changes to the fictional family, and what the API answers to each.
 
-A copy to edit makes changes with TypeScript twins of the app's rules. The cases are
-written down once, in frontend/src/copyedit/edit-cases.json: the app answers them here, and
-the copy must answer them the same way (src/copyedit/edit-cases.test.ts)."""
+The cases are written down in edit-cases.json beside this file: the status, the refusal's code,
+the notices and the fields that matter. They were first shared with the copy to edit, which
+answered them with twins of the app's rules until it retired; the app still answers them
+here."""
 
 import json
 import re
+from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
 from neo4j import AsyncDriver
 
-from ancestree.config import REPO_ROOT, Settings
+from ancestree.config import Settings
 from ancestree.seed.family import load_seed_family
 from ancestree.seed.loader import load_seed
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
-CASES = json.loads(
-    (REPO_ROOT / "frontend" / "src" / "copyedit" / "edit-cases.json").read_text("utf-8")
-)["cases"]
+CASES = json.loads((Path(__file__).parent / "edit-cases.json").read_text("utf-8"))["cases"]
 _NAMED = re.compile(r"@([^/?\"]+?)(?=$|/|\?)")
 _KEPT = re.compile(r"\$([a-z]+)")
 

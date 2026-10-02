@@ -3,6 +3,7 @@ import {
   ChevronRightIcon,
   DownloadIcon,
   FileSpreadsheetIcon,
+  LaptopIcon,
   PencilIcon,
   UploadIcon,
 } from "lucide-react";
@@ -30,7 +31,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ACTION_MS, showError } from "@/lib/notify";
-import { CopyImport } from "./CopyImport";
 import { carriedOut, type Ticks, tickAll, tickedIds } from "./importTicks";
 import { count, Group, LeftOut, Question, quoted, Review, Row, SecondLook, when } from "./review";
 
@@ -219,7 +219,9 @@ function EarlierImport({
   return (
     <li className="space-y-1 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        {item.kind === "copy" ? (
+        {item.kind === "folder" ? (
+          <LaptopIcon className="size-4 text-stone-400" aria-hidden />
+        ) : item.kind === "copy" ? (
           <PencilIcon className="size-4 text-stone-400" aria-hidden />
         ) : (
           <FileSpreadsheetIcon className="size-4 text-stone-400" aria-hidden />
@@ -227,9 +229,11 @@ function EarlierImport({
         <span className="font-medium">{when(item.imported_at)}</span>
         <span className="text-stone-600">
           ·{" "}
-          {item.kind === "copy"
-            ? `changes from ${item.for_name}'s copy, ${item.file_name}`
-            : item.file_name}
+          {item.kind === "folder"
+            ? `changes from ${item.for_name}`
+            : item.kind === "copy"
+              ? `changes from ${item.for_name}'s copy, ${item.file_name}`
+              : item.file_name}
         </span>
         <span className="text-stone-600">
           · {count(item.people, "person", "people")}, {count(item.links, "link")}
@@ -302,7 +306,7 @@ function takingBack(item: ImportSummary): string {
     );
   }
   if (item.links > 0) parts.push("Links it made between people already here go too.");
-  if (item.kind === "copy") {
+  if (item.kind === "copy" || item.kind === "folder") {
     const more = item.changed + (item.stories ?? 0) + (item.photos ?? 0);
     if (more > 0) {
       parts.push(
@@ -570,7 +574,6 @@ export function ImportSection() {
         )}
       </section>
 
-      <CopyImport />
       <EarlierImports />
     </div>
   );

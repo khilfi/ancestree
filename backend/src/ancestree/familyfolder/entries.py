@@ -11,7 +11,7 @@
     setting/places        the places put on the map by hand
 
 What stays on each computer, and never travels: "Me", the kinship language, and the tree's
-centre and colours. So does the Trash, and the records of copies to edit.
+centre and colours. So does the Trash.
 
 The keeper's computer works the entries out from its family and publishes what changed; every
 other computer builds an archive from them, as a backup archive would be, and restores it.

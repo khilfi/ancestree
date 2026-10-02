@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.1.0"
+    "version": "0.2.1"
   },
   "paths": {
     "/api/health": {
@@ -1846,7 +1846,7 @@
           "export"
         ],
         "summary": "Make Export",
-        "description": "Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or\na copy of the app with the family inside, following its choices: view-only, or to\nedit and send back, for someone.",
+        "description": "Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or\na view-only copy of the app with the family inside, following its choices.",
         "operationId": "make_export",
         "requestBody": {
           "content": {
@@ -2687,7 +2687,7 @@
           "family folder"
         ],
         "summary": "Review Family Folder Changes",
-        "description": "What a relative's computer sent, compared with the family it was made on and with the\ntree now, for you to tick, as changes from a copy are (the keeper's). Nothing is written.",
+        "description": "What a relative's computer sent, compared with the family it was made on and with the\ntree now, for you to tick (the keeper's). Nothing is written.",
         "operationId": "review_family_folder_changes",
         "parameters": [
           {
@@ -2726,7 +2726,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CopyPreview"
+                  "$ref": "#/components/schemas/ChangesPreview"
                 }
               }
             }
@@ -2940,7 +2940,7 @@
           "import"
         ],
         "summary": "List Imports",
-        "description": "Earlier imports, of spreadsheets and from copies, newest first.",
+        "description": "Earlier imports, newest first: of spreadsheets, and of changes from relatives, from a\ncopy to edit as it once was, or from their computers.",
         "operationId": "list_imports",
         "responses": {
           "200": {
@@ -2971,90 +2971,6 @@
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/Body_run_import"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportDone"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/imports/copy/preview": {
-      "post": {
-        "tags": [
-          "import"
-        ],
-        "summary": "Preview Copy",
-        "description": "What a copy to edit brings back, compared with what the app knows it started from and\nwith the tree now: each change for you to tick. The file is only read, never run.\nRefused (422) when it isn't a copy to edit (\"not_a_copy\", \"not_to_edit\"), is locked without\nits password (\"locked\"), has another (\"wrong_password\") or is damaged (\"damaged\"); (409)\nwhen it wasn't made here (\"unknown_copy\") or is older than one brought in (\"older_copy\").",
-        "operationId": "preview_copy",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_preview_copy"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CopyPreview"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/imports/copy": {
-      "post": {
-        "tags": [
-          "import"
-        ],
-        "summary": "Run Copy",
-        "description": "Bring in the changes ticked: a backup first, then the people, details and links as one\nUndo step, then stories and photos. Take back undoes it all later.",
-        "operationId": "run_copy",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_run_copy"
               }
             }
           },
@@ -3629,39 +3545,6 @@
         ],
         "title": "Body_add_picture"
       },
-      "Body_preview_copy": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "description": "A copy to edit, as it came back (.html)"
-          },
-          "password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password",
-            "description": "The copy's password, when it's locked. Used to open it, then forgotten."
-          },
-          "answers": {
-            "type": "string",
-            "title": "Answers",
-            "description": "Your answers so far, as JSON: each question's id -> an option's id",
-            "default": "{}"
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_preview_copy"
-      },
       "Body_preview_import": {
         "properties": {
           "file": {
@@ -3682,51 +3565,6 @@
           "file"
         ],
         "title": "Body_preview_import"
-      },
-      "Body_run_copy": {
-        "properties": {
-          "file": {
-            "type": "string",
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "description": "A copy to edit, as it came back (.html)"
-          },
-          "password": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password",
-            "description": "The copy's password, when it's locked. Used to open it, then forgotten."
-          },
-          "answers": {
-            "type": "string",
-            "title": "Answers",
-            "description": "Your answers so far, as JSON: each question's id -> an option's id",
-            "default": "{}"
-          },
-          "chosen": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chosen",
-            "description": "The changes ticked, as a JSON list of their ids. Left out: those ticked to begin with."
-          }
-        },
-        "type": "object",
-        "required": [
-          "file"
-        ],
-        "title": "Body_run_copy"
       },
       "Body_run_import": {
         "properties": {
@@ -3850,6 +3688,47 @@
           "photo"
         ]
       },
+      "ChangesPreview": {
+        "properties": {
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/ImportQuestion"
+            },
+            "type": "array",
+            "title": "Questions"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ImportChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "left_out": {
+            "items": {
+              "$ref": "#/components/schemas/ImportLeftOut"
+            },
+            "type": "array",
+            "title": "Left Out"
+          },
+          "second_look": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSecondLook"
+            },
+            "type": "array",
+            "title": "Second Look"
+          }
+        },
+        "type": "object",
+        "required": [
+          "questions",
+          "changes",
+          "left_out",
+          "second_look"
+        ],
+        "title": "ChangesPreview",
+        "description": "What a relative's computer sent, for you to tick. Nothing is written."
+      },
       "ChildGroup": {
         "properties": {
           "kind": {
@@ -3909,149 +3788,6 @@
         ],
         "title": "ChildrenOrder",
         "description": "Children of the same two parents, eldest first."
-      },
-      "CopyPermissions": {
-        "properties": {
-          "add": {
-            "type": "boolean",
-            "title": "Add",
-            "default": true
-          },
-          "change": {
-            "type": "boolean",
-            "title": "Change",
-            "default": true
-          },
-          "remove": {
-            "type": "boolean",
-            "title": "Remove",
-            "default": true
-          },
-          "stories": {
-            "type": "boolean",
-            "title": "Stories",
-            "default": true
-          },
-          "photos": {
-            "type": "boolean",
-            "title": "Photos",
-            "default": true
-          }
-        },
-        "type": "object",
-        "title": "CopyPermissions",
-        "description": "What relatives may do in a copy to edit: all of it unless switched off."
-      },
-      "CopyPreview": {
-        "properties": {
-          "file_name": {
-            "type": "string",
-            "title": "File Name"
-          },
-          "about": {
-            "$ref": "#/components/schemas/CopyReturned"
-          },
-          "questions": {
-            "items": {
-              "$ref": "#/components/schemas/ImportQuestion"
-            },
-            "type": "array",
-            "title": "Questions"
-          },
-          "changes": {
-            "items": {
-              "$ref": "#/components/schemas/ImportChange"
-            },
-            "type": "array",
-            "title": "Changes"
-          },
-          "left_out": {
-            "items": {
-              "$ref": "#/components/schemas/ImportLeftOut"
-            },
-            "type": "array",
-            "title": "Left Out"
-          },
-          "second_look": {
-            "items": {
-              "$ref": "#/components/schemas/ImportSecondLook"
-            },
-            "type": "array",
-            "title": "Second Look"
-          }
-        },
-        "type": "object",
-        "required": [
-          "file_name",
-          "about",
-          "questions",
-          "changes",
-          "left_out",
-          "second_look"
-        ],
-        "title": "CopyPreview",
-        "description": "What a copy to edit brings back, for you to tick. Nothing is written."
-      },
-      "CopyReturned": {
-        "properties": {
-          "copy_id": {
-            "type": "string",
-            "title": "Copy Id"
-          },
-          "for_name": {
-            "type": "string",
-            "title": "For Name"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "made_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Made At"
-          },
-          "saved_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Saved At"
-          },
-          "brought_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Brought At"
-          },
-          "locked": {
-            "type": "boolean",
-            "title": "Locked"
-          }
-        },
-        "type": "object",
-        "required": [
-          "copy_id",
-          "for_name",
-          "title",
-          "made_at",
-          "saved_at",
-          "brought_at",
-          "locked"
-        ],
-        "title": "CopyReturned",
-        "description": "Which copy to edit came back, as the app recorded it when it made it."
       },
       "Counts": {
         "properties": {
@@ -4453,20 +4189,6 @@
             "type": "boolean",
             "title": "Archive",
             "default": true
-          },
-          "editable": {
-            "type": "boolean",
-            "title": "Editable",
-            "default": false
-          },
-          "for_name": {
-            "type": "string",
-            "maxLength": 60,
-            "title": "For Name",
-            "default": ""
-          },
-          "may": {
-            "$ref": "#/components/schemas/CopyPermissions"
           }
         },
         "type": "object",
@@ -5848,7 +5570,7 @@
           "why"
         ],
         "title": "ImportLeftOut",
-        "description": "A value or a link that didn't come in, and why; the rest of the row still did. For a\ncopy: whose it was, in `column`, with no row."
+        "description": "A value or a link that didn't come in, and why; the rest of the row still did. For a\nrelative's changes: whose it was, in `column`, with no row."
       },
       "ImportOption": {
         "properties": {

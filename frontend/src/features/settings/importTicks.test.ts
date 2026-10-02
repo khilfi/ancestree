@@ -63,8 +63,8 @@ describe("ticking an import's changes", () => {
     expect(carriedOut(all, tickAll(all, false)).size).toBe(0);
   });
 
-  it("leaves whatever takes something out from a copy to its own tick too", () => {
-    // A link taken out, and a photo taken out, in a relative's copy; a story written.
+  it("leaves whatever takes something out of a relative's changes to its own tick too", () => {
+    // A link taken out, and a photo taken out, on a relative's computer; a story written.
     const unlink = change("unlink:1", { kind: "remove_link", removes: true, ticked: false });
     const photo = change("photo:siti", { kind: "photo", removes: true, ticked: false });
     const story = change("story:hassan", { kind: "story" });

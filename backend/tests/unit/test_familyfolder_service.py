@@ -145,7 +145,7 @@ async def test_a_relative_joins_with_the_code_and_receives_the_family(
     now = await relative.status()
     assert (now.role, now.family, now.problem) == ("viewer", "Keluarga Contoh", "")
     assert [restore["graph"] for restore in theirs.restores] == [ours.graph]
-    assert theirs.restores[0]["backup_first"] is False  # the keeper's family can always return
+    assert theirs.restores[0]["backup_first"] is True  # what was here first: kept
     names = {member.name: (member.role, member.email) for member in now.members}
     assert names == {
         "Pak Hassan's PC": ("keeper", KEEPER),
@@ -211,6 +211,7 @@ async def test_what_the_keeper_changes_reaches_the_relative(tmp_path: Path, clou
     await relative.sync()
 
     latest = theirs.restores[-1]
+    assert latest["backup_first"] is False  # after the first: the keeper's can always return
     assert latest["graph"] == ours.graph
     assert latest["files"][f"people/{HASSAN}/photos/portrait.jpg"] == b"\xff\xd8 a made-up photo"
     assert latest["files"][f"people/{HASSAN}/biography.md"].startswith(b"# Hassan")

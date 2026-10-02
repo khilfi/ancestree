@@ -1,6 +1,6 @@
 """Importing a spreadsheet in the app, and reviewing what it
-would change before anything does. The changes a copy to edit brings back are reviewed
-the same way."""
+would change before anything does. The changes a relative's computer sends back are
+reviewed the same way, as a copy to edit's were."""
 
 from datetime import datetime
 from typing import Literal
@@ -19,8 +19,8 @@ class ImportOption(BaseModel):
 
 
 class ImportQuestion(BaseModel):
-    id: str  # stable for the same file: "same:3", "who:9:Parents:0", "same:<id>" for a copy
-    row: int | None  # None: a copy's, which has no rows
+    id: str  # stable for the same file: "same:3", "who:9:Parents:0", "same:<id>" for changes
+    row: int | None  # None: a relative's changes, which have no rows
     column: str
     written: str  # what the cell said
     kind: Literal["same_person", "which_person"]
@@ -31,7 +31,7 @@ class ImportQuestion(BaseModel):
 
 class ImportLeftOut(BaseModel):
     """A value or a link that didn't come in, and why; the rest of the row still did. For a
-    copy: whose it was, in `column`, with no row."""
+    relative's changes: whose it was, in `column`, with no row."""
 
     row: int | None
     column: str
@@ -64,7 +64,7 @@ type ChangeKind = Literal[
     "set",
     "add_link",
     "remove_person",
-    # From a copy to edit:
+    # From a relative's changes:
     "remove_link",
     "change_link",  # its kind, a marriage's status, or which way round a parent link goes
     "fill_in",  # an unknown parent filled in
@@ -88,7 +88,7 @@ class ImportChange(BaseModel):
     before: str | None = None  # "set": what the tree has now; "" when nothing
     after: str | None = None  # "set": what the file says; "" when it clears the detail
     detail: str | None = None  # "add_person": b. 1938 · Kota Bharu; "add_link": who, and how
-    clash: bool = False  # changed in the tree too since the file was exported, or the copy made
+    clash: bool = False  # changed in the tree too since the file was exported, or they changed it
     unsure: bool = False  # the file doesn't say what it started from (no Version)
     removes: bool = False  # takes something out: only ever by its own tick, never Tick all
     picture: str | None = None  # "photo": the new photo, small, as a data: address
@@ -122,26 +122,12 @@ class ImportPreview(BaseModel):
     changes: list[ImportChange] = Field(default_factory=list)  # to review and tick
 
 
-class CopyReturned(BaseModel):
-    """Which copy to edit came back, as the app recorded it when it made it."""
+class ChangesPreview(BaseModel):
+    """What a relative's computer sent, for you to tick. Nothing is written."""
 
-    copy_id: str
-    for_name: str  # whom it was made for
-    title: str
-    made_at: datetime
-    saved_at: datetime | None  # when the file was saved from the copy; None: as the app made it
-    brought_at: datetime | None  # when a file of this copy was last brought in; None: never
-    locked: bool
-
-
-class CopyPreview(BaseModel):
-    """What a copy to edit brings back, for you to tick. Nothing is written."""
-
-    file_name: str
-    about: CopyReturned  # which copy, and whose
     questions: list[ImportQuestion]  # look-alikes: is someone new already in the tree?
     changes: list[ImportChange]
-    left_out: list[ImportLeftOut]  # what the copy changed that can't come in, and why
+    left_out: list[ImportLeftOut]  # what they changed that can't come in, and why
     second_look: list[ImportSecondLook]
 
 
@@ -162,9 +148,11 @@ class ImportSummary(BaseModel):
     """An earlier import, for Settings → Import and What's missing."""
 
     id: str
+    # "copy": changes from a copy to edit, before it retired; "folder": from a relative's
+    # computer, through the family folder.
     kind: Literal["spreadsheet", "copy", "folder"] = "spreadsheet"
     file_name: str
-    # A copy's: whom it was made for (M21); a relative's computer's: its name.
+    # A copy's: whom it was made for; a relative's computer's: its name.
     for_name: str | None = None
     imported_at: datetime
     people: int

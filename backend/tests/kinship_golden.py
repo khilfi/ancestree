@@ -158,9 +158,6 @@ class Sketch:
     def rows(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         return in_read_order([row_of(person) for person in self.people], list(self.links))
 
-    def props(self) -> list[dict[str, Any]]:
-        return [person_to_props(person) for person in self.people]
-
 
 @dataclass(frozen=True)
 class Golden:
@@ -171,8 +168,6 @@ class Golden:
     pairs: list[tuple[str, str]]
     titles: Titles | None = None  # the family's Malay birth-order titles (Settings, D14)
     kinds: dict[str, RelationshipKind] = field(default_factory=lambda: dict(KINDS))
-    # Everyone's stored properties, as a copy to edit carries them (tests/copy_golden.py).
-    props: list[dict[str, Any]] = field(default_factory=list)
 
 
 def every_pair(people: Sequence[dict[str, Any]]) -> list[tuple[str, str]]:
@@ -207,7 +202,6 @@ def seed() -> Golden:
         people,
         links,
         every_pair(people),
-        props=[person_to_props(person) for person in everyone],
     )
 
 
@@ -326,7 +320,6 @@ def tables() -> Golden:
         links,
         pairs,
         Titles(("long", "ngah", "alang", "andak"), "busu"),
-        props=s.props(),
     )
 
 
@@ -353,7 +346,6 @@ def notes() -> Golden:
         people,
         links,
         every_pair(people),
-        props=s.props(),
     )
 
 
@@ -374,18 +366,7 @@ def generated() -> Golden:
         people,
         links,
         pairs,
-        props=[props_of(row) for row in people],
     )
-
-
-def props_of(row: dict[str, Any]) -> dict[str, Any]:
-    """The stored properties behind a row read_family gave: its fields, under their own names."""
-    props = {name: value for name, value in row.items() if name not in ("x", "y")}
-    return props | {
-        "has_photo": row["photo_version"] is not None,
-        "layout_x": None,
-        "layout_y": None,
-    }
 
 
 FAMILIES = (seed, tables, notes, generated)

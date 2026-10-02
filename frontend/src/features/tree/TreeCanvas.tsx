@@ -143,11 +143,9 @@ export function TreeCanvas({
   const colours = readOnly ? "branch" : (settings.data?.colours ?? "branch");
   // Nothing on the canvas changes the family in the made-up sample or a view-only
   // copy. A copy still keeps its viewer's colours and folds; the sample doesn't.
-  // What can be changed here: nothing in a view-only copy or the made-up sample;
-  // in a copy to edit, what it allows.
+  // What can be changed here: nothing in a view-only copy, the made-up sample, or on a
+  // computer that only receives the family.
   const canEdit = useCanEdit();
-  const canAdd = useCanEdit("add");
-  const canChange = useCanEdit("change");
   const fixed = readOnly || !canEdit;
   // Married-in families open unfolded, unless this browser remembers otherwise. The
   // generated sample is big, and opens folded; it isn't remembered.
@@ -394,10 +392,10 @@ export function TreeCanvas({
 
   const actions = useMemo<TreeActions>(
     () => ({
-      readOnly: fixed || !canAdd, // no linking by dragging, nor filling in an unknown parent
+      readOnly: fixed, // no linking by dragging, nor filling in an unknown parent
       toggleFold: (unit) => setFolding((now) => toggled(now, unit)),
     }),
-    [fixed, canAdd],
+    [fixed],
   );
 
   // Escape closes an open card first; otherwise it ends finding a relationship.
@@ -458,7 +456,7 @@ export function TreeCanvas({
         return;
       }
       if (node.type === "unknown") {
-        if (!fixed && canAdd)
+        if (!fixed)
           setPending({
             kind: "unknown",
             id: node.id,
@@ -469,7 +467,7 @@ export function TreeCanvas({
       setPending(null);
       onSelect(node.id);
     },
-    [fixed, canAdd, relating, relative, onSelect, onPick],
+    [fixed, relating, relative, onSelect, onPick],
   );
 
   // Handlers keep their identity: React Flow stores each new one, and every store update
@@ -489,7 +487,7 @@ export function TreeCanvas({
   );
   // Only places on the rings are kept: in the other layouts a move lasts until you
   // leave, as they're always worked out afresh.
-  const keepsMoves = !fixed && canChange && layout.layout === "rings";
+  const keepsMoves = !fixed && layout.layout === "rings";
   const onNodeDragStop = useCallback(
     (_: unknown, __: unknown, dragged: PersonFlowNode[]) => {
       if (!keepsMoves) return;
@@ -550,8 +548,8 @@ export function TreeCanvas({
           onNodeDragStop={onNodeDragStop}
           onMove={onMove}
           // The made-up sample: moves aren't saved. A view-only copy: nothing moves at all.
-          nodesDraggable={canChange}
-          nodesConnectable={!fixed && canAdd}
+          nodesDraggable={canEdit}
+          nodesConnectable={!fixed}
           elementsSelectable={false}
           onlyRenderVisibleElements
           connectionRadius={40}

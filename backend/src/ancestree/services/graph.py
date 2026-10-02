@@ -84,7 +84,7 @@ def build_graph(
     this_year: int | None = None,
 ) -> Graph:
     """Rows as the database returns them (or a generated family) -> the canvas's graph.
-    `this_year` decides who is taken to be alive; golden files fix it."""
+    `this_year` decides who is taken to be alive: this year, unless a test fixes it."""
     members = [
         seating.Member(
             id=str(row["id"]),

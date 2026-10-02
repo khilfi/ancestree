@@ -28,7 +28,7 @@ export function TreePage() {
   const selectedId = params.get("person");
   // Someone new, where people can be added: not in a view-only copy, nor in a copy to edit
   // that doesn't allow it.
-  const mayAdd = useCanEdit("add");
+  const mayAdd = useCanEdit();
   const creating = params.has("new") && mayAdd;
   const panelOpen = creating || selectedId !== null;
 

@@ -1,44 +1,35 @@
-"""A copy to edit, come back: read safely, and compared three ways
-with what it started from and the tree now. The fictional family's names; each case built in a
-few lines."""
+"""What a relative's computer sends back: read strictly,
+and compared three ways with the family their changes were made on and the tree now. The
+fictional family's names; each case built in a few lines."""
 
 import base64
-import gzip
 import io
-import json
-from datetime import UTC, datetime
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
 import pytest
 from PIL import Image
 
-from ancestree.domain.exports import CopyPermissions
 from ancestree.domain.imports import ImportChange
 from ancestree.domain.relationship import SpouseStatus
-from ancestree.exchange.copies import page, seal
 from ancestree.exchange.returned import (
     DamagedError,
-    LockedError,
-    NotACopyError,
-    NotToEditError,
     Returned,
     ReturnedLink,
     ReturnedPerson,
     ReturnedPhoto,
     ReturnedStory,
-    WrongPasswordError,
-    read_returned,
+    sent_family,
 )
 from ancestree.importing.returned import (
     AddLink,
     Base,
-    CopyPlan,
     FillIn,
     Order,
     Photo,
     Relink,
     Remove,
+    ReturnedPlan,
     SetDetail,
     Siblings,
     Story,
@@ -48,12 +39,7 @@ from ancestree.importing.returned import (
 )
 from tests.kinship_fixtures import KINDS
 
-APP = (
-    "<!doctype html><html><head><title>AncesTree</title></head>"
-    '<body><div id="root"></div><!--ANCESTREE-COPY--></body></html>'
-)
-COPY = str(uuid5(NAMESPACE_URL, "copy:mak-long"))
-MADE = "2026-09-29T08:00:00+08:00"
+SENDER = "5e4d3c2b1a090807"  # Mak Long's laptop, by its id in the family folder
 
 
 def pid(name: str) -> str:
@@ -127,17 +113,12 @@ def base(
     people: list[dict[str, Any]] = PEOPLE,
     links: list[dict[str, Any]] = LINKS,
     stories: dict[str, Any] | None = None,
-    may: CopyPermissions | None = None,
-    hidden: frozenset[str] = frozenset(),
 ) -> Base:
     return Base(
         people={p["id"]: dict(p) for p in people},
         links={link["id"]: dict(link) for link in links},
         stories=stories or {},
         ids={},
-        may=may or CopyPermissions(),
-        hidden=hidden,
-        for_name="Mak Long",
     )
 
 
@@ -162,12 +143,7 @@ def came_back(
     photos: dict[str, Any] | None = None,
 ) -> Returned:
     return Returned(
-        copy_id=COPY,
-        for_name="Mak Long",
-        title="Keluarga Contoh",
-        made_at=datetime.fromisoformat(MADE),
-        saved_at=datetime(2026, 10, 2, tzinfo=UTC),
-        locked=False,
+        sender=SENDER,
         people={p["id"]: ReturnedPerson.model_validate(p) for p in people},
         links={link["id"]: ReturnedLink.model_validate(link) for link in links},
         stories={k: ReturnedStory.model_validate(v) for k, v in (stories or {}).items()},
@@ -184,7 +160,7 @@ def without(people: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
     return [p for p in people if p["full_name"] != name]
 
 
-def by_kind(plan: CopyPlan, kind: str) -> list[ImportChange]:
+def by_kind(plan: ReturnedPlan, kind: str) -> list[ImportChange]:
     return [change for change in plan.changes if change.kind == kind]
 
 
@@ -197,7 +173,7 @@ def webp(colour: tuple[int, int, int] = (200, 150, 90), size: int = 64) -> str:
 # --- Details ------------------------------------------------------------------------------------
 
 
-def test_a_detail_only_the_copy_changed_is_offered_ticked() -> None:
+def test_a_detail_only_they_changed_is_offered_ticked() -> None:
     back = came_back(changed(PEOPLE, "Aminah binti Hassan", occupation="Guru besar"))
 
     plan = plan_returned(base(), back, tree(), {})
@@ -295,13 +271,13 @@ def test_someone_new_is_offered_and_their_links_need_them() -> None:
 
 
 def test_someone_new_who_looks_like_someone_in_the_tree_is_asked_about() -> None:
-    # Added in the app since the copy was made, and in the copy too, with more in it.
+    # Added in the app since their changes started, and by them too, with more in it.
     siti_here = person("Siti binti Zulkifli", gender="female", birth_year=1992)
     siti_there = {
         **person("Siti binti Zulkifli", gender="female", birth_year=1992, occupation="Jururawat"),
-        "id": pid("Siti, in the copy"),
+        "id": pid("Siti, as they sent her"),
     }
-    link = parent("zul>siti", "Zulkifli bin Hassan", "Siti, in the copy")
+    link = parent("zul>siti", "Zulkifli bin Hassan", "Siti, as they sent her")
     link["target"] = siti_there["id"]
     back = came_back([*PEOPLE, siti_there], [*LINKS, link])
     now = tree([*PEOPLE, siti_here])
@@ -327,7 +303,7 @@ def test_someone_new_who_looks_like_someone_in_the_tree_is_asked_about() -> None
     assert [c.kind for c in someone_else.changes] == ["add_person", "add_link"]
 
 
-def test_someone_taken_out_in_the_copy_waits_for_their_own_tick() -> None:
+def test_someone_they_took_out_waits_for_their_own_tick() -> None:
     links = [
         link
         for link in LINKS
@@ -543,130 +519,30 @@ def test_photos_come_back_added_and_taken_out() -> None:
     assert (photo.display, photo.version) == (picture, None)
 
 
-# --- What the copy allowed ------------------------------------------------------------------------
+# --- Reading what was sent ---------------------------------------------------------------------
 
 
-def test_only_what_the_copy_was_made_to_allow_comes_back() -> None:
-    siti = person("Siti binti Zulkifli", gender="female", birth_year=1992)
-    link = parent("zul>siti", "Zulkifli bin Hassan", "Siti binti Zulkifli")
-    back = came_back(
-        changed(
-            without([*PEOPLE, siti], "Hassan bin Ismail"),
-            "Aminah binti Hassan",
-            occupation="Guru besar",
-        ),
-        [*[x for x in LINKS if pid("Hassan bin Ismail") not in (x["source"], x["target"])], link],
-    )
-
-    plan = plan_returned(base(may=CopyPermissions(add=False, remove=False)), back, tree(), {})
-
-    assert [c.kind for c in plan.changes] == ["set"]  # only the detail
-    assert sorted(item.why for item in plan.left_out) == [
-        "This copy didn't let Mak Long add people or links, so it's left out.",
-        "This copy didn't let Mak Long add people or links, so it's left out.",
-        "This copy didn't let Mak Long remove people or links, so it's left out.",
-    ]
-
-
-def test_details_the_copy_hid_are_not_known_there_never_cleared() -> None:
-    aminah = pid("Aminah binti Hassan")
-    hid = {k: v for k, v in AMINAH.items() if k != "occupation"}  # as the copy carried her
-    started = [HASSAN, FATIMAH, hid, ZUL]
-    story = {aminah: {"story": "Cikgu di Shah Alam.", "sources": []}}
-
-    unchanged = plan_returned(
-        base(started, hidden=frozenset({aminah})), came_back(started), tree(), {}
-    )
-    assert unchanged.changes == []  # her occupation isn't cleared
-
-    tampered = came_back(
-        changed(started, "Aminah binti Hassan", occupation="Doktor"), stories=story
-    )
-    plan = plan_returned(base(started, hidden=frozenset({aminah})), tampered, tree(), {})
-    [change] = plan.changes
-    assert (change.column, change.unsure, change.ticked) == ("Occupation", True, False)
-    assert change.detail == "Hidden in the copy, so it didn't show what the tree has."
-    assert [item.why for item in plan.left_out] == ["Their story wasn't in the copy, so it's kept."]
-
-
-# --- Reading the file -----------------------------------------------------------------------------
-
-
-def snapshot(**about: Any) -> dict[str, Any]:
+def sent(**family: Any) -> dict[str, Any]:
     return {
-        "format": 1,
-        "about": {
-            "title": "Keluarga Contoh",
-            "editing": {
-                "id": COPY,
-                "for": "Mak Long",
-                "made_at": MADE,
-                "saved_at": None,
-                "may": {},
-                "hidden": [],
-            },
-            **about,
-        },
-        "family": {"people": PEOPLE, "links": LINKS},
+        "family": {"people": PEOPLE, "links": LINKS, **family},
         "stories": {},
         "files": {},
         "photos": {},
     }
 
 
-def test_a_copy_is_read_and_a_locked_one_needs_its_password() -> None:
-    back = read_returned(page(APP, seal(snapshot())).encode("utf-8"))
-    assert (back.copy_id, back.for_name, back.locked) == (COPY, "Mak Long", False)
+def test_what_a_computer_sent_is_read_by_who_sent_it() -> None:
+    back = sent_family(sent(), SENDER)
+    assert back.sender == SENDER
     assert back.people[pid("Hassan bin Ismail")].birth_town == "Kota Bharu"
     assert back.links[lid("hassan>zul")].type == "parent"
 
-    locked = page(APP, seal(snapshot(), "kunci rahsia keluarga")).encode("utf-8")
-    assert read_returned(locked, "kunci rahsia keluarga").locked is True
-    with pytest.raises(LockedError):
-        read_returned(locked)
-    with pytest.raises(WrongPasswordError):
-        read_returned(locked, "kunci")
-
-
-def test_what_isnt_a_copy_to_edit_is_refused_and_says_why() -> None:
-    with pytest.raises(NotACopyError):
-        read_returned(b"<html><body>A letter</body></html>")
-    view_only = snapshot()
-    del view_only["about"]["editing"]
-    with pytest.raises(NotToEditError):
-        read_returned(page(APP, seal(view_only)).encode("utf-8"))
-    damaged = page(APP, {"format": 1, "gzip": "not base64!"}).encode("utf-8")
-    with pytest.raises(DamagedError):
-        read_returned(damaged)
-    newer = page(APP, {"format": 2, "gzip": ""}).encode("utf-8")
-    with pytest.raises(DamagedError, match="newer"):
-        read_returned(newer)
-
-
-def test_a_small_file_that_would_unpack_into_gigabytes_is_refused() -> None:
-    bomb = gzip.compress(b"{" + b" " * (300 * 1024 * 1024) + b"}", compresslevel=9, mtime=0)
-    assert len(bomb) < 1024 * 1024
-    sealed = {"format": 1, "gzip": base64.b64encode(bomb).decode("ascii")}
-
-    with pytest.raises(DamagedError, match="too big"):
-        read_returned(page(APP, sealed).encode("utf-8"))
-
-
-def test_a_lock_that_asks_for_endless_work_is_refused() -> None:
-    sealed = seal(snapshot(), "kunci rahsia keluarga")
-    sealed["locked"]["iterations"] = 1_000_000_000
-
-    with pytest.raises(DamagedError, match="lock"):
-        read_returned(page(APP, sealed).encode("utf-8"), "kunci rahsia keluarga")
-
 
 def test_a_record_out_of_shape_is_refused_whole() -> None:
-    odd = snapshot()
-    odd["family"]["people"] = [{**HASSAN, "birth_month": 13}, *PEOPLE[1:]]
     with pytest.raises(DamagedError, match=r"family\.people"):
-        read_returned(page(APP, seal(odd)).encode("utf-8"))
-    odd["family"]["people"] = PEOPLE
-    odd["family"]["links"] = [{**LINKS[0], "type": "cousin"}]
+        sent_family(sent(people=[{**HASSAN, "birth_month": 13}, *PEOPLE[1:]]), SENDER)
     with pytest.raises(DamagedError):
-        read_returned(page(APP, seal(odd)).encode("utf-8"))
-    assert json.loads(json.dumps(snapshot()))  # the good one stays good
+        sent_family(sent(links=[{**LINKS[0], "type": "cousin"}]), SENDER)
+    with pytest.raises(DamagedError):
+        sent_family(["not", "a", "family"], SENDER)
+    assert sent_family(sent(), SENDER).people  # the good one stays good

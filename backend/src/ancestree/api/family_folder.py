@@ -20,7 +20,7 @@ from ancestree.domain.familyfolder import (
     StartFamily,
     TurnDown,
 )
-from ancestree.domain.imports import CopyPreview, ImportDone
+from ancestree.domain.imports import ChangesPreview, ImportDone
 from ancestree.services.familyfolder import FamilyFolder
 
 router = APIRouter(prefix="/family-folder", tags=["family folder"])
@@ -143,9 +143,9 @@ async def family_folder_answers_seen(request: Request) -> FamilyFolderStatus:
 @router.post("/changes/{device}/{proposal}/review")
 async def review_family_folder_changes(
     request: Request, device: Device, proposal: int, body: ReviewChanges
-) -> CopyPreview:
+) -> ChangesPreview:
     """What a relative's computer sent, compared with the family it was made on and with the
-    tree now, for you to tick, as changes from a copy are (the keeper's). Nothing is written."""
+    tree now, for you to tick (the keeper's). Nothing is written."""
     return await _folder(request).review(device, proposal, body)
 
 

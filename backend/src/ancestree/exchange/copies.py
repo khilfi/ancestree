@@ -9,10 +9,6 @@ choose, since a view-only copy seats no one itself. How any two people are
 related is worked out in the copy, by a twin of the kinship engine, from the graph and the word
 lists carried here. Living people's details can be hidden, and the whole locked
 with a password; then it goes into the copy's page, in place of MARKER.
-
-A copy to edit carries the family itself instead of the graph, the seats, people's
-views and the search list: everyone's stored properties and every link (exchange/records.py).
-It works those out itself, again after every change, with twins of the app's code.
 """
 
 import asyncio
@@ -25,7 +21,7 @@ import os
 import re
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime
 from functools import partial
 from pathlib import Path
@@ -37,19 +33,16 @@ from pydantic import BaseModel
 
 from ancestree import __version__
 from ancestree.domain.dates import describe_partial_date, format_partial_date
-from ancestree.domain.exports import CopyPermissions
 from ancestree.domain.graph import GraphPerson
 from ancestree.domain.person import DateQualifier, PartialDate
 from ancestree.domain.views import DateView, PersonDetail, PersonSummary
 from ancestree.exchange.backup import create_backup
 from ancestree.exchange.family import FamilyData, Member, load_family
 from ancestree.exchange.gedcom import write_gedcom
-from ancestree.exchange.records import in_link_order, person_record
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
 from ancestree.importing.template import template_csv
 from ancestree.media.photos import AVATAR_SIZES
 from ancestree.repo.graph import read_family
-from ancestree.repo.imports import read_tree
 from ancestree.repo.kinds import list_relationship_kinds
 from ancestree.services import kinds as kinds_service
 from ancestree.services import kinship as kinship_service
@@ -74,13 +67,7 @@ class CopyOptions:
     title: str = ""  # at the top of the copy, e.g. "Keluarga Contoh"
     hide_living: bool = False  # for copies beyond close family
     password: str | None = None
-    archive: bool = True  # the full archive among a view-only copy's exports
-    # A copy to edit: its id, under which the app keeps what it started from
-    # (DATA_DIR/copies/<id>), whom it's for, and what they may do in it.
-    editable: bool = False
-    copy_id: str = ""
-    for_name: str = ""
-    may: CopyPermissions = field(default_factory=CopyPermissions)
+    archive: bool = True  # the full archive among the copy's exports
 
 
 def _json(model: BaseModel) -> Any:
@@ -134,21 +121,6 @@ _HIDDEN = (
 
 def hidden_row(row: Mapping[str, Any]) -> dict[str, Any]:
     return {**row, **dict.fromkeys(_HIDDEN)}
-
-
-# A copy to edit carries a hidden living person's record without what their panel leaves out.
-_HIDDEN_RECORD = (
-    *_HIDDEN,
-    "residence_town",
-    "residence_state",
-    "residence_country",
-    "occupation",
-    "notes",
-)
-
-
-def hidden_record(record: Mapping[str, Any]) -> dict[str, Any]:
-    return {name: value for name, value in record.items() if name not in _HIDDEN_RECORD}
 
 
 def hidden_graph_person(person: GraphPerson) -> GraphPerson:
@@ -243,20 +215,6 @@ def _stories(data_dir: Path, ids: Sequence[str]) -> dict[str, Any]:
     return told
 
 
-async def _records(ctx: Context, links: Sequence[Mapping[str, Any]], living: set[str]) -> Any:
-    """The family as a copy to edit carries it: everyone's stored properties, hidden living
-    people's without their details, and every link."""
-    people, _ = await read(ctx, read_tree)
-    records = [person_record(props) for props in people]
-    return {
-        "people": sorted(
-            (hidden_record(record) if record["id"] in living else record for record in records),
-            key=lambda record: str(record["id"]),
-        ),
-        "links": in_link_order(links),
-    }
-
-
 async def family_snapshot(
     ctx: Context,
     options: CopyOptions,
@@ -264,8 +222,7 @@ async def family_snapshot(
     today: date | None = None,
     made_at: datetime | None = None,
 ) -> dict[str, Any]:
-    """Everything a copy of the family shows, as the API would answer; for a copy to edit, the
-    family itself in place of the answers it works out."""
+    """Everything a copy of the family shows, as the API would answer."""
     today = today or date.today()
     made_at = made_at or datetime.now().astimezone()
     settings = await asyncio.to_thread(read_tree_settings, ctx.data_dir)
@@ -338,33 +295,10 @@ async def family_snapshot(
         "kinship_settings": _json(await kinship_service.kinship_settings(ctx)),
         # For the copy's own relationship finder, a twin of this one.
         "kinship": kinship_service.twin_inputs(await kinship_service.books_for(ctx)),
-        # As the family is now: a copy to edit shows them as they were when it was made.
         "facts": _json(facts),
         "stories": told,
         "files": files,
     }
-
-    if options.editable:
-        # A copy to edit works out the graph, the seats, people's views and the search list
-        # itself. Its exports would be out of date after its first change: it saves itself
-        # instead.
-        about["editing"] = {
-            "id": options.copy_id,
-            "for": options.for_name,
-            "may": options.may.model_dump(mode="json"),
-            "made_at": about["made_at"],
-            "saved_at": None,  # saved by the app, not from the copy
-            "hidden": sorted(living),  # whose details it hides, so can't change
-        }
-        places = await asyncio.to_thread(places_service.rough_places)
-        return snapshot | {
-            "family": await _records(ctx, links, living),
-            "photos": {},  # photos added in the copy, to crop again: none yet
-            "trash": [],
-            # The middle of each state and country, to place a new place roughly.
-            "places": {key: _json(located) for key, located in places.items()},
-            "exports": {"gedcom": None, "csv": None, "template": template, "archive": None},
-        }
 
     # Seats only: who sits where around each other centre a viewer may choose.
     layouts = centre_layouts(rows, links, in_layout, graph, settings.centre)
@@ -494,14 +428,8 @@ def read_page(copy: str) -> dict[str, Any]:
     return sealed
 
 
-@dataclass(frozen=True)
-class Copy:
-    page: str  # the copy's app with the family inside
-    snapshot: dict[str, Any]  # what's inside it: for a copy to edit, what it starts from
-
-
-async def make_copy(ctx: Context, app: str, options: CopyOptions) -> Copy:
+async def make_copy(ctx: Context, app: str, options: CopyOptions) -> str:
     """A copy's page: the copy's app with the family inside."""
     snapshot = await family_snapshot(ctx, options)
     sealed = await asyncio.to_thread(seal, snapshot, options.password)
-    return Copy(page(app, sealed, options.title), snapshot)
+    return page(app, sealed, options.title)

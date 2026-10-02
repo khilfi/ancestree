@@ -1,5 +1,5 @@
 {
-  "about": "Changes to the fictional test family, Keluarga Contoh, and what the API answers to each. The app answers them (backend/tests/integration/test_edit_cases.py) and so must a copy to edit (src/copyedit/edit-cases.test.ts), from the same family: the rules are the app's, in both. '@Full name' is that person's id; '$name' is what an earlier step kept. 'expect' checks the answer's fields by their path, 'notices' its notices' codes.",
+  "about": "Changes to the fictional test family, Keluarga Contoh, and what the API answers to each. The app answers them in test_edit_cases.py, beside this file. '@Full name' is that person's id; '$name' is what an earlier step kept. 'expect' checks the answer's fields by their path, 'notices' its notices' codes.",
   "cases": [
     {
       "name": "a third birth parent is refused",

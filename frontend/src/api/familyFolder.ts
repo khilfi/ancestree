@@ -28,6 +28,15 @@ export function useFamilyFolder(enabled = true) {
   });
 }
 
+/** What waits in Settings → Family folder: for the keeper, computers asking to join and
+ *  relatives' changes; for a relative, the keeper's answers, unread. */
+export function waitingIn(status: FamilyFolderStatus | undefined) {
+  const asking = status?.asking?.length ?? 0;
+  const changes = status?.changes?.length ?? 0;
+  const answered = status?.answers?.length ?? 0;
+  return { asking, changes, answered, all: asking + changes + answered };
+}
+
 // A relative's computer with one of these roles sends its changes to the keeper.
 const SENDS = new Set(["contributor", "trusted"]);
 
@@ -94,7 +103,8 @@ export const useAnswersSeen = () =>
   useFolderAction(() => unwrap(api.POST("/api/family-folder/answers-seen")));
 
 /** What a relative's computer sent, compared with the family it was made on and with the tree
- *  now, for the keeper to tick, as changes from a copy are. Nothing is written. */
+ *  now, for the keeper to tick, as changes from a copy to edit were. Nothing is
+ *  written. */
 export function useFolderReview(changes: FolderChanges | null, answers: Record<string, string>) {
   return useQuery({
     queryKey: ["family-folder", "review", changes?.device, changes?.proposal, answers],

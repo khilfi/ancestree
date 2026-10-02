@@ -12,7 +12,7 @@ from neo4j import AsyncDriver
 
 from ancestree.config import Settings, get_settings
 from ancestree.db import connect
-from ancestree.domain.exports import BackupRestored, CopyPermissions, ExportFile, ExportFormat
+from ancestree.domain.exports import BackupRestored, ExportFile, ExportFormat
 from ancestree.exchange.backup import BackupResult, create_backup
 from ancestree.exchange.copies import CopyOptions
 from ancestree.exchange.restore import ArchiveError, read_info, restore_archive
@@ -162,9 +162,6 @@ def export(
     typer.echo(f"Written: {folder / result.name} ({result.size:,} bytes)")
 
 
-_MAY = tuple(CopyPermissions.model_fields)  # add, change, remove, stories, photos
-
-
 @app.command("copy")
 def copy_command(
     to: Annotated[
@@ -189,39 +186,18 @@ def copy_command(
     archive: Annotated[
         bool, typer.Option(help="Put the full archive among the copy's exports.")
     ] = True,
-    for_name: Annotated[
-        str,
-        typer.Option(
-            "--for",
-            help="Make a copy to edit, for this person: their changes come back under the name.",
-        ),
-    ] = "",
-    may: Annotated[
-        str,
-        typer.Option(
-            help="What they may do in a copy to edit, of: " + ", ".join(_MAY) + ". Default: all."
-        ),
-    ] = ",".join(_MAY),
 ) -> None:
-    """Make a copy: one .html file with the app and the family inside, view-only, or
-    with --for, a copy to edit, sent back with changes."""
-    allowed = {part.strip() for part in may.split(",") if part.strip()}
-    if allowed - set(_MAY):
-        raise _fail(f"--may takes {', '.join(_MAY)}, not {', '.join(sorted(allowed - set(_MAY)))}.")
+    """Make a view-only copy: one .html file with the app and the family inside."""
     secret = (
         typer.prompt("Password", hide_input=True, confirmation_prompt=True) if password else None
     )
     if secret is not None and len(secret) < 6:
         raise _fail("A password needs at least 6 characters.")
-    whom = " ".join(for_name.split())[:60]
     options = CopyOptions(
         title=" ".join(title.split())[:60],
         hide_living=hide_living,
         password=secret,
-        archive=archive and not whom,
-        editable=bool(whom),
-        for_name=whom,
-        may=CopyPermissions(**{what: what in allowed for what in _MAY}),
+        archive=archive,
     )
 
     async def work(driver: AsyncDriver, settings: Settings) -> tuple[ExportFile, Path]:

@@ -1,6 +1,7 @@
 import { BookOpenIcon, InfoIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { useFamilyFolder, waitingIn } from "@/api/familyFolder";
 import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/features/export/ExportDialog";
 import { TreePictureProvider } from "@/features/export/treePicture";
@@ -11,8 +12,7 @@ import { PeopleSearch } from "@/features/search/PeopleSearch";
 import { viewSearch, withView } from "@/features/tree/filters";
 import { cn } from "@/lib/utils";
 import { CopyBadge } from "./CopyBadge";
-import { CopyEditBar } from "./CopyEditBar";
-import { CanEdit, InAppOnly, useCopy, useCopyControls } from "./copy";
+import { CanEdit, InAppOnly, useCopy } from "./copy";
 import { DatabaseWarning } from "./DatabaseWarning";
 import { FamilyFolderBar } from "./FamilyFolderBar";
 import { UpdateBanner } from "./UpdateBanner";
@@ -32,16 +32,36 @@ function iconLinkClass({ isActive }: { isActive: boolean }): string {
   );
 }
 
+/** Settings, with how many things wait in it: computers asking to join and relatives'
+ *  changes, for the keeper; the keeper's answers, for a relative. Only in the app itself. */
+export function SettingsLink() {
+  const waiting = waitingIn(useFamilyFolder().data).all;
+  return (
+    <NavLink
+      to="/settings"
+      className={iconLinkClass}
+      aria-label={waiting > 0 ? `Settings: ${waiting} waiting in Family folder` : "Settings"}
+      title={waiting > 0 ? `${waiting} waiting in Settings → Family folder` : "Settings"}
+    >
+      <SettingsIcon className="size-4" />
+      <span className="hidden xl:inline">Settings</span>
+      {waiting > 0 && (
+        <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
+          {waiting}
+        </span>
+      )}
+    </NavLink>
+  );
+}
+
 export function AppLayout() {
   const [facts, setFacts] = useState(false);
   const closeFacts = useCallback(() => setFacts(false), []);
   // The tree and the timeline share their filters: moving between them keeps them.
   const params = new URLSearchParams(useLocation().search);
   const kept = viewSearch(params);
-  // A view-only copy: nothing to add, undo or set. A copy to edit: what it
-  // allows, and its own bar, to save it.
+  // A view-only copy: nothing to add, undo or set.
   const copy = useCopy();
-  const controls = useCopyControls();
 
   return (
     <TreePictureProvider>
@@ -88,7 +108,7 @@ export function AppLayout() {
               Map
             </NavLink>
           </nav>
-          <CanEdit what="add">
+          <CanEdit>
             <Button asChild size="sm">
               <Link to={{ pathname: "/tree", search: `?${withView(params, { new: "1" })}` }}>
                 <PlusIcon />
@@ -116,19 +136,10 @@ export function AppLayout() {
               <span className="hidden xl:inline">Dictionary</span>
             </NavLink>
             <InAppOnly>
-              <NavLink
-                to="/settings"
-                className={iconLinkClass}
-                aria-label="Settings"
-                title="Settings"
-              >
-                <SettingsIcon className="size-4" />
-                <span className="hidden xl:inline">Settings</span>
-              </NavLink>
+              <SettingsLink />
             </InAppOnly>
           </div>
         </header>
-        {copy?.editing && controls && <CopyEditBar editing={copy.editing} controls={controls} />}
         {!copy && <UpdateBanner />}
         {!copy && <FamilyFolderBar />}
         <main className="relative min-h-0 flex-1">

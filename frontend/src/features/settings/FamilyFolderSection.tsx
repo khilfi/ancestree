@@ -123,8 +123,8 @@ function SignIn({ status }: { status: FamilyFolderStatus }) {
         The family folder is in Google Drive, so AncesTree needs your Google account. Google asks
         whether AncesTree may see your Drive's files and change only the files it makes: tick both.
         AncesTree only ever looks in the family folder. It isn't verified by Google, so Google first
-        says "Google hasn't verified this app": choose <strong>Advanced</strong>, then carry on to
-        AncesTree.
+        says "Google hasn't verified this app": choose <strong>Advanced</strong>, then{" "}
+        <strong>Go to AncesTree (unsafe)</strong>. Google says so of any app it hasn't checked.
       </p>
       {status.problem && <p className="text-sm font-medium text-amber-700">{status.problem}</p>}
       <div className="flex flex-wrap items-center gap-3">
@@ -309,7 +309,7 @@ function Invite() {
           onError: showError,
           onSuccess: () => {
             toast.success(
-              `The family folder is shared with ${email}. They install AncesTree, sign in with that account, and choose Join.`,
+              `The family folder is shared with ${email}. Google doesn't tell them, so let them know: they install AncesTree, sign in with that account, and choose Ask to join.`,
             );
             setEmail("");
           },

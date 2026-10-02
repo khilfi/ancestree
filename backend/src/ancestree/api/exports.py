@@ -27,16 +27,12 @@ _MEDIA_TYPES = {
 @router.post("/exports", status_code=status.HTTP_201_CREATED)
 async def make_export(ctx: Ctx, request: ExportRequest) -> ExportFile:
     """Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or
-    a copy of the app with the family inside, following its choices: view-only, or to
-    edit and send back, for someone."""
+    a view-only copy of the app with the family inside, following its choices."""
     copy = CopyOptions(
         title=" ".join(request.title.split()),
         hide_living=request.hide_living,
         password=request.password,
-        archive=request.archive and not request.editable,
-        editable=request.editable,
-        for_name=" ".join(request.for_name.split()),
-        may=request.may,
+        archive=request.archive,
     )
     return await exports.make_export(ctx, request.format, copy=copy)
 

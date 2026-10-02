@@ -1,5 +1,5 @@
-"""Importing a spreadsheet, and bringing in the changes a
-copy to edit comes back with (M21)."""
+"""Importing a spreadsheet, and the earlier imports: of
+spreadsheets, and of changes from relatives."""
 
 import json
 from pathlib import PurePath
@@ -9,18 +9,11 @@ from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, 
 from fastapi.responses import FileResponse
 
 from ancestree.api.deps import Ctx, Hist
-from ancestree.domain.imports import (
-    CopyPreview,
-    ImportDone,
-    ImportPreview,
-    ImportSummary,
-    ImportTakenBack,
-)
-from ancestree.exchange.returned import MAX_FILE
+from ancestree.domain.imports import ImportDone, ImportPreview, ImportSummary, ImportTakenBack
 from ancestree.exchange.spreadsheet import ENCODING
 from ancestree.importing.sheet import MAX_BYTES
 from ancestree.importing.template import template_csv
-from ancestree.services import imports, returns
+from ancestree.services import imports
 
 router = APIRouter(prefix="/imports", tags=["import"])
 
@@ -28,11 +21,6 @@ _CSV = "text/csv; charset=utf-8"
 Spreadsheet = Annotated[UploadFile, File(description="A spreadsheet saved as CSV")]
 Answers = Annotated[
     str, Form(description="Your answers so far, as JSON: each question's id -> an option's id")
-]
-CopyFile = Annotated[UploadFile, File(description="A copy to edit, as it came back (.html)")]
-Password = Annotated[
-    str | None,
-    Form(description="The copy's password, when it's locked. Used to open it, then forgotten."),
 ]
 Chosen = Annotated[
     str | None,
@@ -109,47 +97,10 @@ async def run_import(
     return await imports.run_import(ctx, history, data, name, _answers(answers), _chosen(chosen))
 
 
-async def _copy_upload(file: UploadFile) -> tuple[bytes, str]:
-    data = await file.read(MAX_FILE + 1)
-    if len(data) > MAX_FILE:
-        raise _bad("too_large", "That file is larger than a copy can be (64 MB).")
-    name = PurePath((file.filename or "").replace("\\", "/")).name[:120]
-    return data, name or "copy.html"
-
-
-@router.post("/copy/preview")
-async def preview_copy(
-    ctx: Ctx, file: CopyFile, password: Password = None, answers: Answers = "{}"
-) -> CopyPreview:
-    """What a copy to edit brings back, compared with what the app knows it started from and
-    with the tree now: each change for you to tick. The file is only read, never run.
-    Refused (422) when it isn't a copy to edit ("not_a_copy", "not_to_edit"), is locked without
-    its password ("locked"), has another ("wrong_password") or is damaged ("damaged"); (409)
-    when it wasn't made here ("unknown_copy") or is older than one brought in ("older_copy")."""
-    data, name = await _copy_upload(file)
-    return await returns.preview_copy(ctx, data, name, password or None, _answers(answers))
-
-
-@router.post("/copy", status_code=status.HTTP_201_CREATED)
-async def run_copy(
-    ctx: Ctx,
-    history: Hist,
-    file: CopyFile,
-    password: Password = None,
-    answers: Answers = "{}",
-    chosen: Chosen = None,
-) -> ImportDone:
-    """Bring in the changes ticked: a backup first, then the people, details and links as one
-    Undo step, then stories and photos. Take back undoes it all later."""
-    data, name = await _copy_upload(file)
-    return await returns.run_copy(
-        ctx, history, data, name, password or None, _answers(answers), _chosen(chosen)
-    )
-
-
 @router.get("")
 async def list_imports(ctx: Ctx) -> list[ImportSummary]:
-    """Earlier imports, of spreadsheets and from copies, newest first."""
+    """Earlier imports, newest first: of spreadsheets, and of changes from relatives, from a
+    copy to edit as it once was, or from their computers."""
     return await imports.list_imports(ctx)
 
 

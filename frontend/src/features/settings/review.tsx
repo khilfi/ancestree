@@ -8,27 +8,25 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { changeNames, heldBack, type Ticks, tickedIds } from "./importTicks";
 
 /**
- * The review of an import's changes, shared by a spreadsheet's and by the changes a copy
- * to edit brings back: each change with a tick, grouped, with what it needs and why it
- * can't happen; the questions to answer; and what's left out.
+ * The review of an import's changes, shared by a spreadsheet's and by the changes a
+ * relative's computer sends back, as a copy to edit's were: each change with a
+ * tick, grouped, with what it needs and why it can't happen; the questions to answer; and
+ * what's left out.
  */
 
-/** Where the changes come from: a spreadsheet's rows, or a relative's copy. */
-// Where the changes come from: a spreadsheet, a copy to edit, or a relative's
-// computer, through the family folder.
-export type Source = "spreadsheet" | "copy" | "computer";
+/** Where the changes come from: a spreadsheet's rows, or a relative's computer, through the
+ *  family folder. */
+export type Source = "spreadsheet" | "computer";
 
 const CLASHES: Record<Source, string> = {
   spreadsheet:
     "Changed in the app too since the file was exported. Unticked, the app's stays; ticked, the file's replaces it.",
-  copy: "Changed in the app too since the copy was made. Unticked, the app's stays; ticked, the copy's replaces it.",
   computer:
     "You changed this too since they made their change. Unticked, yours stays; ticked, theirs replaces it.",
 };
 const UNSURE: Record<Source, string> = {
   spreadsheet:
     "The file doesn't say what this was when it was exported, so it waits for your tick.",
-  copy: "The copy didn't start with this, so it waits for your tick.",
   computer: "Their computer didn't start with this, so it waits for your tick.",
 };
 

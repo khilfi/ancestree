@@ -12,7 +12,7 @@ function daysLeft(entry: TrashEntry): number {
   return Math.max(0, Math.ceil((Date.parse(entry.restore_until) - Date.now()) / 86_400_000));
 }
 
-/** Who is in the Trash, each with Restore: in Settings, and in a copy to edit. */
+/** Who is in the Trash, each with Restore, in Settings. */
 export function TrashList() {
   const trash = useTrash();
   const restore = useRestore();

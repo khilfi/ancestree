@@ -29,7 +29,6 @@ from ancestree.api import (
 from ancestree.config import Settings, get_settings
 from ancestree.db import connect
 from ancestree.exchange.restore import ArchiveError, restore_archive
-from ancestree.exchange.returned import ReturnedError
 from ancestree.importing.sheet import SheetError
 from ancestree.media.photos import PhotoError
 from ancestree.migrations.runner import apply_migrations
@@ -140,16 +139,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def bad_spreadsheet(request: Request, error: Exception) -> JSONResponse:
         return _error(status.HTTP_422_UNPROCESSABLE_CONTENT, "bad_spreadsheet", str(error))
 
-    async def bad_copy(request: Request, error: Exception) -> JSONResponse:
-        code = error.code if isinstance(error, ReturnedError) else "damaged"
-        return _error(status.HTTP_422_UNPROCESSABLE_CONTENT, code, str(error))
-
     app.add_exception_handler(NotFoundError, not_found)
     app.add_exception_handler(RuleError, rule_broken)
     app.add_exception_handler(PhotoError, bad_photo)
     app.add_exception_handler(ArchiveError, bad_archive)
     app.add_exception_handler(SheetError, bad_spreadsheet)
-    app.add_exception_handler(ReturnedError, bad_copy)
 
     @app.middleware("http")
     async def kept_by_the_keeper(

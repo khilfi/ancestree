@@ -71,7 +71,7 @@ function Section({
     <section className="space-y-1">
       <div className="flex min-h-6 items-center justify-between">
         <h3 className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{title}</h3>
-        <CanEdit what="add">
+        <CanEdit>
           <Button variant="ghost" size="xs" onClick={onAdd}>
             <PlusIcon />
             {addLabel}
@@ -153,11 +153,10 @@ function LinkMenu({
   const update = useUpdateLink();
   const unlink = useUnlink();
   const feedback = useFeedback();
-  const canChange = useCanEdit("change");
-  const canRemove = useCanEdit("remove");
+  const canEdit = useCanEdit();
   const [confirming, setConfirming] = useState(false);
   const linkId = relative.link_id;
-  if (!linkId || !(canChange || canRemove)) return null;
+  if (!linkId || !canEdit) return null;
 
   const current = relative.kind ?? "biological";
   const options = (kinds.data ?? []).filter((kind) => kind.active || kind.key === current);
@@ -201,7 +200,7 @@ function LinkMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          {!canChange ? null : type === "parent" ? (
+          {!canEdit ? null : type === "parent" ? (
             <>
               <DropdownMenuLabel>Kind of link</DropdownMenuLabel>
               <DropdownMenuRadioGroup
@@ -228,8 +227,8 @@ function LinkMenu({
               </DropdownMenuRadioGroup>
             </>
           )}
-          {canChange && canRemove && <DropdownMenuSeparator />}
-          {canRemove && (
+          {canEdit && <DropdownMenuSeparator />}
+          {canEdit && (
             <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
               Remove link
             </DropdownMenuItem>
@@ -322,7 +321,7 @@ function ChildGroupList({
     .join(" & ");
   // Birth order belongs to children by birth; adopted, fostered and other children follow dates.
   const byBirth = group.kind === null || group.kind === undefined;
-  const canEdit = useCanEdit("change");
+  const canEdit = useCanEdit();
   const uncertain = byBirth && children.length > 1 && !group.order_decided;
   const sortable = byBirth && children.length > 1 && canEdit;
 

@@ -263,16 +263,6 @@ describe("Settings → Family folder", () => {
       ticked: true,
     };
     const preview = {
-      file_name: "Mak Long's laptop",
-      about: {
-        copy_id: "d2",
-        for_name: "Mak Long's laptop",
-        title: "",
-        made_at: sent,
-        saved_at: sent,
-        brought_at: null,
-        locked: false,
-      },
       questions: [],
       changes: [
         { ...change, id: "set:p1:nickname", column: "Nickname", before: "", after: "Pak Hassan" },

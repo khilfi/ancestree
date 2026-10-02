@@ -5,11 +5,11 @@ changed is kept as the difference between its family and the family it last rece
 whatever the keeper publishes next can come in beneath it: `rebased`, field by field for
 people. Once the keeper has answered, what was answered goes, and only what came after stays.
 
-What it sends the keeper is its whole family, as a copy to edit carries it (exchange/records.py,
-exchange/returned.py): everyone, every link and every life story; and, where they differ from
-the family as received, a story's pictures and the photo, made again here. The keeper's
-computer compares it with the family as the record had it when the change was made, and with
-the tree now, as changes from a copy are compared: the keeper's review decides.
+What it sends the keeper is its whole family (exchange/records.py, exchange/returned.py):
+everyone, every link and every life story; and, where they differ from the family as received,
+a story's pictures and the photo, made again here. The keeper's computer compares it with the
+family as the record had it when the change was made, and with the tree now, as changes from a
+copy to edit were compared: the keeper's review decides.
 """
 
 from __future__ import annotations
@@ -123,8 +123,8 @@ def own_changes(received: Entries, family: Entries) -> dict[str, dict[str, Any] 
 
 
 def records(entries: Entries) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-    """The family the entries hold, as a copy to edit carries it: everyone's record and every
-    link's, by id."""
+    """The family the entries hold, as it's sent (exchange/records.py): everyone's record and
+    every link's, by id."""
     people = {
         key.removeprefix("person/"): person_record(value)
         for key, value in entries.items()
@@ -154,9 +154,9 @@ def _picture(data: bytes) -> str:
 
 
 def family_to_send(family: Entries, received: Entries, data_dir: Path) -> dict[str, Any]:
-    """This computer's family as a copy to edit carries it, for the keeper's review: everyone,
-    every link and every life story; and, where they differ from the family as received, the
-    pictures in a story and the photo, made again here (WebP, at most 1600 pixels)."""
+    """This computer's family as it's sent, for the keeper's review: everyone, every link and
+    every life story; and, where they differ from the family as received, the pictures in a
+    story and the photo, made again here (WebP, at most 1600 pixels)."""
     people, links = records(family)
     told: dict[str, Any] = {}
     pictures: dict[str, str] = {}

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { displayPhotoAddress } from "@/api/addresses";
 import { usePhotoCrop, useRecropPhoto, useRemovePhoto, useUploadPhoto } from "@/api/queries";
 import type { Crop, PersonDetail } from "@/api/types";
-import { useCopy } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,10 +56,7 @@ export function PhotoDialog({
   const recrop = useRecropPhoto(person.id);
   const remove = useRemovePhoto(person.id);
   const busy = upload.isPending || recrop.isPending || remove.isPending;
-  // A copy to edit carries only the small copies of a photo from the app, so it's cropped
-  // again in the app; one chosen in the copy can be cropped again there.
-  const copy = useCopy();
-  const canRecrop = hasPhoto && (copy === null || savedCrop.data != null);
+  const canRecrop = hasPhoto;
 
   function displayUrl(version: number | null): string {
     return displayPhotoAddress(person.id, version ?? 0);
@@ -121,9 +117,7 @@ export function PhotoDialog({
   async function removePhoto() {
     try {
       await remove.mutateAsync();
-      toast.success(
-        copy ? "Photo removed." : "Photo removed. The file is still in the person's folder.",
-      );
+      toast.success("Photo removed. The file is still in the person's folder.");
       close();
     } catch (error) {
       showError(error);
@@ -172,11 +166,7 @@ export function PhotoDialog({
             <PersonAvatar person={person} size="lg" />
             {confirmRemove ? (
               <div className="space-y-3 text-center">
-                <p>
-                  {copy
-                    ? "Remove this photo from the copy?"
-                    : "Remove this photo? The file stays in the person's folder."}
-                </p>
+                <p>Remove this photo? The file stays in the person's folder.</p>
                 <div className="flex justify-center gap-2">
                   <Button variant="destructive" onClick={removePhoto} disabled={busy}>
                     Remove photo

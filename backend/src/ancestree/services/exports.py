@@ -8,11 +8,10 @@ import asyncio
 import hashlib
 import re
 import shutil
-from dataclasses import replace
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, BinaryIO
-from uuid import uuid4, uuid7
+from typing import BinaryIO
+from uuid import uuid4
 
 from ancestree.domain.exports import Backup, BackupList, BackupRestored, ExportFile, ExportFormat
 from ancestree.exchange.backup import create_backup, is_automatic, unused_path
@@ -23,7 +22,6 @@ from ancestree.exchange.gedcom import write_gedcom
 from ancestree.exchange.restore import ArchiveError, read_info, restore_archive
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
 from ancestree.services.context import Context, NotFoundError, RuleError
-from ancestree.storage.copies import keep_copy
 from ancestree.storage.files import atomic_write
 
 EXPORTS = "exports"
@@ -53,34 +51,9 @@ def _slug(title: str) -> str:
 
 
 def _copy_name(options: CopyOptions) -> str:
-    """ "ancestree-keluarga-contoh-2026-09-29.html"; a copy to edit's also says whom it's for,
-    "ancestree-keluarga-contoh-for-mak-long-2026-09-29.html"."""
-    whom = _slug(options.for_name) if options.editable else ""
-    parts = [
-        "ancestree",
-        _slug(options.title),
-        f"for-{whom}" if whom else "",
-        date.today().isoformat(),
-    ]
+    """ "ancestree-keluarga-contoh-2026-09-29.html"."""
+    parts = ["ancestree", _slug(options.title), date.today().isoformat()]
     return "-".join(part for part in parts if part) + ".html"
-
-
-def _kept(options: CopyOptions, snapshot: dict[str, Any], name: str) -> dict[str, Any]:
-    """What the app keeps about a copy to edit: never its password."""
-    about = snapshot["about"]
-    return {
-        "id": options.copy_id,
-        "for": options.for_name,
-        "title": options.title,
-        "file": name,
-        "made_at": about["made_at"],
-        "version": about["version"],
-        "people": about["people"],
-        "may": about["editing"]["may"],
-        "hidden_living": options.hide_living,
-        "hidden": about["editing"]["hidden"],
-        "locked": options.password is not None,
-    }
 
 
 async def _copy(ctx: Context, folder: Path, options: CopyOptions) -> Path:
@@ -88,16 +61,9 @@ async def _copy(ctx: Context, folder: Path, options: CopyOptions) -> Path:
         app = await copy_app()
     except CopyAppError as error:
         raise RuleError("copy_app", str(error)) from error
-    if options.editable:
-        options = replace(options, copy_id=str(uuid7()))
     made = await make_copy(ctx, app, options)
     path = unused_path(folder / _copy_name(options))
-    if options.editable:
-        # What it starts from, first: a copy whose start isn't kept couldn't come back.
-        start = {"family": made.snapshot["family"], "stories": made.snapshot["stories"]}
-        about = _kept(options, made.snapshot, path.name)
-        await asyncio.to_thread(keep_copy, ctx.data_dir, options.copy_id, about, start)
-    await asyncio.to_thread(atomic_write, path, made.page.encode("utf-8"))
+    await asyncio.to_thread(atomic_write, path, made.encode("utf-8"))
     return path
 
 
@@ -108,8 +74,7 @@ async def make_export(
     copy: CopyOptions | None = None,
 ) -> ExportFile:
     """Write an export: an archive to the backup folder, anything else to DATA_DIR/exports,
-    unless `folder` is given. A copy follows `copy`'s choices; the app keeps what a copy to
-    edit starts from in DATA_DIR/copies."""
+    unless `folder` is given. A copy follows `copy`'s choices."""
     if export_format is ExportFormat.ARCHIVE:
         try:
             backup = await create_backup(

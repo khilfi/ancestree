@@ -2,26 +2,15 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class ExportFormat(StrEnum):
     ARCHIVE = "archive"  # everything, for backups and moving to a new PC
     GEDCOM = "gedcom"  # for other genealogy programs
     CSV = "csv"  # a spreadsheet, one row per person
-    COPY = "copy"  # a copy of the app with the family inside, to give
-
-
-class CopyPermissions(BaseModel):
-    """What relatives may do in a copy to edit: all of it unless switched off."""
-
-    add: bool = True  # people and links
-    change: bool = True  # details, kinds of link, birth order
-    remove: bool = True  # people and links, through the Trash
-    stories: bool = True  # life stories and their pictures
-    photos: bool = True
+    COPY = "copy"  # a view-only copy of the app with the family inside, to give
 
 
 class ExportRequest(BaseModel):
@@ -31,16 +20,6 @@ class ExportRequest(BaseModel):
     hide_living: bool = False  # living people's details left out
     password: str | None = Field(default=None, min_length=6, max_length=200)  # kept nowhere
     archive: bool = True  # the full archive among its exports
-    # For a copy to edit: whom it's for, and what they may do in it.
-    editable: bool = False
-    for_name: str = Field(default="", max_length=60)
-    may: CopyPermissions = Field(default_factory=CopyPermissions)
-
-    @model_validator(mode="after")
-    def says_whom_for(self) -> Self:
-        if self.editable and not self.for_name.strip():
-            raise ValueError("a copy to edit needs the name of the person it's for")
-        return self
 
 
 class ExportFile(BaseModel):

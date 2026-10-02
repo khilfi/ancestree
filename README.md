@@ -8,7 +8,7 @@ A family-history app for one family, on its own computers. Add relatives with th
 
 ## Install
 
-Download the installer for your system from the [latest release](../../releases/latest).
+Download the installer for your system from the [latest release](../../releases/latest). **[The guide](GUIDE.md)** takes you through each step, and each warning your computer shows: installing, starting the family folder or joining it, updates, and what to do when something goes wrong.
 
 | System | File | The first time |
 |---|---|---|
@@ -27,7 +27,7 @@ A family can have its AncesTree on each relative's computer, kept in step throug
 - **The family arrives by itself** on each computer while AncesTree is open, photos and stories too. What a relative changes waits for the keeper; what the keeper takes reaches everyone.
 - **Everything in Google Drive is encrypted** on each computer first, with the family's own keys: Google keeps the files, but can't read them. A computer the keeper removes can't read what comes after.
 
-Google says it hasn't verified AncesTree when you sign in: it's made for one family, so it isn't. Choose **Advanced**, then **Go to AncesTree**.
+Google says it hasn't verified AncesTree when you sign in: it's made for one family, so it isn't. Choose **Advanced**, then **Go to AncesTree (unsafe)**. [The guide](GUIDE.md) shows how the keeper starts the folder and invites relatives, and how a relative joins.
 
 ## Updates
 

@@ -11,7 +11,7 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import { usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
 import type { PersonDetail } from "@/api/types";
-import { CanEdit, InAppOnly, useCanEdit, useHiddenHere } from "@/app/copy";
+import { CanEdit, InAppOnly, useCanEdit } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
   AlertDialog,
@@ -151,8 +151,6 @@ function ExistingPerson({
 }: Omit<Props, "personId"> & { personId: string }) {
   const query = usePerson(personId);
   const canEdit = useCanEdit();
-  const canPhoto = useCanEdit("photos");
-  const hidden = useHiddenHere(personId); // in a copy to edit that hides their details
   const [tab, setTab] = useState("details");
   const [storyOpened, setStoryOpened] = useState(false);
   if (tab === "biography" && !storyOpened) setStoryOpened(true);
@@ -200,7 +198,7 @@ function ExistingPerson({
   return (
     <>
       <header className="flex gap-4 border-b border-stone-200 p-4">
-        {canPhoto ? (
+        {canEdit ? (
           <button
             type="button"
             onClick={() => setPhotoOpen(true)}
@@ -263,14 +261,12 @@ function ExistingPerson({
                 </InAppOnly>
                 {(canEdit || onFindRelationship) && (
                   <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-4">
-                    {!hidden && (
-                      <CanEdit what="change">
-                        <Button onClick={() => setEditing(true)}>
-                          <PencilIcon />
-                          Edit
-                        </Button>
-                      </CanEdit>
-                    )}
+                    <CanEdit>
+                      <Button onClick={() => setEditing(true)}>
+                        <PencilIcon />
+                        Edit
+                      </Button>
+                    </CanEdit>
                     {onFindRelationship && (
                       <Button variant="outline" onClick={() => onFindRelationship(person.id)}>
                         <WaypointsIcon />
@@ -281,7 +277,7 @@ function ExistingPerson({
                       <CentreButton person={person} />
                     </CanEdit>
                     {!person.placeholder && (
-                      <CanEdit what="remove">
+                      <CanEdit>
                         <InAppOnly>
                           <Button variant="ghost" onClick={() => setMerging(true)}>
                             <MergeIcon />
@@ -290,7 +286,7 @@ function ExistingPerson({
                         </InAppOnly>
                       </CanEdit>
                     )}
-                    <CanEdit what="remove">
+                    <CanEdit>
                       <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
                         <Trash2Icon />
                         Move to Trash
@@ -319,7 +315,7 @@ function ExistingPerson({
         </TabsContent>
       </Tabs>
 
-      {canPhoto && <PhotoDialog person={person} open={photoOpen} onOpenChange={setPhotoOpen} />}
+      {canEdit && <PhotoDialog person={person} open={photoOpen} onOpenChange={setPhotoOpen} />}
       {merging && <MergeDialog person={person} open={merging} onOpenChange={setMerging} />}
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>

@@ -3,7 +3,6 @@ gives an identical result, and a bad archive changes nothing."""
 
 import hashlib
 import json
-import shutil
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -18,7 +17,6 @@ from PIL import Image
 from ancestree.config import Settings
 from ancestree.exchange.backup import create_backup
 from ancestree.services.context import Context
-from ancestree.storage.copies import keep_copy, read_copy
 from tests.integration.conftest import create_person, link
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
@@ -102,25 +100,39 @@ async def test_restoring_a_backup_brings_back_exactly_what_it_holds(
     assert avatar.status_code == 200
 
 
-async def test_a_restore_keeps_what_copies_to_edit_started_from(
+async def test_a_backup_with_copies_to_edit_restores_without_their_records(
     client: httpx.AsyncClient, settings: Settings
 ) -> None:
-    """Such a record is only ever added to: a copy made since the backup can still come back,
-    and one the backup holds comes back with it."""
-    await build_tree(client)
-    start: dict[str, Any] = {"family": {"people": [], "links": []}, "stories": {}}
-    older, newer = str(uuid7()), str(uuid7())
-    keep_copy(settings.data_dir, older, {"id": older, "for": "Mak Long"}, start)
-    made = await client.post("/api/exports", json={"format": "archive"})
-    assert made.status_code == 201, made.text
-    keep_copy(settings.data_dir, newer, {"id": newer, "for": "Pak Ngah"}, start)
-    shutil.rmtree(settings.data_dir / "copies" / older)  # as if on a new PC
+    """Backups made while there were copies to edit hold copies/, what each started from.
+    They restore as ever, and the records are left out: nothing reads them now."""
+    good = await a_backup(client, settings)
+    older = good.with_name("ancestree-backup-with-copies.zip")
+    name = f"copies/{uuid7()}/about.json"
+    record = json.dumps({"for": "Mak Long"}).encode()
+    with ZipFile(good) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+    manifest["sha256"][name] = hashlib.sha256(record).hexdigest()
+    rezip(good, older, {name: record, "manifest.json": json.dumps(manifest).encode()})
 
-    restored = await client.post(f"/api/backups/{made.json()['name']}/restore")
+    restored = await client.post(f"/api/backups/{older.name}/restore")
 
     assert restored.status_code == 200, restored.text
-    assert read_copy(settings.data_dir, older)[0]["for"] == "Mak Long"  # from the backup
-    assert read_copy(settings.data_dir, newer)[0]["for"] == "Pak Ngah"  # kept
+    assert not (settings.data_dir / "copies").exists()
+
+
+async def test_restoring_into_an_empty_tree_backs_nothing_up(
+    client: httpx.AsyncClient, settings: Settings, driver: AsyncDriver
+) -> None:
+    good = await a_backup(client, settings)
+    async with driver.session(database=settings.neo4j_database) as session:
+        await session.run("MATCH (p:Person) DETACH DELETE p")
+    before = sorted(p.name for p in (settings.data_dir / "exports").glob("*.zip"))
+
+    restored = await client.post(f"/api/backups/{good.name}/restore")
+
+    assert restored.status_code == 200, restored.text
+    assert restored.json()["backup"] == ""  # nothing to keep
+    assert sorted(p.name for p in (settings.data_dir / "exports").glob("*.zip")) == before
 
 
 def rezip(source: Path, target: Path, change: dict[str, bytes | None]) -> None:

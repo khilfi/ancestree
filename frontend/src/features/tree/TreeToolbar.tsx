@@ -61,7 +61,7 @@ export function TreeToolbar({
   const me = useMeId();
   // A view-only copy: its viewer's own colours, but no tidying. A copy to edit tidies
   // up when it allows changes.
-  const canTidy = useCanEdit("change");
+  const canTidy = useCanEdit();
   const clear = useClearPositions();
   const restore = useSavePositions();
   const byId = new Map(graph.people.map((person) => [person.id, person]));

@@ -22,7 +22,7 @@ async def read_tree(tx: Tx) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]
 
 async def read_whole_tree(tx: Tx) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Everyone, with all they hold, unknown parents too; and every link as {id, type, source,
-    target, kind, status}: what changes from a copy are compared with (M21)."""
+    target, kind, status}: what a relative's changes are compared with (M26)."""
     people = await tx.run("MATCH (p:Person) RETURN properties(p) AS person")
     person_rows = [dict(row["person"]) for row in await people.data()]
     links = await tx.run(

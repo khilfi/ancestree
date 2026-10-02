@@ -1,6 +1,5 @@
 """A relative's changes as the family folder carries them: kept on top of what the keeper
-publishes, counted and sent as a copy to edit carries a family. Names are the fictional
-family's."""
+publishes, counted, and sent as the whole family. Names are the fictional family's."""
 
 from __future__ import annotations
 

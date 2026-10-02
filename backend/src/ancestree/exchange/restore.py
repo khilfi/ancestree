@@ -25,12 +25,15 @@ from pydantic import BaseModel, ValidationError
 
 from ancestree.domain.exports import BackupRestored
 from ancestree.domain.relationship import BIOLOGICAL
-from ancestree.exchange.backup import ARCHIVE_FORMAT, DATA_FOLDERS, KEPT_FOLDERS, create_backup
+from ancestree.exchange.backup import ARCHIVE_FORMAT, DATA_FOLDERS, create_backup
 from ancestree.migrations.runner import load_migrations
-from ancestree.services.context import Context, write
+from ancestree.services.context import Context, read, write
 
 _TIMES = ("created_at", "updated_at")  # stored as date-times, written as ISO 8601 text
 _LINK_TYPES = ("PARENT_OF", "SPOUSE_OF")
+# Backups made while there were copies to edit also hold copies/, what each started from
+# (M21). Nothing reads them now: they're left out.
+_RETIRED = ("copies",)
 _SAFE_PART = re.compile(r'^[^\\/:*?"<>|\x00-\x1f]+$')  # a file or folder name, on Windows too
 
 
@@ -85,11 +88,11 @@ def read_info(path: Path) -> ArchiveInfo:
 
 
 def _target(staging: Path, name: str) -> Path:
-    """Where an archived file goes: only inside people/, settings/, trash/ or copies/."""
+    """Where an archived file goes: only inside people/, settings/ or trash/."""
     parts = name.split("/")
     if (
         len(parts) < 2
-        or parts[0] not in (*DATA_FOLDERS, *KEPT_FOLDERS)
+        or parts[0] not in DATA_FOLDERS
         or any(part in (".", "..") or not _SAFE_PART.match(part) for part in parts)
     ):
         raise ArchiveError(f"The archive has a file in an unexpected place: {name}")
@@ -178,7 +181,7 @@ def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:
                 raise ArchiveError(f"{path.name} has no graph.json.")
             graph_bytes = _copy_checked(archive, "graph.json", manifest.sha256["graph.json"], None)
             for name, expected in manifest.sha256.items():
-                if name == "graph.json":
+                if name == "graph.json" or name.split("/")[0] in _RETIRED:
                     continue
                 target = _target(staging, name)
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -217,18 +220,6 @@ def _swap_in(data_dir: Path, staging: Path, previous: Path) -> Callable[[], None
             else:
                 live.mkdir()
                 made.append(live)
-        # What copies to edit started from is only added to: one made since the backup keeps
-        # its record, and can still come back.
-        for name in KEPT_FOLDERS:
-            staged = staging / name
-            if not staged.is_dir():
-                continue
-            (data_dir / name).mkdir(exist_ok=True)
-            for folder in sorted(staged.iterdir()):
-                target = data_dir / name / folder.name
-                if not target.exists():
-                    folder.rename(target)
-                    made.append(target)
     except OSError as error:
         undo()
         raise ArchiveError(
@@ -310,10 +301,16 @@ def _remove(folder: Path) -> None:
     shutil.rmtree(folder, ignore_errors=True)
 
 
+async def _anyone(tx: Tx) -> bool:
+    found = await (await tx.run("MATCH (p:Person) RETURN count(p) > 0 AS anyone")).single()
+    return bool(found and found["anyone"])
+
+
 async def restore_archive(ctx: Context, path: Path, *, backup_first: bool = True) -> BackupRestored:
     """Replace everything with what the archive at `path` holds. Everything as it was is
     backed up first, with the other backups, unless it can always be had again: a relative's
-    family, as the family folder brings it."""
+    family, as the family folder brings it once it has first arrived. An empty tree has
+    nothing to keep, so it isn't backed up."""
     stamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S-%f")
     staging = ctx.data_dir / f".restore-{stamp}"
     previous = ctx.data_dir / f".replaced-{stamp}"
@@ -321,7 +318,7 @@ async def restore_archive(ctx: Context, path: Path, *, backup_first: bool = True
     backup_name = ""
     try:
         graph, manifest = await asyncio.to_thread(_stage, path, staging)
-        if backup_first:
+        if backup_first and await read(ctx, _anyone):
             try:
                 backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups)
             except OSError as error:

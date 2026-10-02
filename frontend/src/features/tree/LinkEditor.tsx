@@ -58,8 +58,7 @@ function ParentLinkRow({
   const update = useUpdateLink();
   const unlink = useUnlink();
   const feedback = useFeedback();
-  const canChange = useCanEdit("change");
-  const canRemove = useCanEdit("remove");
+  const canEdit = useCanEdit();
   const parent = people.get(link.source);
   const child = people.get(link.target);
   if (!parent || !child) return null;
@@ -85,9 +84,9 @@ function ParentLinkRow({
       <p>
         {who} is {shortName(child)}'s {kindWord(kind, "parent", parent.gender)}.
       </p>
-      {!parent.placeholder && (canChange || canRemove) && (
+      {!parent.placeholder && canEdit && (
         <div className="flex flex-wrap items-center gap-2">
-          {canChange && (
+          {canEdit && (
             <>
               <div className="w-36">
                 <KindSelect
@@ -105,7 +104,7 @@ function ParentLinkRow({
               </Button>
             </>
           )}
-          {canRemove && (
+          {canEdit && (
             <RemoveButton
               what="this link"
               onRemove={() =>
@@ -136,8 +135,7 @@ function MarriageRow({
 }) {
   const update = useUpdateLink();
   const unlink = useUnlink();
-  const canChange = useCanEdit("change");
-  const canRemove = useCanEdit("remove");
+  const canEdit = useCanEdit();
   const [a, b] = [people.get(link.source), people.get(link.target)];
   if (!a || !b) return null;
   return (
@@ -146,7 +144,7 @@ function MarriageRow({
         {shortName(a)} and {shortName(b)}
       </p>
       <div className="flex flex-wrap items-center gap-2">
-        {canChange && (
+        {canEdit && (
           <Select
             value={link.status ?? "married"}
             onValueChange={(status) =>
@@ -166,7 +164,7 @@ function MarriageRow({
             </SelectContent>
           </Select>
         )}
-        {canRemove && (
+        {canEdit && (
           <RemoveButton
             what="this marriage"
             onRemove={() =>
@@ -187,7 +185,7 @@ function MarriageRow({
 
 function PairRow({ a, b, onDone }: { a: GraphPerson; b: GraphPerson; onDone: () => void }) {
   const link = useLink();
-  const canAdd = useCanEdit("add");
+  const canAdd = useCanEdit();
   if (a.placeholder || b.placeholder) {
     return <p>One parent isn't known yet.{canAdd && " Click the “?” to fill them in."}</p>;
   }

@@ -47,13 +47,3 @@ export function templateAddress(example: boolean): string {
 export function importReportAddress(id: string): string {
   return address(`/api/imports/${encodeURIComponent(id)}/report`);
 }
-
-/** The addresses someone's files are served at, as a copy to edit keeps its files by them
- *  (src/copyedit/book.ts, M20): not resolved, since they're where the copy's own answers look. */
-export const personFiles = {
-  all: (id: string) => `/api/persons/${id}/`,
-  photo: (id: string) => `/api/persons/${id}/photo/`,
-  avatar: (id: string, size: number) => `/api/persons/${id}/photo/avatar?size=${size}`,
-  display: (id: string) => `/api/persons/${id}/photo/display`,
-  picture: (id: string, name: string) => `/api/persons/${id}/media/${name}`,
-};

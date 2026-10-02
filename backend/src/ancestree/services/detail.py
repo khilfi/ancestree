@@ -1,7 +1,7 @@
 """Building the person view from database rows: labels, families and birth order."""
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from datetime import date, datetime
 from typing import Any
 from uuid import UUID
@@ -92,111 +92,6 @@ async def load_detail(
     co_parents = await people_repo.fetch_people(tx, sorted(co_parent_ids))
     book = TermBook.load(language)
     return build_detail(props, kinds, parents, spouses, children, siblings, co_parents, book)
-
-
-class FamilyRows:
-    """The whole family in memory, read the way the person view's database queries read it
-    (repo/people.py): for a copy to edit, which works out each person's view itself, and
-    for the golden files that prove it does so as Python does.
-
-    `people` are the stored properties; `links` are {id, type ("parent" or "spouse"), source (the
-    parent), target, kind, status, order}. Where the database would give rows in no set order,
-    these come in the order of the links, by type, then id, as the tree reads them."""
-
-    def __init__(
-        self, people: Iterable[Mapping[str, Any]], links: Iterable[Mapping[str, Any]]
-    ) -> None:
-        self.people = {str(props["id"]): props for props in people}
-        self._up: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
-        self._down: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
-        self._married: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
-        for link in sorted(links, key=lambda link: (link["type"], str(link["id"]))):
-            if link["type"] == "parent":
-                self._up[str(link["target"])].append(link)
-                self._down[str(link["source"])].append(link)
-            else:
-                self._married[str(link["source"])].append(link)
-                self._married[str(link["target"])].append(link)
-
-    @staticmethod
-    def _link(link: Mapping[str, Any]) -> dict[str, Any]:
-        """A link's stored properties, as `properties(link)` gives them."""
-        if link["type"] == "parent":
-            return {"id": str(link["id"]), "kind": link.get("kind")}
-        return {"id": str(link["id"]), "status": link.get("status"), "order": link.get("order")}
-
-    @staticmethod
-    def _kind(link: Mapping[str, Any]) -> str:
-        return str(link.get("kind") or BIOLOGICAL)
-
-    def _parents_of(self, person_id: str) -> list[dict[str, Any]]:
-        return [
-            {"id": str(link["source"]), "kind": self._kind(link)} for link in self._up[person_id]
-        ]
-
-    def parents(self, person_id: str) -> list[dict[str, Any]]:
-        return [
-            {"person": self.people[str(link["source"])], "link": self._link(link)}
-            for link in self._up[person_id]
-        ]
-
-    def spouses(self, person_id: str) -> list[dict[str, Any]]:
-        rows = []
-        for link in self._married[person_id]:
-            other = link["target"] if str(link["source"]) == person_id else link["source"]
-            rows.append({"person": self.people[str(other)], "link": self._link(link)})
-        return rows
-
-    def children(self, person_id: str) -> list[dict[str, Any]]:
-        return [
-            {
-                "person": self.people[str(link["target"])],
-                "link": self._link(link),
-                "parents": self._parents_of(str(link["target"])),
-            }
-            for link in self._down[person_id]
-        ]
-
-    def siblings(self, person_id: str) -> list[dict[str, Any]]:
-        shared: dict[str, list[dict[str, Any]]] = {}
-        for mine in self._up[person_id]:
-            for theirs in self._down[str(mine["source"])]:
-                sibling = str(theirs["target"])
-                if sibling != person_id:
-                    shared.setdefault(sibling, []).append(
-                        {
-                            "id": str(mine["source"]),
-                            "mine": self._kind(mine),
-                            "theirs": self._kind(theirs),
-                        }
-                    )
-        return [
-            {"person": self.people[sibling], "shared": rows, "parents": self._parents_of(sibling)}
-            for sibling, rows in shared.items()
-        ]
-
-    def detail(
-        self,
-        person_id: str,
-        kinds: Kinds,
-        book: TermBook | None = None,
-        *,
-        this_year: int | None = None,
-    ) -> PersonDetail:
-        """What GET /api/persons/{id} answers, as load_detail works it out from the database."""
-        children = self.children(person_id)
-        co_parents = {row["id"] for child in children for row in child["parents"]} - {person_id}
-        return build_detail(
-            self.people[person_id],
-            kinds,
-            self.parents(person_id),
-            self.spouses(person_id),
-            children,
-            self.siblings(person_id),
-            {pid: dict(self.people[pid]) for pid in sorted(co_parents)},
-            book,
-            this_year=this_year,
-        )
 
 
 def build_detail(
