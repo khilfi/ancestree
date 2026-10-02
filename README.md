@@ -2,7 +2,8 @@
 
 A family-history app for one family, on its own computers. Add relatives with their photos and life stories, link them by dragging arrows, and see the family laid out in rings around its oldest ancestor, as a family tree, on a timeline or on a map. Ask how any two people are related, and get the answer in English, Malay or Javanese, with the path between them highlighted.
 
-- **Private by design.** The family lives on your computer, in a database of its own. The app sends nothing about it anywhere. It asks the internet only whether there's a new version of itself, and, the first time it starts, for its database.
+- **Private by design.** The family lives on your computer, in a database of its own. On its own, the app asks the internet only whether there's a new version of itself, and, the first time it starts, for its database. Nothing about the family leaves the computer, unless the family keeps its AncesTree in step through Google Drive, and then only encrypted. See the [privacy policy](PRIVACY.md).
+- **For the whole family.** One relative keeps the family; the others' computers receive it, and send their changes for the keeper to look at.
 - **Windows, macOS (Apple Silicon) and Linux.**
 
 ## Install
@@ -16,6 +17,17 @@ Download the installer for your system from the [latest release](../../releases/
 | Linux | `AncesTree_<version>_amd64.AppImage` | Make it executable (`chmod +x`), then run it. |
 
 The first start fetches the app's database, Neo4j Community, and the Java it runs on: about 330 MB, once. Both are checked against fingerprints built into the app before they're used.
+
+## The family folder
+
+A family can have its AncesTree on each relative's computer, kept in step through a private folder in the keeper's Google Drive (**Settings → Family folder**):
+
+- **The keeper** starts the family's folder from AncesTree, and invites each relative by their Google account.
+- **A relative** installs AncesTree, signs in to Google, and asks to join. The keeper checks a short code with them, then lets their computer in, and chooses what it may do: change the family, with the keeper looking at each change first, or with its changes coming in by themselves unless they clash; or only receive it.
+- **The family arrives by itself** on each computer while AncesTree is open, photos and stories too. What a relative changes waits for the keeper; what the keeper takes reaches everyone.
+- **Everything in Google Drive is encrypted** on each computer first, with the family's own keys: Google keeps the files, but can't read them. A computer the keeper removes can't read what comes after.
+
+Google says it hasn't verified AncesTree when you sign in: it's made for one family, so it isn't. Choose **Advanced**, then **Go to AncesTree**.
 
 ## Updates
 
@@ -31,7 +43,7 @@ cd ../backend && uv run --with pyinstaller pyinstaller ../desktop/engine/engine.
 cd ../desktop && pnpm install && pnpm tauri build
 ```
 
-GitHub Actions builds and checks it on all three systems (`.github/workflows/desktop.yml`), and builds each release from its tag (`release.yml`).
+GitHub Actions builds and checks it on all three systems (`.github/workflows/desktop.yml`), and builds each release from its tag (`release.yml`). A build of your own can't sign in to Google: AncesTree's Google client goes into each release from a secret of this repository's, never from its code.
 
 ## This repository
 

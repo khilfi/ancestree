@@ -2,7 +2,8 @@
 # the one on offer, from this repository's releases, starts it just as a user would, and waits
 # for it to update itself to the version latest.json offers. It runs whenever a new latest.json
 # is pushed, and can be started by hand from any older version. Nothing here is made for the
-# test: the releases, the update file and its signatures are the real ones.
+# test: the releases, the update file and its signatures are the real ones. A release from before
+# the update key changed can't update itself past the change: the check says so, and stops.
 
 name: Update check
 
@@ -27,6 +28,8 @@ jobs:
       to: ${{ steps.pick.outputs.to }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # every release's tag, to read the key it trusts
 
       - id: pick
         env:
@@ -42,6 +45,13 @@ jobs:
           fi
           [ "$from" != "$to" ] || { echo "::error::$to is already the version on offer"; exit 1; }
           [ -n "$from" ] || echo "::notice::$to is the first release: there's nothing older to update from"
+          if [ -n "$from" ]; then  # an older release trusts only the key that was the app's then
+            trusted=$(git show "v$from:desktop/src-tauri/tauri.conf.json" | jq -r .plugins.updater.pubkey)
+            if [ "$trusted" != "$(jq -r .plugins.updater.pubkey desktop/src-tauri/tauri.conf.json)" ]; then
+              echo "::notice::$from trusts an earlier update key, so it can't update itself to $to: it's installed again by hand"
+              from=""
+            fi
+          fi
           echo "from=$from" >> "$GITHUB_OUTPUT"
           echo "to=$to" >> "$GITHUB_OUTPUT"
           echo "from $from to $to"
