@@ -121,8 +121,9 @@ jobs:
       - name: Build 0.1.0
         working-directory: desktop
         run: |
+          # 0.1.0 by name, whatever the app's own version: the update below is 0.1.1.
           pnpm tauri build --verbose --bundles ${{ matrix.bundles }} \
-            --config "{\"plugins\":{\"updater\":{\"pubkey\":\"$PUBKEY\",\"dangerousInsecureTransportProtocol\":true}}}"
+            --config "{\"version\":\"0.1.0\",\"plugins\":{\"updater\":{\"pubkey\":\"$PUBKEY\",\"dangerousInsecureTransportProtocol\":true}}}"
           mkdir -p "$RUNNER_TEMP/v010"
           cp -R src-tauri/target/release/bundle/. "$RUNNER_TEMP/v010/"
           find "$RUNNER_TEMP/v010" -maxdepth 2 | sort

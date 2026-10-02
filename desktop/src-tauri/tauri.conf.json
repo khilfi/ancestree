@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "AncesTree",
   "mainBinaryName": "AncesTree",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "identifier": "app.ancestree.desktop",
   "build": {
     "frontendDist": "../loading"
@@ -43,7 +43,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENENkNGMjEwNUM3OEFCRTAKUldUZ3EzaGNFUEpzemZWZEtLdlI3QmY4eVVUeFdnWjZvdm9sMXZtU3kwT05KcGhsVzdQWWtxbHMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZEOENCRjk0QTZEQTE4RDcKUldUWEdOcW1sTCtNL1grR1U2MmlkSGZRNm1FdTFDMzlaZEJLenRXazRNbWlZWmtiWWNxenFYWTQK",
       "endpoints": ["https://raw.githubusercontent.com/khilfi/ancestree/main/updates/latest.json"],
       "requireSignedVersion": true,
       "windows": {
