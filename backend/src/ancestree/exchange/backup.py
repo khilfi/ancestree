@@ -13,6 +13,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from neo4j import AsyncDriver
 
 from ancestree import __version__
+from ancestree.config import WhichFamily
 from ancestree.repo.export import export_graph
 
 ARCHIVE_FORMAT = 1
@@ -37,6 +38,7 @@ To restore it: in AncesTree, Settings > Backups; or `uv run ancestree restore <t
 
 # In an automatic backup's name: those are kept 30 at a time, those made by hand for ever.
 AUTOMATIC = "-automatic"
+KEEP_AUTOMATIC = 30
 # Two made in one second are "...-automatic.zip", then "...-automatic-2.zip".
 AUTOMATIC_NAME = re.compile(
     r"ancestree-backup-(\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d)-automatic(?:-(\d+))?\.zip"
@@ -53,11 +55,15 @@ class BackupResult:
 
 
 async def create_backup(
-    driver: AsyncDriver, database: str, data_dir: Path, dest_dir: Path
+    driver: AsyncDriver,
+    database: str,
+    data_dir: Path,
+    dest_dir: Path,
+    family: WhichFamily | None = None,
 ) -> BackupResult:
     graph = await export_graph(driver, database)
     # Zipping and hashing files is blocking work: keep it off the event loop.
-    return await asyncio.to_thread(write_archive, graph, data_dir, dest_dir)
+    return await asyncio.to_thread(write_archive, graph, data_dir, dest_dir, family=family)
 
 
 def is_automatic(name: str) -> bool:
@@ -67,8 +73,15 @@ def is_automatic(name: str) -> bool:
 
 
 def write_archive(
-    graph: dict[str, Any], data_dir: Path, dest_dir: Path, *, automatic: bool = False
+    graph: dict[str, Any],
+    data_dir: Path,
+    dest_dir: Path,
+    *,
+    automatic: bool = False,
+    family: WhichFamily | None = None,
 ) -> BackupResult:
+    """The archive, in `dest_dir`. `family`: which family it is, of several on the computer
+    (0.4.0), so it can't be restored into another."""
     graph_json = json.dumps(graph, ensure_ascii=False, indent=2, default=_json_value).encode()
     created = datetime.now().astimezone()
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -99,6 +112,8 @@ def write_archive(
             "counts": counts,
             "sha256": checksums,
         }
+        if family is not None:
+            manifest["family"] = {"id": family.id, "name": family.name}
         archive.writestr("manifest.json", json.dumps(manifest, indent=2))
         archive.writestr("README.txt", _README)
     partial.replace(final)  # only a complete archive ever gets the .zip name

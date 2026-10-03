@@ -38,6 +38,8 @@ const backup = (name: string, madeAt: string, automatic: boolean): Backup => ({
   links: 61,
   files: 3,
   automatic,
+  family_id: "aaaaaaaaaaaaaaaa",
+  family_name: "Keluarga Contoh",
 });
 
 const BACKUPS = [
@@ -53,6 +55,8 @@ async function show(daily: boolean) {
     reachable: true,
     backups: daily ? BACKUPS : BACKUPS.slice(1),
     automatic_backups: daily,
+    family_id: "aaaaaaaaaaaaaaaa",
+    family_name: "Keluarga Contoh",
   };
   vi.stubGlobal("fetch", async () =>
     Response.json(list, { headers: { "content-type": "application/json" } }),

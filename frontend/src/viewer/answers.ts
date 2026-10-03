@@ -220,6 +220,8 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
   // Each computer's own part in the family folder: a copy has none.
   "/api/family-folder": NOT_IN_COPY,
   "/api/family-folder/shared": NOT_IN_COPY,
+  "/api/family-folder/invitation": NOT_IN_COPY,
+  "/api/backups/places": NOT_IN_COPY,
 };
 
 const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
@@ -311,6 +313,15 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "DELETE /api/places/pins": REFUSED,
   "POST /api/family-folder/sign-in": REFUSED,
   "POST /api/family-folder/sign-out": REFUSED,
+  "POST /api/family-folder/move-account": REFUSED,
+  "POST /api/family-folder/rebuild": REFUSED,
+  "POST /api/family-folder/old-folder-deleted": REFUSED,
+  "PUT /api/backups/elsewhere": REFUSED,
+  "POST /api/backups/elsewhere/copy": REFUSED,
+  "DELETE /api/backups/elsewhere": REFUSED,
+  "POST /api/backups/{name}/check": REFUSED,
+  "POST /api/family-folder/project": REFUSED,
+  "POST /api/family-folder/invitation": REFUSED,
   "POST /api/family-folder/start": REFUSED,
   "POST /api/family-folder/recovery-seen": REFUSED,
   "POST /api/family-folder/new-recovery-code": REFUSED,

@@ -10,6 +10,8 @@ from weakref import WeakValueDictionary
 
 from neo4j import AsyncDriver, AsyncManagedTransaction
 
+from ancestree.config import WhichFamily
+
 
 @dataclass(frozen=True)
 class Context:
@@ -18,6 +20,7 @@ class Context:
     data_dir: Path
     backup_dir: Path | None = None
     automatic_backups: bool = False
+    family: WhichFamily | None = None  # which family, of several on the computer (0.4.0)
 
     @property
     def backups(self) -> Path:

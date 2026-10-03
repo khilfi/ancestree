@@ -76,6 +76,55 @@ export function useSignInToGoogle() {
 
 export const useSignOutOfGoogle = () =>
   useFolderAction(() => unwrap(api.POST("/api/family-folder/sign-out")));
+
+/** The family's own Google project (0.4.0), from the file Google's console gives for its
+ *  client: the keeper's, or for a computer starting a family folder. `moving`: the keeper
+ *  moving the family folder into this other project, rebuilt next. */
+export const useFamilyProject = () =>
+  useFolderAction(({ client, moving = false }: { client: string; moving?: boolean }) =>
+    unwrap(api.POST("/api/family-folder/project", { body: { client, moving } })),
+  );
+
+/** The keeper moving the family folder to another Google account (0.4.0): signed out, and a
+ *  sign-in started in the browser that may be another account's; then the rebuild. */
+export function useMoveAccount() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { url } = await unwrap(api.POST("/api/family-folder/move-account"));
+      window.open(url, "_blank", "noopener");
+      return url;
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: FAMILY_FOLDER }),
+  });
+}
+
+/** The family folder made again in Drive from the keeper's computer (0.4.0): when it's lost,
+ *  or to move it to the account signed in, or the project given. Relatives' computers follow. */
+export const useRebuild = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/rebuild")));
+
+/** The keeper's word that the old family folder, left in Drive after a move, is deleted. */
+export const useOldFolderDeleted = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/old-folder-deleted")));
+
+/** A keeper's invitation, pasted on a relative's computer (0.4.0): the family's Google project,
+ *  to sign in through, and the family to ask to join. */
+export const useTakeInvitation = () =>
+  useFolderAction((invitation: string) =>
+    unwrap(api.POST("/api/family-folder/invitation", { body: { invitation } })),
+  );
+
+/** The family's invitation, for its keeper to send (0.4.0). */
+export function useInvitation(enabled: boolean) {
+  return useQuery({
+    queryKey: ["family-folder", "invitation"],
+    queryFn: () => unwrap(api.GET("/api/family-folder/invitation")),
+    enabled,
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
 export const useStartFamily = () =>
   useFolderAction((body: StartFamily) => unwrap(api.POST("/api/family-folder/start", { body })));
 export const useRecoverySeen = () =>

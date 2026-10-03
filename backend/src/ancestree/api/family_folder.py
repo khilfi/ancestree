@@ -10,9 +10,12 @@ from ancestree.domain.familyfolder import (
     Admit,
     BringIn,
     FamilyFolderStatus,
+    InvitationMade,
+    InvitationText,
     Invite,
     JoinFamily,
     OneComputer,
+    ProjectFile,
     Recover,
     ReviewChanges,
     SharedFolder,
@@ -50,6 +53,57 @@ async def sign_out_of_google(request: Request) -> FamilyFolderStatus:
     folder = _folder(request)
     await folder.sign_out()
     return await folder.status()
+
+
+@router.post("/project")
+async def use_family_project(request: Request, body: ProjectFile) -> FamilyFolderStatus:
+    """The family's own Google project, from the file Google's console gives for its client of
+    the Desktop app type: kept with this family, to sign in through. A sign-in made with
+    another client is given back: sign in again."""
+    folder = _folder(request)
+    await folder.use_project(body.client, moving=body.moving)
+    return await folder.status()
+
+
+@router.post("/move-account")
+async def move_family_folder_account(request: Request) -> SignInStarted:
+    """Move the family folder to another Google account (the keeper's): signed out here, and a
+    sign-in started that may be another account's. Then rebuild the family folder in it."""
+    return SignInStarted(url=await _folder(request).move_account())
+
+
+@router.post("/old-folder-deleted")
+async def old_family_folder_deleted(request: Request) -> FamilyFolderStatus:
+    """The keeper's word that the old family folder, left in Drive after a move, is deleted."""
+    folder = _folder(request)
+    folder.old_folder_deleted()
+    return await folder.status()
+
+
+@router.post("/rebuild")
+async def rebuild_family_folder(request: Request) -> FamilyFolderStatus:
+    """Make the family folder again in Drive from this computer's copy (the keeper's): when
+    it's lost, or to move it to the Google account signed in, or the project given. The same
+    keys and record; shared again with every relative's account, whose computers follow."""
+    folder = _folder(request)
+    await folder.rebuild()
+    return await folder.status()
+
+
+@router.post("/invitation")
+async def take_family_invitation(request: Request, body: InvitationText) -> FamilyFolderStatus:
+    """A keeper's invitation, pasted on a relative's computer: the family's Google project, to
+    sign in through, and the family to ask to join."""
+    folder = _folder(request)
+    await folder.take_invitation(body.invitation)
+    return await folder.status()
+
+
+@router.get("/invitation")
+async def get_family_invitation(request: Request) -> InvitationMade:
+    """The family's invitation, for its keeper to send to the relatives they invite."""
+    invitation = _folder(request).invitation()
+    return InvitationMade(invitation=invitation.text(), project=invitation.client.name)
 
 
 @router.post("/start")
@@ -96,8 +150,8 @@ async def shared_family_folders(request: Request) -> list[SharedFolder]:
 
 @router.post("/join")
 async def join_family_folder(request: Request, body: JoinFamily) -> FamilyFolderStatus:
-    """Ask to join the family in a shared folder. The status carries the code to read to the
-    keeper."""
+    """Ask to join the family the pasted invitation names, or the one in a folder given. The
+    status carries the code to read to the keeper."""
     folder = _folder(request)
     await folder.join(body)
     return await folder.status()

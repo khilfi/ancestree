@@ -48,8 +48,14 @@ from ancestree.storage.files import TRASH_DAYS, purge_trash
 log = logging.getLogger("uvicorn.error")
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build the app. Settings are read at startup unless given (tests pass their own)."""
+def create_app(
+    settings: Settings | None = None,
+    *,
+    on_round: Callable[[FamilyFolder], None] | None = None,
+) -> FastAPI:
+    """Build the app. Settings are read at startup unless given (tests pass their own).
+    `on_round`: told after each round with the family folder, as the desktop app's engine is
+    (0.4.0)."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -69,7 +75,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 active.data_dir,
                 active.backup_dir,
                 active.automatic_backups,
+                active.family,
             )
+            if active.restore_first is not None and active.restore_first.is_file():
+                # A family added from a backup, opening for the first time (0.4.0). One that
+                # can't be restored leaves the family empty, with the backup in its list.
+                try:
+                    await restore_archive(context, active.restore_first, backup_first=False)
+                    log.info("Restored %s, as the family opened", active.restore_first.name)
+                except ArchiveError as error:
+                    log.warning("The family's backup couldn't be restored: %s", error)
             backing_up = None
             if active.automatic_backups:
                 backing_up = asyncio.create_task(keep_backing_up(context))
@@ -82,7 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     history_now.clear()
                     return restored
 
-            folder = FamilyFolder(context, restore=take_in, history=history_now)
+            folder = FamilyFolder(context, restore=take_in, history=history_now, on_round=on_round)
             app.state.family_folder = folder
 
             def journal_step(step: Step, how: str) -> None:
@@ -93,6 +108,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             history_now.journal = journal_step
             keeping = asyncio.create_task(keep_in_step(app.state.family_folder))
             yield
+            await folder.last_round()  # nothing that could go is left waiting (0.4.0)
             keeping.cancel()
             if backing_up is not None:
                 backing_up.cancel()
@@ -178,7 +194,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         the keeper's. Any other changes nothing: a change made there would be lost."""
         folder: FamilyFolder | None = getattr(request.app.state, "family_folder", None)
         if folder is None or folder.editing:
-            return await call_next(request)
+            return _nudged(folder, request, await call_next(request))
         if folder.proposing and _keepers_own(request):
             return _error(
                 status.HTTP_409_CONFLICT,
@@ -192,7 +208,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "This family is kept by its keeper, and arrives from the family folder: "
                 "it can't be changed on this computer.",
             )
-        return await call_next(request)
+        return _nudged(folder, request, await call_next(request))
 
     return app
 
@@ -212,6 +228,14 @@ _FAMILY_CHANGES = (
 # Of those, what stays the keeper's even on a relative's computer that sends its changes to
 # the keeper, whose review takes people, links, stories and photos.
 _KEEPERS_OWN = ("/api/relationship-kinds", "/api/places/pins")
+
+
+def _nudged(folder: FamilyFolder | None, request: Request, response: Response) -> Response:
+    """A change to the family made here: the family folder keeps in step a few seconds after,
+    rather than within the minute (0.4.0)."""
+    if folder is not None and response.status_code < 400 and _changes_family(request):
+        folder.nudge()
+    return response
 
 
 def _changes_family(request: Request) -> bool:

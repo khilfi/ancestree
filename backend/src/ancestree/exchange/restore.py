@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import shutil
+import tempfile
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -48,6 +49,7 @@ class _Manifest(BaseModel):
     created_at: datetime
     counts: dict[str, int]
     sha256: dict[str, str]
+    family: dict[str, str] | None = None  # which family, of several on a computer (0.4.0)
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,8 @@ class ArchiveInfo:
     people: int
     links: int
     files: int
+    family_id: str | None = None
+    family_name: str = ""
 
 
 def _manifest(archive: ZipFile, name: str) -> _Manifest:
@@ -77,6 +81,7 @@ def read_info(path: Path) -> ArchiveInfo:
             manifest = _manifest(archive, path.name)
     except (BadZipFile, OSError) as error:
         raise ArchiveError(f"{path.name} isn't an AncesTree backup archive.") from error
+    family = manifest.family or {}
     return ArchiveInfo(
         made_at=manifest.created_at,
         app_version=manifest.app_version,
@@ -84,6 +89,8 @@ def read_info(path: Path) -> ArchiveInfo:
         people=manifest.counts.get("people", 0),
         links=manifest.counts.get("links", 0),
         files=manifest.counts.get("files", 0),
+        family_id=family.get("id") or None,
+        family_name=family.get("name", ""),
     )
 
 
@@ -194,6 +201,14 @@ def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:
         raise ArchiveError("The archive's graph.json can't be read.") from error
     _check_graph(graph)
     return graph, manifest
+
+
+def check_archive(path: Path) -> ArchiveInfo:
+    """A backup read whole, as a restore reads it, every file against its checksum and every
+    link checked, with nothing restored (0.4.0): so a copy kept elsewhere is known to be good."""
+    with tempfile.TemporaryDirectory(prefix="ancestree-check-") as staging:
+        _stage(path, Path(staging))
+    return read_info(path)
 
 
 def _swap_in(data_dir: Path, staging: Path, previous: Path) -> Callable[[], None]:
@@ -320,7 +335,9 @@ async def restore_archive(ctx: Context, path: Path, *, backup_first: bool = True
         graph, manifest = await asyncio.to_thread(_stage, path, staging)
         if backup_first and await read(ctx, _anyone):
             try:
-                backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups)
+                backup = await create_backup(
+                    ctx.driver, ctx.database, ctx.data_dir, ctx.backups, ctx.family
+                )
             except OSError as error:
                 raise ArchiveError(
                     f"Nothing was restored: everything as it is now couldn't be backed up first "

@@ -1,14 +1,16 @@
 """The family folder over HTTP: its status, and a relative's computer keeping the family
 as the keeper sends it, with only its own choices open to change."""
 
+import json
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
 
-from ancestree.familyfolder import google
 from ancestree.familyfolder.computers import Member
+from ancestree.familyfolder.google import Client
+from ancestree.familyfolder.invitations import Invitation
 from ancestree.services.familyfolder import Setup
 from tests.integration.conftest import create_person
 
@@ -16,10 +18,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
 
 @pytest.fixture(autouse=True)
-def no_google_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """None of the maintainer's own: the tests never reach Google."""
-    monkeypatch.setattr(google, "BUILT_IN", tmp_path / "none.json")
-    monkeypatch.setattr(google, "OWN_COPY", tmp_path / "none.json")
+def no_google_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """None named while developing: the family has its own, or none (0.4.0), and the tests
+    never reach Google."""
     monkeypatch.delenv("ANCESTREE_GOOGLE_CLIENT", raising=False)
 
 
@@ -45,6 +46,48 @@ async def test_a_new_computer_takes_part_in_no_family_folder(client: httpx.Async
     code = await client.post("/api/family-folder/new-recovery-code")
     assert (code.status_code, code.json()["detail"]["code"]) == (409, "signed_out")
     assert body["may_leave"] is False
+
+
+CLIENT_FILE = json.dumps(
+    {
+        "installed": {
+            "client_id": "123456789012-ourclient.apps.googleusercontent.com",
+            "project_id": "keluarga-contoh",
+            "client_secret": "made-up-secret",
+        }
+    }
+)
+
+
+async def test_the_familys_own_project_and_an_invitation(client: httpx.AsyncClient) -> None:
+    """A family's Google project, from its client's file, or a keeper's invitation (0.4.0)."""
+    refused = await client.post("/api/family-folder/project", json={"client": "{}"})
+    assert (refused.status_code, refused.json()["detail"]["code"]) == (409, "not_a_client_file")
+    body = (await client.post("/api/family-folder/project", json={"client": CLIENT_FILE})).json()
+    assert (body["available"], body["project"], body["project_invited"]) == (
+        True,
+        "keluarga-contoh",
+        False,
+    )
+    asked = await client.get("/api/family-folder/invitation")
+    assert (asked.status_code, asked.json()["detail"]["code"]) == (409, "not_the_keeper")
+
+    pasted = await client.post("/api/family-folder/invitation", json={"invitation": "Hello"})
+    assert (pasted.status_code, pasted.json()["detail"]["code"]) == (409, "not_an_invitation")
+    invitation = Invitation(
+        Client("987654321098-theirs.apps.googleusercontent.com", "s", "keluarga-lain"),
+        "3f9c0a1b2c3d4e5f",
+    )
+    body = (
+        await client.post("/api/family-folder/invitation", json={"invitation": invitation.text()})
+    ).json()
+    assert (body["project"], body["project_invited"], body["invited"]) == (
+        "keluarga-lain",
+        True,
+        True,
+    )
+    join = await client.post("/api/family-folder/join", json={"computer": "Mak Long's laptop"})
+    assert (join.status_code, join.json()["detail"]["code"]) == (409, "signed_out")
 
 
 async def test_a_relatives_computer_changes_only_its_own_choices(

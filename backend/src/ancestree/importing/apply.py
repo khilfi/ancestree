@@ -60,7 +60,7 @@ async def apply_plan(
             "  uv run ancestree import undo"
         )
 
-    backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups)
+    backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, ctx.backups, ctx.family)
     started = datetime.now().astimezone()
     tag = f"{IMPORT_TAG}{started:%Y-%m-%dT%H-%M-%S}"
     ids = {ref: str(uuid7()) for ref in plan.people}

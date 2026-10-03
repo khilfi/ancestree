@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import io
 import platform
+import re
+import subprocess
 import sys
 import tarfile
 import threading
@@ -30,7 +32,7 @@ from ancestree.ownneo4j.runtime import (
     this_system,
     unpack,
 )
-from ancestree.ownneo4j.server import FAMILY_SIZED, OwnNeo4j, StoppedError
+from ancestree.ownneo4j.server import FAMILY_SIZED, AdminError, OwnNeo4j, StoppedError
 
 SHIPPED = """# Neo4j's own settings, as shipped (a few of them)
 server.default_listen_address=0.0.0.0
@@ -160,11 +162,70 @@ def test_the_password_is_made_once(own: OwnNeo4j) -> None:
         assert (own.root / "password").stat().st_mode & 0o777 == 0o600
 
 
+def test_a_password_never_reads_as_an_option(tmp_path: Path) -> None:
+    """One starting with "-" read as an option to Neo4j's admin tool, which then set none: a
+    first start failed, and every start after it (found by its error, for 0.4.0)."""
+    runtime = made_up_runtime(tmp_path)
+    for number in range(50):
+        own = OwnNeo4j(tmp_path / str(number), runtime, ["helper"])
+        assert re.fullmatch(r"[0-9a-f]{48}", own.password())
+
+
+def test_a_password_that_reads_as_an_option_and_was_never_set_is_made_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    own = OwnNeo4j(tmp_path / "neo4j", made_up_runtime(tmp_path), ["helper"])
+    own.root.mkdir(parents=True)
+    (own.root / "password").write_text("-made-up-before-0-4-0", encoding="utf-8")
+    given: list[str] = []
+
+    def working(command: list[str], **_: Any) -> subprocess.CompletedProcess[bytes]:
+        given.append(command[-1])
+        return subprocess.CompletedProcess(command, 0, b"Changed password for user 'neo4j'.", b"")
+
+    monkeypatch.setattr(subprocess, "run", working)
+    own.configure(7690)
+    assert given == [own.password()]
+    assert not own.password().startswith("-")
+
+
 def test_asked_to_stop_while_starting_it_stops_at_once(own: OwnNeo4j) -> None:
     stopping = threading.Event()
     stopping.set()
     with pytest.raises(StoppedError):
         own.wait_ready(timeout=60, stopping=stopping)
+
+
+def test_a_failed_first_password_says_why_and_never_shows_the_password(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    own = OwnNeo4j(tmp_path / "neo4j", made_up_runtime(tmp_path), ["helper"])
+    password = own.password()
+    said = f"Picked up options\nCould not write {password}: the file is locked by another program\n"
+
+    def failing(command: list[str], **_: Any) -> subprocess.CompletedProcess[bytes]:
+        assert password in command  # Neo4j's tool is given it, and no one else
+        return subprocess.CompletedProcess(command, 1, b"Selecting JVM\n", said.encode())
+
+    monkeypatch.setattr(subprocess, "run", failing)
+    with pytest.raises(AdminError) as failed:
+        own.configure(7690)
+    message = str(failed.value)
+    assert "Neo4j couldn't set the database's first password" in message
+    assert "ended with code 1" in message
+    assert "the file is locked by another program" in message  # its own last words
+    assert password not in message
+    log = (own.store / "logs" / "neo4j-admin.log").read_text(encoding="utf-8")
+    assert "the file is locked by another program" in log
+    assert password not in log
+
+    def working(command: list[str], **_: Any) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(command, 0, b"Changed password for user 'neo4j'.\n", b"")
+
+    monkeypatch.setattr(subprocess, "run", working)
+    own.configure(7690)  # the next start tries again, and it's done
+    log = (own.store / "logs" / "neo4j-admin.log").read_text(encoding="utf-8")
+    assert "code 0\nChanged password for user 'neo4j'." in log
 
 
 def test_only_what_comes_over_https_is_fetched(tmp_path: Path) -> None:

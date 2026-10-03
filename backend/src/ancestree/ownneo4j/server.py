@@ -11,6 +11,7 @@ import threading
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from neo4j import GraphDatabase
@@ -32,6 +33,17 @@ FAMILY_SIZED = Memory(heap_initial="128m", heap_max="384m", pagecache="64m")
 
 class StoppedError(Exception):
     """Asked to stop while Neo4j was still starting."""
+
+
+class AdminError(RuntimeError):
+    """Neo4j's admin tool failed: what it was for, how it ended, and its last words."""
+
+
+# What each of Neo4j's admin commands is for, in words, so a failure says what didn't happen.
+ADMIN_WORDS: dict[tuple[str, ...], str] = {
+    ("dbms", "set-initial-password"): "set the database's first password"
+}
+ADMIN_LOG = "neo4j-admin.log"  # in the database's logs folder, beside Neo4j's own
 
 
 def _setting_name(line: str) -> str:
@@ -58,12 +70,14 @@ class OwnNeo4j:
         return f"bolt://127.0.0.1:{self.bolt_port}"
 
     def password(self) -> str:
-        """Made once, kept in this folder, readable by this user alone where that's possible."""
+        """Made once, kept in this folder, readable by this user alone where that's possible.
+        Letters and digits alone: one starting with "-", as base64 can, reads as an option to
+        Neo4j's admin tool, which then sets no password at all (0.4.0)."""
         path = self.root / "password"
         if path.is_file():
             return path.read_text(encoding="utf-8").strip()
         self.root.mkdir(parents=True, exist_ok=True)
-        value = secrets.token_urlsafe(24)
+        value = secrets.token_hex(24)
         path.write_text(value, encoding="utf-8")
         if sys.platform != "win32":
             path.chmod(0o600)
@@ -109,6 +123,10 @@ class OwnNeo4j:
         self.conf_dir.mkdir(parents=True, exist_ok=True)
         (self.conf_dir / "neo4j.conf").write_text("\n".join(lines) + "\n", encoding="utf-8")
         if not (self.store / "data" / "databases" / "system").exists():
+            password = self.root / "password"
+            if self.password().startswith("-"):
+                # Made before 0.4.0, and never set: Neo4j's admin tool took it for an option.
+                password.unlink()
             self._admin("dbms", "set-initial-password", self.password())
 
     def _environment(self) -> dict[str, str]:
@@ -168,14 +186,35 @@ class OwnNeo4j:
         ]
 
     def _admin(self, *arguments: str) -> None:
-        subprocess.run(  # noqa: S603 - Neo4j's own tool, from the runtime unpacked here
+        """Neo4j's own admin tool: a command (`dbms set-initial-password`) and its values. What
+        it says goes to the logs folder, whatever happens. If it fails, the error says what
+        didn't happen and why, in its own last words: never with the values it was given,
+        such as the password."""
+        done = subprocess.run(  # noqa: S603 - Neo4j's own tool, from the runtime unpacked here
             self.launcher("org.neo4j.server.startup.Neo4jAdminCommand", *arguments),
             env=self._environment(),
             cwd=self.runtime.neo4j_home,
-            check=True,
+            check=False,
             capture_output=True,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
+        said = (done.stdout + b"\n" + done.stderr).decode("utf-8", errors="replace").strip()
+        for value in arguments[2:]:
+            if value:
+                said = said.replace(value, "[not shown]")
+        what = ADMIN_WORDS.get(tuple(arguments[:2]), "do what the app asked of it")
+        logs = self.store / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        with (logs / ADMIN_LOG).open("a", encoding="utf-8") as log:
+            when = datetime.now(UTC).isoformat(timespec="seconds")
+            log.write(f"{when} to {what}: code {done.returncode}\n{said}\n\n")
+        if done.returncode != 0:
+            last = [line.strip() for line in said.splitlines() if line.strip()]
+            why = " / ".join(last[-3:])[-400:] or "it said nothing"
+            raise AdminError(
+                f"Neo4j couldn't {what}: its admin tool ended with code {done.returncode} and "
+                f"said: {why}. All it said is in {logs / ADMIN_LOG}"
+            )
 
     def start(self) -> None:
         logs = self.store / "logs"

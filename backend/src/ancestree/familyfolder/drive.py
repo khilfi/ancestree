@@ -76,7 +76,7 @@ class DriveLike(Protocol):
     def unshare(self, file_id: str, email: str) -> bool: ...
     def shared_with(self, file_id: str) -> list[str]: ...
     def shared_folders(self, name: str = "") -> list[RemoteFile]: ...
-    def own_folders(self, name: str) -> list[RemoteFile]: ...
+    def own_folders(self, name: str, *, starting: bool = False) -> list[RemoteFile]: ...
 
 
 def _remote(item: dict[str, Any]) -> RemoteFile:
@@ -289,12 +289,19 @@ class Drive:
             if permission.get("type") == "user" and permission.get("role") != "owner"
         ]
 
-    def own_folders(self, name: str) -> list[RemoteFile]:
-        """Folders of this name that belong to this account."""
-        return self._search(
-            f"name = '{_quoted(name)}' and mimeType = '{FOLDER}' and 'me' in owners "
-            "and trashed = false"
+    def own_folders(self, name: str, *, starting: bool = False) -> list[RemoteFile]:
+        """Folders of this name that belong to this account; or, `starting`, those whose names
+        start with it."""
+        if not starting:
+            return self._search(
+                f"name = '{_quoted(name)}' and mimeType = '{FOLDER}' and 'me' in owners "
+                "and trashed = false"
+            )
+        search = (
+            f"name contains '{_quoted(name.split()[0])}' and mimeType = '{FOLDER}' "
+            "and 'me' in owners and trashed = false"
         )
+        return [folder for folder in self._search(search) if folder.name.startswith(name)]
 
     def shared_folders(self, name: str = "") -> list[RemoteFile]:
         """Folders others have shared with this account; those whose names start with `name`."""

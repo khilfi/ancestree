@@ -62,6 +62,9 @@ export type ExportRequest = Schemas["ExportRequest"];
 export type ExportFile = Schemas["ExportFile"];
 export type Backup = Schemas["Backup"];
 export type BackupList = Schemas["BackupList"];
+// Copies of the backups in a second place (0.4.0)
+export type Elsewhere = Schemas["Elsewhere"];
+export type CopyPlace = Schemas["CopyPlace"];
 export type FamilyFacts = Schemas["FamilyFacts"];
 export type MeSettings = Schemas["MeSettings"];
 export type PersonPatch = Schemas["PersonPatch"];
@@ -109,6 +112,8 @@ export type StartFamily = Schemas["StartFamily"];
 export type JoinFamily = Schemas["JoinFamily"];
 export type Recover = Schemas["Recover"];
 export type Admit = Schemas["Admit"];
+// Each family's own Google project, and invitations (0.4.0)
+export type InvitationMade = Schemas["InvitationMade"];
 // Changes sent back through the family folder
 export type FolderAnswer = Schemas["FolderAnswer"];
 export type FolderChanges = Schemas["FolderChanges"];

@@ -53,7 +53,7 @@ class FolderChanges(BaseModel):
 
 
 class FamilyFolderStatus(BaseModel):
-    available: bool  # AncesTree has a Google client to sign in with
+    available: bool  # this family has a Google client to sign in with (0.4.0: its own project's)
     email: str | None  # the Google account signed in, if one is
     signing_in: bool  # a sign-in is waiting for Google's answer
     setup: Literal["keeper", "member"] | None
@@ -78,6 +78,25 @@ class FamilyFolderStatus(BaseModel):
     broken: bool = False
     replaced: bool = False
     may_leave: bool = False
+    # 0.4.0: the family's own Google project, by name; whether it came with a keeper's
+    # invitation; and whether an invitation is waiting for this computer to ask to join.
+    project: str = ""
+    project_invited: bool = False
+    invited: bool = False
+    # 0.4.0: a round under way; when the last was tried, through or not; and, on the keeper's
+    # computer, when a change was last published.
+    syncing: bool = False
+    tried: datetime | None = None
+    through: bool = False  # the last round went through: `problem`, if any, is only a note
+    # What stood in its way, as a code: "offline", "signed_out", "project", "lost", "foreign"
+    # (a family folder made through another Google project), "problem", or "" for nothing.
+    trouble: str = ""
+    # 0.4.0: the last round found the family folder gone from Drive; the keeper is moving it
+    # to another Google account or project; and the old one is still in Drive after a move.
+    lost: bool = False
+    moving: bool = False
+    old_folder_left: bool = False
+    published: datetime | None = None
 
 
 class SignInStarted(BaseModel):
@@ -94,11 +113,35 @@ class SharedFolder(BaseModel):
 class StartFamily(BaseModel):
     family: Name  # "Keluarga Contoh": never written in the clear
     computer: Name  # this computer, as the family will see it
+    # 0.4.0: start it although this Google account's Drive holds another family's folder.
+    another: bool = False
 
 
 class JoinFamily(BaseModel):
-    folder: str
+    folder: str | None = None  # none: the family the invitation names (0.4.0)
     computer: Name
+
+
+class ProjectFile(BaseModel):
+    """The family's own Google project (0.4.0): the file Google's console gives for its client
+    of the Desktop app type, as text."""
+
+    client: Annotated[str, StringConstraints(max_length=20_000)]
+    # The keeper moving the family folder into this other project: the rebuild follows.
+    moving: bool = False
+
+
+class InvitationText(BaseModel):
+    """A keeper's invitation, pasted on a relative's computer (0.4.0)."""
+
+    invitation: Annotated[str, StringConstraints(max_length=10_000)]
+
+
+class InvitationMade(BaseModel):
+    """The family's invitation, for its keeper to send (0.4.0)."""
+
+    invitation: str
+    project: str
 
 
 class Admit(BaseModel):

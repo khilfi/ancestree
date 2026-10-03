@@ -26,6 +26,7 @@ def _context(request: Request) -> Context:
         settings.data_dir,
         settings.backup_dir,
         settings.automatic_backups,
+        settings.family,
     )
 
 

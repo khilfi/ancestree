@@ -8,8 +8,11 @@ narrowest that S6's test showed working: every file read, only AncesTree's own c
 What's kept is the sign-in's refresh token and the account's address, locked on this computer
 (protect.py). Access tokens live an hour and are made again from it as needed.
 
-AncesTree's Google client is built into a release, from a secret of the release workflow's;
-the maintainer's own copy stands in while developing: ~/.ancestree/google-client.json.
+The Google client is the family's own (0.4.0): no release carries one. The keeper sets up a
+Google Cloud project for the family, and gives AncesTree the file Google's console gives for
+its client of the Desktop app type; relatives' computers take it from the keeper's invitation
+(invitations.py). Each family keeps its client with it, locked as the sign-in is.
+ANCESTREE_GOOGLE_CLIENT names a client file to use instead, while developing.
 """
 
 from __future__ import annotations
@@ -19,13 +22,14 @@ import contextlib
 import hashlib
 import json
 import os
+import re
 import secrets
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -39,9 +43,9 @@ SCOPES = (
 AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"  # noqa: S105 - Google's address, not a secret
 REVOKE = "https://oauth2.googleapis.com/revoke"
-BUILT_IN = Path(__file__).with_name("google-client.json")
-OWN_COPY = Path.home() / ".ancestree" / "google-client.json"
 SIGN_IN_MINUTES = 10
+# A client's id, as Google makes it: the project's number, then the client's own part.
+CLIENT_ID = re.compile(r"(\d+)-[0-9a-z]+\.apps\.googleusercontent\.com")
 
 
 class GoogleError(Exception):
@@ -56,24 +60,87 @@ class SignedOutError(GoogleError):
     """The sign-in has ended (taken back in the Google account, or expired): sign in again."""
 
 
+class ProjectGoneError(GoogleError):
+    """Google doesn't know the client any more, or the sign-in was made with another (0.4.0):
+    the family's project, or its client, changed."""
+
+
+class ClientFileError(ValueError):
+    """A file that isn't a Google client AncesTree can sign in with: in plain words."""
+
+
 @dataclass(frozen=True)
 class Client:
-    """AncesTree's Google client, of the Desktop app type."""
+    """A family's Google client, of the Desktop app type, from the family's own Google project.
+    `invited`: it came with a keeper's invitation, so the project is that keeper's family's."""
 
     client_id: str
     client_secret: str
+    project: str = ""  # the project's id, as the console's file names it
+    invited: bool = False
+
+    @property
+    def number(self) -> str:
+        """The project's number, which starts every one of its clients' ids: one project's
+        clients reach the same files in Drive."""
+        found = CLIENT_ID.fullmatch(self.client_id)
+        return found.group(1) if found else self.client_id
+
+    @property
+    def name(self) -> str:
+        """The project, as the keeper would know it."""
+        return self.project or f"project {self.number}"
 
     @classmethod
-    def find(cls) -> Client | None:
-        """The client named by ANCESTREE_GOOGLE_CLIENT, if that's set (to try another client);
-        else the one built into this app; else the maintainer's own copy. None if there's
-        none."""
+    def from_file(cls, text: str) -> Client:
+        """The client in the file Google's console gives for it."""
+        try:
+            found = json.loads(text)
+        except ValueError as error:
+            raise ClientFileError(
+                "That isn't the file Google gives for a client: it can't be read as one."
+            ) from error
+        if not isinstance(found, dict):
+            raise ClientFileError("That isn't the file Google gives for a client.")
+        if "installed" not in found and "web" in found:
+            raise ClientFileError(
+                "That client is for a web application. AncesTree needs one for a Desktop app: "
+                "create one of that type in your Google project, and choose its file."
+            )
+        installed = found.get("installed")
+        client_id = installed.get("client_id") if isinstance(installed, dict) else None
+        secret = installed.get("client_secret") if isinstance(installed, dict) else None
+        if not isinstance(client_id, str) or not CLIENT_ID.fullmatch(client_id):
+            raise ClientFileError(
+                "That file holds no Desktop app client: choose the file Google's console gives "
+                "when you download the client."
+            )
+        if not isinstance(secret, str) or not secret.strip():
+            raise ClientFileError("That client's file has no secret in it: download it again.")
+        project = installed.get("project_id") if isinstance(installed, dict) else None
+        return cls(client_id, secret.strip(), project if isinstance(project, str) else "")
+
+    @classmethod
+    def find(cls, kept: Path) -> Client | None:
+        """The client named by ANCESTREE_GOOGLE_CLIENT, if that's set (to try another client
+        while developing); else the family's own, kept in `kept`. None if there's none yet."""
         named = os.environ.get("ANCESTREE_GOOGLE_CLIENT")
-        for path in (Path(named) if named else None, BUILT_IN, OWN_COPY):
-            if path is not None and path.is_file():
-                installed = json.loads(path.read_text(encoding="utf-8"))["installed"]
-                return cls(installed["client_id"], installed["client_secret"])
-        return None
+        if named and Path(named).is_file():
+            return cls.from_file(Path(named).read_text(encoding="utf-8"))
+        stored = read_secret(kept)
+        if stored is None:
+            return None
+        saved = json.loads(stored)
+        return cls(
+            saved["client_id"],
+            saved["client_secret"],
+            saved.get("project", ""),
+            bool(saved.get("invited", False)),
+        )
+
+    def keep(self, path: Path) -> None:
+        """Kept with the family, locked on this computer as the sign-in is."""
+        write_secret(path, json.dumps(asdict(self)).encode())
 
 
 @dataclass
@@ -112,6 +179,10 @@ def _post(url: str, form: dict[str, str]) -> dict[str, Any]:
             said = {}
         if said.get("error") == "invalid_grant":
             raise SignedOutError("The sign-in to Google has ended: sign in again.") from error
+        if said.get("error") in ("invalid_client", "unauthorized_client"):
+            raise ProjectGoneError(
+                "Google doesn't know the family's Google project's client any more."
+            ) from error
         reason = said.get("error_description") or f"Google said no ({error.code})"
         raise GoogleError(reason) from error
     except (urllib.error.URLError, TimeoutError) as error:

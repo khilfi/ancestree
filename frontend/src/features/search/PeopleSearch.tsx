@@ -55,14 +55,15 @@ export function PeopleSearch() {
       <Button
         variant="outline"
         size="sm"
-        // It gives way first when the top bar is short of room; on a phone, the icon alone.
-        className="w-56 min-w-28 shrink justify-start text-stone-500 max-md:w-auto max-md:min-w-0"
+        // It takes the room the top bar has left, and gives way first; where the bar is short,
+        // the icon alone.
+        className="max-w-56 min-w-28 flex-1 justify-start text-stone-500 max-lg:min-w-0 max-lg:flex-none"
         aria-label="Search people"
         onClick={() => setOpen(true)}
       >
         <SearchIcon />
-        <span className="truncate max-md:hidden">Search people…</span>
-        <kbd className="ml-auto rounded border border-stone-200 px-1 text-[10px] text-stone-400 max-md:hidden pointer-coarse:hidden">
+        <span className="truncate max-lg:hidden">Search people…</span>
+        <kbd className="ml-auto rounded border border-stone-200 px-1 text-[10px] text-stone-400 max-lg:hidden pointer-coarse:hidden">
           Ctrl K
         </kbd>
       </Button>

@@ -1,18 +1,22 @@
+import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 
 from ancestree.api.deps import Ctx, Hist
 from ancestree.domain.exports import (
     Backup,
+    BackupChecked,
     BackupList,
     BackupRestored,
+    CopyPlace,
+    ElsewhereChoice,
     ExportFile,
     ExportRequest,
 )
 from ancestree.exchange.copies import CopyOptions
-from ancestree.services import exports
+from ancestree.services import elsewhere, exports
 
 router = APIRouter(tags=["export"])
 
@@ -53,10 +57,48 @@ async def list_backups(ctx: Ctx) -> BackupList:
 
 @router.post("/backups", status_code=status.HTTP_201_CREATED)
 async def add_backup(
-    ctx: Ctx, file: Annotated[UploadFile, File(description="An AncesTree backup archive (.zip)")]
+    ctx: Ctx,
+    file: Annotated[UploadFile, File(description="An AncesTree backup archive (.zip)")],
+    password: Annotated[str | None, Form(max_length=200)] = None,
 ) -> Backup:
-    """Bring in a backup archive from elsewhere, e.g. another disk, to restore from."""
-    return await exports.add_backup(ctx, file.file)
+    """Bring in a backup archive from elsewhere, e.g. another disk, to restore from. A copy
+    locked with a password (0.4.0) is opened with `password`."""
+    return await exports.add_backup(ctx, file.file, password)
+
+
+@router.get("/backups/places")
+async def places_for_copies() -> list[CopyPlace]:
+    """Places on this computer that suit copies of the backups (0.4.0): other disks, and the
+    folders OneDrive, Dropbox and Google Drive's own app keep."""
+    return await asyncio.to_thread(elsewhere.places)
+
+
+@router.put("/backups/elsewhere")
+async def copy_backups_elsewhere(ctx: Ctx, body: ElsewhereChoice) -> BackupList:
+    """Copy every backup to a second place from now on, locked with a password if one is given,
+    which is kept nowhere (0.4.0). The copies not there yet are made at once."""
+    await asyncio.to_thread(elsewhere.choose, ctx, body.folder, body.password or None)
+    return await exports.copy_elsewhere(ctx)
+
+
+@router.post("/backups/elsewhere/copy")
+async def copy_backups_now(ctx: Ctx) -> BackupList:
+    """Make the copies not made yet in the second place, now (0.4.0)."""
+    return await exports.copy_elsewhere(ctx)
+
+
+@router.delete("/backups/elsewhere")
+async def stop_copying_backups(ctx: Ctx) -> BackupList:
+    """No more copies in the second place; those made there stay (0.4.0)."""
+    await asyncio.to_thread(elsewhere.stop, ctx)
+    return await exports.list_backups(ctx)
+
+
+@router.post("/backups/{name}/check")
+async def check_backup(ctx: Ctx, name: str) -> BackupChecked:
+    """Read a backup whole, every file against its checksum, restoring nothing (0.4.0).
+    Refused (422, "bad_archive") if it's damaged."""
+    return await exports.check_backup(ctx, name)
 
 
 @router.post("/backups/{name}/restore")

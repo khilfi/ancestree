@@ -4,6 +4,8 @@ AncesTree keeps your family's tree on your own computer: everyone in it, how the
 
 Each relative who joins has the same family on their own computer. A private folder in Google Drive keeps every computer in step. One person, **the keeper**, looks after the family's record. The keeper looks at every change a relative makes before it reaches everyone else.
 
+**Every family is its own.** Whoever installs AncesTree can keep their own family, as its keeper, through their own Google account: no family goes through anyone else's. One computer can also hold several families, such as your mother's side and your father's, each kept completely apart.
+
 **Who this guide is for:** everyone in the family, on Windows or a Mac. Start at the beginning. Parts marked **For the keeper** are only for the person who keeps the family.
 
 ## Contents
@@ -31,20 +33,21 @@ Each relative who joins has the same family on their own computer. A private fol
 16. [Copies for phones, and other files](#16-copies-for-phones-and-other-files)
 17. [Bringing people in from a spreadsheet](#17-bringing-people-in-from-a-spreadsheet)
 
-**Part 3: The family folder**
+**Part 3: The family folder**: [keeping in step](#keeping-in-step), [signing in to Google](#signing-in-to-google)
 
 18. [For relatives: join your family](#18-for-relatives-join-your-family)
-19. [For the keeper: start and look after the family folder](#19-for-the-keeper-start-and-look-after-the-family-folder)
+19. [For the keeper: start and look after the family folder](#19-for-the-keeper-start-and-look-after-the-family-folder): [your family's Google project](#your-familys-google-project)
 
 **Part 4: Look after AncesTree**
 
-20. [Backups](#20-backups)
-21. [Updates](#21-updates)
-22. [Keep your computer safe](#22-keep-your-computer-safe)
-23. [Where AncesTree keeps the family](#23-where-ancestree-keeps-the-family)
-24. [When something goes wrong](#24-when-something-goes-wrong)
-25. [Removing AncesTree](#25-removing-ancestree)
-26. [Linux](#26-linux)
+20. [Backups](#20-backups): [copies in another place](#copies-in-another-place), [when something is lost](#when-something-is-lost)
+21. [Several families on one computer](#21-several-families-on-one-computer)
+22. [Updates](#22-updates)
+23. [Keep your computer safe](#23-keep-your-computer-safe)
+24. [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)
+25. [When something goes wrong](#25-when-something-goes-wrong)
+26. [Removing AncesTree](#26-removing-ancestree)
+27. [Linux](#27-linux)
 
 ---
 
@@ -61,6 +64,8 @@ Each relative who joins has the same family on their own computer. A private fol
 | **The window** | AncesTree's own window on your screen, with the family in it. |
 | **The icon by the clock** | AncesTree's small icon: a green square with a little family tree on it. On Windows it's at the bottom right, by the clock. On a Mac it's at the top right, in the menu bar. |
 | **The keeper** | The one person who looks after the family's record. |
+| **The family's Google project** | The keeper's own free Google Cloud project, through which every family computer reaches the family folder. The keeper sets it up once. |
+| **The invitation** | A line of text, starting with `ATI1-`, that your keeper sends you so that you can join the family. |
 | **Ctrl** | The key marked **Ctrl** on Windows. On a Mac, use **⌘ Command** wherever this guide says **Ctrl**. |
 
 ## 2. Install AncesTree
@@ -69,7 +74,8 @@ Each relative who joins has the same family on their own computer. A private fol
 
 - **a Windows computer** with Windows 10 or 11, **or a Mac** with Apple Silicon (an M1 chip or newer) and macOS 11 or newer;
 - **the internet**, the first time AncesTree starts. It fetches about 330 MB once;
-- **a Google account**, to join your family. Tell your keeper which one it is.
+- **a Google account**, to join your family. Tell your keeper which one it is;
+- **the invitation** your keeper sends you, to join your family.
 
 Phones and tablets can't install AncesTree. Your keeper can send you a copy to look at instead (see [Copies for phones](#16-copies-for-phones-and-other-files)).
 
@@ -133,11 +139,11 @@ After that, AncesTree opens in a few seconds.
 
 **On a new computer, AncesTree first asks about your family:**
 
-> Welcome to AncesTree. Does your family keep its AncesTree in a family folder? Join it, or start your family's own.
+> Welcome to AncesTree. Has your family's keeper sent you an invitation? Join with it, or start your family's own.
 
 - **A relative** chooses **Join or start**, then follows [Join your family](#18-for-relatives-join-your-family).
 - **The keeper** follows [For the keeper](#19-for-the-keeper-start-and-look-after-the-family-folder).
-- To look around first, choose **Not now**. You can join later from **Settings → Family folder**.
+- **To keep the family on this computer alone,** or to look around first, choose **Not now**. AncesTree works without a family folder. You can join or start one later from **Settings → Family folder**.
 
 ## 4. Opening and closing AncesTree
 
@@ -156,9 +162,12 @@ After that, AncesTree opens in a few seconds.
 | Choice | What it does |
 |---|---|
 | **Open AncesTree** | Opens the window. |
+| **Sync now** | Keeps the family in step with its family folder now, rather than within the minute (see [Keeping in step](#keeping-in-step)). |
 | **Start when I sign in** | Ticked: AncesTree starts by itself when you sign in. Click it to untick. |
-| **Check for updates** | Looks for a new version now (see [Updates](#21-updates)). |
+| **Check for updates** | Looks for a new version now (see [Updates](#22-updates)). |
 | **Quit AncesTree** | Stops AncesTree completely, until you open it again. |
+
+**Point at the icon** to see which family is open, and when it was last in step with its family folder.
 
 **To open AncesTree after quitting it:** on Windows, click **Start** and type **AncesTree**. On a Mac, open it from **Applications**.
 
@@ -179,16 +188,18 @@ The pictures in this part show a made-up family, *Keluarga Contoh*. Your own fam
 | | Name | What it does |
 |---|---|---|
 | 1 | **Family facts** | Facts about the whole family at a glance (see [Family facts](#14-family-facts-and-whats-missing)). |
-| 2 | **Tree**, **Timeline**, **Map** | Three ways to see the family. Click one to switch. |
-| 3 | **Add person** | Adds someone new (see [Adding people](#8-adding-and-changing-people)). |
-| 4 | **Undo** and **Redo** | Undo takes back your last change; Redo puts it back again. Point at them to see which change. |
-| 5 | **Search people…** | Finds someone by name or nickname. |
-| 6 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name (see [Me](#11-me-telling-ancestree-who-you-are)). |
-| 7 | **Export** | Copies for phones, and files for other programs (see [Copies](#16-copies-for-phones-and-other-files)). |
-| 8 | **Dictionary** | The words for relatives in English, Malay and Javanese. |
-| 9 | **Settings** | Settings, backups, the Trash, and the family folder. A number here means something waits for you there. |
+| 2 | **The family's name** | The family you're looking at. Click it to open another family on this computer, or to add one (see [Several families on one computer](#21-several-families-on-one-computer)). |
+| 3 | **In step · 2 minutes ago** | Only with a family folder: how the family stands with it. Click it to see more, or to keep in step at once (see [Keeping in step](#keeping-in-step)). |
+| 4 | **Tree**, **Timeline**, **Map** | Three ways to see the family. Click one to switch. |
+| 5 | **Add person** | Adds someone new (see [Adding people](#8-adding-and-changing-people)). |
+| 6 | **Undo** and **Redo** | Undo takes back your last change; Redo puts it back again. Point at them to see which change. |
+| 7 | **Search people…** | Finds someone by name or nickname. |
+| 8 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name (see [Me](#11-me-telling-ancestree-who-you-are)). |
+| 9 | **Export** | Copies for phones, and files for other programs (see [Copies](#16-copies-for-phones-and-other-files)). |
+| 10 | **Dictionary** | The words for relatives in English, Malay and Javanese. |
+| 11 | **Settings** | Settings, backups, the Trash, and the family folder. A number here means something waits for you there. |
 
-On a smaller screen, some of these show only their icon. Point at an icon to see its name.
+Some show only their icon unless the window is wide, such as Export, Dictionary and Settings here, and more in a smaller window. Point at an icon to see its name.
 
 **Undo works for almost everything:** adding, changing, linking and removing people. Press **Ctrl+Z** to undo and **Ctrl+Y** to redo. Undo reaches back to when AncesTree last started.
 
@@ -549,16 +560,41 @@ The family folder keeps every family computer in step, through a private folder 
 - a relative's changes go to the keeper, who looks at each before it reaches everyone else;
 - everything in Google Drive is locked on the family's computers first. Google keeps the files, but can't read them.
 
-AncesTree must be running for this to happen. It runs by the clock, so leave it there.
+AncesTree reaches Google Drive through **the family's Google project**: the keeper's own, set up once (see [Your family's Google project](#your-familys-google-project)). Nothing of one family goes through another's project, or through AncesTree's maintainer.
 
-**Signing in to Google** happens the same way for relatives and the keeper:
+AncesTree must be running for the family to keep in step. It runs by the clock, so leave it there. A family kept on one computer alone needs none of this part.
+
+### Keeping in step
+
+At the top of the window, beside the family's name, AncesTree says how the family stands with its family folder:
+
+| It says | What it means |
+|---|---|
+| **In step · 2 minutes ago** | All's well: the family is in step with everyone's. |
+| **Keeping in step…** | AncesTree is keeping in step just now. |
+| **Offline · in step 3 hours ago** | There's no internet. AncesTree tries again every minute. |
+| **Not in step since Tue 1 Oct** | Nothing has gone through for over a day. Click it to see why. |
+| **Sign in to Google** | The sign-in has ended. Open **Settings → Family folder**, and sign in again. |
+| **Family folder gone**, or **Not in step** | Something's in the way. Click it to see what. |
+
+**Click it** to see when the family was last in step; when it last arrived, on a relative's computer, or when your last change went out, on the keeper's; and what waits. **Sync now** keeps in step at once.
+
+<img src="guide/app-in-step.png" alt="The family's name at the top, In step beside it, and its window open" width="640">
+
+**Point at the icon by the clock** to see the same, and its menu has **Sync now** too.
+
+AncesTree keeps in step every minute while it runs, a few seconds after each change you make, when you come back to its window, and once more before it closes.
+
+### Signing in to Google
+
+It's the same for relatives and the keeper:
 
 1. Open **Settings → Family folder**, and click **Sign in with Google**. Google's page opens in your web browser.
 
    ![Settings → Family folder, before signing in](guide/app-settings-family-folder.png)
 
 2. **Choose your Google account.** A relative chooses the account their keeper invited.
-3. **Google says "Google hasn't verified this app".** Google says this of any app it hasn't checked, and AncesTree is made for one family. Click **Advanced**, then **Go to AncesTree (unsafe)**.
+3. **Google says "Google hasn't verified this app".** The family's Google project is the keeper's own, and Google hasn't checked it, as it's for one family. Click **Advanced**, then **Go to AncesTree (unsafe)**. (If your keeper gave their project another name, it shows that name instead.)
    <!-- picture: guide/google-1-not-verified.png (Google hasn't verified this app) -->
    <!-- picture: guide/google-2-advanced.png (the same after Advanced, with Go to AncesTree (unsafe)) -->
 4. **Google asks what AncesTree may do.** Tick **both** boxes, then click **Continue**:
@@ -572,22 +608,25 @@ AncesTree must be running for this to happen. It runs by the clock, so leave it 
 
 ## 18. For relatives: join your family
 
-Ask your keeper to invite your Google account first. Google doesn't tell you when they have, so they'll tell you.
+**You need the invitation your keeper sends you**, by message or email: a line of text that starts with `ATI1-`. Your keeper also shares the family folder with your Google account. Google doesn't tell you when they have, so they'll tell you.
 
 ### Join
 
 1. Install AncesTree (see [Install AncesTree](#2-install-ancestree)).
 2. AncesTree says **"Welcome to AncesTree"**. Click **Join or start**. Or open **Settings → Family folder**.
    <!-- picture: guide/relative-1-welcome.png (the welcome bar, with Join or start) -->
-3. Sign in to Google, as above, with the account your keeper invited.
-4. Under **Join your family's AncesTree**, type a name for this computer, such as *Aisyah's laptop*. The family sees this name.
-5. Click **Ask to join**.
-   <!-- picture: guide/relative-2-join.png (Join your family's AncesTree) -->
+3. **Paste the invitation.** Copy all of it from your keeper's message. Under **Join your family's AncesTree**, click in the box, press **Ctrl+V**, and click **Use this invitation**.
+   <!-- picture: guide/relative-2-invitation.png (Join your family's AncesTree, the invitation pasted) -->
+4. **Sign in to Google**, as above, with the account your keeper invited.
+5. Type a name for this computer, such as *Aisyah's laptop*. The family sees this name. Click **Ask to join**.
+   <!-- picture: guide/relative-2-join.png (Join your family's AncesTree, with Ask to join) -->
 6. AncesTree shows **Waiting to be let in**, with a code of eight letters and numbers. **Read the code to your keeper**, by phone or message. They let your computer in only if they see the same code.
    <!-- picture: guide/relative-3-code.png (Waiting to be let in, with the code) -->
 7. Once your keeper lets you in, **the family arrives by itself**, photos and stories too. Leave AncesTree running: with many photos, it can take a while. Meanwhile it says "Photos and stories are still arriving".
 
-If you had already put people into AncesTree yourself, the family replaces them on this computer. What you had is kept in a backup, under **Settings → Backups**: send it to your keeper if it should join the family.
+If AncesTree says **The family folder isn't shared with … yet**, your keeper hasn't shared it with that Google account. Ask them to, then click **Ask to join** again.
+
+If you had already put people into AncesTree yourself, the family replaces them on this computer. What you had is kept in a backup, under **Settings → Backups**: send it to your keeper if it should join the family. Or keep it as a family of its own (see [Several families on one computer](#21-several-families-on-one-computer)).
 
 ### What your computer may do
 
@@ -603,7 +642,7 @@ Some things are the keeper's alone, whatever your role: the kinds of relationshi
 
 ### Your changes
 
-When you change something, the bar at the top says how many of your changes wait for your keeper. AncesTree sends them by itself within a minute. **Send now** sends them at once.
+When you change something, the bar at the top says how many of your changes wait for your keeper. AncesTree sends them by itself within a few seconds. **Send now** sends them at once.
 
 <!-- picture: guide/relative-4-changes-waiting.png (the bar, with Send now) -->
 
@@ -615,45 +654,94 @@ When your keeper leaves something out, or writes you a note, **Settings** shows 
 
 <!-- picture: guide/relative-5-answer.png (The keeper's answer) -->
 
+### When your keeper moves the family folder
+
+If your keeper makes the family folder again, or moves it to another Google account, your computer finds it and carries on by itself.
+
+If they move it to another Google project, AncesTree asks for **your keeper's newest invitation**. In **Settings → Family folder**, click **Your keeper sent a new invitation?**, paste it, click **Use this invitation**, then sign in again.
+
 ### Leaving the family
 
 1. Ask your keeper to remove your computer.
 2. On your computer, open **Settings → Family folder**, click **Leave the family folder…**, then **Leave**.
 
-The family stays on your computer as it is, as your own: nothing new arrives, and nothing you change goes to the keeper. You can ask to join again later.
+The family stays on your computer as it is, as your own: nothing new arrives, and nothing you change goes to the keeper. You can ask to join again later, with an invitation.
 
-**Asked to join the wrong family, or your keeper turned your computer away by mistake?** Click **Leave the family folder…** under **Waiting to be let in**, then ask to join again.
+**Asked to join the wrong family, or your keeper turned your computer away by mistake?** Click **Leave the family folder…** under **Waiting to be let in**, then join again.
 
 ## 19. For the keeper: start and look after the family folder
 
-**For the keeper.** You start the family's folder once, in your Google Drive, then let each relative's computer in.
+**For the keeper.** You set up your family's Google project once, start the family's folder in your Google Drive, then invite relatives and let each of their computers in.
 
 **Before you start:**
 
 - **Bring your family in first.** If your family is in another AncesTree, move it across first (see [Moving the family to another computer](#moving-the-family-to-another-computer)). Starting the family folder sends your family as it is.
 - **Choose the Google account carefully.** The family folder lives in its Drive. You'll need this same account to be the keeper again on another computer.
+- **Allow about 20 minutes** the first time, for the Google project.
 - **Keep a pen and paper, or a printer, ready** for your recovery code.
+
+### Your family's Google project
+
+AncesTree reaches Google Drive through a Google Cloud project, and each family uses its own: yours, free, set up once. Your relatives sign in through it, and nothing of your family goes through anyone else's.
+
+1. **Open the Google Cloud console**, [console.cloud.google.com](https://console.cloud.google.com), and sign in with the Google account that will hold the family folder. The first time, agree to Google's terms.
+   <!-- picture: guide/project-1-console.png (the Google Cloud console, the first time) -->
+2. **Make a project.** Click the project list at the top, then **New project**. Name it, for example *AncesTree Keluarga Rahman*, and click **Create**. Check that it's chosen in the project list.
+   <!-- picture: guide/project-2-new.png (New project, named) -->
+3. **Switch on Google Drive's API.** Open the menu (**☰**), then **APIs & Services → Library**. Search for **Google Drive API**, click it, then click **Enable**.
+   <!-- picture: guide/project-3-drive-api.png (Google Drive API, with Enable) -->
+4. **Describe AncesTree to Google.** Open the menu, then **Google Auth platform**, and click **Get started**:
+   - **App name:** *AncesTree*. Your relatives see this name when they sign in;
+   - **User support email:** your own. Click **Next**;
+   - **Audience:** **External**. Click **Next**;
+   - **Contact information:** your email again. Click **Next**;
+   - tick that you agree to Google's API Services User Data Policy, then click **Continue**, and **Create**.
+   <!-- picture: guide/project-4-branding.png (Google Auth platform: App name, User support email) -->
+5. **Say what AncesTree may do.** Under **Google Auth platform**, open **Data Access**, and click **Add or remove scopes**. Tick these two, or paste them under **Manually add scopes**:
+   - `https://www.googleapis.com/auth/drive.readonly`
+   - `https://www.googleapis.com/auth/drive.file`
+
+   Click **Update**, then **Save**.
+   <!-- picture: guide/project-5-scopes.png (Data Access, the two scopes added) -->
+6. **Put it in production.** Open **Audience**, and under **Publishing status**, click **Publish app**, then **Confirm**. Without this, each sign-in ends after a week. Google doesn't need to verify it: it's for your family alone, and up to 100 people can sign in through it.
+   <!-- picture: guide/project-6-publish.png (Audience: In production) -->
+7. **Make its client.** Open **Clients**, and click **Create client**. For **Application type**, choose **Desktop app**. Name it *AncesTree*, and click **Create**. Then click **Download JSON**: the client's file goes to your **Downloads** folder.
+   <!-- picture: guide/project-7-client.png (the client made, with Download JSON) -->
+8. **Give it to AncesTree.** Open **Settings → Family folder**. Under **Start your family's folder, as its keeper**, click **Choose the client's file…**, and choose the file you downloaded. AncesTree keeps it with this family, locked.
+
+   ![Settings → Family folder, before the family's Google project is chosen](guide/app-family-folder-project.png)
+
+**Keep the client's file** somewhere safe, as you keep your recovery code: you'll need it to be the keeper again on a new computer. It isn't your Google password, but share it only with your family: your invitations carry it to them. If it's lost, make another client in the same project.
 
 ### Start the family folder
 
-1. Sign in to Google, as above, with your account.
+1. Sign in to Google, as above, with the account that will hold the family folder.
 2. Under **Start your family's folder, as its keeper**, type the family's name, such as *Keluarga Rahman*, and this computer's name, such as *Home PC*.
 3. Click **Start the family folder**.
    <!-- picture: guide/keeper-1-start.png (Start your family's folder, as its keeper) -->
-4. **AncesTree shows your recovery code.** With it, and this Google account, you can be the family's keeper again on another computer. Without it, no one can.
+4. **AncesTree shows your recovery code.** With it, the client's file and this Google account, you can be the family's keeper again on another computer. Without it, no one can.
    - Click **Print**, or write the code down. Keep it somewhere safe, away from this computer: with your important papers, or in your password manager.
    - When it's safe, click **I've kept it safe**. AncesTree shows the code until you do, then never again.
    <!-- picture: guide/keeper-2-recovery-code.png (Your recovery code; the code covered) -->
 
-A Google account's Drive holds one family folder: AncesTree won't start a second.
+**One Google account can hold several families' folders,** such as both sides of your family. If its Drive holds one already, AncesTree asks first: if it's this family's, be its keeper again instead (see [Be the keeper on a new computer](#be-the-keeper-on-a-new-computer)); if it's another family, click **Start another family's folder**.
 
 **Lost your recovery code, or someone else may have seen it?** In **Settings → Family folder**, click **Lost your recovery code?**, then **Make a new recovery code**, and **Make it**. Keep the new code as you kept the old. Once it's in your Google Drive, the old code opens nothing.
 
 ### Invite a relative
 
 1. Under **Invite a relative, by their Google account**, type their Google address, and click **Invite**.
-   <!-- picture: guide/keeper-3-invite.png (Invite a relative) -->
-2. **Tell them yourself:** Google doesn't send them anything. Send them this guide, and ask them to follow [Join your family](#18-for-relatives-join-your-family).
+2. **AncesTree shows the invitation to send.** Click **Copy**, and paste it into a message or an email to them. It comes with a few lines on installing AncesTree.
+   <!-- picture: guide/keeper-3-invitation.png (The invitation to send, with Copy) -->
+3. Ask them to follow [Join your family](#18-for-relatives-join-your-family).
+
+The invitation holds your family's Google project, not your family: only the Google accounts you invite can open the family folder, and you check each computer's code. Send it only to family. To send it again, click **Show the invitation**, under the family's computers.
+
+### Your own other computers
+
+A laptop or Mac of your own joins as a relative's does, but with your own Google account, so there's no need to invite it. On it, paste the invitation (click **Show the invitation** on this computer to see it), sign in with your own account, and ask to join. Let it in as **Trusted**: what you change there comes in by itself.
+
+Don't use **Be the keeper again** on it: only one computer keeps the family.
 
 ### Let their computer in
 
@@ -696,12 +784,36 @@ Under **The family's computers**, click **Remove** beside it, then **Remove** ag
 ### Be the keeper on a new computer
 
 1. Install AncesTree on the new computer.
-2. Open **Settings → Family folder**, and sign in with the Google account that started the family folder.
-3. Click **The family's keeper, on a new computer?**, type your recovery code, and click **Be the keeper again**.
+2. Open **Settings → Family folder**, click **Choose the client's file…**, and choose your family's Google project's client file (see [Your family's Google project](#your-familys-google-project)).
+3. Sign in with the Google account that holds the family folder.
+4. Click **The family's keeper, on a new computer?**, type your recovery code, and click **Be the keeper again**.
 
-The family comes back from the family folder. If photos and stories are still arriving, AncesTree says so, and waits for them before it sends anything.
+The family comes back from the family folder. If your Google account holds several families' folders, the code finds its own. If photos and stories are still arriving, AncesTree says so, and waits for them before it sends anything.
 
-The old computer, if it still runs, stops keeping the family by itself: its **Settings → Family folder** says **Another computer keeps the family now**. Click **Leave the family folder…** there, then **Leave**, or [remove AncesTree](#25-removing-ancestree) from it.
+The old computer, if it still runs, stops keeping the family by itself: its **Settings → Family folder** says **Another computer keeps the family now**. Click **Leave the family folder…** there, then **Leave**, or [remove AncesTree](#26-removing-ancestree) from it.
+
+### When the family folder is lost: rebuild it
+
+If the family folder is deleted from Google Drive, past the bin's 30 days, or the Google account holding it is lost, your computer still has every one of its files:
+
+1. Open **Settings → Family folder**. It says **The family folder is gone from Google Drive**.
+2. Click **Rebuild the family folder**, then **Rebuild it**.
+
+A new family folder is made from this computer, with the same family, keys and history, and shared again with each relative's Google account. Their computers find it and carry on by themselves: nobody joins again. If the old one is only in Drive's bin, take it out there instead.
+
+<!-- picture: guide/keeper-8-rebuild.png (The family folder is gone from Google Drive, with Rebuild) -->
+
+### Move the family folder
+
+To keep the family folder in another Google account, or through another Google project:
+
+1. Open **Settings → Family folder**, and click **Move the family folder to another Google account or project?**
+2. Click **Another Google account…**, and sign in with that account in your browser. Or click **Another Google project's client file…**, choose the new project's client file, and sign in.
+3. Click **Rebuild it here**.
+
+The old folder goes to Drive's bin, and relatives' computers follow the new one. If AncesTree can't put it in the bin, it says so: delete it in Google Drive yourself, then click **I've deleted it**.
+
+After a move to another Google project, send relatives the new invitation (**Show the invitation**): their AncesTree asks for it.
 
 ### Copies for those without AncesTree
 
@@ -722,24 +834,79 @@ Open **Settings → Backups** to see them all.
 | To | Do this |
 |---|---|
 | Make a backup now | Click **Back up now**. |
-| Copy a backup somewhere safe | Click the download arrow beside it. It goes to your **Downloads** folder; copy it to a USB stick or another disk now and then. |
-| Bring in a backup from elsewhere | Click **Add a backup file…**, and choose the file. |
+| Copy a backup somewhere safe | Keep copies in another place (below), or click the download arrow beside one: it goes to your **Downloads** folder. |
+| Check a backup | Click the double tick beside it. AncesTree reads all of it, every file against its checksum, and restores nothing. |
+| Bring in a backup from elsewhere | Click **Add a backup file…**, and choose the file. A locked copy asks for its password. |
 | Go back to a backup | Click **Restore…** beside it, then **Replace everything**. |
 
-**Restoring replaces everything** in AncesTree with what the backup holds. Everything as it is just before is backed up first, so you can always go back.
+**Restoring replaces everything** in the family with what the backup holds. Everything as it is just before is backed up first, so you can always go back. A backup of another family on this computer can't be restored into this one.
 
 On a relative's computer, restoring is the keeper's alone: the family comes from the family folder.
+
+### Copies in another place
+
+The backups are on this computer's own disk: if the computer is lost, so are they. Keep copies somewhere else too.
+
+1. In **Settings → Backups**, under **Copies in another place**, click **Choose a place…**.
+2. Choose a place AncesTree found, such as a USB stick or OneDrive's folder. Or choose **Another folder**, and type where it is, such as `E:\AncesTree backups`.
+3. **Lock the copies with a password** is ticked. Keep it so, above all for a folder OneDrive, Dropbox or Google Drive keeps: anyone who gets a copy then can't read it. Type a password twice. AncesTree doesn't keep it, so keep it with your recovery code.
+4. Click **Copy them there**.
+
+![Copies in another place, in Settings → Backups](guide/app-copies-elsewhere.png)
+
+From then on, each backup is copied there as it's made, into a folder named `AncesTree` and the family's id. When the place isn't there, a USB stick taken out say, Settings says so, and the copies catch up once it's back. The last 30 daily copies are kept, as the backups are, and copies of the backups you made yourself for good.
+
+To bring a copy back: **Add a backup file…**, choose it, and type its password if it's locked.
 
 ### Moving the family to another computer
 
 - **The keeper, with a family folder:** see [Be the keeper on a new computer](#be-the-keeper-on-a-new-computer). The family comes from the family folder.
-- **A relative:** install AncesTree on the new computer and [join](#18-for-relatives-join-your-family) again. Ask your keeper to remove your old computer.
+- **A relative:** install AncesTree on the new computer and [join](#18-for-relatives-join-your-family) again, with the invitation. Ask your keeper to remove your old computer.
 - **Anyone without a family folder:**
   1. On the old computer, open **Settings → Backups**, click **Back up now**, then the download arrow beside the new backup. Copy the file to a USB stick.
   2. On the new computer, install AncesTree, open **Settings → Backups**, click **Add a backup file…**, and choose the file from the USB stick.
   3. Click **Restore…** beside it, then **Replace everything**.
 
-## 21. Updates
+  Or, on the new computer, click the family's name at the top, then **Add a family…** and **Add one from a backup…**: the family opens with the backup restored.
+
+### When something is lost
+
+| What's lost | What to do |
+|---|---|
+| A relative's computer | On another computer, install AncesTree, paste the invitation, and ask to join. The keeper lets it in. |
+| The keeper's computer | On another computer, give AncesTree the family's Google project's file, sign in, and **Be the keeper again** with the recovery code. |
+| The family folder in Google Drive | On the keeper's computer, **Rebuild the family folder**. Relatives' computers follow it. |
+| The keeper's computer, and the family folder | On another computer, restore the newest backup: a copy kept in another place, or one a relative makes and sends you. Then start a new family folder, and invite everyone again. Relatives leave the old family folder, and join with the new invitation. |
+| The family's Google project | Set up a new one, then [move the family folder](#move-the-family-folder) into it. Relatives paste the new invitation. |
+| The recovery code | On the keeper's computer, **Make a new recovery code**. |
+| A change brought in by mistake | **Undo**, or **Take back…** under **Earlier imports**. Or restore an earlier backup on the keeper's computer: it reaches everyone. |
+
+## 21. Several families on one computer
+
+AncesTree can keep several families on one computer, such as your mother's side and your father's. Each is completely apart: its own people, photos, stories, backups and family folder. Nothing of one ever shows in another.
+
+<img src="guide/app-families.png" alt="The family's name at the top, with its menu open" width="560">
+
+- **The family's name is at the top left** of the window. Click it to see the families on this computer, and to open another.
+- **To add a family,** click the family's name, then **Add a family…**. Type its name, and click **Add and open it**. Or click **Add one from a backup…**: it opens with the backup restored.
+- **Opening another family** takes a few seconds: AncesTree keeps the open one in step once more, closes it, and opens the other. Undo starts afresh.
+- **Only the open family keeps in step** with its family folder. The others catch up when you open them, and relatives' changes wait for you meanwhile.
+- **Each family has its own family folder, or none.** You can keep one family, and be a relative in another, each with its own invitation and Google account.
+
+**Settings → Families** lists them all:
+
+| To | Do this |
+|---|---|
+| Open one | Click **Open** beside it. |
+| Rename one | Click **Rename…**. Only this computer sees the name. |
+| Remove one from this computer | Click **Remove…**, then **Remove**. It goes to AncesTree's bin for 30 days, then it's deleted. The family that's open can't be removed: open another first. |
+| Bring one back | Under **In AncesTree's bin**, click **Put back** beside it. |
+
+![Settings → Families](guide/app-settings-families.png)
+
+If you keep a family's family folder, removing it from this computer means nothing you change reaches relatives, and their changes wait. With your recovery code, you can be its keeper again on another computer.
+
+## 22. Updates
 
 AncesTree looks for a new version each time it starts, and once a day. When there's one, a bar at the top says **A new version of AncesTree is ready**. Click **Restart to update**. Or carry on: it updates itself the next time AncesTree starts.
 
@@ -753,7 +920,7 @@ To look for a new version yourself, right-click the icon by the clock and choose
 
 AncesTree installs only updates signed by its maintainer.
 
-## 22. Keep your computer safe
+## 23. Keep your computer safe
 
 The family folder in Google Drive is locked: only your family's computers can read it. On each computer, though, the family is kept as it is. Anyone who has your computer can read it, unless its disk is locked. Many new computers lock it already. To check, and to switch it on:
 
@@ -765,7 +932,7 @@ When you switch it on, you're given a recovery key. Keep it as safely as the kee
 
 Give your computer a password too, so that no one else can sign in to it.
 
-## 23. Where AncesTree keeps the family
+## 24. Where AncesTree keeps the family
 
 AncesTree keeps everything in one folder:
 
@@ -778,38 +945,49 @@ To open it on Windows, copy its name into the address bar of File Explorer and p
 
 Inside it:
 
-- `family`: the photos, life stories and settings;
-- `backups`: the backups;
+- `family`, `backups` and `neo4j`: the first family's photos, life stories and settings; its backups; and its database;
+- `families`: each family added since, in a folder of its own, with the same three inside;
+- `removed`: families removed from this computer, for 30 days;
+- `families.json`: the list of the families, and which one is open;
 - `logs`: notes AncesTree keeps of what it did. If something goes wrong, your keeper may ask for this folder.
 
-**Settings → About** shows where the folders are.
+**Settings → About** shows where the open family's folders are.
 
-## 24. When something goes wrong
+## 25. When something goes wrong
 
 | What you see | What to do |
 |---|---|
 | **AncesTree needs the internet this once, to fetch its database** | Connect to the internet. AncesTree tries again by itself. |
-| **AncesTree's engine stopped**, or **Can't reach the database** | Right-click the icon by the clock and choose **Quit AncesTree**. Then open AncesTree again. Nothing is lost: your family is safe on the disk. If it happens again, send your keeper the `logs` folder (see [Where AncesTree keeps the family](#23-where-ancestree-keeps-the-family)). |
+| **AncesTree's engine stopped**, or **Can't reach the database** | Right-click the icon by the clock and choose **Quit AncesTree**. Then open AncesTree again. Nothing is lost: your family is safe on the disk. If it happens again, send your keeper the `logs` folder (see [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)). |
 | The window has gone | AncesTree is still running. Click its icon by the clock. On a Mac, you can also click AncesTree in the Dock. |
 | No icon by the clock | On Windows, click the small **^** arrow beside the clock: the icon may be hidden there. If it isn't, AncesTree isn't running: open it from **Start** (Windows) or **Applications** (Mac). |
-| **No family folder is shared with this Google account yet** | Check that you signed in with the account your keeper invited. If you did, ask your keeper to invite it, then click **look again**. |
+| **That isn't an AncesTree invitation**, or **That invitation isn't whole** | Copy all of it from your keeper's message, from `ATI1-` to its end, and paste it again. |
+| **The family folder isn't shared with … yet** | Check that you signed in with the account your keeper invited. If you did, ask your keeper to invite it, then click **Ask to join** again. |
+| **This family has no Google project to sign in through yet** | A relative: paste your keeper's invitation. The keeper: choose your project's client file (see [Your family's Google project](#your-familys-google-project)). |
+| **Your family's Google project has changed: paste your keeper's newest invitation** | Ask your keeper for it. Paste it under **Your keeper sent a new invitation?**, then sign in again. |
+| **That client is for a web application** (the keeper) | In your Google project, make a client of the **Desktop app** type, and choose its file. |
 | **Both boxes need ticking on Google's page** | Sign in again, and tick both boxes. |
 | **The sign-in to Google has ended: sign in again** | Open **Settings → Family folder**, and click **Sign in with Google**. |
-| **That was … This computer's family folder is with …** | You signed in with another Google account. Sign in again with the account it names. |
+| **That was … This computer's family folder is with …** | You signed in with another Google account. Sign in again, and on Google's page choose the account it names. If your browser keeps choosing the other one, click **Sign in with Google**, right-click **Open it** beside it, and copy the link. Paste it into a private window (**Ctrl+Shift+N**; on a Mac, **Shift+Command+N**), and sign in there afresh. |
 | **No internet just now** | Nothing to do: AncesTree tries again every minute. |
 | **Photos and stories are still arriving** | Leave AncesTree running: the family comes when they have. |
-| **The family folder isn't shared with this Google account any more** | Ask your keeper. |
+| **The family folder isn't shared with this Google account any more** | Ask your keeper. If they started the family folder again, they'll send a new invitation: click **Leave the family folder…**, then join with it. |
 | **This computer was removed from the family** | Your keeper removed it. What's on it stays, but nothing new arrives. |
-| **This computer's part can't be opened here** | Its family folder was copied from another computer or another Windows user. Click **Leave the family folder…**, then **Leave**. Then ask to join again, or, as the keeper, be the keeper again with your recovery code. |
+| **This computer's part can't be opened here** | Its family folder was copied from another computer or another Windows user. Click **Leave the family folder…**, then **Leave**. Then join again, or, as the keeper, be the keeper again with your recovery code. |
 | **Another computer keeps the family now** (the keeper) | You became the keeper on another computer with your recovery code. Keep the family there. Click **Leave the family folder…** here, then **Leave**. |
-| **The family folder can't be found in your Google Drive** (the keeper) | If the folder was deleted, take it out of the bin in Google Drive. |
-| **That recovery code doesn't open this family folder** (the keeper) | Check the code, and that you signed in with the account that started the family folder. Spaces and capitals don't matter. If you made a new code since, only the new one works. |
-| **There's an AncesTree family folder in this Google account's Drive already** (the keeper) | Your family folder is there. To keep it on this computer, click **The family's keeper, on a new computer?** and use your recovery code. |
+| **The family folder can't be found in your Google Drive** (the keeper) | If it's in Google Drive's bin, take it out. If it's gone, click **Rebuild the family folder** (see [When the family folder is lost](#when-the-family-folder-is-lost-rebuild-it)). |
+| **The family's old folder is still in Google Drive** (the keeper) | Delete the old family folder in Google Drive, then click **I've deleted it**. |
+| **The family folder was made through another Google project** (the keeper) | It was made before your family had its own project. Click **Rebuild the family folder**: relatives' computers follow it. |
+| **That recovery code doesn't open …** (the keeper) | Check the code, and that you signed in with the account that holds the family folder. Spaces and capitals don't matter. If you made a new code since, only the new one works. |
+| **Your Google Drive holds a family folder already** (the keeper) | If it's this family's, click **The family's keeper, on a new computer?** and use your recovery code. If it's another family's, click **Start another family's folder**. |
 | **What … sends you couldn't be fetched just now** (the keeper) | Nothing to do: the rest of the family is in step, and AncesTree tries again every minute. If it stays, tell whoever looks after AncesTree. |
+| **That backup is of …, not …** | It's another family's backup. Open that family to restore it, or add it as a family of its own (see [Several families](#21-several-families-on-one-computer)). |
+| **That password doesn't open this backup** | Check the password the copies were locked with. Capitals matter. |
+| **… can't be reached: is its disk plugged in?** (Backups) | Plug in the USB stick or disk that holds the copies. They catch up by themselves. |
 | A photo won't go in | Photos can be up to 20 MB. Try a smaller copy. |
 | Something else | Note what it says, and tell your keeper. |
 
-## 25. Removing AncesTree
+## 26. Removing AncesTree
 
 If you're leaving the family, first ask your keeper to remove your computer, and [leave the family folder](#leaving-the-family).
 
@@ -818,7 +996,7 @@ If you're leaving the family, first ask your keeper to remove your computer, and
 1. Click **Start**, then **Settings → Apps → Installed apps**.
 2. Click **…** beside **AncesTree**, then **Uninstall**.
 3. The uninstaller asks whether to **Delete the application data**:
-   - leave it **unticked** to keep the family and its backups on this computer, for if you install AncesTree again;
+   - leave it **unticked** to keep the families and their backups on this computer, for if you install AncesTree again;
    - tick it to remove them too.
 
 <!-- picture: guide/windows-6-uninstall.png (the uninstaller, with Delete the application data) -->
@@ -831,9 +1009,9 @@ The same box appears if you install a new version over an old one and choose to 
 2. Choose **Quit AncesTree**.
 3. Drag AncesTree from **Applications** to the Bin.
 
-The family stays in its folder (see [Where AncesTree keeps the family](#23-where-ancestree-keeps-the-family)) until you delete that folder too.
+The families stay in AncesTree's folder (see [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)) until you delete that folder too.
 
-## 26. Linux
+## 27. Linux
 
 AncesTree also runs on Linux, on a 64-bit Intel or AMD computer. Everything in this guide is the same, except:
 
@@ -841,5 +1019,6 @@ AncesTree also runs on Linux, on a 64-bit Intel or AMD computer. Everything in t
 - **If nothing happens:** run it from a terminal. If it mentions FUSE, install it: `sudo apt install libfuse2t64` on Ubuntu 24.04 or newer, or `sudo apt install libfuse2` on Ubuntu 22.04.
 - **The icon by the clock** is in the top bar or panel, if your desktop shows such icons. On GNOME, add the **AppIndicator** extension. Clicking the icon may only open its menu: choose **Open AncesTree**.
 - **The folder** is `~/.local/share/app.ancestree.desktop`.
+- **Copies in another place:** AncesTree finds disks under `/media` and `/run/media`.
 - **Locking the disk:** choose to encrypt the disk when you install Linux. Most kinds of Linux can't switch it on afterwards.
 - **Removing AncesTree:** untick **Start when I sign in**, choose **Quit AncesTree**, and delete the AppImage.

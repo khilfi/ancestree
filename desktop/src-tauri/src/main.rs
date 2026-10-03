@@ -5,6 +5,11 @@
 //! shell how it's getting on, one JSON line at a time, and stops when its input closes. Each
 //! start, the shell makes a secret that only the window gets, so nothing else on this
 //! computer, a web page included, can reach the engine (ancestree/desktop/guard.py).
+//!
+//! The engine opens one family of those on the computer (0.4.0). Opening another, from the
+//! app, it says "restart": the shell shows the loading page, stops it, and starts it again,
+//! on the other family's folders. Each round with the family folder, it says how things stand,
+//! for the icon's tooltip; and the icon's menu has Sync now.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -12,6 +17,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -34,7 +40,8 @@ const BENCH: &str = include_str!("bench.js");
 const HIDDEN: &str = "--hidden";
 
 /// The engine while it runs: its input (closing it stops the engine), the process, the
-/// secret the window enters with, and where the window finds it once it's ready.
+/// secret the window enters with, and where the window finds it once it's ready. Each start is
+/// counted, so what an engine stopping for another family says last is heard as old news.
 #[derive(Default)]
 struct Engine {
     input: Mutex<Option<ChildStdin>>,
@@ -43,7 +50,13 @@ struct Engine {
     job: Mutex<Option<job::Job>>,
     secret: String,
     origin: Mutex<Option<String>>,
+    started: AtomicU64,
 }
+
+/// The loading page's address, as the window first had it: shown again while the engine
+/// starts on another family.
+#[derive(Default)]
+struct LoadingPage(Mutex<Option<Url>>);
 
 /// 32 random bytes, made afresh at each start, as hex. The tests give their own, in
 /// ANCESTREE_SESSION, to reach the engine as the window does.
@@ -147,6 +160,7 @@ fn start_engine(app: &AppHandle) -> std::io::Result<()> {
         command.process_group(0); // the engine and Neo4j, stopped together if need be
     }
     let mut child = command.spawn()?;
+    let start = engine.started.fetch_add(1, Ordering::SeqCst) + 1;
     #[cfg(windows)]
     {
         // Whatever happens to the shell, Windows ends the engine and Neo4j with it.
@@ -167,6 +181,9 @@ fn start_engine(app: &AppHandle) -> std::io::Result<()> {
             let Ok(event) = serde_json::from_str::<Value>(&line) else {
                 continue;
             };
+            if app.state::<Engine>().started.load(Ordering::SeqCst) != start {
+                continue; // an engine that stopped for another family: old news
+            }
             tell_page(&app, event.clone());
             match event["stage"].as_str() {
                 Some("ready") => {
@@ -205,13 +222,50 @@ fn start_engine(app: &AppHandle) -> std::io::Result<()> {
                         std::thread::spawn(move || install(&app, &update, &bytes));
                     }
                 }
+                // Another family, opened in the app (0.4.0).
+                Some("restart") => {
+                    let family = event["family"].as_str().unwrap_or_default().to_owned();
+                    let app = app.clone();
+                    std::thread::spawn(move || restart_engine(&app, &family));
+                }
+                // How the family stands with its family folder, each round (0.4.0).
+                Some("in-step") => {
+                    let text = event["text"].as_str();
+                    if let (Some(tray), Some(text)) = (app.tray_by_id("main"), text) {
+                        let _ = tray.set_tooltip(Some(text));
+                    }
+                }
                 _ => {}
             }
         }
         log(&app, "engine: output closed");
-        tell_page(&app, serde_json::json!({ "stage": "exited" }));
+        if app.state::<Engine>().started.load(Ordering::SeqCst) == start {
+            tell_page(&app, serde_json::json!({ "stage": "exited" }));
+        }
     });
     Ok(())
+}
+
+/// Another family, opened in the app (0.4.0): the loading page while the engine stops, then
+/// the engine again, which opens the family the families list now names.
+fn restart_engine(app: &AppHandle, family: &str) {
+    log(app, "another family opened: the engine starts again");
+    tell_page(
+        app,
+        serde_json::json!({ "stage": "opening", "family": family }),
+    );
+    let loading = app.state::<LoadingPage>().0.lock().unwrap().clone();
+    if let (Some(window), Some(url)) = (app.get_webview_window("main"), loading) {
+        let _ = window.navigate(url);
+    }
+    *app.state::<Engine>().origin.lock().unwrap() = None;
+    // What the stopping engine says from now on, its end above all, is old news.
+    app.state::<Engine>().started.fetch_add(1, Ordering::SeqCst);
+    stop_engine(app);
+    if let Err(error) = start_engine(app) {
+        log(app, &format!("the engine couldn't start again: {error}"));
+        tell_page(app, serde_json::json!({ "stage": "exited" }));
+    }
 }
 
 /// Close the engine's input, which tells it to stop Neo4j and go; kill it only if it hangs.
@@ -426,10 +480,14 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         starts,
         None::<&str>,
     )?;
+    let sync = MenuItem::with_id(app, "sync", "Sync now", true, None::<&str>)?;
     let updates = MenuItem::with_id(app, "updates", "Check for updates", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit AncesTree", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&open, &at_sign_in, &updates, &separator, &quit_item])?;
+    let menu = Menu::with_items(
+        app,
+        &[&open, &sync, &at_sign_in, &updates, &separator, &quit_item],
+    )?;
     TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().expect("the app's icon").clone())
         .tooltip("AncesTree")
@@ -443,6 +501,8 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 log(app, &format!("start at sign-in: {wanted} ({done:?})"));
                 let _ = at_sign_in.set_checked(app.autolaunch().is_enabled().unwrap_or(false));
             }
+            // The family folder, in step now rather than within the minute (0.4.0).
+            "sync" => tell_engine(app, "sync"),
             "updates" => {
                 show_main(app); // where the answer shows
                 let app = app.clone();
@@ -598,6 +658,7 @@ fn main() {
         )
         .manage(Pending::default())
         .manage(Latest::default())
+        .manage(LoadingPage::default())
         .manage(Engine {
             secret: session_secret(),
             ..Engine::default()
@@ -646,6 +707,9 @@ fn main() {
                 window = window.initialization_script(BENCH);
             }
             let window = window.build()?;
+            if let Ok(url) = window.url() {
+                *app.state::<LoadingPage>().0.lock().unwrap() = Some(url);
+            }
             let keep = window.clone();
             window.on_window_event(move |event| {
                 if let WindowEvent::CloseRequested { api, .. } = event {

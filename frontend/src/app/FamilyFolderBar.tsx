@@ -78,7 +78,7 @@ export function FamilyFolderBar() {
     );
   }
 
-  const newInstall = desktop && status.available && !status.setup && people === 0;
+  const newInstall = desktop && !status.setup && people === 0;
   if (!newInstall || notNow) return null;
   return (
     <div
@@ -86,7 +86,7 @@ export function FamilyFolderBar() {
       className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-sky-200 bg-sky-50 px-3 py-1.5 text-sm text-sky-900 md:px-4"
     >
       <span>
-        Welcome to AncesTree. Does your family keep its AncesTree in a family folder? Join it, or
+        Welcome to AncesTree. Has your family's keeper sent you an invitation? Join with it, or
         start your family's own.
       </span>
       <Button size="sm" className="ml-auto" asChild>

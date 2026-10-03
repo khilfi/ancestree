@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router";
+import { useFamilies } from "@/api/desktop";
 import { useFamilyFolder, waitingIn } from "@/api/familyFolder";
 import { useTrash } from "@/api/queries";
 import { useDatabaseDown } from "@/app/DatabaseWarning";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { to: "kinship", label: "Kinship words" },
   { to: "me", label: "Me" },
+  { to: "families", label: "Families" },
   { to: "family-folder", label: "Family folder" },
   { to: "kinds", label: "Relationship kinds" },
   { to: "missing", label: "What's missing" },
@@ -31,6 +33,8 @@ export function SettingsPage() {
   const inTrash = useTrash().data?.length ?? 0;
   const { asking, changes, answered, all } = waitingIn(useFamilyFolder().data);
   const down = useDatabaseDown();
+  // Several families on one computer are the desktop app's alone (0.4.0).
+  const desktop = Boolean(useFamilies().data);
 
   return (
     <div className="flex h-full">
@@ -39,7 +43,7 @@ export function SettingsPage() {
         className="w-52 shrink-0 space-y-1 border-r border-stone-200 bg-white p-3"
       >
         <h1 className="px-3 pt-1 pb-2 text-lg font-semibold">Settings</h1>
-        {SECTIONS.map((section) => (
+        {SECTIONS.filter((section) => desktop || section.to !== "families").map((section) => (
           <NavLink key={section.to} to={section.to} className={sectionClass}>
             {section.label}
             {section.to === "family-folder" && all > 0 && (

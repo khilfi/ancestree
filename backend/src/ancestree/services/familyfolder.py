@@ -35,6 +35,17 @@ person asks for that Google, Drive or this computer can't do comes back as a pla
 Only one computer keeps the family at a time. One brought back as the keeper with the recovery
 code says so in the record at once; the keeper's computer it replaces sees the record move on
 without it, and stops publishing (`replaced`), so the record never splits in two.
+
+Since 0.4.0 each family signs in through its own Google project: the keeper gives AncesTree its
+client's file, and relatives' computers take it from the keeper's invitation (invitations.py).
+Folders in Drive carry the family's id in their names, so one Google account can keep several
+families' folders, and a keeper of two never mixes their relatives' computers.
+
+The keeper's computer holds every file of the family folder, so a family folder lost from Drive
+is made again from it (`rebuild`), with the same keys and record; the same moves it to another
+Google account or project. A relative's computer whose family folder has gone looks for the
+same family, by its id and its keeper's signing key, among the folders shared with it, and
+follows it there by itself (`_follow`).
 """
 
 from __future__ import annotations
@@ -46,10 +57,12 @@ import hashlib
 import json
 import logging
 import re
+import secrets
 import shutil
 from collections.abc import Awaitable, Callable, Iterator
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any, Literal
 
@@ -84,19 +97,22 @@ from ancestree.familyfolder.changes import (
     unpack,
 )
 from ancestree.familyfolder.computers import MAY_SEND, Arrived, Keeper, Member
-from ancestree.familyfolder.drive import Drive, DriveError, DriveLike
+from ancestree.familyfolder.drive import Drive, DriveError, DriveLike, RemoteFile
 from ancestree.familyfolder.entries import Entries, build_archive, changes_between, family_entries
 from ancestree.familyfolder.google import (
     Client,
+    ClientFileError,
     GoogleError,
     OfflineError,
+    ProjectGoneError,
     Session,
     SignedOutError,
     SignIn,
     Tokens,
 )
+from ancestree.familyfolder.invitations import Invitation, InvitationError
 from ancestree.familyfolder.mirror import Mirror
-from ancestree.familyfolder.models import Joined, Source
+from ancestree.familyfolder.models import FamilyFile, Joined, Source
 from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.familyfolder.seals import RefusedError, join_code
 from ancestree.importing.returned import Base
@@ -108,15 +124,23 @@ from ancestree.services.history import History
 from ancestree.storage.biography import BIOGRAPHY
 
 FOLDER_NAME = "AncesTree family"
+# Since 0.4.0, "<FOLDER_NAME> (<family>)": the family's id, as its family.json has it.
+FOLDER_NAMED = re.compile(re.escape(FOLDER_NAME) + r"(?: \(([0-9a-f]{16})\))?")
 # Made by the keeper at the start, so no two computers ever make the same one at once.
 SUBFOLDERS = ("members", "record", "snapshots", "notes", "files", "recovery")
-# A relative's computer's own folder, in its own Drive: "<OWN_FOLDER> (<computer>)".
+# A relative's computer's own folder, in its own Drive: "<OWN_FOLDER> (<family>, <computer>)";
+# before 0.4.0, "<OWN_FOLDER> (<computer>)".
 OWN_FOLDER = f"{FOLDER_NAME} - to the keeper"
-OWN_FOLDER_NAMED = re.compile(re.escape(OWN_FOLDER) + r" \(([0-9a-f]{16})\)")
+OWN_FOLDER_NAMED = re.compile(re.escape(OWN_FOLDER) + r" \((?:([0-9a-f]{16}), )?([0-9a-f]{16})\)")
+# The family's own Google client (0.4.0), and an invitation waiting to be joined, in the
+# family folder's part of the data folder.
+CLIENT = "google-client.bin"
+JOINING = "joining.json"
 # What relatives' computers write, in their own folders. In each computer's copy, it sits
 # beside the family folder's files, as computers.py reads it.
 RELATIVES = ("join/", "inbox/")
 EVERY = 60.0  # seconds between syncs while the app runs
+SOON = 5.0  # seconds after a change here before its round, as more changes may follow (0.4.0)
 SNAPSHOT_EVERY = 10  # change sets between snapshots of the whole family
 
 BROKEN = (
@@ -133,6 +157,27 @@ REPLACED = (
 )
 # What a relative hears when what it sent couldn't be read, and was turned down.
 UNREADABLE = "Everything you sent: it couldn't be read on the keeper's computer"
+# The family folder gone from Drive (0.4.0): on the keeper's computer, which can make it again,
+# and on a relative's, which found no moved one to follow.
+LOST = (
+    "The family folder can't be found in your Google Drive. If it's in Drive's bin, take it "
+    "out; if it's gone, rebuild it from this computer: everyone's computers follow it."
+)
+LOST_RELATIVE = (
+    "The family folder isn't shared with this Google account any more, and no moved one was "
+    "found. If your keeper started it again, they'll send a new invitation: leave this family "
+    "folder, then join with it."
+)
+FOREIGN = (
+    "The family folder was made through another Google project, and this one can't change "
+    "it: rebuild the family folder through this project, and relatives' computers follow it."
+)
+# Drive's reason when this project may read a file, through drive.readonly, but not change it.
+NOT_THIS_PROJECTS = "appNotAuthorizedToFile"
+OLD_FOLDER = (
+    "The family's old folder is still in Google Drive, where relatives' computers keep reading "
+    "it: delete it there, so they move to the new one."
+)
 
 log = logging.getLogger("uvicorn.error")
 
@@ -171,6 +216,13 @@ class Setup:
     # The keeper's, brought back with the recovery code: until the family has arrived here
     # whole, nothing is published, or what's missing here would be taken out for everyone.
     recovering: bool = False
+    # When the family was last in step, and, on the keeper's computer, when it last published
+    # a change: kept across restarts (0.4.0).
+    in_step: str = ""
+    published: str = ""
+    # The keeper's (0.4.0): the family folder it moved from, while that's still in Drive, where
+    # relatives' computers would keep reading it.
+    moved_from: str = ""
 
 
 def _fingerprint(entries: Entries) -> str:
@@ -210,10 +262,12 @@ class FamilyFolder:
         graph: Callable[[], Awaitable[dict[str, Any]]] | None = None,
         restore: Callable[[Path, bool], Awaitable[object]] | None = None,
         history: History | None = None,
+        on_round: Callable[[FamilyFolder], None] | None = None,
     ) -> None:
         self.ctx = ctx
         self.dir = ctx.data_dir / "familyfolder"
-        self.client = client if client is not None else Client.find()
+        self.problem = ""
+        self.client = client if client is not None else self._kept_client()
         self._make_drive: Callable[[Session], DriveLike] = drive or (
             lambda session: Drive(session.access_token)
         )
@@ -232,8 +286,29 @@ class FamilyFolder:
         self.setup: Setup | None = None
         self.computer: Keeper | Member | None = None
         self.mirror: Mirror | None = None
-        self.last_sync: datetime | None = None
-        self.problem = ""
+        self.last_sync: datetime | None = None  # when the last round went through
+        self.tried: datetime | None = None  # when the last round was tried, through or not
+        self.went_through = False  # whether it went through: what `problem` says is a note
+        self.lost = False  # the last round found the family folder gone from Drive (0.4.0)
+        # What stood in the last round's way, as a code for the indicator at the top (0.4.0):
+        # "offline", "signed_out", "project", "lost", "problem", or "" for nothing.
+        self.trouble = ""
+        # The keeper moving the family folder to another Google account or project (0.4.0):
+        # a sign-in with another account is let through, for the rebuild.
+        self.moving = False
+        # The sign-in the keeper is moving from, kept until the rebuild has put the old family
+        # folder in Drive's bin with it: the new account, or the new project, can't.
+        self._before: Session | None = None
+        self.syncing = False  # a round is under way
+        # Told after each round, as the desktop app's engine is: for its families' list and
+        # the tooltip by the clock (0.4.0).
+        self._on_round = on_round
+        # A change made here, or Sync now from the icon by the clock: a round soon (0.4.0).
+        self.nudged = asyncio.Event()
+        self.now = False  # the round asked for is wanted at once: Sync now
+        self._loop: asyncio.AbstractEventLoop | None = None
+        # The family an invitation names, while this computer hasn't asked to join it yet.
+        self.invited: str | None = None
         # The keeper's new recovery code, until they've kept it: shown until then, even after
         # a restart, and then never again.
         self.recovery_code: str | None = None
@@ -252,10 +327,26 @@ class FamilyFolder:
     def data(self) -> Path:
         return self.dir / "computer"  # its keys and copy of the family, locked
 
+    def _kept_client(self) -> Client | None:
+        """The family's own Google client, kept here (0.4.0); None if there's none yet, or it
+        can't be opened on this computer, which is said."""
+        try:
+            return Client.find(self.dir / CLIENT)
+        except (ProtectError, OSError, ValueError, KeyError) as error:
+            log.warning("The family's Google project kept here can't be opened: %s", error)
+            self.problem = (
+                "The family's Google project kept here can't be opened on this computer: give "
+                "it AncesTree again."
+            )
+            return None
+
     def _load(self) -> None:
         """What this computer kept, as the app starts. What can't be opened here (kept by
         another Windows user, or on another computer) never stops the app: it's said instead,
         and the family folder waits to be left."""
+        joining = self._read(self.dir / JOINING)
+        if isinstance(joining, dict) and isinstance(joining.get("family"), str):
+            self.invited = joining["family"]
         if self.client is not None:
             try:
                 tokens = Tokens.load(self.dir / "google.bin")
@@ -272,6 +363,8 @@ class FamilyFolder:
         if setup.is_file():
             try:
                 self.setup = Setup(**json.loads(setup.read_text(encoding="utf-8")))
+                if self.setup.in_step:
+                    self.last_sync = datetime.fromisoformat(self.setup.in_step)
                 kind = Keeper if self.setup.role == "keeper" else Member
                 self.computer = kind.load(self.local, self.data)
             except (ProtectError, OSError, ValueError, KeyError, TypeError) as error:
@@ -325,9 +418,11 @@ class FamilyFolder:
         return Mirror(drive, folder, self.local, self.dir / "mirror.json", me, _family_files)
 
     def _relatives_mirror(self, drive: DriveLike, folder: str, device: str) -> Mirror:
-        """A relative's computer's own folder in Drive, as this computer's copy holds it."""
+        """A relative's computer's own folder in Drive, as this computer's copy holds it. Its
+        state is the folder's own: a computer whose family moved to another Google project
+        makes a new own folder beside the old (0.4.0)."""
         me = self.session.email if self.session else ""
-        state = self.dir / "relatives" / f"{device}.json"
+        state = self.dir / "relatives" / f"{device}-{folder}.json"
         return Mirror(drive, folder, self.local, state, me, _relatives_files(device))
 
     def _clear_local(self) -> None:
@@ -346,7 +441,8 @@ class FamilyFolder:
         if self.client is None:
             raise RuleError(
                 "no_google_client",
-                "This AncesTree can't sign in to Google: it was built without its Google client.",
+                "This family has no Google project to sign in through yet. The keeper gives "
+                "AncesTree the project's client file; a relative pastes the keeper's invitation.",
             )
         if self.signing_in is not None:
             self.signing_in.close()
@@ -371,12 +467,25 @@ class FamilyFolder:
             tokens = await asyncio.to_thread(waiting.finish)
             if tokens is None:
                 return
+        except (GoogleError, OfflineError) as error:
+            self.problem = str(error)
+            return
+        # A sign-in not kept is given back to Google at once (0.4.0): kept nowhere, it would
+        # only stay on that account's list of apps with access to it.
+        give_back = Session(client, tokens).sign_out
+        try:
             drive = self._make_drive(Session(client, tokens))
             tokens.email = await asyncio.to_thread(drive.account)
         except (GoogleError, OfflineError, DriveError) as error:
+            await asyncio.to_thread(give_back)
             self.problem = str(error)
             return
-        if self.setup and tokens.email.casefold() != self.setup.account.casefold():
+        if (
+            self.setup
+            and not self.moving
+            and tokens.email.casefold() != self.setup.account.casefold()
+        ):
+            await asyncio.to_thread(give_back)
             self.problem = (
                 f"That was {tokens.email}. This computer's family folder is with "
                 f"{self.setup.account}: sign in with that account."
@@ -385,6 +494,7 @@ class FamilyFolder:
         try:
             tokens.save(self.dir / "google.bin")
         except (ProtectError, OSError) as error:
+            await asyncio.to_thread(give_back)
             self.problem = f"The sign-in to Google couldn't be kept on this computer ({error})."
             return
         self._signed_in(client, tokens)
@@ -400,6 +510,126 @@ class FamilyFolder:
                 await asyncio.to_thread(self.session.sign_out)
             (self.dir / "google.bin").unlink(missing_ok=True)
             self.session = self.drive = self.mirror = None
+
+    # The family's own Google project (0.4.0)
+
+    async def _keep_client(self, client: Client) -> None:
+        """The family's Google client, kept here. A sign-in belongs to the client it was made
+        with, so one made with another is given back: sign in again. One the keeper is moving
+        from is kept until the rebuild is done with it."""
+        if client != self.client:
+            if self.signing_in is not None:
+                self.signing_in.close()
+                self.signing_in = None
+            if self.moving and self.session is not None and self._before is None:
+                self._before = self.session
+            elif self.session is not None:
+                await asyncio.to_thread(self.session.sign_out)
+            (self.dir / "google.bin").unlink(missing_ok=True)
+            self.session = self.drive = self.mirror = None
+        try:
+            await asyncio.to_thread(client.keep, self.dir / CLIENT)
+        except (ProtectError, OSError) as error:
+            raise RuleError(
+                "cant_be_locked",
+                f"The family's Google project couldn't be kept on this computer ({error}).",
+            ) from error
+        self.client = client
+        self.problem = self.broken
+
+    async def use_project(self, text: str, *, moving: bool = False) -> None:
+        """The family's own Google project, from the file Google's console gives for its
+        client: for a computer starting a family folder, or its keeper's. A relative's
+        computer takes the project from the keeper's invitation instead. Once the family folder
+        is started, a client of the same project can take over (sign in again); another
+        project's can't reach the folder's files."""
+        async with self.lock:
+            if self.broken:
+                raise RuleError("cant_be_opened", self.broken)
+            try:
+                client = Client.from_file(text)
+            except ClientFileError as error:
+                raise RuleError("not_a_client_file", str(error)) from error
+            setup = self.setup
+            if setup is not None and setup.role == "member":
+                raise RuleError(
+                    "project_from_the_keeper",
+                    "This computer takes the family's Google project from its keeper's "
+                    "invitation: paste the newest one instead.",
+                )
+            client_now = self.client
+            if (
+                setup is not None
+                and client_now is not None
+                and client.number != client_now.number
+                and not moving
+            ):
+                raise RuleError(
+                    "other_project",
+                    f"That client is from another Google project. The family folder was made "
+                    f"through {client_now.name}, so only that project's clients can keep it.",
+                )
+            if moving:
+                self._moving()
+            await self._keep_client(client)
+            # An invitation pasted before brought another project: it's set aside with it.
+            self.invited = None
+            (self.dir / JOINING).unlink(missing_ok=True)
+
+    async def take_invitation(self, text: str) -> None:
+        """A keeper's invitation, pasted on a relative's computer: its Google project becomes
+        this family's, to sign in through, and the family it names is the one to join. On a
+        computer already in that family, a newer invitation brings the family's new project."""
+        async with self.lock:
+            if self.broken:
+                raise RuleError("cant_be_opened", self.broken)
+            try:
+                invitation = Invitation.read(text)
+            except InvitationError as error:
+                raise RuleError("not_an_invitation", str(error)) from error
+            setup, computer = self.setup, self.computer
+            if setup is not None and setup.role == "keeper":
+                raise RuleError(
+                    "keepers_own",
+                    "This computer keeps a family folder: invitations are for the relatives "
+                    "you invite.",
+                )
+            if setup is not None and (computer is None or computer.family != invitation.family):
+                raise RuleError(
+                    "another_family",
+                    "That invitation is to another family. To join it on this computer, add a "
+                    "family for it, or leave this family folder first.",
+                )
+            moved = self.client is not None and self.client.number != invitation.client.number
+            await self._keep_client(invitation.client)
+            if setup is not None and moved:
+                # The new project's client can't write in the own folder the old one made: a
+                # new one is made at the next round (0.4.0).
+                setup.own_folder = ""
+                self._save_setup()
+            if setup is None:
+                self.invited = invitation.family
+                await asyncio.to_thread(
+                    self._write_text, self.dir / JOINING, json.dumps({"family": invitation.family})
+                )
+
+    def invitation(self) -> Invitation:
+        """The family's invitation, for its keeper to send to the relatives they invite."""
+        computer, setup = self.computer, self.setup
+        if not isinstance(computer, Keeper) or setup is None:
+            raise RuleError("not_the_keeper", "Only the family's keeper can invite.")
+        if setup.replaced:
+            raise RuleError("replaced", REPLACED)
+        if self.client is None:
+            raise RuleError("no_google_client", "Give AncesTree the family's Google project first.")
+        own = Client(self.client.client_id, self.client.client_secret, self.client.project)
+        return Invitation(own, computer.family)
+
+    def _own_account(self) -> str:
+        """The Google account this computer keeps its family folder with."""
+        if self.session is not None:
+            return self.session.email
+        return self.setup.account if self.setup else ""
 
     def _ready(self, *, set_up: bool) -> tuple[DriveLike, Session]:
         """Drive and the sign-in, when this computer is signed in and does (or doesn't
@@ -567,6 +797,19 @@ class FamilyFolder:
             broken=bool(self.broken),
             replaced=replaced,
             may_leave=self._may_leave(),
+            project=self.client.name if self.client else "",
+            project_invited=bool(self.client and self.client.invited),
+            invited=setup is None and self.invited is not None,
+            syncing=self.syncing,
+            tried=self.tried,
+            through=self.went_through,
+            trouble=self.trouble,
+            lost=self.lost,
+            moving=self.moving,
+            old_folder_left=bool(setup and setup.moved_from),
+            published=(
+                datetime.fromisoformat(setup.published) if setup and setup.published else None
+            ),
         )
 
     def _may_leave(self) -> bool:
@@ -594,30 +837,48 @@ class FamilyFolder:
     # Starting, joining, and coming back
 
     async def start(self, request: StartFamily) -> str:
-        """Start the family's folder, with this computer as its keeper; the recovery code."""
+        """Start the family's folder, with this computer as its keeper; the recovery code. The
+        folder in Drive is named with the family's id, so one Google account can keep several
+        families' folders; but one already there is asked about first, as it may be this
+        family's, to keep again with the recovery code."""
         async with self.lock:
             with self._plainly():
                 drive, session = self._ready(set_up=False)
-                if await self._family_folders(drive):
+                if self.client is not None and self.client.invited:
+                    raise RuleError(
+                        "project_from_an_invitation",
+                        "This family's Google project came with an invitation to someone "
+                        "else's family. To start your own family's folder, give AncesTree your "
+                        "own family's Google project first.",
+                    )
+                found = await self._family_folders(drive)
+                if found and not request.another:
+                    folders = "folder" if len(found) == 1 else "folders"
                     raise RuleError(
                         "family_folder_exists",
-                        f"There's an {FOLDER_NAME} folder in this Google account's Drive "
-                        "already. To keep it on this computer, be the keeper again with your "
-                        "recovery code. To start afresh, rename the old one in Google Drive "
-                        "first.",
+                        f"This Google account's Drive already holds {len(found)} AncesTree "
+                        f"family {folders}. If one is this family's, be its keeper again with "
+                        "your recovery code. If this is another family, start its own folder "
+                        "beside it.",
+                        count=len(found),
                     )
-                root = await asyncio.to_thread(drive.create_folder, FOLDER_NAME, None)
+                family = secrets.token_hex(8)
+                root = await asyncio.to_thread(
+                    drive.create_folder, f"{FOLDER_NAME} ({family})", None
+                )
                 for name in SUBFOLDERS:
                     await asyncio.to_thread(drive.create_folder, name, root.id)
                 self._clear_local()
                 keeper, code = await asyncio.to_thread(
-                    Keeper.start, self.local, self.data, request.computer
+                    Keeper.start, self.local, self.data, request.computer, family
                 )
                 self.computer = keeper
                 self.setup = Setup(
                     "keeper", root.id, request.family, request.computer, session.email
                 )
                 self._save_setup()
+                self.invited = None
+                (self.dir / JOINING).unlink(missing_ok=True)
                 self._make_mirror()
                 # Shown even if Drive fails just now, and after a restart until it's kept:
                 # there's no other copy of it.
@@ -630,20 +891,58 @@ class FamilyFolder:
         with self._plainly():
             drive, _ = self._ready(set_up=False)
             found: list[SharedFolder] = []
-            for folder in await asyncio.to_thread(drive.shared_folders):
-                children = await asyncio.to_thread(drive.children, folder.id)
-                if any(child.name == "family.json" and not child.folder for child in children):
+            for folder in await asyncio.to_thread(drive.shared_folders, FOLDER_NAME):
+                if FOLDER_NAMED.fullmatch(folder.name) is None:
+                    continue
+                if await asyncio.to_thread(self._family_in, drive, folder) is not None:
                     found.append(SharedFolder(id=folder.id, owner=folder.owner))
             return found
 
+    @staticmethod
+    def _family_in(drive: DriveLike, folder: RemoteFile) -> FamilyFile | None:
+        """The family a folder in Drive holds, by its family.json; None if it holds none."""
+        for child in drive.children(folder.id):
+            if child.name == "family.json" and not child.folder:
+                try:
+                    return FamilyFile.model_validate_json(drive.download(child.id))
+                except ValueError:
+                    return None
+        return None
+
+    async def _invited_folder(self, drive: DriveLike, email: str) -> str:
+        """The family folder the pasted invitation names: shared with this account, or, for a
+        computer of the keeper's own, in this account's own Drive."""
+        if self.invited is None:
+            raise RuleError(
+                "no_invitation", "Paste the invitation your family's keeper sent you first."
+            )
+        folders = [
+            *await asyncio.to_thread(drive.shared_folders, FOLDER_NAME),
+            *await asyncio.to_thread(drive.own_folders, FOLDER_NAME, starting=True),
+        ]
+        for folder in folders:
+            if FOLDER_NAMED.fullmatch(folder.name) is None:
+                continue
+            family = await asyncio.to_thread(self._family_in, drive, folder)
+            if family is not None and family.family == self.invited:
+                return folder.id
+        raise RuleError(
+            "not_shared_yet",
+            f"The family folder isn't shared with {email} yet. Ask your family's keeper to "
+            "invite this Google account, then try again.",
+        )
+
     async def join(self, request: JoinFamily) -> None:
-        """Ask to join the family in a folder shared with this account. The request goes in a
-        folder of this computer's own, in this account's Drive, shared with the keeper's."""
+        """Ask to join the family in a folder shared with this account: the one the pasted
+        invitation names, unless another's given. The request goes in a folder of this
+        computer's own, in this account's Drive, shared with the keeper's account; a computer
+        of the keeper's own, signed in with the keeper's account, keeps it in their Drive."""
         async with self.lock:
             with self._plainly():
                 drive, session = self._ready(set_up=False)
+                folder = request.folder or await self._invited_folder(drive, session.email)
                 self._clear_local()
-                mirror = self._family_mirror(drive, request.folder, session.email)
+                mirror = self._family_mirror(drive, folder, session.email)
                 await self._reach(mirror.pull)
                 if not (self.local / "family.json").is_file():
                     raise RuleError("not_a_family_folder", "That folder holds no AncesTree family.")
@@ -652,25 +951,31 @@ class FamilyFolder:
                     Member.ask_to_join, self.local, self.data, request.computer
                 )
                 own = await self._reach(
-                    lambda: drive.create_folder(f"{OWN_FOLDER} ({member.device})", None)
+                    lambda: drive.create_folder(
+                        f"{OWN_FOLDER} ({member.family}, {member.device})", None
+                    )
                 )
-                await self._reach(lambda: drive.share(own.id, keeper))
+                if keeper.casefold() != session.email.casefold():
+                    await self._reach(lambda: drive.share(own.id, keeper))
                 await self._reach(self._relatives_mirror(drive, own.id, member.device).push)
                 self.computer, self.mirror = member, mirror
                 self.setup = Setup(
-                    "member", request.folder, "", request.computer, session.email, own_folder=own.id
+                    "member", folder, "", request.computer, session.email, own_folder=own.id
                 )
                 self._save_setup()
+                self.invited = None
+                (self.dir / JOINING).unlink(missing_ok=True)
                 self.last_sync, self.problem = datetime.now(UTC), ""
 
     async def recover(self, request: Recover) -> None:
         """This computer as the keeper again, from the recovery code: the family comes back
-        from the folder. It says so in the record at once, so the computer it replaces sees
-        the record move on, and stops keeping the family."""
+        from its folder, the one in this account's Drive the code opens. It says so in the
+        record at once, so the computer it replaces sees the record move on, and stops keeping
+        the family."""
         async with self.lock:
             with self._plainly():
                 drive, session = self._ready(set_up=False)
-                folder = request.folder or await self._own_family_folder(drive)
+                folder = request.folder or await self._opened_by(drive, request.code)
                 self._clear_local()
                 # The family folder's files alone: relatives' requests and changes, gathered
                 # here later beside them, are never sent up into it as the keeper's.
@@ -699,17 +1004,20 @@ class FamilyFolder:
             await self._in_step()
 
     async def _family_folders(self, drive: DriveLike) -> list[str]:
-        """The family folders in this account's own Drive: its folders of that name that
-        hold a family."""
+        """The family folders in this account's own Drive: its folders named as family folders
+        are, since 0.4.0 or before, that hold a family."""
         found: list[str] = []
-        for folder in await asyncio.to_thread(drive.own_folders, FOLDER_NAME):
+        for folder in await asyncio.to_thread(drive.own_folders, FOLDER_NAME, starting=True):
+            if FOLDER_NAMED.fullmatch(folder.name) is None:
+                continue
             children = await asyncio.to_thread(drive.children, folder.id)
             if any(child.name == "family.json" and not child.folder for child in children):
                 found.append(folder.id)
         return found
 
-    async def _own_family_folder(self, drive: DriveLike) -> str:
-        """The family folder in this account's own Drive, when there's just the one."""
+    async def _opened_by(self, drive: DriveLike, code: str) -> str:
+        """The family folder in this account's own Drive that the recovery code opens: the one
+        whose newest recovery file it unlocks."""
         found = await self._family_folders(drive)
         if not found:
             raise RuleError(
@@ -717,12 +1025,31 @@ class FamilyFolder:
                 "There's no family folder in this Google account's Drive. Sign in with the "
                 "account that started it.",
             )
-        if len(found) > 1:
-            raise RuleError(
-                "several_family_folders",
-                f"There's more than one {FOLDER_NAME} in this Drive: rename the others first.",
-            )
-        return found[0]
+        for folder in found:
+            if await asyncio.to_thread(self._opens, drive, folder, code):
+                return folder
+        raise RuleError(
+            "not_recovered",
+            "That recovery code doesn't open any family folder in this Google account's Drive. "
+            "Check it, and try again.",
+        )
+
+    @staticmethod
+    def _opens(drive: DriveLike, folder: str, code: str) -> bool:
+        """Whether the recovery code opens a family folder's newest recovery file."""
+        children = {child.name: child for child in drive.children(folder)}
+        family, recovery = children.get("family.json"), children.get("recovery")
+        if family is None or recovery is None or not recovery.folder:
+            return False
+        versions = [
+            (int(item.name.removesuffix(".bin")), item)
+            for item in drive.children(recovery.id)
+            if item.name.endswith(".bin") and item.name.removesuffix(".bin").isdigit()
+        ]
+        if not versions:
+            return False
+        version, newest = max(versions, key=lambda found: found[0])
+        return Keeper.opens(drive.download(family.id), drive.download(newest.id), version, code)
 
     async def _reach[T](self, work: Callable[[], T]) -> T:
         """Drive's work, with its errors in plain words."""
@@ -732,10 +1059,14 @@ class FamilyFolder:
     # The keeper's
 
     async def invite(self, request: Invite) -> None:
-        """Share the family folder with a relative's Google account."""
+        """Share the family folder with a relative's Google account; then the invitation is
+        theirs to have. A computer of the keeper's own, with the keeper's own account, reaches
+        the folder already: it needs only the invitation."""
         async with self.lock:
             with self._plainly():
                 _, drive, setup = self._keeper()
+                if request.email.casefold() == self._own_account().casefold():
+                    return
                 await self._reach(lambda: drive.share(setup.folder, request.email))
                 # Asked back before Drive stopped sharing with it after a removal: it stays
                 # shared.
@@ -783,7 +1114,8 @@ class FamilyFolder:
                     and other.role != "removed"
                     and self._email_of(device).casefold() == email.casefold()
                 ]
-                if email and not others:
+                # A computer of the keeper's own: the keeper's account keeps its folder.
+                if email and not others and email.casefold() != self._own_account().casefold():
                     setup.unshare.append(email)  # noted before the removal: never forgotten
                     self._save_setup()
                 await asyncio.to_thread(keeper.remove, request.device)
@@ -822,6 +1154,9 @@ class FamilyFolder:
             if self.signing_in is not None:
                 self.signing_in.close()
                 self.signing_in = None
+            # The keeper's own Google project stays, to keep the family again; a relative's
+            # was the keeper's, and goes with the rest (0.4.0).
+            keep_client = self.setup is None or self.setup.role == "keeper"
             if self.dir.exists():
                 stamp = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
                 aside = self.dir.with_name(f"familyfolder-left-{stamp}")
@@ -830,10 +1165,17 @@ class FamilyFolder:
                     number += 1
                     aside = self.dir.with_name(f"familyfolder-left-{stamp}-{number}")
                 await asyncio.to_thread(self.dir.rename, aside)
+                if keep_client and (aside / CLIENT).is_file():
+                    self.dir.mkdir(parents=True, exist_ok=True)
+                    await asyncio.to_thread(shutil.copy2, aside / CLIENT, self.dir / CLIENT)
+            if not keep_client:
+                self.client = None
+            self.invited = None
             self.session = self.drive = self.mirror = None
             self.setup, self.computer = None, None
             self.recovery_code, self.broken, self.problem = None, "", ""
             self.pending, self.waiting, self.last_sync = 0, [], None
+            self.moving, self._before, self.lost = False, None, False
 
     async def _entries_here(self) -> Entries:
         """The family as this computer's database holds it, as entries, its files named as the
@@ -874,7 +1216,8 @@ class FamilyFolder:
         if setup.snapshot == 0 or seq - setup.snapshot >= SNAPSHOT_EVERY:
             await asyncio.to_thread(keeper.snapshot)
             setup.snapshot = seq
-            self._save_setup()
+        setup.published = datetime.now(UTC).isoformat(timespec="seconds")
+        self._save_setup()
         return len(changes)
 
     # A relative's
@@ -1169,6 +1512,133 @@ class FamilyFolder:
                 self.waiting = [changes for changes in self.waiting if changes.device != device]
             await self._in_step()
 
+    # Rebuilding the family folder, and following it (0.4.0)
+
+    def _moving(self) -> None:
+        """The keeper moving the family folder: the next sign-in may be another account's."""
+        if not isinstance(self.computer, Keeper) or self.setup is None or self.setup.replaced:
+            raise RuleError("not_the_keeper", "Only the family's keeper can move its folder.")
+        self.moving = True
+
+    async def move_account(self) -> str:
+        """The keeper moving the family folder to another Google account: signed out here, and a
+        sign-in started that may be another account's; then `rebuild`."""
+        async with self.lock:
+            self._moving()
+            if self._before is None:
+                self._before = self.session
+            (self.dir / "google.bin").unlink(missing_ok=True)
+            self.session = self.drive = self.mirror = None
+        return await self.sign_in()
+
+    async def rebuild(self) -> None:
+        """The family folder made again in Drive, from this computer's copy: the keeper's, when
+        it's lost from Drive, or to move it to the Google account signed in now, or into the
+        family's new Google project. Every file goes up as it was, so the keys and the record
+        stay the same; it's shared again with every relative's account, and their computers
+        follow it. The old folder, if it's still there and this project made it, goes to
+        Drive's bin, so they move; otherwise the keeper is asked to delete it."""
+        async with self.lock:
+            with self._plainly():
+                keeper, drive, setup = self._keeper()
+                _, session = self._ready(set_up=True)
+                old = setup.folder
+                await asyncio.to_thread(keeper.repair)  # every file of its own, here
+                root = await self._reach(
+                    lambda: drive.create_folder(f"{FOLDER_NAME} ({keeper.family})", None)
+                )
+                for name in SUBFOLDERS:
+                    await self._reach(partial(drive.create_folder, name, root.id))
+                (self.dir / "mirror.json").unlink(missing_ok=True)
+                mirror = self._family_mirror(drive, root.id, session.email)
+                await self._reach(mirror.pull)  # the folders just made, known
+                await self._reach(mirror.push)
+                own = session.email.casefold()
+                emails = {
+                    email
+                    for device, email in setup.accounts.items()
+                    if device in keeper.known and keeper.known[device].role != "removed"
+                }
+                with contextlib.suppress(DriveError, OfflineError):
+                    # Invited, but not joined yet: still welcome.
+                    emails |= set(await asyncio.to_thread(drive.shared_with, old))
+                emails -= set(setup.unshare)
+                for email in sorted(emails, key=str.casefold):
+                    if email.casefold() != own:
+                        await self._reach(partial(drive.share, root.id, email))
+                # The old folder to Drive's bin, by the sign-in that kept it, so relatives'
+                # computers find it gone and follow; said, if it can't be.
+                before = self._before
+                binning = self._make_drive(before) if before is not None else drive
+                same = before is None and session.email.casefold() == setup.account.casefold()
+                try:
+                    await asyncio.to_thread(binning.trash, old)
+                    setup.moved_from = ""
+                except DriveError as error:
+                    setup.moved_from = "" if error.status == 404 and same else old
+                except GoogleError, OfflineError:
+                    setup.moved_from = old
+                if before is not None and before.email.casefold() != session.email.casefold():
+                    await asyncio.to_thread(before.sign_out)
+                setup.folder, setup.account, setup.unshare = root.id, session.email, []
+                self._save_setup()
+                self._before = None
+                self.mirror, self.moving, self.lost = mirror, False, False
+                log.info("The family folder was rebuilt: %s", "moved" if old else "made again")
+            await self._in_step()
+
+    def _follow(self) -> bool:
+        """A relative's computer whose family folder has gone: the same family's folder, if its
+        keeper rebuilt or moved it, found among the folders shared with this account (or in its
+        own Drive, for a computer of the keeper's own) by the family's id and its keeper's
+        signing key; whether this computer moved to it. Its own folder is shared with the
+        account that holds the family's now. Every file there is checked as before, so a folder
+        that only looks like the family's can't take it in."""
+        computer, setup, drive, session = self.computer, self.setup, self.drive, self.session
+        if not isinstance(computer, Member) or setup is None or drive is None or session is None:
+            return False
+        folders = [
+            *drive.shared_folders(FOLDER_NAME),
+            *drive.own_folders(FOLDER_NAME, starting=True),
+        ]
+        for folder in folders:
+            if folder.id == setup.folder or FOLDER_NAMED.fullmatch(folder.name) is None:
+                continue
+            found = self._family_in(drive, folder)
+            if (
+                found is None
+                or found.family != computer.family
+                or bytes.fromhex(found.keeper_sign) != computer.keeper
+            ):
+                continue
+            if setup.own_folder and folder.owner.casefold() != session.email.casefold():
+                drive.share(setup.own_folder, folder.owner)
+            setup.folder = folder.id
+            (self.dir / "mirror.json").unlink(missing_ok=True)
+            self._save_setup()
+            self._make_mirror()
+            log.info("The family folder moved: this computer follows it")
+            return True
+        return False
+
+    def _make_own_folder(self, mirror: Mirror, computer: Member, setup: Setup) -> None:
+        """A relative's computer's own folder made again (0.4.0): its family moved to another
+        Google project, whose client can't write in a folder the old one made. Shared with the
+        keeper's account, as the first was; what it wrote goes up into it."""
+        drive = mirror.drive
+        own = drive.create_folder(f"{OWN_FOLDER} ({computer.family}, {computer.device})", None)
+        keeper = mirror.owner("family.json")
+        if keeper and keeper.casefold() != self._own_account().casefold():
+            drive.share(own.id, keeper)
+        setup.own_folder = own.id
+        self._save_setup()
+
+    def old_folder_deleted(self) -> None:
+        """The keeper's word that the old family folder, left in Drive after a move, is gone."""
+        if self.setup is not None and self.setup.moved_from:
+            self.setup.moved_from = ""
+            self._save_setup()
+
     # Keeping in step
 
     async def _round(self) -> None:
@@ -1194,7 +1664,7 @@ class FamilyFolder:
                 self.waiting = []
                 self.last_sync, self.problem = datetime.now(UTC), REPLACED
                 return
-            unread = await self._gather(mirror.drive, setup)
+            unread = await self._gather(mirror.drive, computer, setup)
             await asyncio.to_thread(computer.repair)
             if setup.recovering and not await self._take_in(backup_first=True):
                 note = "Photos and stories are still arriving: the family comes when they have."
@@ -1207,6 +1677,8 @@ class FamilyFolder:
                 await asyncio.to_thread(mirror.drive.unshare, setup.folder, email)
                 setup.unshare.remove(email)
                 self._save_setup()
+            if setup.moved_from and not note:
+                note = OLD_FOLDER
             if unread and not note:
                 names = ", ".join(
                     computer.known[device].name if device in computer.known else "A new computer"
@@ -1226,9 +1698,10 @@ class FamilyFolder:
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._send()
-            if setup.own_folder:
-                own = self._relatives_mirror(mirror.drive, setup.own_folder, computer.device)
-                await asyncio.to_thread(own.push)
+            if not setup.own_folder:
+                await asyncio.to_thread(self._make_own_folder, mirror, computer, setup)
+            own = self._relatives_mirror(mirror.drive, setup.own_folder, computer.device)
+            await asyncio.to_thread(own.push)
         self.last_sync, self.problem = datetime.now(UTC), note
 
     def _retire(self, mirror: Mirror, keeper: Keeper, setup: Setup) -> None:
@@ -1251,37 +1724,85 @@ class FamilyFolder:
             setup.retire.remove(path)
             self._save_setup()
 
-    async def _gather(self, drive: DriveLike, setup: Setup) -> list[tuple[str, DriveError]]:
-        """Bring down what relatives' computers wrote in their own folders: the folders of the
-        accounts the family folder is shared with, and each computer's from one account only.
-        A folder Drive won't give just now is passed over, and named: one relative's trouble
-        never holds up the rest of the family."""
+    async def _gather(
+        self, drive: DriveLike, keeper: Keeper, setup: Setup
+    ) -> list[tuple[str, DriveError]]:
+        """Bring down what relatives' computers wrote in their own folders: this family's, by
+        the family's id in their names, of the accounts the family folder is shared with, and
+        of the keeper's own account, for computers of the keeper's own. Each computer's comes
+        from one account only. A folder named before 0.4.0, without the family's id, is read
+        only for a computer this family knows already. A folder Drive won't give just now is
+        passed over, and named: one relative's trouble never holds up the rest of the
+        family."""
+        own = self._own_account().casefold()
         sharing = {
             email.casefold() for email in await asyncio.to_thread(drive.shared_with, setup.folder)
-        }
-        folders: dict[str, str] = {}
-        for folder in sorted(
-            await asyncio.to_thread(drive.shared_folders, OWN_FOLDER), key=lambda f: f.id
-        ):
+        } | {own}
+        found = [
+            *await asyncio.to_thread(drive.shared_folders, OWN_FOLDER),
+            *await asyncio.to_thread(drive.own_folders, OWN_FOLDER, starting=True),
+        ]
+        folders: dict[str, list[str]] = {}
+        for folder in sorted(found, key=lambda f: f.id):
             named = OWN_FOLDER_NAMED.fullmatch(folder.name)
             if named is None or folder.owner.casefold() not in sharing:
                 continue
-            device = named.group(1)
+            family, device = named.groups()
+            if family is None and device not in setup.accounts:
+                continue  # a computer from before 0.4.0 that this family doesn't know
+            if family is not None and family != keeper.family:
+                continue  # another family's: its keeper keeps it
             if device not in setup.accounts:
                 setup.accounts[device] = folder.owner
                 self._save_setup()
             if setup.accounts[device].casefold() == folder.owner.casefold():
-                folders.setdefault(device, folder.id)  # another account can't speak for it
+                # Another account can't speak for it; its own may have a new folder, made
+                # when the family moved to another Google project (0.4.0).
+                folders.setdefault(device, []).append(folder.id)
         unread: list[tuple[str, DriveError]] = []
-        for device, folder_id in folders.items():
-            try:
-                await asyncio.to_thread(self._relatives_mirror(drive, folder_id, device).pull)
-            except DriveError as error:
-                if error.status == 404:
-                    continue  # gone, or no longer shared with this account, since the search
-                log.warning("A relative's own folder couldn't be read: %s", error)
-                unread.append((device, error))
+        for device, folder_ids in folders.items():
+            for folder_id in folder_ids:
+                try:
+                    await asyncio.to_thread(self._relatives_mirror(drive, folder_id, device).pull)
+                except DriveError as error:
+                    if error.status == 404:
+                        continue  # gone, or no longer shared with this account, since the search
+                    log.warning("A relative's own folder couldn't be read: %s", error)
+                    unread.append((device, error))
+                    break
         return unread
+
+    def attach(self, loop: asyncio.AbstractEventLoop) -> None:
+        """The loop that keeps the family in step: Sync now from another thread reaches it."""
+        self._loop = loop
+        self.now = False
+
+    def nudge(self) -> None:
+        """A change here: a round in a few seconds, rather than within the minute."""
+        if self.setup is not None:
+            self.nudged.set()
+
+    def sync_soon(self) -> None:
+        """Sync now, from another thread: the icon by the clock's menu, through the engine."""
+        loop = self._loop
+        if loop is None:
+            return
+
+        def now() -> None:
+            self.now = True
+            self.nudged.set()
+
+        loop.call_soon_threadsafe(now)
+
+    async def last_round(self, within: float = 15.0) -> None:
+        """One more round before the app closes or opens another family, so nothing that could
+        go is left waiting; given up after `within` seconds."""
+        if self.setup is None or self.mirror is None:
+            return
+        try:
+            await asyncio.wait_for(self.sync(), timeout=within)
+        except TimeoutError:
+            log.warning("The last round before closing didn't finish in time")
 
     async def sync(self) -> None:
         """Keep in step now, if this computer takes part; what's in the way goes in `problem`."""
@@ -1296,42 +1817,108 @@ class FamilyFolder:
 
     async def _in_step(self) -> None:
         """A round with Drive. What's in the way, if anything, goes in `problem`: what was done
-        here stays done, and the next round carries it on."""
+        here stays done, and the next round carries it on. When it went through is kept across
+        restarts; and whoever listens is told (0.4.0)."""
+        self.syncing = True
+        before = self.last_sync
         try:
-            await self._round()
+            await self._try_round()
+        finally:
+            self.syncing = False
+            self.tried = datetime.now(UTC)
+            self.went_through = self.last_sync is not None and self.last_sync != before
+            setup = self.setup
+            if setup is not None and self.last_sync is not None:
+                done = self.last_sync.isoformat(timespec="seconds")
+                if setup.in_step != done:
+                    setup.in_step = done
+                    self._save_setup()
+            self.told()
+
+    def told(self) -> None:
+        """Whoever listens, told how things stand: never a failure of theirs in a round."""
+        if self._on_round is None:
+            return
+        try:
+            self._on_round(self)
+        except Exception:
+            log.exception("The family folder's listener failed")
+
+    async def _try_round(self) -> None:
+        self.lost, self.trouble = False, ""
+        try:
+            try:
+                await self._round()
+            except DriveError as error:
+                # A relative's family folder gone: followed, if its keeper moved it (0.4.0).
+                setup = self.setup
+                if error.status != 404 or setup is None or setup.role != "member":
+                    raise
+                if not await asyncio.to_thread(self._follow):
+                    raise
+                await self._round()
         except OfflineError:
+            self.trouble = "offline"
             self.problem = "No internet just now: AncesTree tries again every minute."
         except SignedOutError:
+            self.trouble = "signed_out"
             self._signed_out()
             self.problem = "The sign-in to Google has ended: sign in again."
+        except ProjectGoneError:
+            self.trouble = "project"
+            self._signed_out()
+            if self.setup is not None and self.setup.role == "member":
+                self.problem = (
+                    "Your family's Google project has changed: paste your keeper's newest "
+                    "invitation, then sign in again."
+                )
+            else:
+                self.problem = (
+                    "The family's Google project no longer has this client: give AncesTree a "
+                    "client file of the project, or rebuild the family folder in another."
+                )
         except GoogleError as error:
+            self.trouble = "problem"
             self.problem = str(error)
         except ProtectError as error:
+            self.trouble = "problem"
             self.problem = f"This computer's keys couldn't be locked or opened here ({error})."
         except DriveError as error:
-            if error.status == 404 and self.setup is not None and self.setup.role == "member":
-                self.problem = "The family folder isn't shared with this Google account any more."
-            elif error.status == 404:
-                self.problem = (
-                    "The family folder can't be found in your Google Drive: if it's in the "
-                    "trash, take it out."
-                )
+            member = self.setup is not None and self.setup.role == "member"
+            self.trouble = "lost" if error.status == 404 else "problem"
+            if error.status == 404:
+                self.lost = True
+                self.problem = LOST_RELATIVE if member else LOST
+            elif error.why == NOT_THIS_PROJECTS and not member:
+                # A family folder made through another Google project: the one AncesTree
+                # carried before 0.4.0, say. This project can read it, not change it.
+                self.lost, self.trouble, self.problem = True, "foreign", FOREIGN
             else:
                 self.problem = str(error)
         except RefusedError as error:
+            self.trouble = "problem"
             self.problem = (
                 f"Something in the family folder didn't check out ({error}), "
                 "so nothing here changed."
             )
 
 
-async def keep_in_step(folder: FamilyFolder, every: float = EVERY) -> None:
+async def keep_in_step(folder: FamilyFolder, every: float = EVERY, soon: float = SOON) -> None:
     """While the app runs: in step with the family folder, a few seconds after it starts, then
-    every minute."""
+    every minute; and a few seconds after a change here, or at once when asked from the icon by
+    the clock (0.4.0)."""
+    folder.attach(asyncio.get_running_loop())
     await asyncio.sleep(5)
     while True:
+        folder.nudged.clear()
         try:
             await folder.sync()
         except Exception:  # never let the app lose its keeping in step
             log.exception("The family folder couldn't be kept in step")
-        await asyncio.sleep(every)
+        try:
+            await asyncio.wait_for(folder.nudged.wait(), timeout=every)
+        except TimeoutError:
+            continue
+        if not folder.now:
+            await asyncio.sleep(soon)  # more changes may follow the first
+        folder.now = False

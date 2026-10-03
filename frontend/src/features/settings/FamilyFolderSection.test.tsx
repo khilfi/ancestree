@@ -48,6 +48,15 @@ const SIGNED_OUT: FamilyFolderStatus = {
   broken: false,
   replaced: false,
   may_leave: false,
+  project: "keluarga-contoh",
+  project_invited: false,
+  invited: false,
+  syncing: false,
+  through: true,
+  lost: false,
+  moving: false,
+  old_folder_left: false,
+  trouble: "",
 };
 const SIGNED_IN = { ...SIGNED_OUT, email: "keeper@example.com" };
 const KEEPER: FamilyFolderStatus = {
@@ -140,9 +149,25 @@ afterEach(() => {
 });
 
 describe("Settings → Family folder", () => {
-  it("says so when this AncesTree has no Google client", async () => {
-    answer({ ...SIGNED_OUT, available: false });
-    await show(<FamilyFolderSection />, "built without its Google client");
+  it("with no Google project yet, takes an invitation or the client's file", async () => {
+    const none = { ...SIGNED_OUT, available: false, project: "" };
+    answer(none, [], { ...SIGNED_OUT, project_invited: true, invited: true });
+    await show(<FamilyFolderSection />, "Your keeper's invitation");
+    expect(document.body.textContent).toContain("Start your family's folder, as its keeper");
+    expect(button("Choose the client's file…")).toBeDefined();
+    const box = document.querySelector<HTMLTextAreaElement>("#invitation");
+    act(() => {
+      const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      set?.call(box, "ATI1-abc-123456");
+      box?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => button("Use this invitation").click());
+    await askedFor("/api/family-folder/invitation");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/invitation",
+      body: { invitation: "ATI1-abc-123456" },
+    });
   });
 
   it("asks to sign in, saying what Google will ask and warn", async () => {
@@ -155,16 +180,20 @@ describe("Settings → Family folder", () => {
     expect(window.open).toHaveBeenCalledWith("https://example.org", "_blank", "noopener");
   });
 
-  it("offers to join what's shared, or to start the family's folder", async () => {
+  it("offers the keeper, through the family's own project, to start or come back", async () => {
     answer(SIGNED_IN, []);
-    await show(<FamilyFolderSection />, "No family folder is shared with this Google account yet");
-    expect(document.body.textContent).toContain("Start your family's folder, as its keeper");
+    await show(<FamilyFolderSection />, "Start your family's folder, as its keeper");
     expect(document.body.textContent).toContain("The family's keeper, on a new computer?");
+    expect(document.body.textContent).toContain("Joining your family instead?");
+    expect(document.body.textContent).toContain("through the family's Google project");
+    expect(document.body.textContent).not.toContain("Ask to join");
   });
 
-  it("joins the folder shared by the keeper", async () => {
-    answer(SIGNED_IN, [{ id: "folder-1", owner: "keeper@example.com" }]);
-    await show(<FamilyFolderSection />, "Shared by keeper@example.com");
+  it("asks to join the family the invitation names", async () => {
+    answer({ ...SIGNED_IN, project_invited: true, invited: true });
+    await show(<FamilyFolderSection />, "Your keeper's invitation says which family to join");
+    expect(document.body.textContent).not.toContain("Start your family's folder");
+    expect(document.body.textContent).toContain("through your keeper's Google project");
     const input = document.querySelector<HTMLInputElement>("#join-computer");
     expect(input).not.toBeNull();
     act(() => {
@@ -177,8 +206,73 @@ describe("Settings → Family folder", () => {
     expect(asked).toContainEqual({
       method: "POST",
       path: "/api/family-folder/join",
-      body: { folder: "folder-1", computer: "Mak Long's laptop" },
+      body: { computer: "Mak Long's laptop" },
     });
+  });
+
+  it("starts another family's folder beside one, once asked", async () => {
+    const exists = new Response(
+      JSON.stringify({
+        detail: { code: "family_folder_exists", message: "There's one already.", count: 1 },
+      }),
+      { status: 409, headers: { "Content-Type": "application/json" } },
+    );
+    answer(SIGNED_IN, [], undefined, { "/api/family-folder/start": exists });
+    await show(<FamilyFolderSection />, "Start your family's folder, as its keeper");
+    for (const [id, text] of [
+      ["#start-family", "Keluarga Ibu"],
+      ["#start-computer", "Home PC"],
+    ] as const) {
+      const input = document.querySelector<HTMLInputElement>(id);
+      act(() => {
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        set?.call(input, text);
+        input?.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
+    act(() => button("Start the family folder").click());
+    await until("Your Google Drive holds a family folder already");
+    act(() => button("Start another family's folder").click());
+    await until("Start your family's folder, as its keeper");
+    const starts = () => asked.filter((ask) => ask.path === "/api/family-folder/start");
+    for (let tries = 0; tries < 100 && starts().length < 2; tries++) {
+      await act(async () => {
+        await new Promise((done) => setTimeout(done, 10));
+      });
+    }
+    expect(asked.filter((ask) => ask.path === "/api/family-folder/start")).toEqual([
+      expect.objectContaining({
+        body: { family: "Keluarga Ibu", computer: "Home PC", another: false },
+      }),
+      expect.objectContaining({
+        body: { family: "Keluarga Ibu", computer: "Home PC", another: true },
+      }),
+    ]);
+  });
+
+  it("gives the keeper the invitation to send, once a relative is invited", async () => {
+    const invitation = { invitation: "ATI1-made-up-123456", project: "keluarga-contoh" };
+    answer(KEEPER, [], undefined, { "/api/family-folder/invitation": invitation });
+    await show(<FamilyFolderSection />, "Invite a relative, by their Google account");
+    const input = document.querySelector<HTMLInputElement>("#invite-email");
+    act(() => {
+      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      set?.call(input, "mak.long@example.com");
+      input?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => button("Invite").click());
+    await until("The family folder is shared with mak.long@example.com");
+    await until("ATI1-made-up-123456");
+    const message = document.querySelector<HTMLTextAreaElement>("textarea")?.value ?? "";
+    expect(message).toContain("https://github.com/khilfi/ancestree/releases/latest");
+    expect(message).toContain("Settings → Family folder");
+  });
+
+  it("asks a keeper from before each family's own project for its client file", async () => {
+    answer({ ...KEEPER, available: false, project: "" });
+    await show(<FamilyFolderSection />, "Your family's Google project");
+    expect(button("Choose the client's file…")).toBeDefined();
+    expect(document.body.textContent).toContain("the family folder carries on as it was");
   });
 
   it("lets the keeper let a computer in, with the role chosen, once the codes match", async () => {

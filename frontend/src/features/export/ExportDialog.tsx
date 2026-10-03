@@ -127,7 +127,7 @@ export function ExportButton() {
       >
         <DownloadIcon />
         {/* The word where the top bar has room; the icon alone where it's short. */}
-        <span className="hidden xl:inline">Export</span>
+        <span className="hidden 2xl:inline">Export</span>
       </Button>
       <Dialog open={open} onOpenChange={(next) => busy === null && setOpen(next)}>
         <DialogContent className="sm:max-w-xl">

@@ -58,7 +58,9 @@
       const bar = document.getElementById("bar");
       const mb = (bytes) => Math.round(bytes / 1048576);
       const lines = {
-        preparing: () => "Starting…",
+        // Each family on this computer opens on its own: its name, once it's known (0.4.0).
+        preparing: (event) => (event.family ? `Opening ${event.family}…` : "Starting…"),
+        opening: (event) => (event.family ? `Opening ${event.family}…` : "Opening the family…"),
         updating: (event) => `Updating AncesTree to ${event.version}…`,
         download: (event) =>
           `Getting the database ready, the first time only: ` +

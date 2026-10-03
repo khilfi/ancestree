@@ -171,12 +171,15 @@ class FakeDrive:
         return self._remote(item)
 
     def trash(self, file_id: str) -> None:
-        """To the owner's bin, where Drive keeps it a while: no longer listed or reachable."""
+        """To the owner's bin, where Drive keeps it a while, with all inside it: no longer
+        listed or reachable."""
         self._touch("trash")
         item = self._item(file_id)
         if item.owner != self.email:
             raise DriveError(403, NOT_ALLOWED)
-        self.cloud.binned[file_id] = self.cloud.items.pop(file_id)
+        inside = [i for i, other in self.cloud.items.items() if self.cloud.inside(other, file_id)]
+        for item_id in [file_id, *inside]:
+            self.cloud.binned[item_id] = self.cloud.items.pop(item_id)
 
     def share(self, file_id: str, email: str, role: str = "reader") -> None:
         """As AncesTree shares, to read; to edit only as Drive's own page could."""
@@ -202,12 +205,14 @@ class FakeDrive:
             and item.name.startswith(name)
         ]
 
-    def own_folders(self, name: str) -> list[RemoteFile]:
+    def own_folders(self, name: str, *, starting: bool = False) -> list[RemoteFile]:
         self._touch("own_folders")
         return [
             self._remote(item)
             for item in self.cloud.items.values()
-            if item.folder and item.name == name and item.owner == self.email
+            if item.folder
+            and (item.name.startswith(name) if starting else item.name == name)
+            and item.owner == self.email
         ]
 
     def tamper(self, file_id: str, data: bytes) -> None:

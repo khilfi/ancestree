@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.3.1"
+    "version": "0.4.0"
   },
   "paths": {
     "/api/health": {
@@ -1944,7 +1944,7 @@
           "export"
         ],
         "summary": "Add Backup",
-        "description": "Bring in a backup archive from elsewhere, e.g. another disk, to restore from.",
+        "description": "Bring in a backup archive from elsewhere, e.g. another disk, to restore from. A copy\nlocked with a password (0.4.0) is opened with `password`.",
         "operationId": "add_backup",
         "requestBody": {
           "content": {
@@ -1963,6 +1963,159 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Backup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/places": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Places For Copies",
+        "description": "Places on this computer that suit copies of the backups (0.4.0): other disks, and the\nfolders OneDrive, Dropbox and Google Drive's own app keep.",
+        "operationId": "places_for_copies",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CopyPlace"
+                  },
+                  "type": "array",
+                  "title": "Response Places For Copies"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/elsewhere": {
+      "put": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Copy Backups Elsewhere",
+        "description": "Copy every backup to a second place from now on, locked with a password if one is given,\nwhich is kept nowhere (0.4.0). The copies not there yet are made at once.",
+        "operationId": "copy_backups_elsewhere",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElsewhereChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Stop Copying Backups",
+        "description": "No more copies in the second place; those made there stay (0.4.0).",
+        "operationId": "stop_copying_backups",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/elsewhere/copy": {
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Copy Backups Now",
+        "description": "Make the copies not made yet in the second place, now (0.4.0).",
+        "operationId": "copy_backups_now",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backups/{name}/check": {
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Check Backup",
+        "description": "Read a backup whole, every file against its checksum, restoring nothing (0.4.0).\nRefused (422, \"bad_archive\") if it's damaged.",
+        "operationId": "check_backup",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupChecked"
                 }
               }
             }
@@ -2295,6 +2448,176 @@
         }
       }
     },
+    "/api/family-folder/project": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Use Family Project",
+        "description": "The family's own Google project, from the file Google's console gives for its client of\nthe Desktop app type: kept with this family, to sign in through. A sign-in made with\nanother client is given back: sign in again.",
+        "operationId": "use_family_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectFile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/move-account": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Move Family Folder Account",
+        "description": "Move the family folder to another Google account (the keeper's): signed out here, and a\nsign-in started that may be another account's. Then rebuild the family folder in it.",
+        "operationId": "move_family_folder_account",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/old-folder-deleted": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Old Family Folder Deleted",
+        "description": "The keeper's word that the old family folder, left in Drive after a move, is deleted.",
+        "operationId": "old_family_folder_deleted",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/rebuild": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Rebuild Family Folder",
+        "description": "Make the family folder again in Drive from this computer's copy (the keeper's): when\nit's lost, or to move it to the Google account signed in, or the project given. The same\nkeys and record; shared again with every relative's account, whose computers follow.",
+        "operationId": "rebuild_family_folder",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/invitation": {
+      "get": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Get Family Invitation",
+        "description": "The family's invitation, for its keeper to send to the relatives they invite.",
+        "operationId": "get_family_invitation",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationMade"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Take Family Invitation",
+        "description": "A keeper's invitation, pasted on a relative's computer: the family's Google project, to\nsign in through, and the family to ask to join.",
+        "operationId": "take_family_invitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationText"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/family-folder/start": {
       "post": {
         "tags": [
@@ -2435,7 +2758,7 @@
           "family folder"
         ],
         "summary": "Join Family Folder",
-        "description": "Ask to join the family in a shared folder. The status carries the code to read to the\nkeeper.",
+        "description": "Ask to join the family the pasted invitation names, or the one in a folder given. The\nstatus carries the code to read to the keeper.",
         "operationId": "join_family_folder",
         "requestBody": {
           "content": {
@@ -3423,6 +3746,22 @@
             "type": "boolean",
             "title": "Automatic",
             "default": false
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "family_name": {
+            "type": "string",
+            "title": "Family Name",
+            "default": ""
           }
         },
         "type": "object",
@@ -3438,6 +3777,35 @@
         ],
         "title": "Backup",
         "description": "A backup archive, from its manifest."
+      },
+      "BackupChecked": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "links": {
+            "type": "integer",
+            "title": "Links"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "people",
+          "links",
+          "files"
+        ],
+        "title": "BackupChecked",
+        "description": "A backup read whole, every file against its checksum, with nothing restored."
       },
       "BackupList": {
         "properties": {
@@ -3460,6 +3828,32 @@
             "type": "boolean",
             "title": "Automatic Backups",
             "default": false
+          },
+          "family_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Id"
+          },
+          "family_name": {
+            "type": "string",
+            "title": "Family Name",
+            "default": ""
+          },
+          "elsewhere": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Elsewhere"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3566,6 +3960,18 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "An AncesTree backup archive (.zip)"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
           }
         },
         "type": "object",
@@ -3832,6 +4238,34 @@
         ],
         "title": "ChildrenOrder",
         "description": "Children of the same two parents, eldest first."
+      },
+      "CopyPlace": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "disk",
+              "cloud"
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "kind",
+          "name"
+        ],
+        "title": "CopyPlace",
+        "description": "A place on this computer that suits copies of backups: a disk, or a cloud's folder."
       },
       "Counts": {
         "properties": {
@@ -4162,6 +4596,90 @@
         ],
         "title": "DictionaryWord",
         "description": "One language's words for a row of the Kinship dictionary."
+      },
+      "Elsewhere": {
+        "properties": {
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "inside": {
+            "type": "string",
+            "title": "Inside"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "reachable": {
+            "type": "boolean",
+            "title": "Reachable"
+          },
+          "copies": {
+            "type": "integer",
+            "title": "Copies"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          },
+          "copied": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copied"
+          },
+          "problem": {
+            "type": "string",
+            "title": "Problem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder",
+          "inside",
+          "locked",
+          "reachable",
+          "copies",
+          "waiting",
+          "copied",
+          "problem"
+        ],
+        "title": "Elsewhere",
+        "description": "The second place a family's backups are copied to (0.4.0), and how its copies stand."
+      },
+      "ElsewhereChoice": {
+        "properties": {
+          "folder": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Folder"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder"
+        ],
+        "title": "ElsewhereChoice"
       },
       "ExportFile": {
         "properties": {
@@ -4622,6 +5140,75 @@
             "type": "boolean",
             "title": "May Leave",
             "default": false
+          },
+          "project": {
+            "type": "string",
+            "title": "Project",
+            "default": ""
+          },
+          "project_invited": {
+            "type": "boolean",
+            "title": "Project Invited",
+            "default": false
+          },
+          "invited": {
+            "type": "boolean",
+            "title": "Invited",
+            "default": false
+          },
+          "syncing": {
+            "type": "boolean",
+            "title": "Syncing",
+            "default": false
+          },
+          "tried": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tried"
+          },
+          "through": {
+            "type": "boolean",
+            "title": "Through",
+            "default": false
+          },
+          "trouble": {
+            "type": "string",
+            "title": "Trouble",
+            "default": ""
+          },
+          "lost": {
+            "type": "boolean",
+            "title": "Lost",
+            "default": false
+          },
+          "moving": {
+            "type": "boolean",
+            "title": "Moving",
+            "default": false
+          },
+          "old_folder_left": {
+            "type": "boolean",
+            "title": "Old Folder Left",
+            "default": false
+          },
+          "published": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published"
           }
         },
         "type": "object",
@@ -6055,6 +6642,40 @@
         ],
         "title": "ImportTakenBack"
       },
+      "InvitationMade": {
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "title": "Invitation"
+          },
+          "project": {
+            "type": "string",
+            "title": "Project"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invitation",
+          "project"
+        ],
+        "title": "InvitationMade",
+        "description": "The family's invitation, for its keeper to send (0.4.0)."
+      },
+      "InvitationText": {
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Invitation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invitation"
+        ],
+        "title": "InvitationText",
+        "description": "A keeper's invitation, pasted on a relative's computer (0.4.0)."
+      },
       "Invite": {
         "properties": {
           "email": {
@@ -6073,7 +6694,14 @@
       "JoinFamily": {
         "properties": {
           "folder": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Folder"
           },
           "computer": {
@@ -6085,7 +6713,6 @@
         },
         "type": "object",
         "required": [
-          "folder",
           "computer"
         ],
         "title": "JoinFamily"
@@ -8142,6 +8769,26 @@
         ],
         "title": "Positions"
       },
+      "ProjectFile": {
+        "properties": {
+          "client": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Client"
+          },
+          "moving": {
+            "type": "boolean",
+            "title": "Moving",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "client"
+        ],
+        "title": "ProjectFile",
+        "description": "The family's own Google project (0.4.0): the file Google's console gives for its client\nof the Desktop app type, as text."
+      },
       "Recover": {
         "properties": {
           "folder": {
@@ -8613,6 +9260,11 @@
             "maxLength": 60,
             "minLength": 1,
             "title": "Computer"
+          },
+          "another": {
+            "type": "boolean",
+            "title": "Another",
+            "default": false
           }
         },
         "type": "object",

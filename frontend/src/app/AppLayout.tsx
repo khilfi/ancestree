@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ExportButton } from "@/features/export/ExportDialog";
 import { TreePictureProvider } from "@/features/export/treePicture";
 import { FamilyFactsPanel } from "@/features/facts/FamilyFactsPanel";
+import { FamilyMenu } from "@/features/families/FamilyMenu";
 import { UndoRedo } from "@/features/history/UndoRedo";
 import { MeButton } from "@/features/me/MeButton";
 import { PeopleSearch } from "@/features/search/PeopleSearch";
@@ -15,6 +16,7 @@ import { CopyBadge } from "./CopyBadge";
 import { CanEdit, InAppOnly, useCopy } from "./copy";
 import { DatabaseWarning } from "./DatabaseWarning";
 import { FamilyFolderBar } from "./FamilyFolderBar";
+import { SyncIndicator } from "./SyncIndicator";
 import { UpdateBanner } from "./UpdateBanner";
 
 function tabClass({ isActive }: { isActive: boolean }): string {
@@ -44,7 +46,7 @@ export function SettingsLink() {
       title={waiting > 0 ? `${waiting} waiting in Settings → Family folder` : "Settings"}
     >
       <SettingsIcon className="size-4" />
-      <span className="hidden xl:inline">Settings</span>
+      <span className="hidden 2xl:inline">Settings</span>
       {waiting > 0 && (
         <span className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums">
           {waiting}
@@ -68,10 +70,13 @@ export function AppLayout() {
       <div className="flex h-full flex-col bg-stone-50 text-stone-900">
         {/* On a phone: two rows, the views across the second. */}
         <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-stone-200 bg-white px-3 py-2 md:flex-nowrap md:gap-x-3 md:px-4">
-          <div className="flex min-w-0 items-center gap-1 max-md:flex-1">
+          {/* Where the bar is short, the family's name leads in the desktop app, and the
+              words beside the icons go first (0.4.0). */}
+          <div className="group/brand flex min-w-0 items-center gap-1 max-md:flex-1">
             <span
               className={cn(
-                "text-lg font-semibold tracking-tight",
+                "shrink-0 text-lg font-semibold tracking-tight",
+                "group-has-[[data-family-menu]]/brand:max-xl:hidden",
                 copy && "max-md:sr-only", // the copy's badge says what this is
               )}
             >
@@ -85,14 +90,18 @@ export function AppLayout() {
               title="Family facts: the whole family at a glance"
               onClick={() => setFacts((now) => !now)}
               className={cn(
-                "flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors",
+                "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors",
                 facts ? "bg-sky-50 text-sky-800" : "text-stone-500 hover:text-stone-900",
               )}
             >
               <InfoIcon className="size-4" />
-              <span className="hidden xl:inline">Family facts</span>
+              <span className="hidden whitespace-nowrap 2xl:inline">Family facts</span>
             </button>
             {copy && <CopyBadge copy={copy} />}
+            {/* Which family, of those on this computer, in the desktop app; and how it stands
+                with its family folder (0.4.0). */}
+            {!copy && <FamilyMenu />}
+            {!copy && <SyncIndicator />}
           </div>
           <nav
             aria-label="Views"
@@ -110,9 +119,12 @@ export function AppLayout() {
           </nav>
           <CanEdit>
             <Button asChild size="sm">
-              <Link to={{ pathname: "/tree", search: `?${withView(params, { new: "1" })}` }}>
+              <Link
+                to={{ pathname: "/tree", search: `?${withView(params, { new: "1" })}` }}
+                title="Add person"
+              >
                 <PlusIcon />
-                Add person
+                <span className="md:max-xl:sr-only">Add person</span>
               </Link>
             </Button>
           </CanEdit>
@@ -133,7 +145,7 @@ export function AppLayout() {
               title="Kinship words in English, Malay and Javanese"
             >
               <BookOpenIcon className="size-4" />
-              <span className="hidden xl:inline">Dictionary</span>
+              <span className="hidden 2xl:inline">Dictionary</span>
             </NavLink>
             <InAppOnly>
               <SettingsLink />

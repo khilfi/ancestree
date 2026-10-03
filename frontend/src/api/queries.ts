@@ -5,6 +5,7 @@ import { api } from "./client";
 import { toApiError, unwrap } from "./errors";
 import type {
   Backup,
+  BackupList,
   BiographyUpdate,
   Crop,
   ExportFormat,
@@ -608,18 +609,59 @@ export function useBackups() {
   return useQuery({ queryKey: keys.backups, queryFn: () => unwrap(api.GET("/api/backups")) });
 }
 
-/** A backup archive from elsewhere, kept with the others so it can be restored. */
+/** A backup archive from elsewhere, kept with the others so it can be restored. One locked
+ *  with a password, as copies kept elsewhere can be (0.4.0), is opened with `password`. */
 export function useAddBackup() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: ({ file, password }: { file: File; password?: string }) => {
       const form = new FormData();
       form.append("file", file);
+      if (password) form.append("password", password);
       return sendForm<Backup>("/api/backups", "POST", form);
     },
     onSettled: () => client.invalidateQueries({ queryKey: keys.backups }),
   });
 }
+
+/** A backup read whole, every file against its checksum, restoring nothing (0.4.0). */
+export function useCheckBackup() {
+  return useMutation({
+    mutationFn: (name: string) =>
+      unwrap(api.POST("/api/backups/{name}/check", { params: { path: { name } } })),
+  });
+}
+
+/** Places on this computer that suit copies of the backups (0.4.0). */
+export function usePlacesForCopies(enabled: boolean) {
+  return useQuery({
+    queryKey: [...keys.backups, "places"],
+    queryFn: () => unwrap(api.GET("/api/backups/places")),
+    enabled,
+    staleTime: 10_000,
+  });
+}
+
+function useBackupsChange<T>(send: (input: T) => Promise<BackupList>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: send,
+    onSuccess: (list) => client.setQueryData(keys.backups, list),
+  });
+}
+
+/** Copies of every backup in a second place from now on, locked with a password if one is
+ *  given (0.4.0). */
+export const useCopyElsewhere = () =>
+  useBackupsChange((body: { folder: string; password: string | null }) =>
+    unwrap(api.PUT("/api/backups/elsewhere", { body })),
+  );
+/** The copies not made yet in the second place, now. */
+export const useCopyNow = () =>
+  useBackupsChange(() => unwrap(api.POST("/api/backups/elsewhere/copy")));
+/** No more copies in the second place; those made stay. */
+export const useStopCopying = () =>
+  useBackupsChange(() => unwrap(api.DELETE("/api/backups/elsewhere")));
 
 /** Replace everything with a backup. Afterwards, everything on screen is read again. */
 export function useRestoreBackup() {

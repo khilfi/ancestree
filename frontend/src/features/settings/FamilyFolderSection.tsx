@@ -1,23 +1,29 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { ApiError } from "@/api/errors";
 import {
   sendsToTheKeeper,
   useAdmit,
   useAnswersSeen,
   useFamilyFolder,
+  useFamilyProject,
+  useInvitation,
   useInvite,
   useJoinFamily,
   useLeaveFamilyFolder,
+  useMoveAccount,
   useNewRecoveryCode,
+  useOldFolderDeleted,
+  useRebuild,
   useRecoverFamily,
   useRecoverySeen,
   useRefuse,
   useRemoveComputer,
-  useSharedFolders,
   useSignInToGoogle,
   useSignOutOfGoogle,
   useStartFamily,
   useSyncNow,
+  useTakeInvitation,
 } from "@/api/familyFolder";
 import type {
   FamilyFolderStatus,
@@ -40,6 +46,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import { ago } from "@/lib/ago";
 import { showError } from "@/lib/notify";
 import { FolderReview } from "./FolderReview";
 
@@ -49,6 +57,11 @@ const ROLES = {
   viewer: "Viewer: they receive the family, and change nothing",
 } as const;
 
+/** AncesTree's guide, and its releases: the same for every family. */
+const GUIDE = "https://github.com/khilfi/ancestree/blob/main/GUIDE.md";
+const GUIDE_PROJECT = `${GUIDE}#your-familys-google-project`;
+const RELEASES = "https://github.com/khilfi/ancestree/releases/latest";
+
 const ROLE_NAMES: Record<string, string> = {
   keeper: "Keeper",
   trusted: "Trusted",
@@ -57,15 +70,6 @@ const ROLE_NAMES: Record<string, string> = {
   removed: "Removed",
   waiting: "Waiting to be let in",
 };
-
-/** "just now", "3 minutes ago", "2 hours ago", or the day. */
-function ago(iso: string): string {
-  const seconds = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.round(seconds / 60)} minute${seconds < 90 ? "" : "s"} ago`;
-  if (seconds < 86_400) return `${Math.round(seconds / 3600)} hour${seconds < 5400 ? "" : "s"} ago`;
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-}
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -104,7 +108,9 @@ function GoogleAccount({ status }: { status: FamilyFolderStatus }) {
   const signOut = useSignOutOfGoogle();
   return (
     <p className="text-xs text-stone-500">
-      Signed in to Google as {status.email}.{" "}
+      Signed in to Google as {status.email}, through{" "}
+      {status.project_invited ? "your keeper's" : "the family's"} Google project,{" "}
+      <span className="font-mono">{status.project}</span>.{" "}
       <button
         type="button"
         className="text-sky-700 hover:underline"
@@ -151,59 +157,166 @@ function SignIn({ status }: { status: FamilyFolderStatus }) {
   );
 }
 
+/** The family's own Google project (0.4.0): the file Google's console gives for its client.
+ *  `moving`: the keeper moving the family folder into another project. */
+function ChooseClientFile({
+  children,
+  moving = false,
+}: {
+  children: React.ReactNode;
+  moving?: boolean;
+}) {
+  const project = useFamilyProject();
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <Button variant="outline" onClick={() => input.current?.click()} disabled={project.isPending}>
+        {project.isPending ? "Reading it…" : children}
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        aria-label="The client's file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void file.text().then((text) =>
+            project.mutate(
+              { client: text, moving },
+              {
+                onError: showError,
+                onSuccess: (status) =>
+                  toast.success(`The family signs in to Google through ${status.project} now.`),
+              },
+            ),
+          );
+        }}
+      />
+    </>
+  );
+}
+
+/** A keeper's invitation, pasted on a relative's computer (0.4.0). */
+function PasteInvitation({ label }: { label: string }) {
+  const take = useTakeInvitation();
+  const [text, setText] = useState("");
+  return (
+    <form
+      className="space-y-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        take.mutate(text, { onError: showError, onSuccess: () => setText("") });
+      }}
+    >
+      <Label htmlFor="invitation">{label}</Label>
+      <Textarea
+        id="invitation"
+        className="max-w-xl font-mono text-xs"
+        rows={3}
+        placeholder="ATI1-…"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        spellCheck={false}
+        required
+      />
+      <Button type="submit" disabled={take.isPending || !text.trim()}>
+        {take.isPending ? "Reading it…" : "Use this invitation"}
+      </Button>
+    </form>
+  );
+}
+
+/** Before the family has a Google project to sign in through (0.4.0): a relative pastes their
+ *  keeper's invitation; a keeper gives AncesTree the project's client file. */
+function NoProject() {
+  return (
+    <div className="space-y-4">
+      <Panel title="Join your family's AncesTree">
+        <p className="max-w-2xl text-sm text-stone-600">
+          Your family's keeper sends you an invitation: a line of text that starts with{" "}
+          <span className="font-mono">ATI1-</span>. Paste it here, then sign in to Google with the
+          account they invited, and ask to join.
+        </p>
+        <PasteInvitation label="Your keeper's invitation" />
+      </Panel>
+      <Panel title="Start your family's folder, as its keeper">
+        <p className="max-w-2xl text-sm text-stone-600">
+          The family folder signs in to Google through a Google Cloud project of your own family's:
+          free, and set up once, in about 20 minutes.{" "}
+          <a href={GUIDE_PROJECT} target="_blank" rel="noreferrer" className="text-sky-700">
+            The guide shows each step
+          </a>
+          . Then choose the file Google gives you for its client.
+        </p>
+        <ChooseClientFile>Choose the client's file…</ChooseClientFile>
+        <p className="max-w-2xl text-xs text-stone-500">
+          The family's keeper on a new computer? Choose the same project's client file, sign in,
+          then be the keeper again with your recovery code.
+        </p>
+      </Panel>
+    </div>
+  );
+}
+
+/** The project's client, or the invitation, changed for another before signing in. */
+function OtherProject({ status }: { status: FamilyFolderStatus }) {
+  return (
+    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">
+        {status.project_invited ? "Another invitation?" : "Joining your family instead?"}
+      </summary>
+      <div className="mt-3 space-y-4">
+        <PasteInvitation label="The invitation from your family's keeper" />
+        {status.project_invited && (
+          <div className="space-y-2">
+            <p className="max-w-2xl text-stone-600">
+              Starting your own family's folder instead? Choose your own Google project's client
+              file.
+            </p>
+            <ChooseClientFile>Choose the client's file…</ChooseClientFile>
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+/** A relative's computer with an invitation pasted (0.4.0): it asks to join the family the
+ *  invitation names. */
 function Join() {
-  const shared = useSharedFolders(true);
   const join = useJoinFamily();
   const [computer, setComputer] = useState("");
-  const folders = shared.data ?? [];
   return (
     <Panel title="Join your family's AncesTree">
-      {shared.isLoading ? (
-        <p className="text-sm text-stone-500">Looking for family folders shared with you…</p>
-      ) : folders.length === 0 ? (
+      <form
+        className="space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          join.mutate({ computer }, { onError: showError });
+        }}
+      >
         <p className="max-w-2xl text-sm text-stone-600">
-          No family folder is shared with this Google account yet. Ask your family's keeper to
-          invite it, then{" "}
-          <button
-            type="button"
-            className="text-sky-700 hover:underline"
-            onClick={() => void shared.refetch()}
-          >
-            look again
-          </button>
-          .
+          Your keeper's invitation says which family to join. Asking to join puts a small folder in
+          your own Google Drive, shared with your keeper, for what this computer sends them.
         </p>
-      ) : (
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const folder = folders[0];
-            if (!folder) return;
-            join.mutate({ folder: folder.id, computer }, { onError: showError });
-          }}
-        >
-          <p className="max-w-2xl text-sm text-stone-600">
-            Shared by <strong>{folders[0]?.owner}</strong>, the family's keeper. Asking to join puts
-            a small folder in your own Google Drive, shared with them, for what this computer sends
-            them.
-          </p>
-          <div className="max-w-sm space-y-1">
-            <Label htmlFor="join-computer">This computer's name, as the family will see it</Label>
-            <Input
-              id="join-computer"
-              placeholder="e.g. Mak Long's laptop"
-              value={computer}
-              onChange={(event) => setComputer(event.target.value)}
-              required
-              maxLength={60}
-            />
-          </div>
-          <Button type="submit" disabled={join.isPending || !computer.trim()}>
-            {join.isPending ? "Asking…" : "Ask to join"}
-          </Button>
-        </form>
-      )}
+        <div className="max-w-sm space-y-1">
+          <Label htmlFor="join-computer">This computer's name, as the family will see it</Label>
+          <Input
+            id="join-computer"
+            placeholder="e.g. Mak Long's laptop"
+            value={computer}
+            onChange={(event) => setComputer(event.target.value)}
+            required
+            maxLength={60}
+          />
+        </div>
+        <Button type="submit" disabled={join.isPending || !computer.trim()}>
+          {join.isPending ? "Asking…" : "Ask to join"}
+        </Button>
+      </form>
     </Panel>
   );
 }
@@ -212,6 +325,22 @@ function Start() {
   const start = useStartFamily();
   const [family, setFamily] = useState("");
   const [computer, setComputer] = useState("");
+  // This Google account's Drive holds another family folder already (0.4.0): how many.
+  const [others, setOthers] = useState(0);
+  const begin = (another: boolean) =>
+    start.mutate(
+      { family, computer, another },
+      {
+        onError: (error) => {
+          if (error instanceof ApiError && error.code === "family_folder_exists") {
+            const detail = error.detail as { count?: number } | undefined;
+            setOthers(detail?.count ?? 1);
+          } else {
+            showError(error);
+          }
+        },
+      },
+    );
   return (
     <Panel title="Start your family's folder, as its keeper">
       <p className="max-w-2xl text-sm text-stone-600">
@@ -222,7 +351,7 @@ function Start() {
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
-          start.mutate({ family, computer }, { onError: showError });
+          begin(false);
         }}
       >
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
@@ -257,6 +386,28 @@ function Start() {
           {start.isPending ? "Starting…" : "Start the family folder"}
         </Button>
       </form>
+      <AlertDialog open={others > 0} onOpenChange={(open) => !open && setOthers(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {others === 1
+                ? "Your Google Drive holds a family folder already"
+                : `Your Google Drive holds ${others} family folders already`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              If one is this family's, don't start another: be its keeper again, below, with your
+              recovery code. If this is another family, such as the other side of yours, start its
+              own folder beside it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => begin(true)}>
+              Start another family's folder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Panel>
   );
 }
@@ -299,40 +450,119 @@ function ComeBack() {
   );
 }
 
+/** What the keeper sends a relative (0.4.0): a few lines on installing AncesTree, and the
+ *  invitation, which holds the family's Google project and says which family it is. */
+function invitationMessage(invitation: string): string {
+  return [
+    "You're invited to our family's AncesTree.",
+    `1. Install AncesTree: ${RELEASES}`,
+    `   The guide shows each step: ${GUIDE}`,
+    "2. In AncesTree, open Settings → Family folder, and paste this invitation:",
+    invitation,
+    "3. Sign in to Google with the account I invited, and ask to join. Then read me the code it shows.",
+  ].join("\n");
+}
+
+/** The family's invitation, to copy and send to a relative, or to a computer of your own. */
+function InvitationDialog({ to, onClose }: { to: string | null; onClose: () => void }) {
+  const invitation = useInvitation(to !== null);
+  const message = invitation.data ? invitationMessage(invitation.data.invitation) : "";
+  return (
+    <AlertDialog open={to !== null} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent className="sm:max-w-xl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>The invitation to send</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3 text-sm text-stone-600">
+              <p>
+                {to
+                  ? `The family folder is shared with ${to}. Google doesn't tell them, so send them this, by message or email.`
+                  : "Send this to a relative you've invited, or paste it on a computer of your own."}{" "}
+                It holds the family's Google project, not the family: only the Google accounts you
+                invite can open the folder, and you check each computer's code.
+              </p>
+              {invitation.isError ? (
+                <p className="text-amber-700">{(invitation.error as Error).message}</p>
+              ) : (
+                <Textarea
+                  readOnly
+                  aria-label="The invitation, with how to use it"
+                  className="font-mono text-xs"
+                  rows={8}
+                  value={message || "…"}
+                  onFocus={(event) => event.target.select()}
+                />
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Close</AlertDialogCancel>
+          <Button
+            disabled={!message}
+            onClick={() =>
+              void navigator.clipboard.writeText(message).then(
+                () => toast.success("Copied: paste it into a message or an email."),
+                () => toast.error("It couldn't be copied: select the text and copy it."),
+              )
+            }
+          >
+            Copy
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function Invite() {
   const invite = useInvite();
   const [email, setEmail] = useState("");
+  // Whom the invitation is for: "" for any relative, or a computer of the keeper's own.
+  const [sending, setSending] = useState<string | null>(null);
   return (
-    <form
-      className="flex max-w-xl flex-wrap items-end gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        invite.mutate(email, {
-          onError: showError,
-          onSuccess: () => {
-            toast.success(
-              `The family folder is shared with ${email}. Google doesn't tell them, so let them know: they install AncesTree, sign in with that account, and choose Ask to join.`,
-            );
-            setEmail("");
-          },
-        });
-      }}
-    >
-      <div className="min-w-64 flex-1 space-y-1">
-        <Label htmlFor="invite-email">Invite a relative, by their Google account</Label>
-        <Input
-          id="invite-email"
-          type="email"
-          placeholder="name@gmail.com"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-      </div>
-      <Button type="submit" variant="outline" disabled={invite.isPending || !email.trim()}>
-        Invite
-      </Button>
-    </form>
+    <>
+      <form
+        className="flex max-w-xl flex-wrap items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          invite.mutate(email, {
+            onError: showError,
+            onSuccess: () => {
+              setSending(email);
+              setEmail("");
+            },
+          });
+        }}
+      >
+        <div className="min-w-64 flex-1 space-y-1">
+          <Label htmlFor="invite-email">Invite a relative, by their Google account</Label>
+          <Input
+            id="invite-email"
+            type="email"
+            placeholder="name@gmail.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </div>
+        <Button type="submit" variant="outline" disabled={invite.isPending || !email.trim()}>
+          Invite
+        </Button>
+      </form>
+      <p className="max-w-xl text-xs text-stone-500">
+        A computer of your own joins with your own Google account: no need to invite it.{" "}
+        <button
+          type="button"
+          className="text-sky-700 hover:underline"
+          onClick={() => setSending("")}
+        >
+          Show the invitation
+        </button>{" "}
+        to paste on it, or to send again.
+      </p>
+      <InvitationDialog to={sending} onClose={() => setSending(null)} />
+    </>
   );
 }
 
@@ -620,9 +850,91 @@ function ChangesWaiting({ changes }: { changes: FolderChanges[] }) {
   );
 }
 
+/** The family folder made again in Drive from this computer (0.4.0): when it's lost, or to
+ *  move it. Relatives' computers follow it by themselves. */
+function RebuildButton({ label }: { label: string }) {
+  const rebuild = useRebuild();
+  const [asking, setAsking] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setAsking(true)} disabled={rebuild.isPending}>
+        {rebuild.isPending ? "Rebuilding…" : label}
+      </Button>
+      <AlertDialog open={asking} onOpenChange={setAsking}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rebuild the family folder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A new family folder is made in your Google Drive from this computer's copy, every file
+              as it was, and shared again with each relative's Google account. Their computers find
+              it and carry on by themselves: nobody joins again. If the old folder is still in
+              Drive, it goes to Drive's bin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                rebuild.mutate(undefined, {
+                  onError: showError,
+                  onSuccess: () =>
+                    toast.success("The family folder is rebuilt: relatives' computers follow it."),
+                })
+              }
+            >
+              Rebuild it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+/** Moving the family folder to another Google account or project (0.4.0). */
+function Move({ status }: { status: FamilyFolderStatus }) {
+  const move = useMoveAccount();
+  if (status.moving) {
+    return (
+      <Panel title="Moving the family folder">
+        <p className="max-w-2xl text-sm text-stone-600">
+          Signed in as {status.email}, through <span className="font-mono">{status.project}</span>.
+          Rebuild the family folder here: relatives' computers follow it. If the family's Google
+          project changed, send relatives the new invitation too, once they're asked for it.
+        </p>
+        <RebuildButton label="Rebuild it here" />
+      </Panel>
+    );
+  }
+  return (
+    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">
+        Move the family folder to another Google account or project?
+      </summary>
+      <div className="mt-3 space-y-3">
+        <p className="max-w-2xl text-stone-600">
+          The family folder is made again from this computer, in the account or project you choose,
+          and relatives' computers follow it. The old one goes to Drive's bin.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={move.isPending}
+            onClick={() => move.mutate(undefined, { onError: showError })}
+          >
+            Another Google account…
+          </Button>
+          <ChooseClientFile moving>Another Google project's client file…</ChooseClientFile>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function Keeper({ status }: { status: FamilyFolderStatus }) {
   const asking = status.asking ?? [];
   const changes = status.changes ?? [];
+  const deleted = useOldFolderDeleted();
   return (
     <div className="space-y-5">
       <p className="text-sm">
@@ -630,6 +942,38 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         within a few minutes, while it's on.
       </p>
       <InStep status={status} />
+      {status.lost && (
+        <Panel
+          title={
+            status.trouble === "foreign"
+              ? "The family folder was made through another Google project"
+              : "The family folder is gone from Google Drive"
+          }
+        >
+          <p className="max-w-2xl text-sm text-stone-600">
+            {status.trouble === "foreign"
+              ? "Your family's Google project can read it, not change it. Rebuild it through your project, from this computer, which holds every one of its files: relatives' computers follow it."
+              : "If it's in Drive's bin, take it out there. If it's gone for good, rebuild it from this computer, which holds every one of its files."}
+          </p>
+          <RebuildButton label="Rebuild the family folder" />
+        </Panel>
+      )}
+      {status.old_folder_left && (
+        <Panel title="The old family folder is still in Google Drive">
+          <p className="max-w-2xl text-sm text-stone-600">
+            AncesTree couldn't put it in Drive's bin. Delete it in Google Drive, so relatives'
+            computers move to the new one, then say so here.
+          </p>
+          <Button
+            variant="outline"
+            disabled={deleted.isPending}
+            onClick={() => deleted.mutate(undefined, { onError: showError })}
+          >
+            I've deleted it
+          </Button>
+        </Panel>
+      )}
+      {status.moving && <Move status={status} />}
       {changes.length > 0 && <ChangesWaiting changes={changes} />}
       {asking.length > 0 && (
         <Panel title={`Asking to join (${asking.length})`}>
@@ -645,6 +989,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         <Invite />
       </Panel>
       <NewRecoveryCode />
+      {!status.moving && <Move status={status} />}
       <GoogleAccount status={status} />
     </div>
   );
@@ -740,7 +1085,61 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
         <Members members={members} keeper={false} />
       </Panel>
       <GoogleAccount status={status} />
+      <details className="rounded-lg border border-stone-200 p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">
+          Your keeper sent a new invitation?
+        </summary>
+        <div className="mt-3 space-y-3">
+          <p className="max-w-2xl text-stone-600">
+            When your keeper moves the family to another Google project, they send a new invitation.
+            Paste it here, then sign in to Google again.
+          </p>
+          <PasteInvitation label="The new invitation" />
+        </div>
+      </details>
       {status.may_leave && <Leave keeper={false} />}
+    </div>
+  );
+}
+
+/** A computer in a family folder with no Google project to sign in through (0.4.0): one that
+ *  kept its family folder before each family had its own project, or whose project can't be
+ *  opened here. The keeper gives the project's client file; a relative pastes the invitation. */
+function ProjectNeeded({ status }: { status: FamilyFolderStatus }) {
+  const keeper = status.setup === "keeper";
+  return (
+    <div className="space-y-4">
+      <Panel title={keeper ? "Your family's Google project" : "Your keeper's invitation"}>
+        <p className="max-w-2xl text-sm text-stone-600">
+          {keeper ? (
+            <>
+              Each family signs in to Google through its own Google project. Choose the file Google
+              gives for your project's client, then sign in again: the family folder carries on as
+              it was.{" "}
+              <a href={GUIDE_PROJECT} target="_blank" rel="noreferrer" className="text-sky-700">
+                The guide shows how
+              </a>
+              .
+            </>
+          ) : (
+            <>
+              Each family signs in to Google through its keeper's own Google project. Ask your
+              keeper for the family's invitation, paste it here, then sign in again: the family
+              carries on as it was.
+            </>
+          )}
+        </p>
+        {keeper ? (
+          <ChooseClientFile>Choose the client's file…</ChooseClientFile>
+        ) : (
+          <PasteInvitation label="Your keeper's invitation" />
+        )}
+      </Panel>
+      {status.problem && (
+        <p className="text-sm font-medium text-amber-700" role="status">
+          {status.problem}
+        </p>
+      )}
     </div>
   );
 }
@@ -753,29 +1152,45 @@ export function FamilyFolderSection() {
   let body: React.ReactNode;
   if (!status) {
     body = <p className="text-sm text-stone-500">{folder.isError ? "Can't be reached." : "…"}</p>;
-  } else if (!status.available) {
-    body = (
-      <p className="text-sm text-stone-600">
-        This AncesTree was built without its Google client, so it can't keep a family folder.
-      </p>
-    );
   } else if (status.broken || status.replaced) {
     body = <Stuck status={status} />;
+  } else if (!status.available) {
+    body = status.setup ? <ProjectNeeded status={status} /> : <NoProject />;
   } else if (!status.email && !status.setup) {
-    body = <SignIn status={status} />;
+    body = (
+      <div className="space-y-4">
+        <SignIn status={status} />
+        <OtherProject status={status} />
+      </div>
+    );
   } else if (!status.email) {
     body = (
       <div className="space-y-4">
-        <InStep status={status} />
+        {status.moving ? (
+          <p className="max-w-2xl text-sm font-medium text-stone-700">
+            Moving the family folder: sign in with the Google account that's to hold it. Then
+            rebuild the family folder there.
+          </p>
+        ) : (
+          <InStep status={status} />
+        )}
         <SignIn status={status} />
       </div>
     );
   } else if (!status.setup) {
     body = (
       <div className="space-y-4">
-        <Join />
-        <Start />
-        <ComeBack />
+        {status.invited ? (
+          <Join />
+        ) : (
+          !status.project_invited && (
+            <>
+              <Start />
+              <ComeBack />
+            </>
+          )
+        )}
+        <OtherProject status={status} />
         <GoogleAccount status={status} />
       </div>
     );
@@ -788,8 +1203,9 @@ export function FamilyFolderSection() {
         <h2 className="font-semibold">Family folder</h2>
         <p className="max-w-2xl text-sm text-stone-500">
           Your family's AncesTree on invited relatives' computers, kept in step through a private
-          folder in the keeper's Google Drive. Everything in it is encrypted on each computer:
-          Google keeps the files, but can't read them.
+          folder in the keeper's Google Drive, reached through the family's own Google project.
+          Everything in it is encrypted on each computer: Google keeps the files, but can't read
+          them.
         </p>
       </div>
       {body}

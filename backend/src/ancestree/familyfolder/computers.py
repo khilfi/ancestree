@@ -508,20 +508,21 @@ class Keeper(Computer):
         copy.write_bytes(blob)
 
     @classmethod
-    def start(cls, folder: Path, data: Path, name: str) -> tuple[Keeper, str]:
-        """Start a family in an empty folder; the recovery code, for the keeper's sheet."""
+    def start(cls, folder: Path, data: Path, name: str, family: str = "") -> tuple[Keeper, str]:
+        """Start a family in an empty folder; the recovery code, for the keeper's sheet.
+        `family`: the family's id, if it's chosen already (it names the folder in Drive)."""
         keeper = cls(folder, data)
-        keeper.family = secrets.token_hex(8)
+        keeper.family = family or secrets.token_hex(8)
         keeper.keeper = _public(keeper.sign)
         keeper.keys = {1: os.urandom(32)}
         keeper.naming = os.urandom(32)
         keeper.role = "keeper"
-        family = FamilyFile(
+        found = FamilyFile(
             family=keeper.family,
             keeper_sign=keeper.keeper.hex(),
             keeper_dh=_public(keeper.dh).hex(),
         )
-        keeper._write("family.json", family.model_dump_json(indent=2).encode())
+        keeper._write("family.json", found.model_dump_json(indent=2).encode())
         keeper.known[keeper.device] = Known(
             name=name, role="keeper", sign=keeper.keeper.hex(), dh=_public(keeper.dh).hex()
         )
@@ -844,6 +845,23 @@ class Keeper(Computer):
                 Computer._write(self, relative, original)
                 restored.append(relative)
         return restored
+
+    @staticmethod
+    def opens(family: bytes, recovery: bytes, version: int, code: str) -> bool:
+        """Whether a recovery code opens a family folder's recovery file: its `family.json`,
+        and its newest recovery file, `recovery/<version>.bin`."""
+        try:
+            found = FamilyFile.model_validate_json(family)
+            unseal(
+                recovery,
+                f"recovery/{version}",
+                Kind.RECOVERY,
+                {bytes.fromhex(found.keeper_sign)},
+                recovery_key(code, found.family),
+            )
+        except RefusedError, ValidationError, ValueError:
+            return False
+        return True
 
     @classmethod
     def recover(cls, folder: Path, data: Path, code: str) -> Keeper:

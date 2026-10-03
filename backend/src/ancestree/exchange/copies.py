@@ -327,7 +327,9 @@ async def family_snapshot(
     }
     if options.archive and not living:
         with tempfile.TemporaryDirectory() as folder:
-            backup = await create_backup(ctx.driver, ctx.database, ctx.data_dir, Path(folder))
+            backup = await create_backup(
+                ctx.driver, ctx.database, ctx.data_dir, Path(folder), ctx.family
+            )
             exports["archive"] = _file(backup.path.name, backup.path.read_bytes())
     about["archive"] = exports["archive"] is not None
 

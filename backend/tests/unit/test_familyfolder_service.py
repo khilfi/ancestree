@@ -5,6 +5,7 @@ fictional family's."""
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 import re
@@ -27,15 +28,21 @@ from ancestree.domain.familyfolder import (
 )
 from ancestree.familyfolder.computers import Keeper, Member
 from ancestree.familyfolder.drive import DriveError
-from ancestree.familyfolder.google import Client, SignedOutError, Tokens
+from ancestree.familyfolder.google import Client, Session, SignedOutError, Tokens
+from ancestree.familyfolder.invitations import Invitation
 from ancestree.familyfolder.mirror import Mirror
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import (
     FOLDER_NAME,
+    FOREIGN,
+    LOST,
+    LOST_RELATIVE,
+    NOT_THIS_PROJECTS,
     OWN_FOLDER,
     REPLACED,
     UNREADABLE,
     FamilyFolder,
+    keep_in_step,
 )
 from tests.fake_drive import Cloud
 
@@ -100,6 +107,21 @@ class Family:
         self.restores.append({"graph": graph, "files": files, "backup_first": backup_first})
 
 
+def family_of(folder: FamilyFolder) -> str:
+    """The family's id, as its family folder's family.json has it."""
+    assert folder.computer is not None
+    return folder.computer.family
+
+
+def folder_name(folder: FamilyFolder) -> str:
+    """The family folder's name in Drive, since 0.4.0: with its family's id."""
+    return f"{FOLDER_NAME} ({family_of(folder)})"
+
+
+def family_folders(cloud: Cloud) -> list[str]:
+    return [item.name for item in cloud.items.values() if item.name.startswith(f"{FOLDER_NAME} (")]
+
+
 def computer(tmp_path: Path, cloud: Cloud, email: str, family: Family) -> FamilyFolder:
     ctx = Context(None, "neo4j", family.data_dir)  # type: ignore[arg-type]
     folder = FamilyFolder(
@@ -136,7 +158,7 @@ async def test_a_relative_joins_with_the_code_and_receives_the_family(
     tmp_path: Path, cloud: Cloud
 ) -> None:
     keeper, ours, relative, theirs, folder = await two_computers(tmp_path, cloud)
-    assert cloud.path(folder) == FOLDER_NAME
+    assert cloud.path(folder) == folder_name(keeper)
     assert cloud.items[folder].owner == KEEPER
 
     waiting = await relative.status()
@@ -180,7 +202,9 @@ async def test_each_computer_writes_only_in_its_own_folder(tmp_path: Path, cloud
     assert {item.owner for item in in_the_family_folder} == {KEEPER}
     assert relative.setup is not None
     own = cloud.items[relative.setup.own_folder]
-    assert (own.name, own.owner, own.parent) == (f"{OWN_FOLDER} ({asking.device})", RELATIVE, None)
+    family = family_of(keeper)
+    named = f"{OWN_FOLDER} ({family}, {asking.device})"
+    assert (own.name, own.owner, own.parent) == (named, RELATIVE, None)
     assert own.shared == {KEEPER: "reader"}
     assert cloud.items[folder].shared == {RELATIVE: "reader"}
     written = [cloud.path(item.id) for item in cloud.items.values() if cloud.inside(item, own.id)]
@@ -680,7 +704,7 @@ async def test_a_new_recovery_code_and_the_old_one_opens_nothing(
     recovery = sorted(
         cloud.path(item.id) for item in cloud.items.values() if "/recovery/" in cloud.path(item.id)
     )
-    assert recovery == [f"{FOLDER_NAME}/recovery/000002.bin"]
+    assert recovery == [f"{folder_name(keeper)}/recovery/000002.bin"]
     assert [item.name for item in cloud.binned.values()] == ["000001.bin"]  # in the bin, a while
     assert not (keeper.local / "recovery" / "000001.bin").exists()
     await keeper.sync()  # not put back by repair
@@ -749,14 +773,22 @@ async def test_drive_trouble_comes_back_as_a_sentence(tmp_path: Path, cloud: Clo
     assert (status.email, status.setup) == (None, "keeper")  # signed out; the folder stays
 
 
-async def test_one_family_folder_to_a_google_account(tmp_path: Path, cloud: Cloud) -> None:
+async def test_a_second_family_folder_in_one_google_account_is_asked_about_first(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """It may be this family's, to keep again with the recovery code (0.3.1); or another
+    family's, beside it (0.4.0)."""
     keeper = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "keeper-data", made_up_graph()))
     await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
-    another = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "another-computer"))
+    another = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "another-family"))
     with pytest.raises(RuleError) as refused:
         await another.start(StartFamily(family="Keluarga Contoh", computer="Laptop"))
-    assert refused.value.code == "family_folder_exists"
-    assert [item.name for item in cloud.items.values()].count(FOLDER_NAME) == 1
+    assert (refused.value.code, refused.value.details) == ("family_folder_exists", {"count": 1})
+    assert family_folders(cloud) == [folder_name(keeper)]
+
+    await another.start(StartFamily(family="Keluarga Lain", computer="Laptop", another=True))
+    assert sorted(family_folders(cloud)) == sorted([folder_name(keeper), folder_name(another)])
+    assert family_of(keeper) != family_of(another)
 
 
 async def test_one_relatives_folder_drive_wont_give_holds_up_no_one(
@@ -869,3 +901,698 @@ async def test_a_part_kept_elsewhere_never_stops_the_app(tmp_path: Path, cloud: 
     status = await again.status()
     assert (status.setup, status.broken, status.problem) == (None, False, "")
     assert again.editing
+
+
+# --- Each family's own Google project, and invitations (0.4.0) ---------------------------------
+
+
+def client_file(client_id: str, project: str = "keluarga-contoh") -> str:
+    """A client's file, as Google's console gives it for one of the Desktop app type."""
+    return json.dumps(
+        {
+            "installed": {
+                "client_id": client_id,
+                "project_id": project,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "client_secret": "made-up-secret",
+                "redirect_uris": ["http://localhost"],
+            }
+        }
+    )
+
+
+OUR_PROJECT = client_file("123456789012-ourclient.apps.googleusercontent.com")
+SAME_PROJECT = client_file("123456789012-newclient.apps.googleusercontent.com")
+OTHER_PROJECT = client_file("987654321098-theirclient.apps.googleusercontent.com", "keluarga-lain")
+
+
+@pytest.fixture(autouse=True)
+def no_client_named(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A client named while developing would stand in for every family's own."""
+    monkeypatch.delenv("ANCESTREE_GOOGLE_CLIENT", raising=False)
+
+
+def fresh(cloud: Cloud, family: Family) -> FamilyFolder:
+    """A family on a new install, or the same one after a restart: what it kept, and no more."""
+    return FamilyFolder(
+        Context(None, "neo4j", family.data_dir),  # type: ignore[arg-type]
+        drive=lambda session: cloud.as_account(session.email),
+        graph=family.export,
+        restore=family.restore,
+    )
+
+
+def signed_in(folder: FamilyFolder, email: str) -> None:
+    """As a sign-in through the family's own project would leave it."""
+    assert folder.client is not None
+    folder._signed_in(folder.client, Tokens("r", email))
+    folder._make_mirror()
+
+
+async def keeper_with_project(
+    tmp_path: Path, cloud: Cloud, name: str = "our-keeper", email: str = KEEPER
+) -> tuple[FamilyFolder, Family]:
+    """A keeper who gave the family its own Google project, signed in and started it."""
+    ours = Family(tmp_path / name, made_up_graph())
+    keeper = fresh(cloud, ours)
+    await keeper.use_project(OUR_PROJECT)
+    signed_in(keeper, email)
+    await keeper.start(StartFamily(family="Keluarga Contoh", computer="Pak Hassan's PC"))
+    keeper.recovery_seen()
+    return keeper, ours
+
+
+async def test_a_family_signs_in_through_its_own_google_project(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    ours = Family(tmp_path / "keeper-data", made_up_graph())
+    keeper = fresh(cloud, ours)
+    status = await keeper.status()
+    assert (status.available, status.project) == (False, "")  # no release carries a client
+    with pytest.raises(RuleError) as none:
+        await keeper.sign_in()
+    assert none.value.code == "no_google_client"
+
+    await keeper.use_project(OUR_PROJECT)
+    status = await keeper.status()
+    assert (status.available, status.project, status.project_invited) == (
+        True,
+        "keluarga-contoh",
+        False,
+    )
+    again = fresh(cloud, ours)  # kept with the family: there after a restart
+    assert again.client == keeper.client
+
+
+class Answered:
+    """A sign-in Google has answered, as `SignIn` is once the browser comes back to it."""
+
+    def __init__(self, client: Client, email: str) -> None:
+        self.client, self.email = client, email
+        self.answer, self.expired = "a code", False
+
+    def finish(self) -> Tokens:
+        return Tokens(f"refresh of {self.email}", self.email)
+
+    def close(self) -> None:
+        pass
+
+
+async def test_a_sign_in_turned_away_is_given_back_to_google(
+    tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The keeper's computer signed in with another account, as a browser holding two will
+    offer: refused, and given back to Google at once, rather than left on that account's list
+    of apps with access to it (0.4.0)."""
+    given_back: list[str] = []
+    monkeypatch.setattr(
+        Session, "sign_out", lambda session: given_back.append(session.tokens.refresh)
+    )
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    assert keeper.client is not None
+    keeper.signing_in = Answered(keeper.client, RELATIVE)  # type: ignore[assignment]
+    status = await keeper.status()
+    assert status.problem.startswith(f"That was {RELATIVE}. This computer's family folder")
+    assert given_back == [f"refresh of {RELATIVE}"]
+
+    keeper.signing_in = Answered(keeper.client, KEEPER)  # type: ignore[assignment]
+    status = await keeper.status()
+    assert (status.email, status.problem) == (KEEPER, "")
+    assert given_back == [f"refresh of {RELATIVE}"]  # the right account's, kept
+
+
+async def test_a_file_that_isnt_a_desktop_apps_client_is_refused(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper = fresh(cloud, Family(tmp_path / "keeper-data"))
+    web = json.dumps({"web": {"client_id": "1-a.apps.googleusercontent.com", "client_secret": "s"}})
+    no_secret = client_file("123456789012-x.apps.googleusercontent.com").replace(
+        "made-up-secret", " "
+    )
+    for text, says in (
+        (web, "web application"),
+        ("{ not the file", "can't be read"),
+        (json.dumps({"installed": {"client_id": "nope", "client_secret": "s"}}), "no Desktop app"),
+        (no_secret, "no secret"),
+    ):
+        with pytest.raises(RuleError) as refused:
+            await keeper.use_project(text)
+        assert refused.value.code == "not_a_client_file"
+        assert says in refused.value.message
+    assert keeper.client is None
+
+
+async def test_once_started_only_its_projects_clients_keep_the_family_folder(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    with pytest.raises(RuleError) as other:
+        await keeper.use_project(OTHER_PROJECT)
+    assert other.value.code == "other_project"
+    assert "keluarga-contoh" in other.value.message
+
+    await keeper.use_project(SAME_PROJECT)  # a new client, in the same project
+    status = await keeper.status()
+    assert (status.setup, status.project) == ("keeper", "keluarga-contoh")
+    assert status.email is None  # a sign-in belongs to the client it was made with
+    signed_in(keeper, KEEPER)
+    await keeper.sync()
+    assert (await keeper.status()).problem == ""
+
+
+async def test_a_relative_joins_with_the_invitation(tmp_path: Path, cloud: Cloud) -> None:
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    await keeper.invite(Invite(email=RELATIVE))
+    invitation = keeper.invitation()
+    assert invitation.client.project == "keluarga-contoh"
+    assert "Keluarga" not in invitation.text()  # nothing of the family's own
+
+    theirs = Family(tmp_path / "relative-data")
+    relative = fresh(cloud, theirs)
+    text = invitation.text()
+    # As a message app may break it across lines, with words around it.
+    await relative.take_invitation(f"Join us in AncesTree! Paste this:\n{text[:40]}\n{text[40:]}")
+    status = await relative.status()
+    assert (status.invited, status.project, status.project_invited) == (
+        True,
+        "keluarga-contoh",
+        True,
+    )
+    assert fresh(cloud, theirs).invited == family_of(keeper)  # kept across a restart
+    signed_in(relative, RELATIVE)
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    status = await relative.status()
+    assert (status.setup, status.role, status.invited) == ("member", "waiting", False)
+
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    assert (asking.name, asking.email) == ("Mak Long's laptop", RELATIVE)
+    await keeper.admit(Admit(device=asking.device, role="viewer"))
+    await relative.sync()
+    assert [restore["graph"] for restore in theirs.restores] == [ours.graph]
+
+
+async def test_an_invitation_says_so_until_the_folder_is_shared(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    relative = fresh(cloud, Family(tmp_path / "relative-data"))
+    await relative.take_invitation(keeper.invitation().text())
+    signed_in(relative, RELATIVE)
+    with pytest.raises(RuleError) as not_yet:
+        await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    assert not_yet.value.code == "not_shared_yet"
+    assert RELATIVE in not_yet.value.message
+    assert (await relative.status()).invited  # still waiting to ask
+
+    await keeper.invite(Invite(email=RELATIVE))
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    assert (await relative.status()).role == "waiting"
+
+
+async def test_what_isnt_an_invitation_is_said_plainly(tmp_path: Path, cloud: Cloud) -> None:
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    relative = fresh(cloud, Family(tmp_path / "relative-data"))
+    whole = keeper.invitation().text()
+    for pasted, says in (
+        ("Hello!", "isn't an AncesTree invitation"),
+        (whole[:30] + whole[36:], "isn't whole"),  # a piece lost on the way
+    ):
+        with pytest.raises(RuleError) as refused:
+            await relative.take_invitation(pasted)
+        assert refused.value.code == "not_an_invitation"
+        assert says in refused.value.message
+    assert relative.client is None
+
+
+async def test_invitations_are_for_relatives_and_for_one_family(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    others, _ = await keeper_with_project(tmp_path, cloud, "another-family", "other@example.com")
+    with pytest.raises(RuleError) as own:
+        await keeper.take_invitation(others.invitation().text())
+    assert own.value.code == "keepers_own"
+
+    await keeper.invite(Invite(email=RELATIVE))
+    relative = fresh(cloud, Family(tmp_path / "relative-data"))
+    await relative.take_invitation(keeper.invitation().text())
+    signed_in(relative, RELATIVE)
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    with pytest.raises(RuleError) as another:
+        await relative.take_invitation(others.invitation().text())
+    assert another.value.code == "another_family"
+
+    with pytest.raises(RuleError) as theirs:
+        await relative.use_project(OTHER_PROJECT)
+    assert theirs.value.code == "project_from_the_keeper"
+    # A newer invitation to the same family brings its new project: sign in again.
+    newer = Client.from_file(SAME_PROJECT)
+    await relative.take_invitation(Invitation(newer, family_of(keeper)).text())
+    assert relative.client is not None
+    assert relative.client.client_id == newer.client_id
+    assert (await relative.status()).email is None
+
+
+async def test_a_relative_cant_start_a_family_folder_through_the_keepers_project(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    relative = fresh(cloud, Family(tmp_path / "relative-data", made_up_graph()))
+    await relative.take_invitation(keeper.invitation().text())
+    signed_in(relative, RELATIVE)
+    with pytest.raises(RuleError) as refused:
+        await relative.start(StartFamily(family="Keluarga Kami", computer="Laptop"))
+    assert refused.value.code == "project_from_an_invitation"
+
+    await relative.use_project(OTHER_PROJECT)  # their own family's project instead
+    signed_in(relative, RELATIVE)
+    await relative.start(StartFamily(family="Keluarga Kami", computer="Laptop"))
+    status = await relative.status()
+    assert (status.setup, status.project, status.invited) == ("keeper", "keluarga-lain", False)
+
+
+async def test_a_computer_of_the_keepers_own_joins_with_the_keepers_account(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """No second Google account for the keeper's own laptop or Mac: it joins with the keeper's,
+    and keeps its own folder in the keeper's Drive."""
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    assert keeper.setup is not None
+    await keeper.invite(Invite(email=KEEPER.upper()))  # the keeper's own: nothing to share
+    assert cloud.items[keeper.setup.folder].shared == {}
+
+    mac = Family(tmp_path / "keepers-mac")
+    second = fresh(cloud, mac)
+    await second.take_invitation(keeper.invitation().text())
+    signed_in(second, KEEPER)
+    await second.join(JoinFamily(computer="Pak Hassan's Mac"))
+    assert second.setup is not None
+    own = cloud.items[second.setup.own_folder]
+    assert (own.owner, own.shared) == (KEEPER, {})
+
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    assert (asking.name, asking.email) == ("Pak Hassan's Mac", KEEPER)
+    await keeper.admit(Admit(device=asking.device, role="trusted"))
+    await second.sync()
+    assert [restore["graph"] for restore in mac.restores] == [ours.graph]
+    in_the_family_folder = [
+        cloud.path(item.id)
+        for item in cloud.items.values()
+        if cloud.inside(item, keeper.setup.folder)
+    ]
+    assert not [path for path in in_the_family_folder if "/join/" in path or "/inbox/" in path]
+
+    await keeper.remove(OneComputer(device=asking.device))
+    assert keeper.setup.unshare == []  # the keeper's own account is never unshared from
+
+
+async def test_two_families_with_one_keeper_never_mix_their_computers(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """A keeper of two families, both in one Google account, and a relative in both: each
+    family's keeper sees that family's computer alone."""
+    fathers, _ = await keeper_with_project(tmp_path, cloud, "fathers-side")
+    mothers = fresh(cloud, Family(tmp_path / "mothers-side", made_up_graph()))
+    await mothers.use_project(OUR_PROJECT)
+    signed_in(mothers, KEEPER)
+    await mothers.start(
+        StartFamily(family="Keluarga Ibu", computer="Pak Hassan's PC", another=True)
+    )
+    devices: dict[str, str] = {}
+    for keeper, name in ((fathers, "For the father's side"), (mothers, "For the mother's side")):
+        await keeper.invite(Invite(email=RELATIVE))
+        relative = fresh(cloud, Family(tmp_path / name))
+        await relative.take_invitation(keeper.invitation().text())
+        signed_in(relative, RELATIVE)
+        await relative.join(JoinFamily(computer=name))
+        assert relative.computer is not None
+        devices[family_of(keeper)] = relative.computer.device
+    for keeper in (fathers, mothers):
+        await keeper.sync()
+        asking = [ask.device for ask in (await keeper.status()).asking]
+        assert asking == [devices[family_of(keeper)]]
+        others = [device for family, device in devices.items() if family != family_of(keeper)]
+        assert not [
+            device for device in others if (keeper.local / "join" / f"{device}.req").exists()
+        ]
+
+
+async def test_the_recovery_code_finds_its_family_among_several(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    await keeper_with_project(tmp_path, cloud, "fathers-side")
+    mothers = fresh(cloud, Family(tmp_path / "mothers-side", made_up_graph()))
+    await mothers.use_project(OUR_PROJECT)
+    signed_in(mothers, KEEPER)
+    code = await mothers.start(
+        StartFamily(family="Keluarga Ibu", computer="Pak Hassan's PC", another=True)
+    )
+    assert mothers.setup is not None
+
+    again = computer(tmp_path, cloud, KEEPER, Family(tmp_path / "new-computer"))
+    with pytest.raises(RuleError) as wrong:
+        await again.recover(Recover(code="AAAA BBBB CCCC DDDD EEEE FFFF GG"))
+    assert wrong.value.code == "not_recovered"
+    await again.recover(Recover(code=code))
+    assert again.setup is not None
+    assert again.setup.folder == mothers.setup.folder
+    assert (await again.status()).family == "Keluarga Ibu"
+
+
+async def test_leaving_keeps_the_keepers_own_project_and_not_a_relatives(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    await keeper.invite(Invite(email=RELATIVE))
+    theirs = Family(tmp_path / "relative-data")
+    relative = fresh(cloud, theirs)
+    await relative.take_invitation(keeper.invitation().text())
+    signed_in(relative, RELATIVE)
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    await relative.leave()
+    assert relative.client is None
+    assert fresh(cloud, theirs).client is None  # the keeper's project went with the rest
+
+    kept = ours.data_dir / "familyfolder" / "computer" / "computer.bin"
+    kept.write_bytes(b"AncesTree protected 1\nanother computer's")  # its part can't be opened
+    broken = fresh(cloud, ours)
+    assert (await broken.status()).broken
+    await broken.leave()
+    assert (await fresh(cloud, ours).status()).project == "keluarga-contoh"  # the keeper's own
+
+
+async def test_a_folder_named_before_0_4_0_is_read_for_a_computer_already_known(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _, device = await admitted(tmp_path, cloud, role="viewer")
+    assert relative.setup is not None
+    own = cloud.items[relative.setup.own_folder]
+    own.name = f"{OWN_FOLDER} ({device})"  # as computers named it before 0.4.0
+    request = keeper.local / "join" / f"{device}.req"
+    request.unlink()
+    for state in (keeper.dir / "relatives").glob(f"{device}-*.json"):
+        state.unlink()
+    await keeper.sync()
+    assert request.is_file()  # read again: this family knows the computer
+
+    stranger = "0123456789abcdef"  # an old name, from an account invited, but a computer unknown
+    relatives_drive = cloud.as_account(RELATIVE)
+    lookalike = relatives_drive.create_folder(f"{OWN_FOLDER} ({stranger})", None)
+    join = relatives_drive.create_folder("join", lookalike.id)
+    relatives_drive.upload(f"{stranger}.req", join.id, b"let me in")
+    relatives_drive.share(lookalike.id, KEEPER)
+    await keeper.sync()
+    assert not (keeper.local / "join" / f"{stranger}.req").exists()
+
+
+# --- The family folder rebuilt, and relatives following it (0.4.0) -----------------------------
+
+
+async def joined_by_invitation(
+    tmp_path: Path, cloud: Cloud, role: str = "contributor"
+) -> tuple[FamilyFolder, Family, FamilyFolder, Family]:
+    """A keeper with the family's own project, and a relative let in with the invitation."""
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    await keeper.invite(Invite(email=RELATIVE))
+    theirs = Family(tmp_path / "relative-data")
+    relative = fresh(cloud, theirs)
+    await relative.take_invitation(keeper.invitation().text())
+    signed_in(relative, RELATIVE)
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role=role))  # type: ignore[arg-type]
+    await relative.sync()
+    return keeper, ours, relative, theirs
+
+
+async def test_a_family_folder_lost_from_drive_is_rebuilt_and_relatives_follow(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, theirs = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+    assert relative.setup is not None
+    lost = keeper.setup.folder
+    cloud.as_account(KEEPER).delete(lost)  # gone for good: past the bin's 30 days, say
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.lost, status.problem) == (True, LOST)
+    await relative.sync()
+    assert (await relative.status()).problem == LOST_RELATIVE  # nothing to follow yet
+
+    await keeper.rebuild()
+    rebuilt = keeper.setup.folder
+    assert rebuilt != lost
+    assert cloud.path(rebuilt) == folder_name(keeper)
+    assert cloud.items[rebuilt].shared == {RELATIVE: "reader"}  # shared again
+    assert (await keeper.status()).lost is False
+    record = [
+        item
+        for item in cloud.items.values()
+        if cloud.inside(item, rebuilt) and "/record/" in cloud.path(item.id)
+    ]
+    assert record  # the record as it was, every change set
+
+    await relative.sync()
+    assert relative.setup.folder == rebuilt  # followed, by itself
+    assert (await relative.status()).problem == ""
+    someone(ours.graph, HASSAN)["nickname"] = "Tok Hassan"  # the keeper changes on
+    await keeper.sync()
+    await relative.sync()
+    assert someone(theirs.restores[-1]["graph"], HASSAN)["nickname"] == "Tok Hassan"
+
+    someone(theirs.graph, SITI)["nickname"] = "Mak Siti"  # and the relative's reach the keeper
+    await relative.sync()
+    await keeper.sync()
+    assert [changes.name for changes in (await keeper.status()).changes] == ["Mak Long's laptop"]
+
+
+async def test_a_folder_that_only_looks_like_the_familys_isnt_followed(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+    assert relative.setup is not None
+    family_json = next(
+        item for item in cloud.items.values() if cloud.path(item.id).endswith("/family.json")
+    )
+    stranger = cloud.as_account("stranger@example.com")
+    fake = stranger.create_folder(folder_name(keeper), None)
+    found = json.loads(family_json.data)
+    found["keeper_sign"] = "00" * 32  # another keeper's key
+    stranger.upload("family.json", fake.id, json.dumps(found).encode())
+    stranger.share(fake.id, RELATIVE)
+    cloud.as_account(KEEPER).delete(keeper.setup.folder)
+    lost = relative.setup.folder
+    await relative.sync()
+    assert relative.setup.folder == lost  # not followed: not signed by the family's keeper
+    assert (await relative.status()).problem == LOST_RELATIVE
+
+
+async def test_the_family_folder_moves_to_another_google_account(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+    assert relative.setup is not None
+    old = keeper.setup.folder
+    url = await keeper.move_account()
+    assert url.startswith("https://accounts.google.com/")
+    assert keeper.signing_in is not None
+    keeper.signing_in.close()
+    keeper.signing_in = None
+    assert (await keeper.status()).moving
+    signed_in(keeper, "new.keeper@example.com")  # as Google's page would leave it
+    await keeper.rebuild()
+    moved = keeper.setup.folder
+    assert cloud.items[moved].owner == "new.keeper@example.com"
+    assert old in cloud.binned  # binned by the account that had it: relatives find it gone
+    assert keeper.setup.account == "new.keeper@example.com"
+    assert (await keeper.status()).old_folder_left is False
+
+    await relative.sync()
+    assert relative.setup.folder == moved
+    own = cloud.items[relative.setup.own_folder]
+    assert "new.keeper@example.com" in own.shared  # its changes reach the new account
+    someone(theirs.graph, SITI)["nickname"] = "Mak Siti"
+    await relative.sync()
+    await keeper.sync()
+    assert [changes.name for changes in (await keeper.status()).changes] == ["Mak Long's laptop"]
+
+
+async def test_the_family_folder_moves_to_another_google_project(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+    assert relative.setup is not None
+    old_own = relative.setup.own_folder
+    await keeper.use_project(OTHER_PROJECT, moving=True)
+    assert (await keeper.status()).project == "keluarga-lain"
+    signed_in(keeper, KEEPER)
+    await keeper.rebuild()
+    assert keeper.setup.folder in cloud.items
+    await relative.sync()  # followed, still through the old project, while its client lasts
+    assert relative.setup.folder == keeper.setup.folder
+
+    await relative.take_invitation(keeper.invitation().text())  # the new project
+    assert relative.client is not None
+    assert relative.client.project == "keluarga-lain"
+    signed_in(relative, RELATIVE)
+    await relative.sync()
+    new_own = relative.setup.own_folder
+    assert new_own not in ("", old_own)  # the new project's client writes in a new own folder
+    assert cloud.items[new_own].shared == {KEEPER: "reader"}
+    someone(theirs.graph, SITI)["nickname"] = "Mak Siti"
+    await relative.sync()
+    await keeper.sync()
+    assert [changes.name for changes in (await keeper.status()).changes] == ["Mak Long's laptop"]
+
+
+async def test_an_old_folder_left_in_drive_is_said_until_its_deleted(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, _, _ = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+
+    def refused(_: str) -> None:
+        raise DriveError(403, "The user does not have sufficient permissions for this file.")
+
+    await keeper.use_project(OTHER_PROJECT, moving=True)
+    signed_in(keeper, KEEPER)
+    before = keeper._before
+    assert before is not None
+    real = keeper._make_drive
+
+    def drives(session: Any) -> Any:
+        drive = real(session)
+        if session is before:
+            drive.trash = refused  # type: ignore[method-assign, assignment]  # the old client, gone
+        return drive
+
+    keeper._make_drive = drives
+    await keeper.rebuild()
+    status = await keeper.status()
+    assert status.old_folder_left
+    assert "old folder is still in Google Drive" in status.problem
+    keeper.old_folder_deleted()
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.old_folder_left, status.problem) == (False, "")
+
+
+# --- Keeping in step, shown (0.4.0) ---------------------------------------------------------
+
+
+async def test_when_the_family_was_last_in_step_is_kept_across_a_restart(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, _, theirs = await joined_by_invitation(tmp_path, cloud)
+    status = await keeper.status()
+    assert status.through
+    assert status.trouble == ""
+    assert status.last_sync is not None
+    assert status.published is not None  # the keeper's change sets went out
+
+    again = fresh(cloud, ours)  # the app started again: no round yet
+    assert (await again.status()).last_sync == status.last_sync.replace(microsecond=0)
+    assert (await fresh(cloud, theirs).status()).last_sync is not None
+
+
+async def test_each_round_is_told_and_says_what_stood_in_its_way(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    heard: list[tuple[bool, str]] = []
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    keeper._on_round = lambda folder: heard.append((folder.went_through, folder.trouble))
+    await keeper.sync()
+    cloud.offline = True
+    await keeper.sync()
+    cloud.offline = False
+    keeper._on_round = lambda _: (_ for _ in ()).throw(RuntimeError("a listener's own fault"))
+    await keeper.sync()  # a listener's failure never stops a round
+    assert heard == [(True, ""), (False, "offline")]
+    assert (await keeper.status()).through
+
+
+async def test_a_change_here_brings_a_round_soon_and_sync_now_at_once(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    rounds: list[float] = []
+    real = keeper._round
+
+    async def counted() -> None:
+        rounds.append(asyncio.get_running_loop().time())
+        await real()
+
+    keeper._round = counted  # type: ignore[method-assign]
+    keeping = asyncio.create_task(keep_in_step(keeper, every=3600, soon=0.05))
+    try:
+        for _ in range(200):  # the first, a few seconds after the start
+            if rounds:
+                break
+            await asyncio.sleep(0.1)
+        someone(ours.graph, HASSAN)["nickname"] = "Tok Hassan"
+        keeper.nudge()  # as the app does after a change
+        for _ in range(100):
+            if len(rounds) >= 2:
+                break
+            await asyncio.sleep(0.05)
+        assert len(rounds) == 2  # soon, not within the hour
+
+        await asyncio.to_thread(keeper.sync_soon)  # Sync now, from the icon by the clock
+        for _ in range(100):
+            if len(rounds) >= 3:
+                break
+            await asyncio.sleep(0.05)
+        assert len(rounds) == 3
+    finally:
+        keeping.cancel()
+
+
+async def test_a_last_round_before_closing_sends_what_could_go(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs = await joined_by_invitation(tmp_path, cloud)
+    someone(theirs.graph, SITI)["nickname"] = "Mak Siti"
+    await relative.last_round()
+    await keeper.sync()
+    assert [changes.name for changes in (await keeper.status()).changes] == ["Mak Long's laptop"]
+    alone = fresh(cloud, Family(tmp_path / "no-family-folder"))
+    await alone.last_round()  # no family folder: nothing to do, quickly
+
+
+async def test_a_family_folder_made_through_another_project_is_offered_a_rebuild(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """A keeper on 0.3.x, through the client AncesTree carried, giving the family its own project:
+    the new project can read the folder, not change it, as Drive says (0.4.0)."""
+    keeper, ours, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    assert keeper.setup is not None
+    assert relative.setup is not None
+    old = keeper.setup.folder
+
+    def not_this_projects(*_: object) -> None:
+        raise DriveError(
+            403,
+            "The user has not granted the app 1234 write access to the file.",
+            NOT_THIS_PROJECTS,
+        )
+
+    keeper.mirror.drive.replace = not_this_projects  # type: ignore[union-attr, method-assign]
+    keeper.mirror.drive.upload = not_this_projects  # type: ignore[union-attr, method-assign]
+    someone(ours.graph, HASSAN)["nickname"] = "Tok Hassan"
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.lost, status.trouble, status.problem) == (True, "foreign", FOREIGN)
+
+    signed_in(keeper, KEEPER)  # a drive of the family's own project
+    await keeper.rebuild()
+    assert keeper.setup.folder != old
+    assert (await keeper.status()).trouble == ""
+    await relative.sync()
+    assert relative.setup.folder == keeper.setup.folder  # followed

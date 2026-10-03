@@ -689,9 +689,97 @@ export interface paths {
         put?: never;
         /**
          * Add Backup
-         * @description Bring in a backup archive from elsewhere, e.g. another disk, to restore from.
+         * @description Bring in a backup archive from elsewhere, e.g. another disk, to restore from. A copy
+         *     locked with a password (0.4.0) is opened with `password`.
          */
         post: operations["add_backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backups/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Places For Copies
+         * @description Places on this computer that suit copies of the backups (0.4.0): other disks, and the
+         *     folders OneDrive, Dropbox and Google Drive's own app keep.
+         */
+        get: operations["places_for_copies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backups/elsewhere": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Copy Backups Elsewhere
+         * @description Copy every backup to a second place from now on, locked with a password if one is given,
+         *     which is kept nowhere (0.4.0). The copies not there yet are made at once.
+         */
+        put: operations["copy_backups_elsewhere"];
+        post?: never;
+        /**
+         * Stop Copying Backups
+         * @description No more copies in the second place; those made there stay (0.4.0).
+         */
+        delete: operations["stop_copying_backups"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backups/elsewhere/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Backups Now
+         * @description Make the copies not made yet in the second place, now (0.4.0).
+         */
+        post: operations["copy_backups_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backups/{name}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Backup
+         * @description Read a backup whole, every file against its checksum, restoring nothing (0.4.0).
+         *     Refused (422, "bad_archive") if it's damaged.
+         */
+        post: operations["check_backup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -889,6 +977,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/family-folder/project": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Use Family Project
+         * @description The family's own Google project, from the file Google's console gives for its client of
+         *     the Desktop app type: kept with this family, to sign in through. A sign-in made with
+         *     another client is given back: sign in again.
+         */
+        post: operations["use_family_project"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/move-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move Family Folder Account
+         * @description Move the family folder to another Google account (the keeper's): signed out here, and a
+         *     sign-in started that may be another account's. Then rebuild the family folder in it.
+         */
+        post: operations["move_family_folder_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/old-folder-deleted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Old Family Folder Deleted
+         * @description The keeper's word that the old family folder, left in Drive after a move, is deleted.
+         */
+        post: operations["old_family_folder_deleted"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild Family Folder
+         * @description Make the family folder again in Drive from this computer's copy (the keeper's): when
+         *     it's lost, or to move it to the Google account signed in, or the project given. The same
+         *     keys and record; shared again with every relative's account, whose computers follow.
+         */
+        post: operations["rebuild_family_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Family Invitation
+         * @description The family's invitation, for its keeper to send to the relatives they invite.
+         */
+        get: operations["get_family_invitation"];
+        put?: never;
+        /**
+         * Take Family Invitation
+         * @description A keeper's invitation, pasted on a relative's computer: the family's Google project, to
+         *     sign in through, and the family to ask to join.
+         */
+        post: operations["take_family_invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/family-folder/start": {
         parameters: {
             query?: never;
@@ -1004,8 +1202,8 @@ export interface paths {
         put?: never;
         /**
          * Join Family Folder
-         * @description Ask to join the family in a shared folder. The status carries the code to read to the
-         *     keeper.
+         * @description Ask to join the family the pasted invitation names, or the one in a folder given. The
+         *     status carries the code to read to the keeper.
          */
         post: operations["join_family_folder"];
         delete?: never;
@@ -1451,6 +1649,27 @@ export interface components {
              * @default false
              */
             automatic: boolean;
+            /** Family Id */
+            family_id?: string | null;
+            /**
+             * Family Name
+             * @default
+             */
+            family_name: string;
+        };
+        /**
+         * BackupChecked
+         * @description A backup read whole, every file against its checksum, with nothing restored.
+         */
+        BackupChecked: {
+            /** Name */
+            name: string;
+            /** People */
+            people: number;
+            /** Links */
+            links: number;
+            /** Files */
+            files: number;
         };
         /** BackupList */
         BackupList: {
@@ -1465,6 +1684,14 @@ export interface components {
              * @default false
              */
             automatic_backups: boolean;
+            /** Family Id */
+            family_id?: string | null;
+            /**
+             * Family Name
+             * @default
+             */
+            family_name: string;
+            elsewhere?: components["schemas"]["Elsewhere"] | null;
         };
         /** BackupRestored */
         BackupRestored: {
@@ -1507,6 +1734,8 @@ export interface components {
              * @description An AncesTree backup archive (.zip)
              */
             file: string;
+            /** Password */
+            password?: string | null;
         };
         /** Body_add_picture */
         Body_add_picture: {
@@ -1621,6 +1850,21 @@ export interface components {
         ChildrenOrder: {
             /** Child Ids */
             child_ids: string[];
+        };
+        /**
+         * CopyPlace
+         * @description A place on this computer that suits copies of backups: a disk, or a cloud's folder.
+         */
+        CopyPlace: {
+            /** Path */
+            path: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "disk" | "cloud";
+            /** Name */
+            name: string;
         };
         /**
          * Counts
@@ -1738,6 +1982,35 @@ export interface components {
             krama_inggil?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * Elsewhere
+         * @description The second place a family's backups are copied to (0.4.0), and how its copies stand.
+         */
+        Elsewhere: {
+            /** Folder */
+            folder: string;
+            /** Inside */
+            inside: string;
+            /** Locked */
+            locked: boolean;
+            /** Reachable */
+            reachable: boolean;
+            /** Copies */
+            copies: number;
+            /** Waiting */
+            waiting: number;
+            /** Copied */
+            copied: string | null;
+            /** Problem */
+            problem: string;
+        };
+        /** ElsewhereChoice */
+        ElsewhereChoice: {
+            /** Folder */
+            folder: string;
+            /** Password */
+            password?: string | null;
         };
         /** ExportFile */
         ExportFile: {
@@ -1874,6 +2147,55 @@ export interface components {
              * @default false
              */
             may_leave: boolean;
+            /**
+             * Project
+             * @default
+             */
+            project: string;
+            /**
+             * Project Invited
+             * @default false
+             */
+            project_invited: boolean;
+            /**
+             * Invited
+             * @default false
+             */
+            invited: boolean;
+            /**
+             * Syncing
+             * @default false
+             */
+            syncing: boolean;
+            /** Tried */
+            tried?: string | null;
+            /**
+             * Through
+             * @default false
+             */
+            through: boolean;
+            /**
+             * Trouble
+             * @default
+             */
+            trouble: string;
+            /**
+             * Lost
+             * @default false
+             */
+            lost: boolean;
+            /**
+             * Moving
+             * @default false
+             */
+            moving: boolean;
+            /**
+             * Old Folder Left
+             * @default false
+             */
+            old_folder_left: boolean;
+            /** Published */
+            published?: string | null;
         };
         /**
          * FamilyMap
@@ -2438,6 +2760,24 @@ export interface components {
              */
             photos: number;
         };
+        /**
+         * InvitationMade
+         * @description The family's invitation, for its keeper to send (0.4.0).
+         */
+        InvitationMade: {
+            /** Invitation */
+            invitation: string;
+            /** Project */
+            project: string;
+        };
+        /**
+         * InvitationText
+         * @description A keeper's invitation, pasted on a relative's computer (0.4.0).
+         */
+        InvitationText: {
+            /** Invitation */
+            invitation: string;
+        };
         /** Invite */
         Invite: {
             /** Email */
@@ -2446,7 +2786,7 @@ export interface components {
         /** JoinFamily */
         JoinFamily: {
             /** Folder */
-            folder: string;
+            folder?: string | null;
             /** Computer */
             computer: string;
         };
@@ -3124,6 +3464,20 @@ export interface components {
             /** Positions */
             positions: components["schemas"]["Position"][];
         };
+        /**
+         * ProjectFile
+         * @description The family's own Google project (0.4.0): the file Google's console gives for its client
+         *     of the Desktop app type, as text.
+         */
+        ProjectFile: {
+            /** Client */
+            client: string;
+            /**
+             * Moving
+             * @default false
+             */
+            moving: boolean;
+        };
         /** Recover */
         Recover: {
             /** Folder */
@@ -3289,6 +3643,11 @@ export interface components {
             family: string;
             /** Computer */
             computer: string;
+            /**
+             * Another
+             * @default false
+             */
+            another: boolean;
         };
         /** Suggestion */
         Suggestion: {
@@ -4807,6 +5166,130 @@ export interface operations {
             };
         };
     };
+    places_for_copies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopyPlace"][];
+                };
+            };
+        };
+    };
+    copy_backups_elsewhere: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ElsewhereChoice"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_copying_backups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+        };
+    };
+    copy_backups_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupList"];
+                };
+            };
+        };
+    };
+    check_backup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupChecked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     restore_backup: {
         parameters: {
             query?: never;
@@ -5049,6 +5532,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    use_family_project: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectFile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_family_folder_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignInStarted"];
+                };
+            };
+        };
+    };
+    old_family_folder_deleted: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    rebuild_family_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    get_family_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationMade"];
+                };
+            };
+        };
+    };
+    take_family_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationText"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

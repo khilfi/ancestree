@@ -1,11 +1,13 @@
-import { ArchiveIcon, DownloadIcon, UploadIcon } from "lucide-react";
+import { ArchiveIcon, CheckCheckIcon, DownloadIcon, UploadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { ApiError } from "@/api/errors";
 import {
   downloadExport,
   useAddBackup,
   useBackups,
+  useCheckBackup,
   useMakeExport,
   useRestoreBackup,
 } from "@/api/queries";
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -32,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { fileSize } from "@/lib/files";
 import { ACTION_MS, showError } from "@/lib/notify";
+import { ElsewherePanel } from "./ElsewherePanel";
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", {
@@ -50,11 +54,17 @@ export function BackupsSection() {
   const list = backups.data?.backups ?? [];
   const folder = backups.data?.folder;
   const daily = backups.data?.automatic_backups ?? false;
+  // The family open, of several on this computer, in the desktop app (0.4.0).
+  const family = backups.data?.family_id ? backups.data.family_name : null;
   const make = useMakeExport();
   const add = useAddBackup();
   const restore = useRestoreBackup();
+  const check = useCheckBackup();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState<Backup | null>(null);
+  // A copy locked with a password (0.4.0), waiting for its password to be added.
+  const [locked, setLocked] = useState<File | null>(null);
+  const [password, setPassword] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const busy = make.isPending || add.isPending || restore.isPending;
 
@@ -68,11 +78,33 @@ export function BackupsSection() {
     });
   }
 
-  function bringIn(file: File) {
-    add.mutate(file, {
-      onSuccess: (backup) =>
-        toast.success(`Added the backup from ${when(backup.made_at)}.`, {
-          description: "Restore it from the list when you're ready.",
+  function bringIn(file: File, password?: string) {
+    add.mutate(
+      { file, password },
+      {
+        onSuccess: (backup) => {
+          setLocked(null);
+          setPassword("");
+          toast.success(`Added the backup from ${when(backup.made_at)}.`, {
+            description: "Restore it from the list when you're ready.",
+          });
+        },
+        onError: (error) => {
+          if (error instanceof ApiError && error.code === "locked_backup") {
+            setLocked(file); // asks for its password
+            return;
+          }
+          showError(error);
+        },
+      },
+    );
+  }
+
+  function checkBackup(backup: Backup) {
+    check.mutate(backup.name, {
+      onSuccess: (checked) =>
+        toast.success(`The backup from ${when(backup.made_at)} is whole.`, {
+          description: `Every one of its files is as it was made: ${checked.people} people, ${checked.links} links, ${checked.files} files.`,
         }),
       onError: showError,
     });
@@ -128,7 +160,7 @@ export function BackupsSection() {
         <input
           ref={input}
           type="file"
-          accept=".zip,application/zip"
+          accept=".zip,.locked,application/zip"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];
@@ -137,6 +169,8 @@ export function BackupsSection() {
           }}
         />
       </div>
+
+      <ElsewherePanel elsewhere={backups.data?.elsewhere} />
 
       {backups.data?.reachable === false && (
         <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -176,6 +210,9 @@ export function BackupsSection() {
                   <div className="text-xs break-all text-stone-500">
                     {backup.name}
                     {backup.folder !== folder && ` · in ${backup.folder}`}
+                    {backup.family_id &&
+                      backup.family_id !== backups.data?.family_id &&
+                      ` · of ${backup.family_name}`}
                   </div>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{backup.people}</TableCell>
@@ -194,6 +231,16 @@ export function BackupsSection() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    disabled={check.isPending}
+                    onClick={() => checkBackup(backup)}
+                    aria-label={`Check the backup from ${when(backup.made_at)}`}
+                    title="Check it: every file against its checksum, restoring nothing"
+                  >
+                    <CheckCheckIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     disabled={busy}
                     onClick={() => setConfirming(backup)}
                   >
@@ -208,6 +255,40 @@ export function BackupsSection() {
         </Table>
       )}
 
+      <AlertDialog open={locked !== null} onOpenChange={(open) => !open && setLocked(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This backup is locked</AlertDialogTitle>
+            <AlertDialogDescription>
+              It's a copy kept in another place, locked with a password. Type the password it was
+              locked with.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (locked) bringIn(locked, password);
+            }}
+          >
+            <Input
+              type="password"
+              aria-label="The backup's password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="off"
+              autoFocus
+            />
+            <AlertDialogFooter>
+              <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+              <Button type="submit" disabled={!password || add.isPending}>
+                {add.isPending ? "Opening…" : "Open it"}
+              </Button>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -215,9 +296,18 @@ export function BackupsSection() {
               Restore the backup from {confirming ? when(confirming.made_at) : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Everything in AncesTree is replaced by what this backup holds: {confirming?.people}{" "}
-              people, {confirming?.links} links and {confirming?.files} files. Everything as it is
-              now is backed up first, so you can come back to it.
+              Everything in {family ?? "AncesTree"} is replaced by what this backup holds:{" "}
+              {confirming?.people} people, {confirming?.links} links and {confirming?.files} files.
+              Everything as it is now is backed up first, so you can come back to it.
+              {family && confirming && !confirming.family_id && (
+                <>
+                  {" "}
+                  <strong>
+                    This backup was made before AncesTree kept several families, so it can't say
+                    which family it's of: check it's {family}'s.
+                  </strong>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

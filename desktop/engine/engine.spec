@@ -19,10 +19,18 @@ if not (pages / "index.html").is_file():
 if not viewer.is_file():
     raise SystemExit("Build the copy's app first: pnpm build:viewer, in frontend/")
 
+# No Google client goes in, even one left in the package while developing: each family signs
+# in through its keeper's own Google project.
+package = [
+    (source, target)
+    for source, target in collect_data_files("ancestree")
+    if Path(source).name != "google-client.json"
+]
+
 analysis = Analysis(  # noqa: F821
     [str(here / "engine.py")],
     pathex=[str(here)],
-    datas=[*collect_data_files("ancestree"), (str(pages), "pages"), (str(viewer), "viewer")],
+    datas=[*package, (str(pages), "pages"), (str(viewer), "viewer")],
     hiddenimports=[*collect_submodules("ancestree"), *collect_submodules("uvicorn")],
     excludes=["tkinter", "pytest", "hypothesis", "IPython"],
 )

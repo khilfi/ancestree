@@ -76,21 +76,13 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile && pnpm build && pnpm build:viewer
 
-      - name: The engine, with AncesTree's Google client inside
+      - name: The engine
         working-directory: backend
-        env:
-          # The Desktop app client's JSON, as Google gives it: a secret of this repository's,
-          # so that it's in the release's engine and never in the repository.
-          GOOGLE_CLIENT_JSON: ${{ secrets.GOOGLE_CLIENT_JSON }}
+        # No Google client goes in: each family signs in through its keeper's own Google
+        # project, given to AncesTree by the keeper, and to relatives in the keeper's invitation.
         run: |
-          if [ -n "$GOOGLE_CLIENT_JSON" ]; then
-            printf '%s' "$GOOGLE_CLIENT_JSON" > src/ancestree/familyfolder/google-client.json
-          else
-            echo "::warning::No GOOGLE_CLIENT_JSON secret: this release can't keep a family folder"
-          fi
           uv run --with pyinstaller pyinstaller ../desktop/engine/engine.spec --noconfirm \
             --distpath ../desktop/engine/dist --workpath ../desktop/engine/build
-          rm -f src/ancestree/familyfolder/google-client.json
 
       - name: The app
         working-directory: desktop

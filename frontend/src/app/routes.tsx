@@ -74,6 +74,12 @@ export const appRoutes: RouteObject[] = [
             }),
           },
           {
+            path: "families",
+            lazy: async () => ({
+              Component: (await import("@/features/settings/FamiliesSection")).FamiliesSection,
+            }),
+          },
+          {
             path: "family-folder",
             lazy: async () => ({
               Component: (await import("@/features/settings/FamilyFolderSection"))
