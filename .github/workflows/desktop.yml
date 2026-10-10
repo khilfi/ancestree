@@ -162,7 +162,14 @@ jobs:
         run: |
           ANCESTREE_BENCH=1 "$APP" &
           for i in $(seq 1 120); do [ -f "$DATA/bench.json" ] && break; sleep 5; done
-          sleep 10
+          # It quits by itself with its result, once its engine has stopped: 24 seconds on
+          # Windows for 0.6.0. Started before it's gone, the next step's app would only hand
+          # over to it, as a second copy of the app does, and never start.
+          for i in $(seq 1 60); do
+            if [ "$RUNNER_OS" = Windows ]; then tasklist | grep -i '^AncesTree\.exe' > /dev/null || break
+            else pgrep -x AncesTree > /dev/null || break; fi
+            sleep 2
+          done
           cat "$DATA/bench.json" || { echo "no result"; tail -n 50 "$DATA/logs/"*.log; exit 1; }
           echo
           if grep -q '"error"' "$DATA/bench.json"; then echo "::warning::The sample didn't show in this web view"; fi
