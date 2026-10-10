@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.4.2"
+    "version": "0.5.0"
   },
   "paths": {
     "/api/health": {
@@ -3004,6 +3004,156 @@
         }
       }
     },
+    "/api/family-folder/role": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Change Family Folder Role",
+        "description": "Another role for a computer let in already, once its changes waiting are reviewed: the\nkeeper's.",
+        "operationId": "change_family_folder_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/offer": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Offer The Family",
+        "description": "Offer the family to another of its computers, which keeps nothing while the offer stands:\nthe keeper's.",
+        "operationId": "offer_the_family",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferFamily"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/offer/withdraw": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Withdraw The Offer",
+        "description": "Take the offer of the family back: this computer keeps it as before (the keeper's).",
+        "operationId": "withdraw_the_offer",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/offer/accept": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Accept The Offer",
+        "description": "Keep the family on its keeper's offer, as this computer becomes the keeper: a\nrelative's.",
+        "operationId": "accept_the_offer",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/offer/decline": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Decline The Offer",
+        "description": "Turn the keeper's offer of the family down, so the keeper keeps it: a relative's.",
+        "operationId": "decline_the_offer",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/family-folder/sync": {
       "post": {
         "tags": [
@@ -3034,6 +3184,28 @@
         "summary": "Family Folder Answers Seen",
         "description": "The keeper's answers to this computer's changes, read: not shown again (a relative's).",
         "operationId": "family_folder_answers_seen",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/role-seen": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Family Folder Role Seen",
+        "description": "The note that the keeper changed this computer's role, read: a relative's.",
+        "operationId": "family_folder_role_seen",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4138,6 +4310,30 @@
           "photo"
         ]
       },
+      "ChangeRole": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "contributor",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "role"
+        ],
+        "title": "ChangeRole",
+        "description": "Another role for a computer let in already."
+      },
       "ChangesPreview": {
         "properties": {
           "questions": {
@@ -5209,6 +5405,46 @@
               }
             ],
             "title": "Published"
+          },
+          "role_changed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleChanged"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offer_made": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfferMade"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offer_here": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfferHere"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "handed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandedOver"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5370,6 +5606,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Sent At"
+          },
+          "changed": {
+            "type": "integer",
+            "title": "Changed",
+            "default": 0
           }
         },
         "type": "object",
@@ -5811,6 +6052,32 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HandedOver": {
+        "properties": {
+          "to": {
+            "type": "string",
+            "title": "To"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "keeper",
+              "trusted",
+              "contributor",
+              "viewer",
+              "removed"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "to",
+          "role"
+        ],
+        "title": "HandedOver",
+        "description": "The family this computer kept, handed to another, until its owner has seen so."
       },
       "Health": {
         "properties": {
@@ -7857,6 +8124,92 @@
         "title": "Notice",
         "description": "Something worth a second look that was still saved, e.g. an unlikely age gap."
       },
+      "OfferFamily": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "after": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "contributor",
+              "viewer",
+              "leave"
+            ],
+            "title": "After",
+            "default": "trusted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device"
+        ],
+        "title": "OfferFamily",
+        "description": "The family offered to another of its computers, and what this one becomes."
+      },
+      "OfferHere": {
+        "properties": {
+          "keeper": {
+            "type": "string",
+            "title": "Keeper"
+          },
+          "made": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Made"
+          },
+          "own": {
+            "type": "boolean",
+            "title": "Own"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keeper",
+          "made",
+          "own"
+        ],
+        "title": "OfferHere",
+        "description": "The family offered to this computer by its keeper, to accept or turn down."
+      },
+      "OfferMade": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "after": {
+            "type": "string",
+            "enum": [
+              "trusted",
+              "contributor",
+              "viewer",
+              "leave"
+            ],
+            "title": "After"
+          },
+          "made": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Made"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "name",
+          "after",
+          "made"
+        ],
+        "title": "OfferMade",
+        "description": "The keeper's offer of the family to another of its computers, while it stands."
+      },
       "OneComputer": {
         "properties": {
           "device": {
@@ -9122,6 +9475,32 @@
         "type": "object",
         "title": "ReviewChanges",
         "description": "The keeper's answers to the look-alike questions, so far."
+      },
+      "RoleChanged": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "keeper",
+              "trusted",
+              "contributor",
+              "viewer",
+              "removed"
+            ],
+            "title": "Role"
+          },
+          "backup": {
+            "type": "string",
+            "title": "Backup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "backup"
+        ],
+        "title": "RoleChanged",
+        "description": "The keeper gave this computer another role, until its owner has seen so."
       },
       "Seat": {
         "properties": {

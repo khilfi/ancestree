@@ -13,6 +13,13 @@ family folder. It writes only files of its own into the family folder, and reads
     notes/<computer>/<n>.note          the keeper's answer to one of them
     files/<name>.bin                   photos and pictures
     recovery/<n>.bin                   the keeper's keys, locked with the recovery code
+    offers/<computer>.bin              the family offered to that computer, locked for it
+
+and, in a relative's computer's own folder, since 0.5.0:
+
+    about/<computer>.bin               what it says of itself: its version, an offer turned down
+    took/<computer>.bin                the new keeper's word that it took the family, and where
+                                       the family folder is now
 """
 
 from __future__ import annotations
@@ -20,7 +27,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, Self
@@ -30,13 +37,17 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from pydantic import ValidationError
 
 from ancestree.familyfolder.models import (
+    About,
     Change,
     FamilyFile,
     Joined,
     JoinRequest,
     KeyRing,
+    KnownComputer,
     MemberFile,
+    Newcomer,
     Note,
+    Offer,
     Proposal,
     RecordChange,
     RecordOp,
@@ -45,6 +56,7 @@ from ancestree.familyfolder.models import (
     Role,
     Snapshot,
     Source,
+    TookOver,
 )
 from ancestree.familyfolder.protect import read_secret, write_secret
 from ancestree.familyfolder.seals import (
@@ -63,6 +75,18 @@ from ancestree.familyfolder.seals import (
 )
 
 MAY_SEND: set[str] = {"trusted", "contributor"}
+HANDOVER = 1  # the way of handing over the keeper this code takes part in, since 0.5.0
+# The family folder's own files, the keeper's: what a new keeper's folder holds after a
+# handover, without the offers or relatives' files.
+FAMILY_FOLDER_FILES = (
+    "family.json",
+    "members/",
+    "record/",
+    "snapshots/",
+    "notes/",
+    "files/",
+    "recovery/",
+)
 
 
 def _now() -> str:
@@ -83,7 +107,9 @@ def _apply_to(state: dict[str, Any], change: RecordChange) -> None:
         elif op.op == "delete":
             people.pop(op.id, None)
         elif op.op == "joined":
-            members[op.device] = {"name": op.name, "role": op.role}
+            # From which change set it has this role: what it sent before, it sent as
+            # it was then. Computers before 0.5.0 read the name and role alone.
+            members[op.device] = {"name": op.name, "role": op.role, "since": change.seq}
         else:
             members.setdefault(op.device, {"name": "", "role": "removed"})["role"] = "removed"
 
@@ -117,6 +143,9 @@ class Arrived:
     device: str
     name: str
     proposal: Proposal
+    # It, or one not decided yet that it stands for, was made before the computer's role last
+    # changed: the keeper's to look at, whatever the computer may do now.
+    before_role: bool = False
 
 
 class Computer:
@@ -476,6 +505,54 @@ class Member(Computer):
         self.save()
         return self.sent
 
+    # Handing over the keeper
+
+    @classmethod
+    def newcomer(
+        cls,
+        folder: Path,
+        data: Path,
+        family: str,
+        keeper: bytes,
+        identity: tuple[str, Ed25519PrivateKey, X25519PrivateKey],
+    ) -> Member:
+        """The old keeper's computer as a relative, after the family it offered was taken: the
+        identity it offered, which the new keeper let in, writing its member file."""
+        member = cls(folder, data)
+        member.device, member.sign, member.dh = identity
+        member.family, member.keeper = family, keeper
+        member.save()
+        return member
+
+    def read_offer(self) -> Offer | None:
+        """The family offered to this computer, if it is: signed with the keeper's key, locked
+        for this computer alone, and holding the keeper's own keys."""
+        path = self.folder / "offers" / f"{self.device}.bin"
+        blob = self._read(path)
+        if blob is None:
+            return None
+        try:
+            opened = unseal(blob, f"offer/{self.device}", Kind.OFFER, {self.keeper}, None)
+            context = b"offer " + self.device.encode()
+            offer = Offer.model_validate_json(open_for(self.dh, opened.payload, context))
+            sign = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(offer.keys.sign))
+            if offer.to != self.device or _public(sign) != self.keeper:
+                raise RefusedError("not the keeper's keys, for this computer")
+        except (RefusedError, ValidationError, ValueError) as error:
+            self._refused(path, error)
+            return None
+        self._cleared(path)
+        return offer
+
+    def write_about(self, version: str, declined: str = "") -> None:
+        """What this computer says of itself, in its own folder: its version, and the way of
+        handing over it can take part in, for the keeper to know it may offer it the family;
+        and an offer it turned down."""
+        about = About(device=self.device, version=version, handover=HANDOVER, declined=declined)
+        place = f"about/{self.device}"
+        blob = seal(Kind.ABOUT, place, about.model_dump_json().encode(), self.sign, None)
+        self._write(f"about/{self.device}.bin", blob)
+
 
 class Keeper(Computer):
     """The keeper's computer: publishes the record, admits and removes computers."""
@@ -568,16 +645,29 @@ class Keeper(Computer):
                     versions.add(int(path.stem))
         return versions
 
-    def _write_recovery(self) -> str:
-        """The keeper's keys, locked with the recovery code, in a new recovery file; its path."""
-        version = max(self._recovery_versions(), default=0) + 1
-        keys = Recovery(
+    def _keys(self) -> Recovery:
+        """The keeper's keys: its place, its private keys, every family key and the naming key,
+        as a recovery file or an offer holds them."""
+        return Recovery(
             device=self.device,
             sign=self.sign.private_bytes_raw().hex(),
             dh=self.dh.private_bytes_raw().hex(),
             keys={epoch: key.hex() for epoch, key in self.keys.items()},
             naming=self.naming.hex(),
         )
+
+    def _take_keys(self, keys: Recovery) -> None:
+        """The keeper's keys, from a recovery file or an offer, as this computer's own."""
+        self.device = keys.device
+        self.sign = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys.sign))
+        self.dh = X25519PrivateKey.from_private_bytes(bytes.fromhex(keys.dh))
+        self.keys = {epoch: bytes.fromhex(key) for epoch, key in keys.keys.items()}
+        self.naming = bytes.fromhex(keys.naming)
+
+    def _write_recovery(self) -> str:
+        """The keeper's keys, locked with the recovery code, in a new recovery file; its path."""
+        version = max(self._recovery_versions(), default=0) + 1
+        keys = self._keys()
         place = f"recovery/{version}"
         blob = seal(Kind.RECOVERY, place, keys.model_dump_json().encode(), self.sign, self.recovery)
         written = f"recovery/{version:06d}.bin"
@@ -713,6 +803,21 @@ class Keeper(Computer):
         self._write_member(ask.device)
         self.publish([Joined(device=ask.device, name=ask.name, role=role)])
 
+    def change_role(self, device: str, role: Role) -> int:
+        """Another role for a computer let in already: a new member file, holding the same
+        keys, as every role reads the family; and the role in the record, so every computer's
+        list shows it. Computers since 0.4.0 read both already. The change set's number."""
+        known = self.known[device]
+        known.role = role
+        self._write_member(device)
+        return self.publish([Joined(device=device, name=known.name, role=role)])
+
+    def role_since(self, device: str) -> int:
+        """The change set from which a computer has had its role: a proposal made from
+        an earlier one was made as the computer was before. 0 if the record doesn't say."""
+        member: dict[str, Any] = self.state["members"].get(device, {})
+        return int(member.get("since", 0))
+
     def remove(self, device: str) -> None:
         """Let a computer go: a new family key for everyone else, so it can't read what follows."""
         self.known[device].role = "removed"
@@ -725,9 +830,12 @@ class Keeper(Computer):
     # Proposals
 
     def inbox(self) -> list[Arrived]:
+        """Each computer's proposals not decided yet, checked. One that became a viewer is
+        still heard on what it sent before it knew: nothing it sent is dropped unseen."""
         arrived: list[Arrived] = []
         for device, known in self.known.items():
-            if known.role not in MAY_SEND:
+            since = self.role_since(device)
+            if known.role in ("keeper", "removed") or (known.role not in MAY_SEND and not since):
                 continue
             for path in sorted((self.folder / "inbox" / device).glob("*.prop")):
                 try:
@@ -756,6 +864,8 @@ class Keeper(Computer):
                     self._refused(path, error)
                     continue
                 self._cleared(path)
+                if known.role not in MAY_SEND and proposal.base >= since:
+                    continue  # sent as it is now, which may send nothing
                 arrived.append(Arrived(device=device, name=known.name, proposal=proposal))
         return arrived
 
@@ -806,23 +916,37 @@ class Keeper(Computer):
     def newest(self) -> list[Arrived]:
         """Each computer's newest proposal not yet decided. Each is the computer's whole
         family, so a newer one stands for those before it; one made before the computer heard
-        back on its last decided proposal waits for a fresher one, which it sends then."""
+        back on its last decided proposal waits for a fresher one, which it sends then. Each
+        says whether it, or one it stands for, was made before the computer's role last
+        changed."""
         newest: dict[str, Arrived] = {}
+        earlier: set[str] = set()
         for arrived in self.inbox():
             if not arrived.proposal.family:
                 continue  # the spike's, entry by entry
+            if arrived.proposal.base < self.role_since(arrived.device):
+                earlier.add(arrived.device)
             if arrived.proposal.answered < self.last_decided(arrived.device):
                 continue
             have = newest.get(arrived.device)
             if have is None or arrived.proposal.seq > have.proposal.seq:
                 newest[arrived.device] = arrived
-        return sorted(newest.values(), key=lambda arrived: arrived.proposal.made)
+        return sorted(
+            (
+                replace(arrived, before_role=arrived.device in earlier)
+                for arrived in newest.values()
+            ),
+            key=lambda arrived: arrived.proposal.made,
+        )
 
     def approve_trusted(self) -> list[int]:
-        """A trusted computer's proposals go through, unless they clash or take something out."""
+        """A trusted computer's proposals go through, unless they clash or take something out,
+        or it sent them before it was trusted."""
         published: list[int] = []
         for arrived in self.inbox():
             if self.known[arrived.device].role != "trusted":
+                continue
+            if arrived.proposal.base < self.role_since(arrived.device):
                 continue
             changes = arrived.proposal.changes
             clean = [
@@ -849,6 +973,134 @@ class Keeper(Computer):
                 Computer._write(self, relative, original)
                 restored.append(relative)
         return restored
+
+    # Handing over the keeper
+
+    def offer(
+        self, to: str, newcomer: Newcomer | None, accounts: dict[str, str], invited: list[str]
+    ) -> Offer:
+        """The family offered to one of its computers: the keeper's keys and its list of the
+        family's computers, locked for that computer alone and signed with the keeper's key, in
+        offers/. Not kept to put back: withdrawn, it stays gone."""
+        offer = Offer(
+            id=secrets.token_hex(8),
+            to=to,
+            made=_now(),
+            keys=self._keys(),
+            recovery=self.recovery.hex(),
+            known={device: KnownComputer(**asdict(known)) for device, known in self.known.items()},
+            accounts=accounts,
+            invited=invited,
+            decided=sorted(self.decided),
+            newcomer=newcomer,
+        )
+        context = b"offer " + to.encode()
+        locked = seal_for(
+            bytes.fromhex(self.known[to].dh), offer.model_dump_json().encode(), context
+        )
+        Computer._write(
+            self, f"offers/{to}.bin", seal(Kind.OFFER, f"offer/{to}", locked, self.sign, None)
+        )
+        return offer
+
+    def about(self, device: str) -> About | None:
+        """What a relative's computer says of itself, from its own folder: checked, as that
+        computer's own. None from a computer before 0.5.0, which writes none."""
+        known = self.known.get(device)
+        path = self.folder / "about" / f"{device}.bin"
+        blob = self._read(path)
+        if known is None or blob is None:
+            return None
+        try:
+            signer = {bytes.fromhex(known.sign)}
+            opened = unseal(blob, f"about/{device}", Kind.ABOUT, signer, None)
+            about = About.model_validate_json(opened.payload)
+            if about.device != device:
+                raise RefusedError("for another computer")
+        except (RefusedError, ValidationError) as error:
+            self._refused(path, error)
+            return None
+        self._cleared(path)
+        return about
+
+    def taken_over(self, offers: set[str]) -> TookOver | None:
+        """The new keeper's word, from a relative's own folder, that it took the family on one
+        of `offers`, those this computer made: signed with the keeper's key, which no other
+        computer had but the one it was offered to."""
+        for path in sorted((self.folder / "took").glob("*.bin")):
+            blob = self._read(path)
+            if blob is None:
+                continue
+            try:
+                opened = unseal(blob, f"took/{path.stem}", Kind.TOOK, {self.keeper}, None)
+                took = TookOver.model_validate_json(opened.payload)
+            except (RefusedError, ValidationError) as error:
+                self._refused(path, error)
+                continue
+            if took.offer in offers:
+                return took
+        return None
+
+    def write_took(self, device: str, offer: str, folder: str) -> None:
+        """This computer's word, as the new keeper, that it took the family on `offer`, and
+        where the family folder is now: in the folder that was its own as `device`, which the
+        old keeper reads."""
+        took = TookOver(offer=offer, folder=folder, made=_now())
+        blob = seal(Kind.TOOK, f"took/{device}", took.model_dump_json().encode(), self.sign, None)
+        Computer._write(self, f"took/{device}.bin", blob)
+
+    @classmethod
+    def take_over(
+        cls, member: Member, offer: Offer, name: str, *, new_code: bool
+    ) -> tuple[Keeper, str]:
+        """The keeper, on the computer the family was offered to: the keeper's keys, list and
+        answers from the offer; the old keeper let in under the identity it offered; this
+        computer's old place as a relative off the list; and the record told at once, so the
+        old keeper stops. Another person's computer gets a new recovery code, which the old
+        one no longer opens; the code, or "" for a computer of the keeper's own."""
+        keeper = cls(member.folder, member.data)
+        keeper.family, keeper.keeper = member.family, member.keeper
+        keeper._take_keys(offer.keys)
+        keeper.role = "keeper"
+        keeper.receive()
+        keeper.known = {
+            device: Known(**known.model_dump()) for device, known in offer.known.items()
+        }
+        keeper.decided = set(offer.decided)
+        keeper._remember_answers()
+        code = recovery_code() if new_code else ""
+        keeper.recovery = (
+            recovery_key(code, keeper.family) if code else bytes.fromhex(offer.recovery)
+        )
+        keeper.known[keeper.device].name = name
+        changes: list[RecordOp] = [Joined(device=keeper.device, name=name, role="keeper")]
+        if member.device in keeper.known:
+            keeper.known[member.device].role = "removed"
+            changes.append(Removed(device=member.device))
+        newcomer = offer.newcomer
+        if newcomer is not None:
+            keeper.known[newcomer.device] = Known(
+                name=newcomer.name, role=newcomer.role, sign=newcomer.sign, dh=newcomer.dh
+            )
+            keeper._write_member(newcomer.device)
+            changes.append(Joined(device=newcomer.device, name=newcomer.name, role=newcomer.role))
+        if code:
+            kept = keeper._write_recovery()
+            for path in (keeper.folder / "recovery").glob("*.bin"):
+                if path.relative_to(keeper.folder).as_posix() != kept:
+                    path.unlink()  # locked with the old code: never in the new folder
+        keeper.publish(changes)
+        return keeper, code
+
+    def adopt_folder(self) -> None:
+        """Every file of the family folder here, as this computer's own to put back: the new
+        keeper's, whose family folder it is now, all of it."""
+        for path in sorted(self.folder.rglob("*")):
+            relative = path.relative_to(self.folder).as_posix()
+            if path.is_file() and relative.startswith(FAMILY_FOLDER_FILES):
+                copy = self.data / "published" / relative
+                copy.parent.mkdir(parents=True, exist_ok=True)
+                copy.write_bytes(path.read_bytes())
 
     @staticmethod
     def opens(family: bytes, recovery: bytes, version: int, code: str) -> bool:
@@ -878,12 +1130,7 @@ class Keeper(Computer):
         newest = max((folder / "recovery").glob("*.bin"), key=lambda path: int(path.stem))
         place = f"recovery/{int(newest.stem)}"
         opened = unseal(newest.read_bytes(), place, Kind.RECOVERY, {keeper.keeper}, keeper.recovery)
-        keys = Recovery.model_validate_json(opened.payload)
-        keeper.device = keys.device
-        keeper.sign = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys.sign))
-        keeper.dh = X25519PrivateKey.from_private_bytes(bytes.fromhex(keys.dh))
-        keeper.keys = {epoch: bytes.fromhex(key) for epoch, key in keys.keys.items()}
-        keeper.naming = bytes.fromhex(keys.naming)
+        keeper._take_keys(Recovery.model_validate_json(opened.payload))
         keeper.role = "keeper"
         keeper.receive()
         for device, info in keeper.state["members"].items():

@@ -16,6 +16,7 @@ from ancestree.config import Settings
 from ancestree.domain.familyfolder import (
     Admit,
     BringIn,
+    ChangeRole,
     Invite,
     JoinFamily,
     ReviewChanges,
@@ -242,6 +243,44 @@ async def test_a_trusted_computers_changes_come_in_unless_they_take_something_ou
     await keeper.sync()
     [waiting] = (await keeper.status()).changes  # taking someone out waits for the keeper
     assert waiting.role == "trusted"
+
+
+async def test_a_contributors_changes_on_their_way_never_come_in_by_themselves(
+    driver: AsyncDriver, settings: Settings, tmp_path: Path
+) -> None:
+    """Sent as a contributor, and reaching the keeper after it became trusted, its changes
+    wait for the keeper; so does what it sends next, which carries them too, until they're
+    looked at. Then what it sends as trusted comes in by itself."""
+    keeper, relative, theirs, device, _ = await two_computers(driver, settings, tmp_path)
+    who = someone_real(theirs.graph)
+    who["nickname"] = "Tok Su"
+    await relative.sync()  # sent before the keeper's round had seen it
+    await keeper.change_role(ChangeRole(device=device, role="trusted"))
+    [waiting] = (await keeper.status()).changes
+    assert waiting.role == "trusted"
+
+    await relative.sync()  # it knows it's trusted now
+    other = next(
+        p for p in theirs.graph["people"] if not p.get("placeholder") and p["id"] != who["id"]
+    )
+    other["nickname"] = "Mak Su"
+    await relative.sync()
+    await keeper.sync()
+    [waiting] = (await keeper.status()).changes
+    people = {p["id"]: p for p in await keepers_family(driver, settings)}
+    assert people[who["id"]].get("nickname") != "Tok Su"
+    assert people[other["id"]].get("nickname") != "Mak Su"
+
+    await keeper.turn_down(device, TurnDown(proposal=waiting.proposal))
+    await relative.sync()  # what was left out goes from here
+    again = next(p for p in theirs.graph["people"] if p["id"] == other["id"])
+    again["nickname"] = "Mak Su"
+    await relative.sync()
+    await keeper.sync()
+    assert (await keeper.status()).changes == []
+    people = {p["id"]: p for p in await keepers_family(driver, settings)}
+    assert people[other["id"]]["nickname"] == "Mak Su"
+    assert people[who["id"]].get("nickname") != "Tok Su"
 
 
 def sources_of(keeper: FamilyFolder) -> dict[int, str | None]:

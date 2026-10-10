@@ -211,6 +211,13 @@ def create_app(
         for the keeper; the family's own settings, imports and restoring a backup stay
         the keeper's. Any other changes nothing: a change made there would be lost."""
         folder: FamilyFolder | None = getattr(request.app.state, "family_folder", None)
+        if (
+            folder is not None
+            and folder.offering
+            and (_changes_family(request) or _keepers_own(request))
+        ):
+            # Offered to another computer: what changed here would never reach anyone.
+            return _error(status.HTTP_409_CONFLICT, "offered", folder.offered_words())
         if folder is None or folder.editing:
             return _nudged(folder, request, await call_next(request))
         if folder.proposing and _keepers_own(request):

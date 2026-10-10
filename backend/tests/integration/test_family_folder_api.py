@@ -122,6 +122,43 @@ async def test_a_relatives_computer_changes_only_its_own_choices(
     assert (await client.post("/api/persons", json={"full_name": "Someone new"})).status_code == 201
 
 
+async def test_a_keepers_computer_changes_nothing_while_its_offer_stands(
+    client: httpx.AsyncClient,
+) -> None:
+    """Offered to another computer, the family can't be changed here: it would reach no
+    one, as this computer publishes nothing until the offer's answered or withdrawn."""
+    ali = await create_person(client, "Ali bin Hassan")
+    offer = {
+        "id": "0a1b2c3d4e5f6071",
+        "to": "0123456789abcdef",
+        "after": "trusted",
+        "made": "2026-10-10T09:00:00+00:00",
+    }
+    app_folder(client).setup = Setup(
+        "keeper", "folder-id", "Keluarga Contoh", "PC", "x@example.com", offer=offer
+    )
+
+    refused = [
+        await client.post("/api/persons", json={"full_name": "Someone new"}),
+        await client.patch(f"/api/persons/{ali['id']}", json={"nickname": "Li"}),
+        await client.post("/api/history/undo"),
+        await client.put("/api/places/pins", json={"pins": []}),
+        await client.post("/api/relationship-kinds", json={"label": "Guardian"}),
+        await client.post("/api/backups/ancestree-backup-x.zip/restore"),
+    ]
+    assert [r.status_code for r in refused] == [409] * len(refused)
+    assert {r.json()["detail"]["code"] for r in refused} == {"offered"}
+    assert refused[0].json()["detail"]["message"] == (
+        "The family is offered to another computer: nothing is kept here until they answer, "
+        "or you withdraw the offer."
+    )
+    allowed = [
+        await client.get("/api/persons"),
+        await client.put("/api/family/me", json={"person": ali["id"]}),
+    ]
+    assert [r.status_code for r in allowed] == [200, 200]
+
+
 async def test_a_relatives_computer_that_sends_changes_makes_them_here(
     client: httpx.AsyncClient, tmp_path: Path
 ) -> None:

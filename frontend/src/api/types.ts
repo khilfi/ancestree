@@ -118,3 +118,11 @@ export type InvitationMade = Schemas["InvitationMade"];
 export type FolderAnswer = Schemas["FolderAnswer"];
 export type FolderChanges = Schemas["FolderChanges"];
 export type BringIn = Schemas["BringIn"];
+// Changing a role
+export type ChangeRole = Schemas["ChangeRole"];
+export type RoleChanged = Schemas["RoleChanged"];
+// Handing over the keeper
+export type OfferFamily = Schemas["OfferFamily"];
+export type OfferMade = Schemas["OfferMade"];
+export type OfferHere = Schemas["OfferHere"];
+export type HandedOver = Schemas["HandedOver"];

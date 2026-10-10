@@ -1312,6 +1312,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/family-folder/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Family Folder Role
+         * @description Another role for a computer let in already, once its changes waiting are reviewed: the
+         *     keeper's.
+         */
+        post: operations["change_family_folder_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offer The Family
+         * @description Offer the family to another of its computers, which keeps nothing while the offer stands:
+         *     the keeper's.
+         */
+        post: operations["offer_the_family"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/offer/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw The Offer
+         * @description Take the offer of the family back: this computer keeps it as before (the keeper's).
+         */
+        post: operations["withdraw_the_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/offer/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept The Offer
+         * @description Keep the family on its keeper's offer, as this computer becomes the keeper: a
+         *     relative's.
+         */
+        post: operations["accept_the_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/offer/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline The Offer
+         * @description Turn the keeper's offer of the family down, so the keeper keeps it: a relative's.
+         */
+        post: operations["decline_the_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/family-folder/sync": {
         parameters: {
             query?: never;
@@ -1346,6 +1449,26 @@ export interface paths {
          * @description The keeper's answers to this computer's changes, read: not shown again (a relative's).
          */
         post: operations["family_folder_answers_seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/role-seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Family Folder Role Seen
+         * @description The note that the keeper changed this computer's role, read: a relative's.
+         */
+        post: operations["family_folder_role_seen"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1813,6 +1936,19 @@ export interface components {
         /** @enum {string} */
         ChangeKind: "add_person" | "set" | "add_link" | "remove_person" | "remove_link" | "change_link" | "fill_in" | "order" | "story" | "photo";
         /**
+         * ChangeRole
+         * @description Another role for a computer let in already.
+         */
+        ChangeRole: {
+            /** Device */
+            device: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "trusted" | "contributor" | "viewer";
+        };
+        /**
          * ChangesPreview
          * @description What a relative's computer sent, for you to tick. Nothing is written.
          */
@@ -2196,6 +2332,10 @@ export interface components {
             old_folder_left: boolean;
             /** Published */
             published?: string | null;
+            role_changed?: components["schemas"]["RoleChanged"] | null;
+            offer_made?: components["schemas"]["OfferMade"] | null;
+            offer_here?: components["schemas"]["OfferHere"] | null;
+            handed?: components["schemas"]["HandedOver"] | null;
         };
         /**
          * FamilyMap
@@ -2265,6 +2405,11 @@ export interface components {
              * Format: date-time
              */
             sent_at: string;
+            /**
+             * Changed
+             * @default 0
+             */
+            changed: number;
         };
         /**
          * FolderMember
@@ -2405,6 +2550,19 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HandedOver
+         * @description The family this computer kept, handed to another, until its owner has seen so.
+         */
+        HandedOver: {
+            /** To */
+            to: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "keeper" | "trusted" | "contributor" | "viewer" | "removed";
         };
         /** Health */
         Health: {
@@ -3229,6 +3387,55 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * OfferFamily
+         * @description The family offered to another of its computers, and what this one becomes.
+         */
+        OfferFamily: {
+            /** Device */
+            device: string;
+            /**
+             * After
+             * @default trusted
+             * @enum {string}
+             */
+            after: "trusted" | "contributor" | "viewer" | "leave";
+        };
+        /**
+         * OfferHere
+         * @description The family offered to this computer by its keeper, to accept or turn down.
+         */
+        OfferHere: {
+            /** Keeper */
+            keeper: string;
+            /**
+             * Made
+             * Format: date-time
+             */
+            made: string;
+            /** Own */
+            own: boolean;
+        };
+        /**
+         * OfferMade
+         * @description The keeper's offer of the family to another of its computers, while it stands.
+         */
+        OfferMade: {
+            /** Device */
+            device: string;
+            /** Name */
+            name: string;
+            /**
+             * After
+             * @enum {string}
+             */
+            after: "trusted" | "contributor" | "viewer" | "leave";
+            /**
+             * Made
+             * Format: date-time
+             */
+            made: string;
+        };
         /** OneComputer */
         OneComputer: {
             /** Device */
@@ -3593,6 +3800,19 @@ export interface components {
             answers?: {
                 [key: string]: string;
             };
+        };
+        /**
+         * RoleChanged
+         * @description The keeper gave this computer another role, until its owner has seen so.
+         */
+        RoleChanged: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "keeper" | "trusted" | "contributor" | "viewer" | "removed";
+            /** Backup */
+            backup: string;
         };
         /**
          * Seat
@@ -5998,6 +6218,132 @@ export interface operations {
             };
         };
     };
+    change_family_folder_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeRole"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offer_the_family: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferFamily"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_the_offer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    accept_the_offer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    decline_the_offer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
     sync_family_folder: {
         parameters: {
             query?: never;
@@ -6019,6 +6365,26 @@ export interface operations {
         };
     };
     family_folder_answers_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+        };
+    };
+    family_folder_role_seen: {
         parameters: {
             query?: never;
             header?: never;

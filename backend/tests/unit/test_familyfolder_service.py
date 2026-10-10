@@ -19,8 +19,11 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from ancestree.domain.familyfolder import (
     Admit,
+    ChangeRole,
+    FamilyFolderStatus,
     Invite,
     JoinFamily,
+    OfferFamily,
     OneComputer,
     Recover,
     ReviewChanges,
@@ -32,6 +35,8 @@ from ancestree.familyfolder.drive import DriveError
 from ancestree.familyfolder.google import Client, Session, SignedOutError, Tokens
 from ancestree.familyfolder.invitations import Invitation
 from ancestree.familyfolder.mirror import Mirror
+from ancestree.familyfolder.protect import read_secret
+from ancestree.familyfolder.seals import Kind, seal
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import (
     FOLDER_NAME,
@@ -1651,3 +1656,363 @@ async def test_a_family_folder_made_through_another_project_is_offered_a_rebuild
     assert (await keeper.status()).trouble == ""
     await relative.sync()
     assert relative.setup.folder == keeper.setup.folder  # followed
+
+
+# --- Changing a role --------------------------------------------------------------------
+
+
+def roles_in(status: FamilyFolderStatus) -> dict[str, str]:
+    return {member.device: member.role for member in status.members}
+
+
+async def test_every_change_of_role_acts_within_a_round_and_every_list_shows_it(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _, device = await admitted(tmp_path, cloud)
+    # Between Trusted, Contributor and Viewer, each way.
+    for role in ("trusted", "viewer", "contributor", "viewer", "trusted", "contributor"):
+        await keeper.change_role(ChangeRole(device=device, role=role))
+        assert roles_in(await keeper.status())[device] == role
+        await relative.sync()
+        status = await relative.status()
+        assert (status.role, roles_in(status)[device]) == (role, role)
+        assert relative.proposing == (role != "viewer")
+        assert status.role_changed is not None
+        assert (status.role_changed.role, status.role_changed.backup) == (role, "")
+    relative.role_seen()
+    assert (await relative.status()).role_changed is None
+
+
+async def test_a_role_change_waits_until_that_computers_changes_are_reviewed(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs, device = await admitted(tmp_path, cloud)
+    someone(theirs.graph, HASSAN)["nickname"] = "Pak Hassan"
+    await relative.sync()
+    await keeper.sync()
+    [waiting] = (await keeper.status()).changes
+    assert waiting.changed == 1
+
+    with pytest.raises(RuleError) as held:
+        await keeper.change_role(ChangeRole(device=device, role="trusted"))
+    assert (held.value.code, held.value.message, held.value.details) == (
+        "changes_waiting",
+        "Review its 1 change first.",
+        {"count": 1},
+    )
+    assert roles_in(await keeper.status())[device] == "contributor"  # nothing changed
+
+    assert isinstance(keeper.computer, Keeper)  # answered, as Take none answers (no database here)
+    keeper.computer.answer(device, waiting.proposal, [], "")
+    await keeper.sync()
+    await keeper.change_role(ChangeRole(device=device, role="trusted"))
+    assert roles_in(await keeper.status())[device] == "trusted"
+
+
+async def test_only_a_computer_let_in_has_its_role_changed_and_only_by_the_keeper(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _, device = await admitted(tmp_path, cloud)
+    assert keeper.computer is not None
+    for nobody in (keeper.computer.device, "0123456789abcdef"):  # its own; one not known
+        with pytest.raises(NotFoundError):
+            await keeper.change_role(ChangeRole(device=nobody, role="viewer"))
+    with pytest.raises(RuleError) as refused:
+        await relative.change_role(ChangeRole(device=device, role="trusted"))
+    assert refused.value.code == "not_the_keeper"
+    await keeper.remove(OneComputer(device=device))
+    with pytest.raises(NotFoundError):
+        await keeper.change_role(ChangeRole(device=device, role="contributor"))
+
+
+async def test_a_new_viewer_keeps_what_it_hadnt_sent_in_a_backup(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, theirs, device = await admitted(tmp_path, cloud)
+    await keeper.change_role(ChangeRole(device=device, role="viewer"))
+    someone(theirs.graph, HASSAN)["nickname"] = "Pak Hassan"  # changed here, not sent yet
+
+    await relative.sync()
+
+    status = await relative.status()
+    assert status.role == "viewer"
+    assert status.role_changed is not None
+    assert status.role_changed.backup.startswith("ancestree-backup-")
+    with ZipFile(theirs.data_dir / "exports" / status.role_changed.backup) as backup:
+        kept = json.loads(backup.read("graph.json"))
+    assert someone(kept, HASSAN)["nickname"] == "Pak Hassan"
+    # The keeper's family, here at once: what it hadn't sent never reaches the keeper.
+    assert "nickname" not in someone(theirs.graph, HASSAN)
+    assert theirs.graph["people"] == ours.graph["people"]
+    await keeper.sync()
+    assert (await keeper.status()).changes == []
+
+
+async def test_what_a_viewer_to_be_sent_is_still_the_keepers_to_look_at(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, theirs, device = await admitted(tmp_path, cloud)
+    someone(theirs.graph, HASSAN)["nickname"] = "Pak Hassan"
+    await relative.sync()  # sent before the keeper's round had seen it
+    await keeper.change_role(ChangeRole(device=device, role="viewer"))
+    [waiting] = (await keeper.status()).changes
+    assert (waiting.device, waiting.role) == (device, "viewer")  # not dropped unseen
+
+
+# --- Handing over the keeper ------------------------------------------------------------
+
+COUSIN = "cousin@example.com"
+
+
+async def a_third_relative(
+    tmp_path: Path, cloud: Cloud, keeper: FamilyFolder, role: str = "viewer"
+) -> tuple[FamilyFolder, Family]:
+    """Another relative's computer, let in with the invitation: one that only follows."""
+    await keeper.invite(Invite(email=COUSIN))
+    family = Family(tmp_path / "cousin-data")
+    cousin = fresh(cloud, family)
+    await cousin.take_invitation(keeper.invitation().text())
+    signed_in(cousin, COUSIN)
+    await cousin.join(JoinFamily(computer="Pak Ngah's PC"))
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role=role))  # type: ignore[arg-type]
+    await cousin.sync()
+    return cousin, family
+
+
+def device_of(folder: FamilyFolder) -> str:
+    assert folder.computer is not None
+    return folder.computer.device
+
+
+def opens(cloud: Cloud, folder: str, code: str) -> bool:
+    """Whether a recovery code opens the newest recovery file in a family folder in Drive."""
+    inside = [item for item in cloud.items.values() if cloud.inside(item, folder)]
+    family = next(item.data for item in inside if item.name == "family.json")
+    recoveries = {
+        int(item.name.removesuffix(".bin")): item.data
+        for item in inside
+        if item.parent is not None and cloud.items[item.parent].name == "recovery"
+    }
+    version = max(recoveries)
+    return Keeper.opens(family, recoveries[version], version, code)
+
+
+async def test_the_keeper_hands_the_family_to_another_person_and_everyone_follows(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    cousin, _ = await a_third_relative(tmp_path, cloud, keeper)
+    old_code = await keeper.new_recovery_code()
+    keeper.recovery_seen()
+    await keeper.sync()  # what each relative says of itself, read
+    assert keeper.setup is not None
+    assert isinstance(keeper.computer, Keeper)
+    old_folder, old_keeper = keeper.setup.folder, device_of(keeper)
+    the_keepers = keeper.computer.sign.private_bytes_raw().hex()
+    theirs_before = device_of(relative)
+
+    await keeper.offer(OfferFamily(device=theirs_before, after="contributor"))
+    offered = (await keeper.status()).offer_made
+    assert offered is not None
+    assert (offered.name, offered.after) == ("Mak Long's laptop", "contributor")
+    with pytest.raises(RuleError) as keeping_nothing:
+        await keeper.change_role(ChangeRole(device=theirs_before, role="viewer"))
+    assert keeping_nothing.value.code == "offered"
+
+    await relative.sync()
+    here = (await relative.status()).offer_here
+    assert here is not None
+    assert (here.keeper, here.own) == ("Pak Hassan's PC", False)
+    assert (await cousin.status()).offer_here is None  # offered to one computer alone
+
+    await relative.accept()
+
+    status = await relative.status()
+    assert (status.setup, status.role) == ("keeper", "keeper")
+    assert status.recovery_code is not None  # a new code, for the new keeper to keep
+    assert relative.setup is not None
+    new_folder = relative.setup.folder
+    assert new_folder != old_folder
+    assert cloud.items[new_folder].owner == RELATIVE  # in the new keeper's Drive
+    assert set(cloud.items[new_folder].shared) == {KEEPER, COUSIN}
+    assert opens(cloud, new_folder, status.recovery_code)
+    assert not opens(cloud, new_folder, old_code)  # the old code opens nothing
+    assert roles_in(status)[old_keeper] == "keeper"  # the keeper's place, this computer's now
+    assert roles_in(status)[theirs_before] == "removed"  # its old place as a relative
+
+    await keeper.sync()  # the new keeper's word: the old one keeps nothing more
+    assert old_folder in cloud.binned  # so relatives' computers follow
+    status = await keeper.status()
+    assert status.setup == "member"
+    assert status.handed is not None
+    assert status.handed.to == "Mak Long's laptop"
+    assert isinstance(keeper.computer, Member)
+    assert device_of(keeper) not in (old_keeper, theirs_before)  # under a new identity
+    kept = read_secret(keeper.data / "computer.bin")
+    assert kept is not None
+    assert the_keepers not in kept.decode()  # its copy of the keeper's keys: gone
+    assert not (keeper.data / "published").exists()
+
+    await keeper.sync()  # let in by the new keeper: the family, from its folder
+    assert (await keeper.status()).role == "contributor"
+    await cousin.sync()  # its folder gone: it follows the family to the new keeper's Drive
+    assert cousin.setup is not None
+    assert cousin.setup.folder == new_folder
+    assert RELATIVE in cloud.items[cousin.setup.own_folder].shared
+
+    someone(ours.graph, HASSAN)["nickname"] = "Tok Hassan"  # the old keeper's change
+    await keeper.sync()
+    await relative.sync()
+    [waiting] = (await relative.status()).changes  # for the new keeper to look at
+    assert waiting.device == device_of(keeper)
+
+
+async def test_the_keeper_hands_the_family_to_a_computer_of_its_own(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """No move in Drive, and the same recovery code: its owner has it already."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    code = await keeper.new_recovery_code()
+    keeper.recovery_seen()
+    laptop = fresh(cloud, Family(tmp_path / "laptop-data"))
+    await laptop.take_invitation(keeper.invitation().text())
+    signed_in(laptop, KEEPER)
+    await laptop.join(JoinFamily(computer="Pak Hassan's laptop"))
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role="trusted"))
+    await laptop.sync()
+    await keeper.sync()
+    assert keeper.setup is not None
+    folder = keeper.setup.folder
+
+    await keeper.offer(OfferFamily(device=asking.device))  # Trusted afterwards, by default
+    await laptop.sync()
+    here = (await laptop.status()).offer_here
+    assert here is not None
+    assert here.own
+    await laptop.accept()
+
+    status = await laptop.status()
+    assert (status.setup, status.recovery_code) == ("keeper", None)
+    assert laptop.setup is not None
+    assert laptop.setup.folder == folder
+    await keeper.sync()
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.setup, status.role) == ("member", "trusted")
+    assert folder in cloud.items  # the family folder stays where it was
+    assert opens(cloud, folder, code)
+
+
+async def test_an_offer_turned_down_leaves_the_family_with_its_keeper(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    await keeper.sync()
+    await keeper.offer(OfferFamily(device=device_of(relative)))
+    await relative.sync()
+    await relative.decline()
+    assert (await relative.status()).offer_here is None
+    await keeper.sync()
+    status = await keeper.status()
+    assert status.offer_made is None
+    assert status.problem == "Mak Long's laptop turned down the family: you keep it, as before."
+    await keeper.change_role(ChangeRole(device=device_of(relative), role="viewer"))  # keeping
+
+
+async def test_an_offer_withdrawn_cant_be_taken(tmp_path: Path, cloud: Cloud) -> None:
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    await keeper.sync()
+    await keeper.offer(OfferFamily(device=device_of(relative)))
+    await relative.sync()
+    assert (await relative.status()).offer_here is not None
+    await keeper.withdraw()
+    assert (await keeper.status()).offer_made is None
+    await relative.sync()
+    assert (await relative.status()).offer_here is None
+    with pytest.raises(RuleError) as gone:
+        await relative.accept()
+    assert gone.value.code == "no_offer"
+    assert (await relative.status()).setup == "member"
+
+
+async def test_taken_as_the_keeper_withdrew_leaves_one_keeper(tmp_path: Path, cloud: Cloud) -> None:
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    await keeper.sync()
+    await keeper.offer(OfferFamily(device=device_of(relative)))
+    await relative.sync()
+    await relative.accept()
+    await keeper.withdraw()  # too late: it's taken, and the new keeper's word says so
+    status = await keeper.status()
+    assert (status.setup, status.offer_made) == ("member", None)
+    assert (await relative.status()).setup == "keeper"
+
+
+async def test_an_offer_waits_for_what_stands_in_its_way(
+    tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    keeper, _, relative, theirs = await joined_by_invitation(tmp_path, cloud)
+    device = device_of(relative)
+    someone(theirs.graph, HASSAN)["nickname"] = "Pak Hassan"
+    await relative.sync()
+    await keeper.sync()
+    with pytest.raises(RuleError) as held:
+        await keeper.offer(OfferFamily(device=device))
+    assert (held.value.code, held.value.message) == (
+        "not_now",
+        "Review the changes waiting first: the new keeper couldn't answer them.",
+    )
+    assert isinstance(keeper.computer, Keeper)
+    [waiting] = (await keeper.status()).changes
+    keeper.computer.answer(device, waiting.proposal, [], "")  # as Take none answers
+    await keeper.sync()
+
+    monkeypatch.setattr("ancestree.services.familyfolder.HANDOVER", 2)  # a later way of it
+    with pytest.raises(RuleError) as earlier:
+        await keeper.offer(OfferFamily(device=device))
+    assert earlier.value.message.startswith("Mak Long's laptop runs an earlier AncesTree")
+    assert (await keeper.status()).offer_made is None
+
+
+async def test_while_its_offer_stands_the_keeper_publishes_nothing(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    keeper, ours, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    await keeper.sync()
+    await keeper.offer(OfferFamily(device=device_of(relative)))
+    assert keeper.offering
+    before = records_in(cloud)
+    someone(ours.graph, SITI)["nickname"] = "Kak Siti"  # as if changed some other way
+    await keeper.sync()
+    assert records_in(cloud) == before
+    assert (await keeper.status()).problem == (
+        "Offered to Mak Long's laptop: nothing is kept here until they answer."
+    )
+
+
+async def test_an_offer_opens_for_its_computer_alone_and_only_from_the_keeper(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """The offer carries the keeper's keys, in a folder every relative reads: locked for the
+    computer it's for, and taken only from the keeper's key."""
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    cousin, _ = await a_third_relative(tmp_path, cloud, keeper)
+    await keeper.sync()
+    await keeper.offer(OfferFamily(device=device_of(relative)))
+    await cousin.sync()
+    assert isinstance(cousin.computer, Member)
+    assert isinstance(relative.computer, Member)
+    offered = cousin.local / "offers" / f"{device_of(relative)}.bin"
+    assert offered.is_file()  # it can see the file...
+    mine = cousin.local / "offers" / f"{device_of(cousin)}.bin"
+    mine.write_bytes(offered.read_bytes())
+    assert cousin.computer.read_offer() is None  # ...but it isn't for it, and doesn't open
+
+    forged = relative.local / "offers" / f"{device_of(relative)}.bin"
+    forged.parent.mkdir(parents=True, exist_ok=True)
+    stranger = Ed25519PrivateKey.generate()  # not the keeper's
+    forged.write_bytes(seal(Kind.OFFER, f"offer/{device_of(relative)}", b"{}", stranger, None))
+    assert relative.computer.read_offer() is None

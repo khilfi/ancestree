@@ -3,8 +3,9 @@
  * as the indicator says it, from the status the app gives.
  */
 import { describe, expect, it } from "vitest";
+import { waitingIn } from "@/api/familyFolder";
 import type { FamilyFolderStatus } from "@/api/types";
-import { at, inStep } from "./SyncIndicator";
+import { at, inStep, waits } from "./SyncIndicator";
 
 const NOW = new Date("2026-10-03T14:10:00+08:00").getTime();
 const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
@@ -113,5 +114,27 @@ describe("the family folder's state at the top", () => {
     expect(at(minutesAgo(8), NOW)).toMatch(/^today at \d\d:\d\d$/);
     expect(at(minutesAgo(24 * 60), NOW)).toMatch(/^yesterday at /);
     expect(at(minutesAgo(3 * 24 * 60), NOW)).toMatch(/^[A-Z][a-z]{2} \d+ [A-Z][a-z]{2,3} at /);
+  });
+
+  it("says first that the keeper changed this computer's role, until it's seen", () => {
+    const relative: FamilyFolderStatus = {
+      ...KEEPING,
+      setup: "member",
+      role: "viewer",
+      role_changed: { role: "viewer", backup: "" },
+    };
+    expect(waits(relative)).toEqual(["Your keeper changed what this computer may do: now Viewer"]);
+    expect(waitingIn(relative).all).toBe(1); // Settings shows a number
+    expect(waits({ ...relative, role_changed: null })).toEqual([]);
+  });
+
+  it("says the family's offered to this computer, or was handed over by it", () => {
+    const made = "2026-10-10T09:00:00+00:00";
+    const relative: FamilyFolderStatus = { ...KEEPING, setup: "member", role: "trusted" };
+    const offered = { ...relative, offer_here: { keeper: "Home PC", made, own: false } };
+    expect(waits(offered)).toEqual(["Home PC asks you to keep the family"]);
+    const handed = { ...relative, handed: { to: "Mak Long's laptop", role: "trusted" as const } };
+    expect(waits(handed)).toEqual(["You handed the family to Mak Long's laptop"]);
+    expect(waitingIn(offered).all).toBe(1);
   });
 });

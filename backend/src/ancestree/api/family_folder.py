@@ -9,11 +9,13 @@ from fastapi import APIRouter, Path, Request
 from ancestree.domain.familyfolder import (
     Admit,
     BringIn,
+    ChangeRole,
     FamilyFolderStatus,
     InvitationMade,
     InvitationText,
     Invite,
     JoinFamily,
+    OfferFamily,
     OneComputer,
     ProjectFile,
     Recover,
@@ -197,6 +199,49 @@ async def remove_from_family_folder(request: Request, body: OneComputer) -> Fami
     return await folder.status()
 
 
+@router.post("/role")
+async def change_family_folder_role(request: Request, body: ChangeRole) -> FamilyFolderStatus:
+    """Another role for a computer let in already, once its changes waiting are reviewed: the
+    keeper's."""
+    folder = _folder(request)
+    await folder.change_role(body)
+    return await folder.status()
+
+
+@router.post("/offer")
+async def offer_the_family(request: Request, body: OfferFamily) -> FamilyFolderStatus:
+    """Offer the family to another of its computers, which keeps nothing while the offer stands:
+    the keeper's."""
+    folder = _folder(request)
+    await folder.offer(body)
+    return await folder.status()
+
+
+@router.post("/offer/withdraw")
+async def withdraw_the_offer(request: Request) -> FamilyFolderStatus:
+    """Take the offer of the family back: this computer keeps it as before (the keeper's)."""
+    folder = _folder(request)
+    await folder.withdraw()
+    return await folder.status()
+
+
+@router.post("/offer/accept")
+async def accept_the_offer(request: Request) -> FamilyFolderStatus:
+    """Keep the family on its keeper's offer, as this computer becomes the keeper: a
+    relative's."""
+    folder = _folder(request)
+    await folder.accept()
+    return await folder.status()
+
+
+@router.post("/offer/decline")
+async def decline_the_offer(request: Request) -> FamilyFolderStatus:
+    """Turn the keeper's offer of the family down, so the keeper keeps it: a relative's."""
+    folder = _folder(request)
+    await folder.decline()
+    return await folder.status()
+
+
 @router.post("/sync")
 async def sync_family_folder(request: Request) -> FamilyFolderStatus:
     """Keep in step now, rather than within the minute."""
@@ -210,6 +255,14 @@ async def family_folder_answers_seen(request: Request) -> FamilyFolderStatus:
     """The keeper's answers to this computer's changes, read: not shown again (a relative's)."""
     folder = _folder(request)
     folder.answers_seen()
+    return await folder.status()
+
+
+@router.post("/role-seen")
+async def family_folder_role_seen(request: Request) -> FamilyFolderStatus:
+    """The note that the keeper changed this computer's role, read: a relative's."""
+    folder = _folder(request)
+    folder.role_seen()
     return await folder.status()
 
 

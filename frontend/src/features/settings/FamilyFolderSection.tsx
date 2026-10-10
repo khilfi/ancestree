@@ -1,10 +1,14 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { ApiError } from "@/api/errors";
 import {
   sendsToTheKeeper,
+  useAcceptOffer,
   useAdmit,
   useAnswersSeen,
+  useChangeRole,
+  useDeclineOffer,
   useFamilyFolder,
   useFamilyProject,
   useInvitation,
@@ -13,17 +17,20 @@ import {
   useLeaveFamilyFolder,
   useMoveAccount,
   useNewRecoveryCode,
+  useOfferFamily,
   useOldFolderDeleted,
   useRebuild,
   useRecoverFamily,
   useRecoverySeen,
   useRefuse,
   useRemoveComputer,
+  useRoleSeen,
   useSignInToGoogle,
   useSignOutOfGoogle,
   useStartFamily,
   useSyncNow,
   useTakeInvitation,
+  useWithdrawOffer,
 } from "@/api/familyFolder";
 import type {
   FamilyFolderStatus,
@@ -31,6 +38,9 @@ import type {
   FolderAsking,
   FolderChanges,
   FolderMember,
+  HandedOver,
+  OfferHere,
+  OfferMade,
 } from "@/api/types";
 import {
   AlertDialog,
@@ -663,9 +673,85 @@ function Asking({ ask }: { ask: FolderAsking }) {
   );
 }
 
-function Members({ members, keeper }: { members: FolderMember[]; keeper: boolean }) {
+/** The keeper's choice of another role for a computer let in already. It waits while
+ *  that computer's changes wait for review, so none come in, or go, unlooked at. */
+function ChangeRoleDialog({
+  member,
+  waiting,
+  onClose,
+}: {
+  member: FolderMember | null;
+  waiting: FolderChanges | undefined;
+  onClose: () => void;
+}) {
+  const change = useChangeRole();
+  const [role, setRole] = useState<keyof typeof ROLES | null>(null);
+  const chosen = role ?? (member?.role as keyof typeof ROLES | undefined) ?? "contributor";
+  const count = waiting?.changed ?? 0;
+  const close = () => {
+    setRole(null);
+    onClose();
+  };
+  return (
+    <AlertDialog open={member !== null} onOpenChange={(open) => !open && close()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Change what {member?.name} may do</AlertDialogTitle>
+          <AlertDialogDescription>
+            It changes at that computer's next round with the family folder, within a minute while
+            it's on. Everything already in the family stays as it is.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <RadioGroup
+          value={chosen}
+          onValueChange={(value) => setRole(value as keyof typeof ROLES)}
+          className="gap-1.5"
+          aria-label={`${member?.name}'s role`}
+        >
+          {Object.entries(ROLES).map(([key, text]) => (
+            <div key={key} className="flex items-center gap-2">
+              <RadioGroupItem value={key} id={`new-role-${key}`} />
+              <Label htmlFor={`new-role-${key}`} className="text-sm font-normal">
+                {text}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+        {waiting && (
+          <p className="text-sm font-medium text-amber-700" role="status">
+            Review its {count ? `${count} ${count === 1 ? "change" : "changes"}` : "changes"} first:
+            they wait for you above.
+          </p>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={waiting !== undefined || chosen === member?.role || change.isPending}
+            onClick={() =>
+              member &&
+              change.mutate({ device: member.device, role: chosen }, { onError: showError })
+            }
+          >
+            Change
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function Members({
+  members,
+  keeper,
+  changes = [],
+}: {
+  members: FolderMember[];
+  keeper: boolean;
+  changes?: FolderChanges[];
+}) {
   const remove = useRemoveComputer();
   const [leaving, setLeaving] = useState<FolderMember | null>(null);
+  const [changing, setChanging] = useState<FolderMember | null>(null);
   return (
     <>
       <ul className="divide-y divide-stone-100 text-sm">
@@ -681,14 +767,24 @@ function Members({ members, keeper }: { members: FolderMember[]; keeper: boolean
             <div className="flex shrink-0 items-center gap-3">
               <span className="text-xs text-stone-600">{ROLE_NAMES[member.role]}</span>
               {keeper && !member.you && member.role !== "removed" && (
-                <Button size="sm" variant="ghost" onClick={() => setLeaving(member)}>
-                  Remove
-                </Button>
+                <>
+                  <Button size="sm" variant="ghost" onClick={() => setChanging(member)}>
+                    Change role…
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setLeaving(member)}>
+                    Remove
+                  </Button>
+                </>
               )}
             </div>
           </li>
         ))}
       </ul>
+      <ChangeRoleDialog
+        member={changing}
+        waiting={changes.find((waiting) => waiting.device === changing?.device)}
+        onClose={() => setChanging(null)}
+      />
       <AlertDialog open={leaving !== null} onOpenChange={(open) => !open && setLeaving(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -971,17 +1067,234 @@ function Move({ status }: { status: FamilyFolderStatus }) {
   );
 }
 
+/** What the computer handing the family over becomes afterwards: Trusted by default. */
+const AFTERWARDS = {
+  trusted: "Trusted: what you change here comes in by itself, as now",
+  contributor: "Contributor: the new keeper looks at each of your changes first",
+  viewer: "Viewer: the family arrives here, and nothing changes it",
+  leave: "Leave the family: this computer keeps the family as it is, its own",
+} as const;
+
+/** Where the family's Google project is shared, said at a handover. */
+function ProjectOwner({ to }: { to: string }) {
+  return (
+    <p className="max-w-2xl text-xs text-stone-500">
+      Your family signs in to Google through your Google Cloud project. Add {to} as an{" "}
+      <strong>Owner</strong> of it in the Google Cloud console (
+      <strong>IAM &amp; Admin → IAM → Grant access</strong>), so the family no longer depends on
+      your Google account. Or the new keeper moves the family into a project of their own later, and
+      sends everyone the new invitation.
+    </p>
+  );
+}
+
+/** The keeper hands the family to another of its computers: which, and what this one
+ *  becomes. The offer can't be made while anything stands in its way, and each says what. */
+function HandOver({ status }: { status: FamilyFolderStatus }) {
+  const offer = useOfferFamily();
+  const [open, setOpen] = useState(false);
+  const others = (status.members ?? []).filter(
+    (member) => !member.you && member.role !== "removed" && member.role !== "keeper",
+  );
+  const [device, setDevice] = useState<string | null>(null);
+  const [after, setAfter] = useState<keyof typeof AFTERWARDS>("trusted");
+  const chosen = others.find((member) => member.device === device) ?? others[0];
+  return (
+    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">Hand the family to someone else?</summary>
+      <div className="mt-3 space-y-3">
+        <p className="max-w-2xl text-stone-600">
+          Another of the family's computers becomes the keeper: it reviews relatives' changes and
+          lets computers in, and the family folder moves to its owner's Google Drive. They're asked
+          first, on that computer.
+        </p>
+        <Button variant="outline" disabled={others.length === 0} onClick={() => setOpen(true)}>
+          Hand the family to someone else…
+        </Button>
+        {others.length === 0 && (
+          <p className="text-xs text-stone-500">
+            Their computer joins the family first, as any relative's does.
+          </p>
+        )}
+      </div>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hand the family to someone else</AlertDialogTitle>
+            <AlertDialogDescription>
+              While the offer stands, this computer keeps nothing: it sends out nothing, reviews
+              nothing, and the family can't be changed here.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Who keeps the family from now on</Label>
+            <RadioGroup
+              value={chosen?.device ?? ""}
+              onValueChange={setDevice}
+              className="gap-1.5"
+              aria-label="Who keeps the family from now on"
+            >
+              {others.map((member) => (
+                <div key={member.device} className="flex items-center gap-2">
+                  <RadioGroupItem value={member.device} id={`keeper-${member.device}`} />
+                  <Label htmlFor={`keeper-${member.device}`} className="text-sm font-normal">
+                    {member.name}
+                    {member.email && <span className="text-stone-500"> · {member.email}</span>}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">This computer afterwards</Label>
+            <RadioGroup
+              value={after}
+              onValueChange={(value) => setAfter(value as keyof typeof AFTERWARDS)}
+              className="gap-1.5"
+              aria-label="This computer afterwards"
+            >
+              {Object.entries(AFTERWARDS).map(([key, text]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <RadioGroupItem value={key} id={`after-${key}`} />
+                  <Label htmlFor={`after-${key}`} className="text-sm font-normal">
+                    {text}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          {chosen && <ProjectOwner to={chosen.email || chosen.name} />}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!chosen || offer.isPending}
+              onClick={() =>
+                chosen && offer.mutate({ device: chosen.device, after }, { onError: showError })
+              }
+            >
+              Offer it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </details>
+  );
+}
+
+/** The keeper's offer of the family, while it stands: withdrawn here, or answered there. */
+function Offered({ offer, to }: { offer: OfferMade; to: string }) {
+  const withdraw = useWithdrawOffer();
+  return (
+    <Panel title={`Offered to ${offer.name}`}>
+      <p className="max-w-2xl text-sm text-stone-600">
+        Sent {ago(offer.made)}: they're asked on their computer to keep the family, or to turn it
+        down. While the offer stands, this computer keeps nothing, and the family can't be changed
+        here. Once it's taken, this computer carries on as{" "}
+        {offer.after === "leave"
+          ? "the family's own copy, out of the family folder"
+          : ROLE_NAMES[offer.after]}
+        .
+      </p>
+      <ProjectOwner to={to} />
+      <Button
+        variant="outline"
+        disabled={withdraw.isPending}
+        onClick={() => withdraw.mutate(undefined, { onError: showError })}
+      >
+        Withdraw the offer
+      </Button>
+    </Panel>
+  );
+}
+
+/** The family offered to this computer by its keeper: kept here from now on, or not. */
+function OfferedHere({ offer }: { offer: OfferHere }) {
+  const accept = useAcceptOffer();
+  const decline = useDeclineOffer();
+  const busy = accept.isPending || decline.isPending;
+  return (
+    <Panel title={`${offer.keeper} asks you to keep the family`}>
+      <ul className="max-w-2xl list-disc space-y-0.5 pl-5 text-sm text-stone-600">
+        <li>You review relatives' changes, and let computers in.</li>
+        {offer.own ? (
+          <li>The family folder stays where it is, in your Google Drive.</li>
+        ) : (
+          <li>The family folder moves to your Google Drive.</li>
+        )}
+        {offer.own ? (
+          <li>Your recovery code stays the one you have.</li>
+        ) : (
+          <li>You get a recovery code, to keep safe.</li>
+        )}
+      </ul>
+      <p className="text-xs text-stone-500">Asked {ago(offer.made)}. A backup is made first.</p>
+      <div className="flex gap-2">
+        <Button disabled={busy} onClick={() => accept.mutate(undefined, { onError: showError })}>
+          {accept.isPending ? "Taking it over…" : "Accept"}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => decline.mutate(undefined, { onError: showError })}
+        >
+          Decline
+        </Button>
+      </div>
+    </Panel>
+  );
+}
+
+/** The family this computer kept, handed to another: said until its owner has seen so. */
+function Handed({ handed }: { handed: HandedOver }) {
+  const seen = useRoleSeen();
+  return (
+    <Panel title={`You handed the family to ${handed.to}`}>
+      <p className="max-w-2xl text-sm">
+        They keep it now. This computer carries on as <strong>{ROLE_NAMES[handed.role]}</strong>.{" "}
+        {ROLE_HERE[handed.role] ?? ""}
+      </p>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => seen.mutate(undefined, { onError: showError })}
+        disabled={seen.isPending}
+      >
+        Got it
+      </Button>
+    </Panel>
+  );
+}
+
 function Keeper({ status }: { status: FamilyFolderStatus }) {
   const asking = status.asking ?? [];
   const changes = status.changes ?? [];
   const deleted = useOldFolderDeleted();
+  // While its offer of the family stands, this computer keeps nothing: nothing to act on.
+  const offered = status.offer_made;
   return (
     <div className="space-y-5">
       <p className="text-sm">
-        You keep <strong>{status.family}</strong>. What you change reaches every computer below
-        within a few minutes, while it's on.
+        {offered ? (
+          <>
+            You keep <strong>{status.family}</strong> until {offered.name} answers your offer.
+          </>
+        ) : (
+          <>
+            You keep <strong>{status.family}</strong>. What you change reaches every computer below
+            within a few minutes, while it's on.
+          </>
+        )}
       </p>
       <InStep status={status} />
+      {offered && (
+        <Offered
+          offer={offered}
+          to={
+            (status.members ?? []).find((member) => member.device === offered.device)?.email ||
+            offered.name
+          }
+        />
+      )}
       {status.lost && (
         <Panel
           title={
@@ -1025,11 +1338,12 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         </Panel>
       )}
       <Panel title="The family's computers">
-        <Members members={status.members ?? []} keeper />
-        <Invite />
+        <Members members={status.members ?? []} keeper={!offered} changes={changes} />
+        {!offered && <Invite />}
       </Panel>
-      <NewRecoveryCode />
-      {!status.moving && <Move status={status} />}
+      {!offered && <NewRecoveryCode />}
+      {!status.moving && !offered && <Move status={status} />}
+      {!offered && <HandOver status={status} />}
       <GoogleAccount status={status} />
     </div>
   );
@@ -1055,6 +1369,45 @@ function Answers({ answers }: { answers: FolderAnswer[] }) {
           )}
         </div>
       ))}
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => seen.mutate(undefined, { onError: showError })}
+        disabled={seen.isPending}
+      >
+        Got it
+      </Button>
+    </Panel>
+  );
+}
+
+/** What each role means for the computer that has it, as its owner reads it. */
+const ROLE_HERE: Record<string, string> = {
+  trusted:
+    "What you change here goes to the keeper, and comes in by itself unless it clashes with theirs or takes something out.",
+  contributor: "What you change here goes to the keeper, who looks at it first.",
+  viewer: "The family arrives here, and can't be changed on this computer.",
+};
+
+/** The keeper gave this computer another role: said until its owner has seen so. */
+function RoleNote({ status }: { status: FamilyFolderStatus }) {
+  const seen = useRoleSeen();
+  const changed = status.role_changed;
+  if (!changed) return null;
+  return (
+    <Panel title="Your keeper changed what this computer may do">
+      <p className="text-sm">
+        Now <strong>{ROLE_NAMES[changed.role]}</strong>. {ROLE_HERE[changed.role] ?? ""}
+      </p>
+      {changed.backup && (
+        <p className="max-w-2xl text-sm text-stone-600">
+          What you'd changed here is kept in a backup, <code>{changed.backup}</code>, in{" "}
+          <Link to="/settings/backups" className="text-sky-700 hover:underline">
+            Settings → Backups
+          </Link>
+          . The family here is the keeper's now.
+        </p>
+      )}
       <Button
         size="sm"
         variant="outline"
@@ -1118,6 +1471,9 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
           </>
         )}
       </p>
+      {status.offer_here && <OfferedHere offer={status.offer_here} />}
+      {status.handed && <Handed handed={status.handed} />}
+      <RoleNote status={status} />
       {sendsToTheKeeper(status) && <Sending status={status} />}
       {(status.answers ?? []).length > 0 && <Answers answers={status.answers ?? []} />}
       <InStep status={status} />

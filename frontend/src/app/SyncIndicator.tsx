@@ -109,10 +109,21 @@ const ICONS: Record<Tone, typeof CircleCheckIcon> = {
   warn: TriangleAlertIcon,
 };
 
+const ROLE_NAMES: Record<string, string> = {
+  trusted: "Trusted",
+  contributor: "Contributor",
+  viewer: "Viewer",
+};
+
 /** What waits, said plainly: for the keeper, computers asking and changes to look at; for a
- *  relative, its own changes waiting for the keeper. */
-function waits(status: FamilyFolderStatus): string[] {
+ *  relative, a role the keeper changed, the family offered to it or handed over by it as
+ *  the keeper, and its own changes waiting for the keeper. */
+export function waits(status: FamilyFolderStatus): string[] {
   const lines: string[] = [];
+  const role = status.role_changed?.role;
+  if (role) lines.push(`Your keeper changed what this computer may do: now ${ROLE_NAMES[role]}`);
+  if (status.offer_here) lines.push(`${status.offer_here.keeper} asks you to keep the family`);
+  if (status.handed) lines.push(`You handed the family to ${status.handed.to}`);
   const { asking, changes } = waitingIn(status);
   if (asking) lines.push(`${asking} ${asking === 1 ? "computer asks" : "computers ask"} to join`);
   if (changes)

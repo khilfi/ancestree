@@ -39,6 +39,11 @@ class Kind(IntEnum):
     NOTE = 6  # the keeper's answer to a proposal
     FILE = 7  # a photo or picture
     RECOVERY = 8  # the keeper's keys, locked with the recovery code
+    # Handing over the keeper: read by computers since 0.5.0 alone, in places no earlier
+    # one reads.
+    OFFER = 9  # the family offered to one computer, locked for it alone: the keeper's
+    ABOUT = 10  # what a relative's computer says of itself, in its own folder: its own
+    TOOK = 11  # the new keeper's word that it took the family, in its own folder: the keeper's
 
 
 class RefusedError(Exception):

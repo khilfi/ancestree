@@ -338,6 +338,126 @@ describe("Settings → Family folder", () => {
     });
   });
 
+  it("lets the keeper change what a computer let in may do", async () => {
+    answer({ ...KEEPER, asking: [] });
+    await show(<FamilyFolderSection />, "Mak Long's laptop");
+    act(() => button("Change role…").click());
+    await until("Change what Mak Long's laptop may do");
+    expect(button("Change").disabled).toBe(true); // it's a viewer already
+    const contributor = document.querySelector<HTMLButtonElement>("#new-role-contributor");
+    act(() => contributor?.click());
+    act(() => button("Change").click());
+    await askedFor("/api/family-folder/role");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/role",
+      body: { device: "d2", role: "contributor" },
+    });
+  });
+
+  it("holds a role change while that computer's changes wait for review", async () => {
+    const sent_at = new Date().toISOString();
+    const waiting = { device: "d2", name: "Mak Long's laptop", email: "r@example.com" };
+    answer({
+      ...KEEPER,
+      asking: [],
+      changes: [{ ...waiting, role: "viewer", proposal: 2, sent_at, changed: 3 }],
+    });
+    await show(<FamilyFolderSection />, "Mak Long's laptop");
+    act(() => button("Change role…").click());
+    await until("Review its 3 changes first");
+    const trusted = document.querySelector<HTMLButtonElement>("#new-role-trusted");
+    act(() => trusted?.click());
+    expect(button("Change").disabled).toBe(true);
+  });
+
+  it("tells a relative its keeper changed its role, and where its changes went", async () => {
+    const relative: FamilyFolderStatus = {
+      ...SIGNED_IN,
+      email: "r@example.com",
+      setup: "member",
+      role: "viewer",
+      family: "Keluarga Contoh",
+      members: KEEPER.members,
+      role_changed: { role: "viewer", backup: "ancestree-backup-2026-10-10T09-30-00.zip" },
+    };
+    answer(relative, [], { ...relative, role_changed: null });
+    await show(<FamilyFolderSection />, "Your keeper changed what this computer may do");
+    expect(document.body.textContent).toContain("Now Viewer.");
+    expect(document.body.textContent).toContain("ancestree-backup-2026-10-10T09-30-00.zip");
+    act(() => button("Got it").click());
+    await askedFor("/api/family-folder/role-seen");
+  });
+
+  it("lets the keeper offer the family to another computer, saying what this one becomes", async () => {
+    answer({ ...KEEPER, asking: [] });
+    await show(<FamilyFolderSection />, "Hand the family to someone else?");
+    act(() => button("Hand the family to someone else…").click());
+    await until("Who keeps the family from now on");
+    expect(document.body.textContent).toContain("IAM & Admin → IAM → Grant access");
+    const contributor = document.querySelector<HTMLButtonElement>("#after-contributor");
+    act(() => contributor?.click());
+    act(() => button("Offer it").click());
+    await askedFor("/api/family-folder/offer");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/offer",
+      body: { device: "d2", after: "contributor" },
+    });
+  });
+
+  it("shows the keeper its offer while it stands, and takes it back", async () => {
+    const made = new Date().toISOString();
+    answer({
+      ...KEEPER,
+      asking: [],
+      offer_made: { device: "d2", name: "Mak Long's laptop", after: "trusted", made },
+    });
+    await show(<FamilyFolderSection />, "Offered to Mak Long's laptop");
+    expect(document.body.textContent).toContain("this computer keeps nothing");
+    for (const keepers of ["Hand the family to someone else?", "Change role…", "Invite"]) {
+      expect(document.body.textContent).not.toContain(keepers); // nothing kept here meanwhile
+    }
+    act(() => button("Withdraw the offer").click());
+    await askedFor("/api/family-folder/offer/withdraw");
+  });
+
+  it("asks a relative to keep the family, and takes its answer", async () => {
+    const offered: FamilyFolderStatus = {
+      ...SIGNED_IN,
+      email: "r@example.com",
+      setup: "member",
+      role: "trusted",
+      family: "Keluarga Contoh",
+      members: KEEPER.members,
+      offer_here: { keeper: "Home PC", made: new Date().toISOString(), own: false },
+    };
+    answer(offered);
+    await show(<FamilyFolderSection />, "Home PC asks you to keep the family");
+    expect(document.body.textContent).toContain("The family folder moves to your Google Drive.");
+    expect(document.body.textContent).toContain("You get a recovery code, to keep safe.");
+    act(() => button("Decline").click());
+    await askedFor("/api/family-folder/offer/decline");
+    act(() => button("Accept").click());
+    await askedFor("/api/family-folder/offer/accept");
+  });
+
+  it("tells the old keeper whom it handed the family to, until it's seen", async () => {
+    const handed: FamilyFolderStatus = {
+      ...SIGNED_IN,
+      setup: "member",
+      role: "trusted",
+      family: "Keluarga Contoh",
+      members: KEEPER.members,
+      handed: { to: "Mak Long's laptop", role: "trusted" },
+    };
+    answer(handed, [], { ...handed, handed: null });
+    await show(<FamilyFolderSection />, "You handed the family to Mak Long's laptop");
+    expect(document.body.textContent).toContain("This computer carries on as Trusted.");
+    act(() => button("Got it").click());
+    await askedFor("/api/family-folder/role-seen");
+  });
+
   it("turns away a computer the keeper doesn't know", async () => {
     answer(KEEPER);
     await show(<FamilyFolderSection />, "Asking to join (1)");
@@ -363,6 +483,26 @@ describe("Settings → Family folder", () => {
     act(() => button("I've kept it safe").click());
     await askedFor("/api/family-folder/recovery-seen");
     expect(asked.map((ask) => ask.path)).toContain("/api/family-folder/recovery-seen");
+  });
+
+  it("changes nothing on the keeper's computer while its offer stands", async () => {
+    const made = new Date().toISOString();
+    answer({
+      ...KEEPER,
+      asking: [],
+      offer_made: { device: "d2", name: "Mak Long's laptop", after: "trusted", made },
+    });
+    await show(
+      <>
+        <FamilyFolderSection />
+        <CanEdit>
+          <button type="button">Add person</button>
+        </CanEdit>
+      </>,
+      "Offered to Mak Long's laptop",
+    );
+    await new Promise((done) => setTimeout(done, 20));
+    expect(document.body.textContent).not.toContain("Add person");
   });
 
   it("keeps a relative's family as the keeper sends it: nothing to change it with", async () => {
@@ -394,6 +534,7 @@ describe("Settings → Family folder", () => {
           role: "contributor",
           proposal: 4,
           sent_at: sent,
+          changed: 2,
         },
       ],
     };
@@ -513,6 +654,7 @@ describe("Settings → Family folder", () => {
           role: "contributor",
           proposal: 5,
           sent_at: new Date().toISOString(),
+          changed: 1,
         },
       ],
     };

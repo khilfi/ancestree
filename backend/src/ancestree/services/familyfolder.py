@@ -66,24 +66,35 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Literal
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+
+from ancestree import __version__
 from ancestree.domain.familyfolder import (
     Admit,
     BringIn,
+    ChangeRole,
     FamilyFolderStatus,
     FolderAnswer,
     FolderAsking,
     FolderChanges,
     FolderMember,
+    HandedOver,
     Invite,
     JoinFamily,
+    OfferFamily,
+    OfferHere,
+    OfferMade,
     OneComputer,
     Recover,
     ReviewChanges,
+    RoleChanged,
     SharedFolder,
     StartFamily,
     TurnDown,
 )
 from ancestree.domain.imports import ChangesPreview, ImportDone
+from ancestree.exchange.backup import write_archive
 from ancestree.exchange.restore import restore_archive
 from ancestree.exchange.returned import ReturnedError, sent_family
 from ancestree.familyfolder.changes import (
@@ -96,7 +107,7 @@ from ancestree.familyfolder.changes import (
     records,
     unpack,
 )
-from ancestree.familyfolder.computers import MAY_SEND, Arrived, Keeper, Member
+from ancestree.familyfolder.computers import HANDOVER, MAY_SEND, Arrived, Keeper, Member
 from ancestree.familyfolder.drive import Drive, DriveError, DriveLike, RemoteFile
 from ancestree.familyfolder.entries import Entries, build_archive, changes_between, family_entries
 from ancestree.familyfolder.google import (
@@ -112,7 +123,7 @@ from ancestree.familyfolder.google import (
 )
 from ancestree.familyfolder.invitations import Invitation, InvitationError
 from ancestree.familyfolder.mirror import Mirror
-from ancestree.familyfolder.models import FamilyFile, Joined, Source
+from ancestree.familyfolder.models import FamilyFile, Joined, Newcomer, Source, TookOver
 from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.familyfolder.seals import RefusedError, join_code
 from ancestree.importing.returned import Base
@@ -137,8 +148,19 @@ OWN_FOLDER_NAMED = re.compile(re.escape(OWN_FOLDER) + r" \((?:([0-9a-f]{16}), )?
 CLIENT = "google-client.bin"
 JOINING = "joining.json"
 # What relatives' computers write, in their own folders. In each computer's copy, it sits
-# beside the family folder's files, as computers.py reads it.
-RELATIVES = ("join/", "inbox/")
+# beside the family folder's files, as computers.py reads it. Since 0.5.0, what a
+# computer says of itself, and a new keeper's word that it took the family.
+RELATIVES = ("join/", "inbox/", "about/", "took/")
+# The keeper's: the identity it offered to come back in under, after a handover, until
+# the family is taken or the offer withdrawn; locked as the keys are.
+NEWCOMER = "newcomer.bin"
+NO_OFFER = "The keeper withdrew the offer, or it's been answered: nothing changed here."
+# The keeper's computer whose record moved on in the family folder while its offer stood.
+TAKING = (
+    "The computer you offered the family to is taking it over: this one keeps nothing more, and "
+    "carries on as you chose once it's done."
+)
+ROLES = ("trusted", "contributor", "viewer")  # those a computer let in may have
 EVERY = 60.0  # seconds between syncs while the app runs
 SOON = 5.0  # seconds after a change here before its round, as more changes may follow (0.4.0)
 SNAPSHOT_EVERY = 10  # change sets between snapshots of the whole family
@@ -223,6 +245,23 @@ class Setup:
     # The keeper's (0.4.0): the family folder it moved from, while that's still in Drive, where
     # relatives' computers would keep reading it.
     moved_from: str = ""
+    # A relative's: the role it last acted on; and the role the keeper changed it to,
+    # with the backup it made of what it changed and hadn't sent, if any, until its owner has
+    # seen so.
+    acted_on: str = ""
+    role_changed: dict[str, str] = field(default_factory=dict)
+    # The keeper's: the family offered to another of its computers, while it stands
+    # ("id", "to", "after", "made"); and every offer it made while keeping the family, whose
+    # taking it heeds even once withdrawn.
+    offer: dict[str, str] = field(default_factory=dict)
+    offers: list[str] = field(default_factory=list)
+    # A relative's: the version it last said it runs, in its own folder; and the offer
+    # its owner turned down.
+    about: str = ""
+    declined: str = ""
+    # The old keeper's, as a relative after a handover: to whom, and as what, until its
+    # owner has seen so.
+    handed: dict[str, str] = field(default_factory=dict)
 
 
 def _fingerprint(entries: Entries) -> str:
@@ -246,9 +285,10 @@ def _family_files(path: str) -> bool:
 
 
 def _relatives_files(device: str) -> Callable[[str], bool]:
-    """One relative's computer's files, in a computer's copy: its join request, and what it
-    sends the keeper."""
-    return lambda path: path == f"join/{device}.req" or path.startswith(f"inbox/{device}/")
+    """One relative's computer's files, in a computer's copy: its join request, what it sends
+    the keeper, and since 0.5.0 what it says of itself, and its word as the new keeper."""
+    own = (f"join/{device}.req", f"about/{device}.bin", f"took/{device}.bin")
+    return lambda path: path in own or path.startswith(f"inbox/{device}/")
 
 
 class FamilyFolder:
@@ -667,13 +707,35 @@ class FamilyFolder:
             )
         return self.drive, self.session
 
-    def _keeper(self) -> tuple[Keeper, DriveLike, Setup]:
+    def _keeper(self, *, offering: bool = False) -> tuple[Keeper, DriveLike, Setup]:
+        """The keeper's computer, to act as the keeper: not one replaced by another, nor, unless
+        `offering`, one that has offered the family to another computer, which keeps
+        nothing while the offer stands."""
         drive, _ = self._ready(set_up=True)
         if not isinstance(self.computer, Keeper) or self.setup is None:
             raise RuleError("not_the_keeper", "Only the family's keeper can do that.")
         if self.setup.replaced:
             raise RuleError("replaced", REPLACED)
+        if self.setup.offer and not offering:
+            raise RuleError("offered", self.offered_words())
         return self.computer, drive, self.setup
+
+    def offered_words(self) -> str:
+        """What a keeper's computer says while its offer of the family stands."""
+        computer, setup = self.computer, self.setup
+        to = setup.offer.get("to", "") if setup else ""
+        known = computer.known.get(to) if isinstance(computer, Keeper) else None
+        name = known.name if known else "another computer"
+        return (
+            f"The family is offered to {name}: nothing is kept here until they answer, or you "
+            "withdraw the offer."
+        )
+
+    @property
+    def offering(self) -> bool:
+        """Whether this keeper's computer has offered the family to another, and the offer
+        stands: the family can't be changed here meanwhile."""
+        return self.setup is not None and self.setup.role == "keeper" and bool(self.setup.offer)
 
     def _signed_out(self) -> None:
         """The sign-in has ended (taken back in the Google account, or expired): forgotten
@@ -831,6 +893,27 @@ class FamilyFolder:
             published=(
                 datetime.fromisoformat(setup.published) if setup and setup.published else None
             ),
+            role_changed=(
+                RoleChanged.model_validate(setup.role_changed)
+                if setup and setup.role_changed
+                else None
+            ),
+            offer_made=self._offer_made(),
+            offer_here=await asyncio.to_thread(self._offered_here),
+            handed=HandedOver.model_validate(setup.handed) if setup and setup.handed else None,
+        )
+
+    def _offer_made(self) -> OfferMade | None:
+        """The keeper's offer of the family, while it stands."""
+        computer, setup = self.computer, self.setup
+        if not isinstance(computer, Keeper) or setup is None or not setup.offer:
+            return None
+        to = setup.offer["to"]
+        return OfferMade(
+            device=to,
+            name=computer.known[to].name if to in computer.known else "",
+            after=setup.offer["after"],  # type: ignore[arg-type]
+            made=datetime.fromisoformat(setup.offer["made"]),
         )
 
     def _may_leave(self) -> bool:
@@ -853,6 +936,13 @@ class FamilyFolder:
         computer, setup = self.computer, self.setup
         if isinstance(computer, Member) and setup is not None and computer.answers:
             setup.seen = max(setup.seen, max(computer.answers))
+            self._save_setup()
+
+    def role_seen(self) -> None:
+        """The note that the keeper changed this computer's role, read: not shown again;
+        and the note that this computer handed the family over, as the old keeper."""
+        if self.setup is not None and (self.setup.role_changed or self.setup.handed):
+            self.setup.role_changed, self.setup.handed = {}, {}
             self._save_setup()
 
     # Starting, joining, and coming back
@@ -1142,6 +1232,298 @@ class FamilyFolder:
                 await asyncio.to_thread(keeper.remove, request.device)
             await self._in_step()
 
+    async def change_role(self, request: ChangeRole) -> None:
+        """Another role for a computer let in already: it acts on it at its next round.
+        Its changes waiting for review come first, so a contributor's never come in by
+        themselves because it became trusted, and a viewer-to-be's are never dropped unseen.
+        What it sent before it knew is taken as it was then (computers.py, `role_since`)."""
+        async with self.lock:
+            with self._plainly():
+                keeper, _, _ = self._keeper()
+                known = keeper.known.get(request.device)
+                if known is None or request.device == keeper.device or known.role == "removed":
+                    raise NotFoundError("That computer isn't in the family.")
+                if known.role == request.role:
+                    return
+                waiting = next(
+                    (changes for changes in self.waiting if changes.device == request.device),
+                    None,
+                )
+                if waiting is not None:
+                    count = waiting.changed
+                    what = f"{count} change{'' if count == 1 else 's'}" if count else "changes"
+                    raise RuleError("changes_waiting", f"Review its {what} first.", count=count)
+                await asyncio.to_thread(keeper.change_role, request.device, request.role)
+            await self._in_step()
+
+    # Handing over the keeper
+
+    async def _may_offer(self, keeper: Keeper, setup: Setup, device: str) -> str:
+        """What stands in the way of offering the family to `device`'s computer, in plain
+        words; "" for nothing. The family is in step, so the offer carries all of it; nothing
+        waits for the keeper, which the new one couldn't answer; and that computer can take
+        over."""
+        name = keeper.known[device].name
+        if not self.went_through or self.problem:
+            return "The family isn't in step just now: keep in step first, with Sync now."
+        if changes_between(keeper.state["people"], await self._entries_here()):
+            return "Your latest changes haven't gone out yet: try again in a minute."
+        if self.mirror is not None and not await asyncio.to_thread(self._all_sent, self.mirror):
+            return "Photos and stories are still going up to the family folder: try again soon."
+        if self.waiting:
+            return "Review the changes waiting first: the new keeper couldn't answer them."
+        if await asyncio.to_thread(keeper.asking, frozenset(setup.refused)):
+            return "Answer the computers asking to join first."
+        about = await asyncio.to_thread(keeper.about, device)
+        if about is None or about.handover < HANDOVER:
+            return (
+                f"{name} runs an earlier AncesTree, which can't take the family: it can once "
+                "it has updated itself, within a day of being on."
+            )
+        return ""
+
+    def _all_sent(self, mirror: Mirror) -> bool:
+        """Whether every file of the family folder here is in Drive as it is here."""
+        for path in self.local.rglob("*"):
+            relative = path.relative_to(self.local).as_posix()
+            if path.is_file() and mirror.carries(relative) and not mirror.sent(relative):
+                return False
+        return True
+
+    async def offer(self, request: OfferFamily) -> None:
+        """Hand the family to another of its computers: the offer, locked for it alone.
+        While it stands, this computer keeps nothing: it publishes nothing, reviews nothing,
+        and the family can't be changed here, so two computers never keep it at once."""
+        async with self.lock:
+            with self._plainly():
+                keeper, drive, setup = self._keeper()
+                known = keeper.known.get(request.device)
+                if known is None or request.device == keeper.device or known.role == "removed":
+                    raise NotFoundError("That computer isn't in the family.")
+                if why := await self._may_offer(keeper, setup, request.device):
+                    raise RuleError("not_now", why)
+                newcomer = None
+                (self.dir / NEWCOMER).unlink(missing_ok=True)  # an earlier offer's, if any
+                if request.after != "leave":
+                    device = secrets.token_hex(8)
+                    sign, dh = Ed25519PrivateKey.generate(), X25519PrivateKey.generate()
+                    # Kept until the family is taken, even once the offer's withdrawn: taken
+                    # meanwhile, this computer comes back under it all the same.
+                    kept = {
+                        "device": device,
+                        "sign": sign.private_bytes_raw().hex(),
+                        "dh": dh.private_bytes_raw().hex(),
+                        "role": request.after,
+                    }
+                    await asyncio.to_thread(
+                        write_secret, self.dir / NEWCOMER, json.dumps(kept).encode()
+                    )
+                    newcomer = Newcomer(
+                        device=device,
+                        name=setup.computer,
+                        role=request.after,
+                        sign=sign.public_key().public_bytes_raw().hex(),
+                        dh=dh.public_key().public_bytes_raw().hex(),
+                    )
+                own = self._own_account().casefold()
+                invited = [
+                    email
+                    for email in await self._reach(lambda: drive.shared_with(setup.folder))
+                    if email.casefold() != own and email not in setup.unshare
+                ]
+                offer = await asyncio.to_thread(
+                    keeper.offer, request.device, newcomer, dict(setup.accounts), invited
+                )
+                setup.offer = {
+                    "id": offer.id,
+                    "to": request.device,
+                    "after": request.after,
+                    "made": offer.made,
+                }
+                setup.offers.append(offer.id)
+                self._save_setup()
+                self.waiting = []
+            await self._in_step()
+
+    async def withdraw(self) -> None:
+        """The keeper's offer of the family taken back: it keeps the family as before.
+        Nothing reached the record, so nothing needs putting back. Taken meanwhile, the new
+        keeper's word comes all the same, and this computer stops, as a replaced keeper does."""
+        async with self.lock:
+            with self._plainly():
+                _, _, setup = self._keeper(offering=True)
+                if not setup.offer:
+                    return
+                mirror = self.mirror
+                if mirror is not None:
+                    offered = f"offers/{setup.offer['to']}.bin"
+                    await self._reach(lambda: mirror.bin(offered))
+                setup.offer = {}
+                self._save_setup()
+            await self._in_step()
+
+    async def accept(self) -> None:
+        """Take the family on the keeper's offer: this computer becomes the keeper, with
+        the keeper's keys and list. What's here is backed up first. Another person's computer
+        moves the family folder into its own Drive, shared with every relative's account, the
+        old keeper's too, and gets a new recovery code; a computer of the keeper's own keeps the
+        folder where it is, and the code its owner has. The old keeper comes back in as a
+        relative, under the identity it offered, or leaves; this computer's old place as a
+        relative goes. Its word, in the folder that was its own, tells the old keeper."""
+        async with self.lock:
+            with self._plainly():
+                computer, setup, mirror = self.computer, self.setup, self.mirror
+                if not isinstance(computer, Member) or setup is None or mirror is None:
+                    raise RuleError("no_offer", NO_OFFER)
+                drive, session = self._ready(set_up=True)
+                await self._reach(mirror.pull)
+                offer = await asyncio.to_thread(computer.read_offer)
+                place = f"offers/{computer.device}.bin"
+                if offer is None or offer.id == setup.declined or not mirror.listed(place):
+                    raise RuleError("no_offer", NO_OFFER)
+                graph = await self._graph()
+                try:
+                    await asyncio.to_thread(
+                        write_archive,
+                        graph,
+                        self.ctx.data_dir,
+                        self.ctx.backups,
+                        family=self.ctx.family,
+                    )
+                except OSError as error:
+                    raise RuleError(
+                        "not_backed_up",
+                        f"Nothing changed: the family here couldn't be backed up first to "
+                        f"{self.ctx.backups} ({error.strerror or error}).",
+                    ) from error
+                old_keeper = mirror.owner("family.json")
+                own = old_keeper.casefold() == session.email.casefold()
+                old = computer.device
+                keeper, code = await asyncio.to_thread(
+                    Keeper.take_over, computer, offer, setup.computer, new_code=not own
+                )
+                accounts = dict(offer.accounts)
+                accounts.pop(old, None)
+                if offer.newcomer is not None and old_keeper:
+                    accounts[offer.newcomer.device] = old_keeper
+                if own:
+                    folder, keeping = setup.folder, mirror
+                    await self._reach(lambda: mirror.bin(place))
+                else:
+                    shutil.rmtree(self.local / "offers", ignore_errors=True)
+                    keeping = await self._new_family_folder(drive, keeper.family, session)
+                    folder = keeping.root
+                    emails = {
+                        email
+                        for device, email in accounts.items()
+                        if device in keeper.known and keeper.known[device].role != "removed"
+                    } | set(offer.invited)
+                    for email in sorted(emails, key=str.casefold):
+                        if email.casefold() != session.email.casefold():
+                            await self._reach(partial(drive.share, folder, email))
+                await asyncio.to_thread(keeper.adopt_folder)
+                await asyncio.to_thread(keeper.write_took, old, offer.id, "" if own else folder)
+                if setup.own_folder:
+                    word = self._relatives_mirror(drive, setup.own_folder, old)
+                    await self._reach(word.push)
+                if own:
+                    await self._reach(keeping.push)
+                self.computer, self.mirror = keeper, keeping
+                self.setup = Setup(
+                    "keeper", folder, setup.family, setup.computer, session.email, accounts=accounts
+                )
+                if code:
+                    self._keep_code(code)
+                self._save_setup()
+                self.waiting, self.pending = [], 0
+                log.info("This computer keeps the family now: it was handed over")
+            await self._in_step()
+
+    async def decline(self) -> None:
+        """The keeper's offer of the family turned down: said in this computer's own
+        folder, so the keeper's computer keeps the family again."""
+        async with self.lock:
+            computer, setup = self.computer, self.setup
+            if not isinstance(computer, Member) or setup is None:
+                raise RuleError("no_offer", NO_OFFER)
+            offer = await asyncio.to_thread(computer.read_offer)
+            if offer is None:
+                return
+            await asyncio.to_thread(computer.write_about, __version__, offer.id)
+            setup.declined, setup.about = offer.id, __version__
+            self._save_setup()
+        await self._in_step()
+
+    def _offered_here(self) -> OfferHere | None:
+        """The family offered to this relative's computer, unless its owner turned it down."""
+        computer, setup, mirror, session = self.computer, self.setup, self.mirror, self.session
+        if not isinstance(computer, Member) or setup is None or mirror is None:
+            return None
+        offer = computer.read_offer()
+        listed = mirror.listed(f"offers/{computer.device}.bin")  # not withdrawn since
+        if offer is None or offer.id == setup.declined or not listed:
+            return None
+        keeper: dict[str, Any] = next(
+            (info for info in computer.state["members"].values() if info["role"] == "keeper"), {}
+        )
+        email = session.email if session else setup.account
+        return OfferHere(
+            keeper=str(keeper.get("name", "")),
+            made=datetime.fromisoformat(offer.made),
+            own=mirror.owner("family.json").casefold() == email.casefold(),
+        )
+
+    async def _handed_over(self, keeper: Keeper, setup: Setup, took: TookOver) -> None:
+        """The family taken by the computer it was offered to: this one keeps it no more.
+        Its copy of the keeper's keys goes, as they'd be a second keeper's; once the family has
+        moved to the new keeper's Drive, the old family folder goes to Drive's bin, so
+        relatives' computers follow it; and this computer carries on as a relative, under the
+        identity it offered, or leaves the family folder, as its owner chose."""
+        mirror = self.mirror
+        to = keeper.known.get(setup.offer.get("to", ""))
+        name = to.name if to else ""
+        if took.folder and took.folder != setup.folder and mirror is not None:
+            try:
+                await asyncio.to_thread(mirror.drive.trash, setup.folder)
+            except (DriveError, GoogleError, OfflineError) as error:
+                log.warning("The old family folder couldn't go to Drive's bin: %s", error)
+        kept = read_secret(self.dir / NEWCOMER)
+        family, keeper_key, account = keeper.family, keeper.keeper, setup.account
+        self._clear_local()  # the keeper's keys and its copies, and its copy of the folder
+        (self.dir / "setup.json").unlink(missing_ok=True)
+        self.computer, self.mirror, self.setup, self.waiting = None, None, None, []
+        if kept is None:
+            await asyncio.to_thread(self._set_aside, True)
+            log.info("The family was handed over: this computer left the family folder")
+            return
+        identity = json.loads(kept)
+        member = await asyncio.to_thread(
+            Member.newcomer,
+            self.local,
+            self.data,
+            family,
+            keeper_key,
+            (
+                identity["device"],
+                Ed25519PrivateKey.from_private_bytes(bytes.fromhex(identity["sign"])),
+                X25519PrivateKey.from_private_bytes(bytes.fromhex(identity["dh"])),
+            ),
+        )
+        self.computer = member
+        self.setup = Setup(
+            "member",
+            took.folder or setup.folder,
+            setup.family,
+            setup.computer,
+            account,
+            acted_on=identity["role"],
+            handed={"to": name, "role": identity["role"]},
+        )
+        self._save_setup()
+        (self.dir / NEWCOMER).unlink(missing_ok=True)
+        self._make_mirror()
+        log.info("The family was handed over: this computer carries on as a relative")
+
     async def new_recovery_code(self) -> str:
         """A new recovery code, for one lost or seen by someone else (0.3.1): the keeper's keys
         locked with it in the newest recovery file, which a new computer opens. Once that's in
@@ -1178,25 +1560,31 @@ class FamilyFolder:
             # The keeper's own Google project stays, to keep the family again; a relative's
             # was the keeper's, and goes with the rest (0.4.0).
             keep_client = self.setup is None or self.setup.role == "keeper"
-            if self.dir.exists():
-                stamp = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
-                aside = self.dir.with_name(f"familyfolder-left-{stamp}")
-                number = 1
-                while aside.exists():
-                    number += 1
-                    aside = self.dir.with_name(f"familyfolder-left-{stamp}-{number}")
-                await asyncio.to_thread(self.dir.rename, aside)
-                if keep_client and (aside / CLIENT).is_file():
-                    self.dir.mkdir(parents=True, exist_ok=True)
-                    await asyncio.to_thread(shutil.copy2, aside / CLIENT, self.dir / CLIENT)
-            if not keep_client:
-                self.client = None
-            self.invited = None
-            self.session = self.drive = self.mirror = None
-            self.setup, self.computer = None, None
-            self.recovery_code, self.broken, self.problem = None, "", ""
-            self.pending, self.waiting, self.last_sync = 0, [], None
-            self.moving, self._before, self.lost = False, None, False
+            await asyncio.to_thread(self._set_aside, keep_client)
+
+    def _set_aside(self, keep_client: bool) -> None:
+        """What this computer kept for the family folder, set aside, never deleted: it takes
+        part in none now, and keeps the family as it is, its own again. `keep_client`: the
+        keeper's own Google project, kept to keep a family again."""
+        if self.dir.exists():
+            stamp = datetime.now().astimezone().strftime("%Y-%m-%dT%H-%M-%S")
+            aside = self.dir.with_name(f"familyfolder-left-{stamp}")
+            number = 1
+            while aside.exists():
+                number += 1
+                aside = self.dir.with_name(f"familyfolder-left-{stamp}-{number}")
+            self.dir.rename(aside)
+            if keep_client and (aside / CLIENT).is_file():
+                self.dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(aside / CLIENT, self.dir / CLIENT)
+        if not keep_client:
+            self.client = None
+        self.invited = None
+        self.session = self.drive = self.mirror = None
+        self.setup, self.computer = None, None
+        self.recovery_code, self.broken, self.problem = None, "", ""
+        self.pending, self.waiting, self.last_sync = 0, [], None
+        self.moving, self._before, self.lost = False, None, False
 
     async def _entries_here(self) -> Entries:
         """The family as this computer's database holds it, as entries, its files named as the
@@ -1259,14 +1647,14 @@ class FamilyFolder:
         partial.write_text(json.dumps(value), encoding="utf-8")
         partial.replace(path)
 
-    async def _take_in(self, *, backup_first: bool = False) -> bool:
-        """Restore the family the record holds, if it changed since; False while a photo or
-        a story hasn't arrived yet. The first time, what was here is backed up first: a family
-        of its own, entered before it joined, isn't in the folder. On a computer that sends its
-        changes, its own changes go back on top: those since the family last arrived, or,
-        once the keeper has answered what it sent, only those made since it sent them. On any
-        other, where people were moved on its tree since the family last arrived stays (0.3.1).
-        After the first time, this computer's Trash stays too: it never travels."""
+    async def _take_in(self, *, backup_first: bool = False, again: bool = False) -> bool:
+        """Restore the family the record holds, if it changed since, or `again`; False while a
+        photo or a story hasn't arrived yet. The first time, what was here is backed up first:
+        a family of its own, entered before it joined, isn't in the folder. On a computer that
+        sends its changes, its own changes go back on top: those since the family last
+        arrived, or, once the keeper has answered what it sent, only those made since it sent
+        them. On any other, where people were moved on its tree since the family last arrived
+        stays (0.3.1). After the first time, this computer's Trash stays too: it never travels."""
         computer, setup = self.computer, self.setup
         if computer is None or setup is None:
             return True
@@ -1275,7 +1663,12 @@ class FamilyFolder:
             return True
         fingerprint = _fingerprint(entries)
         answered = setup.answered > setup.rebuilt
-        if fingerprint == setup.restored and not answered:
+        if fingerprint == setup.restored and not answered and not again:
+            if isinstance(computer, Member) and computer.applied > setup.restored_seq:
+                # The family here is as the record has it now, which changed nothing in it
+                # since: what this computer sends is made from here, knowing its role.
+                setup.restored_seq = computer.applied
+                self._save_setup()
             return True
         family = entries
         received_path = self.dir / "received.json"
@@ -1359,6 +1752,42 @@ class FamilyFolder:
         setup.sent_at = datetime.now(UTC).isoformat(timespec="seconds")
         self._save_setup()
 
+    async def _act_on_role(self, computer: Member, setup: Setup) -> bool | None:
+        """The role the keeper gave this computer, acted on once, and said here until
+        its owner has seen so. One that may no longer send keeps what it changed here in a
+        backup first, then takes the keeper's family as it is: whether to take it in again.
+        None while that backup can't be made: nothing replaces the family here until it is."""
+        role, before = computer.role, setup.acted_on
+        if role not in ROLES:
+            return False  # waiting to be let in, or removed
+        if before not in ROLES or role == before:
+            if before != role:  # let in, or here before 0.5.0: nothing to act on
+                setup.acted_on = role
+                self._save_setup()
+            return False
+        backup, again = "", False
+        if before in MAY_SEND and role not in MAY_SEND:
+            received = self._read(self.dir / "received.json")
+            if isinstance(received, dict) and own_changes(received, await self._entries_here()):
+                graph = await self._graph()
+                try:
+                    made = await asyncio.to_thread(
+                        write_archive,
+                        graph,
+                        self.ctx.data_dir,
+                        self.ctx.backups,
+                        family=self.ctx.family,
+                    )
+                except OSError as error:
+                    log.warning("What was changed here couldn't be backed up just now: %s", error)
+                    return None
+                backup, again = made.path.name, True
+        earlier = setup.role_changed.get("backup", "")
+        setup.role_changed = {"role": role, "backup": backup or earlier}
+        setup.acted_on = role
+        self._save_setup()
+        return again
+
     def _heard_back(self, computer: Member, setup: Setup, waiting: set[int]) -> None:
         """What the keeper answered since the last round: the newest proposal answered, and
         every one before it, which it stood for."""
@@ -1386,7 +1815,10 @@ class FamilyFolder:
             known = keeper.known.get(arrived.device)
             if known is None:
                 continue
-            if known.role == "trusted" and await self._trusted(keeper, setup, arrived):
+            # Made, or standing for one made, before the computer knew it was trusted: the
+            # keeper's to look at.
+            trusted = known.role == "trusted" and not arrived.before_role
+            if trusted and await self._trusted(keeper, setup, arrived):
                 continue
             waiting.append(
                 FolderChanges(
@@ -1396,6 +1828,7 @@ class FamilyFolder:
                     role=known.role,
                     proposal=proposal.seq,
                     sent_at=datetime.fromisoformat(proposal.made),
+                    changed=proposal.changed,
                 )
             )
         self.waiting = waiting
@@ -1552,6 +1985,19 @@ class FamilyFolder:
             self.session = self.drive = self.mirror = None
         return await self.sign_in()
 
+    async def _new_family_folder(self, drive: DriveLike, family: str, session: Session) -> Mirror:
+        """A new family folder in the signed-in account's Drive, with its six folders, holding
+        every file of the family folder here as it is: the same family, keys and record. Its
+        copy of Drive is started afresh. The folder's own mirror."""
+        root = await self._reach(lambda: drive.create_folder(f"{FOLDER_NAME} ({family})", None))
+        for name in SUBFOLDERS:
+            await self._reach(partial(drive.create_folder, name, root.id))
+        (self.dir / "mirror.json").unlink(missing_ok=True)
+        mirror = self._family_mirror(drive, root.id, session.email)
+        await self._reach(mirror.pull)  # the folders just made, known
+        await self._reach(mirror.push)
+        return mirror
+
     async def rebuild(self) -> None:
         """The family folder made again in Drive, from this computer's copy: the keeper's, when
         it's lost from Drive, or to move it to the Google account signed in now, or into the
@@ -1565,15 +2011,8 @@ class FamilyFolder:
                 _, session = self._ready(set_up=True)
                 old = setup.folder
                 await asyncio.to_thread(keeper.repair)  # every file of its own, here
-                root = await self._reach(
-                    lambda: drive.create_folder(f"{FOLDER_NAME} ({keeper.family})", None)
-                )
-                for name in SUBFOLDERS:
-                    await self._reach(partial(drive.create_folder, name, root.id))
-                (self.dir / "mirror.json").unlink(missing_ok=True)
-                mirror = self._family_mirror(drive, root.id, session.email)
-                await self._reach(mirror.pull)  # the folders just made, known
-                await self._reach(mirror.push)
+                mirror = await self._new_family_folder(drive, keeper.family, session)
+                root = mirror.root
                 own = session.email.casefold()
                 emails = {
                     email
@@ -1586,7 +2025,7 @@ class FamilyFolder:
                 emails -= set(setup.unshare)
                 for email in sorted(emails, key=str.casefold):
                     if email.casefold() != own:
-                        await self._reach(partial(drive.share, root.id, email))
+                        await self._reach(partial(drive.share, root, email))
                 # The old folder to Drive's bin, by the sign-in that kept it, so relatives'
                 # computers find it gone and follow; said, if it can't be.
                 before = self._before
@@ -1601,7 +2040,7 @@ class FamilyFolder:
                     setup.moved_from = old
                 if before is not None and before.email.casefold() != session.email.casefold():
                     await asyncio.to_thread(before.sign_out)
-                setup.folder, setup.account, setup.unshare = root.id, session.email, []
+                setup.folder, setup.account, setup.unshare = root, session.email, []
                 self._save_setup()
                 self._before = None
                 self.mirror, self.moving, self.lost = mirror, False, False
@@ -1675,6 +2114,21 @@ class FamilyFolder:
         await asyncio.to_thread(mirror.pull)
         if isinstance(computer, Keeper):
             overtaken = bool(setup.replaced) or await asyncio.to_thread(computer.overtaken)
+            unread: list[tuple[str, DriveError]] = []
+            if setup.offers:
+                # The computer the family was offered to may have taken it: its word is
+                # in the folder that was its own, which this computer reads.
+                unread = await self._gather(mirror.drive, computer, setup)
+                took = await asyncio.to_thread(computer.taken_over, set(setup.offers))
+                if took is not None:
+                    await self._handed_over(computer, setup, took)
+                    return
+            if overtaken and setup.offer:
+                # Taken in this folder, most likely by the computer it was offered to, whose
+                # word is still on its way: nothing more here meanwhile.
+                self.waiting = []
+                self.last_sync, self.problem = datetime.now(UTC), TAKING
+                return
             if overtaken:
                 # Another computer keeps the family now: this one writes nothing more, so the
                 # record never splits in two.
@@ -1685,9 +2139,12 @@ class FamilyFolder:
                 self.waiting = []
                 self.last_sync, self.problem = datetime.now(UTC), REPLACED
                 return
-            unread = await self._gather(mirror.drive, computer, setup)
+            if not setup.offers:
+                unread = await self._gather(mirror.drive, computer, setup)
             await asyncio.to_thread(computer.repair)
-            if setup.recovering and not await self._take_in(backup_first=True):
+            if setup.offer:
+                note = await self._still_offered(computer, setup)  # keeping nothing meanwhile
+            elif setup.recovering and not await self._take_in(backup_first=True):
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._publish()  # the keeper's own, before any relative's comes in
@@ -1713,17 +2170,46 @@ class FamilyFolder:
             waiting = set(computer.waiting)
             await asyncio.to_thread(computer.receive)
             self._heard_back(computer, setup, waiting)
+            again = await self._act_on_role(computer, setup)
             if computer.role == "removed":
                 note = "This computer was removed from the family: nothing new reaches it."
-            elif not await self._take_in():
+            elif again is None:
+                note = (
+                    "Your keeper made this computer a viewer, and what you changed here couldn't "
+                    "be backed up just now: the family arrives once it has. AncesTree tries again "
+                    "every minute."
+                )
+            elif not await self._take_in(again=again):
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._send()
             if not setup.own_folder:
                 await asyncio.to_thread(self._make_own_folder, mirror, computer, setup)
+            if setup.about != __version__ and computer.role not in ("waiting", "removed"):
+                # Said in its own folder: the keeper knows it can take the family.
+                await asyncio.to_thread(computer.write_about, __version__, setup.declined)
+                setup.about = __version__
+                self._save_setup()
             own = self._relatives_mirror(mirror.drive, setup.own_folder, computer.device)
             await asyncio.to_thread(own.push)
         self.last_sync, self.problem = datetime.now(UTC), note
+
+    async def _still_offered(self, keeper: Keeper, setup: Setup) -> str:
+        """While the keeper's offer of the family stands: the round's note. Turned down
+        by the computer it was offered to, the offer goes, and this computer keeps the family
+        again from the next round."""
+        to = setup.offer["to"]
+        name = keeper.known[to].name if to in keeper.known else "That computer"
+        about = await asyncio.to_thread(keeper.about, to)
+        if about is None or about.declined != setup.offer["id"]:
+            return f"Offered to {name}: nothing is kept here until they answer."
+        mirror = self.mirror
+        if mirror is not None:
+            await asyncio.to_thread(mirror.bin, f"offers/{to}.bin")
+        setup.offer = {}
+        self._save_setup()
+        log.info("The offer of the family was turned down: this computer keeps it")
+        return f"{name} turned down the family: you keep it, as before."
 
     def _retire(self, mirror: Mirror, keeper: Keeper, setup: Setup) -> None:
         """Recovery files locked with an old recovery code: put in Drive's bin, and gone from

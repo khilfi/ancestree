@@ -632,7 +632,7 @@ If you had already put people into AncesTree yourself, the family replaces them 
 
 ### What your computer may do
 
-Your keeper chooses one of these when letting your computer in:
+Your keeper chooses one of these when letting your computer in, and can change it later:
 
 | Role | What it means |
 |---|---|
@@ -641,6 +641,8 @@ Your keeper chooses one of these when letting your computer in:
 | **Viewer** | You see the whole family, but can't change it on this computer. |
 
 Some things are the keeper's alone, whatever your role: the kinds of relationship, the map's hand-placed pins, importing spreadsheets, and restoring a backup.
+
+When your keeper changes your computer's role, **Settings** shows a number, and **Settings → Family folder** says what your computer may do now. Click **Got it** when you've read it. If it becomes a **Viewer** while you have changes of your own, AncesTree keeps them in a backup first (see **Settings → Backups**), then shows the family as your keeper keeps it.
 
 ### Your changes
 
@@ -661,6 +663,14 @@ When your keeper leaves something out, or writes you a note, **Settings** shows 
 If your keeper makes the family folder again, or moves it to another Google account, your computer finds it and carries on by itself.
 
 If they move it to another Google project, AncesTree asks for **your keeper's newest invitation**. In **Settings → Family folder**, click **Your keeper sent a new invitation?**, paste it, and click **Use this invitation**. AncesTree shows the new project's name and asks first: click **Move, and sign in again** if your keeper told you they're moving the family, then sign in again. An invitation your keeper didn't sign can't move your computer.
+
+### When your keeper asks you to keep the family
+
+Your keeper can hand the family to you. **Settings** shows a number, and **Settings → Family folder** says your keeper asks you to keep the family, and what that means: you look at relatives' changes and let computers in, the family folder moves to your Google Drive, and you get a recovery code to keep safe.
+
+<!-- picture: guide/relative-6-asked-to-keep.png (… asks you to keep the family, with Accept and Decline) -->
+
+Click **Accept** to keep it, or **Decline**. Accepting makes a backup first, then shows your recovery code: write it down, and keep it safe (see [Start the family folder](#start-the-family-folder), step 4).
 
 ### Leaving the family
 
@@ -723,6 +733,7 @@ AncesTree reaches Google Drive through a Google Cloud project, and each family u
    <!-- picture: guide/keeper-1-start.png (Start your family's folder, as its keeper) -->
 4. **AncesTree shows your recovery code.** With it, the client's file and this Google account, you can be the family's keeper again on another computer. Without it, no one can.
    - Click **Print**, or write the code down. Keep it somewhere safe, away from this computer: with your important papers, or in your password manager.
+   - **Leave a copy with someone you trust**, in a sealed envelope: if yours is lost with your computer, theirs lets you be the keeper again on a new one. The family can't be handed over from a computer that's gone; only the code brings it back.
    - When it's safe, click **I've kept it safe**. AncesTree shows the code until you do, then never again.
    <!-- picture: guide/keeper-2-recovery-code.png (Your recovery code; the code covered) -->
 
@@ -777,11 +788,33 @@ Before anything comes in, AncesTree makes a backup. **Undo** takes back the peop
 
 A **Trusted** computer's changes come in by themselves, unless they clash with yours, take something out, or need an answer under **To check**.
 
+### Change what a computer may do
+
+Under **The family's computers**, click **Change role…** beside it, choose **Trusted**, **Contributor** or **Viewer** (see [What your computer may do](#what-your-computer-may-do)), and click **Change**. Their computer changes within a minute while it's on, and tells them.
+
+If their changes are waiting for you, review them first (see [Changes waiting](#changes-waiting)): **Change** waits until you have, so nothing comes in, or goes, without you seeing it.
+
+<!-- picture: guide/keeper-9-change-role.png (Change what … may do, with the three roles and Change) -->
+
 ### Remove a computer
 
 Under **The family's computers**, click **Remove** beside it, then **Remove** again. AncesTree stops sharing the family folder with that Google account, and gives the family a new key. That computer keeps what it already has, but can't read anything new.
 
 <!-- picture: guide/keeper-7-computers.png (The family's computers, with Remove) -->
+
+### Hand the family to someone else
+
+Another of the family's computers can keep the family instead of yours: a relative's, or another computer of your own.
+
+1. Their computer joins the family first, as any relative's does.
+2. In **Settings → Family folder**, open **Hand the family to someone else?** and click **Hand the family to someone else…**.
+3. Choose their computer, and what yours becomes afterwards: **Trusted**, **Contributor**, **Viewer**, or **Leave the family**.
+4. Click **Offer it**.
+   <!-- picture: guide/keeper-10-hand-over.png (Hand the family to someone else: who keeps it, and this computer afterwards) -->
+
+Until they answer, nothing changes on your computer, and you can click **Withdraw the offer**. If something is in the way, AncesTree says what: changes waiting for you, say, or their computer still to update itself.
+
+When they accept, the family folder moves to their Google Drive, and your computer carries on as you chose. Handed to a computer of your own, the family folder stays where it is, and so does your recovery code. Your family signs in to Google through your Google Cloud project: add them as an **Owner** of it in the Google Cloud console (**IAM & Admin → IAM → Grant access**), so the family no longer depends on your Google account.
 
 ### Be the keeper on a new computer
 

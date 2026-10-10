@@ -5,9 +5,11 @@ import { unwrap } from "./errors";
 import type {
   Admit,
   BringIn,
+  ChangeRole,
   FamilyFolderStatus,
   FolderChanges,
   JoinFamily,
+  OfferFamily,
   Recover,
   StartFamily,
 } from "./types";
@@ -29,11 +31,13 @@ export function useFamilyFolder(enabled = true) {
 }
 
 /** What waits in Settings → Family folder: for the keeper, computers asking to join and
- *  relatives' changes; for a relative, the keeper's answers, unread. */
+ *  relatives' changes; for a relative, the keeper's answers, unread, a role the keeper changed
+ *  since, the family offered to it, or the one it handed over, until seen. */
 export function waitingIn(status: FamilyFolderStatus | undefined) {
   const asking = status?.asking?.length ?? 0;
   const changes = status?.changes?.length ?? 0;
-  const answered = status?.answers?.length ?? 0;
+  const notes = [status?.role_changed, status?.offer_here, status?.handed].filter(Boolean).length;
+  const answered = (status?.answers?.length ?? 0) + notes;
   return { asking, changes, answered, all: asking + changes + answered };
 }
 
@@ -41,9 +45,11 @@ export function waitingIn(status: FamilyFolderStatus | undefined) {
 const SENDS = new Set(["contributor", "trusted"]);
 
 /** Whether the family here is kept by its keeper and nothing in it changes: on a relative's
- *  computer that doesn't send changes (a viewer's, one not let in yet, or one removed). */
+ *  computer that doesn't send changes (a viewer's, one not let in yet, or one removed); and on
+ *  the keeper's while it offers the family to another computer. */
 export function useKeptByTheKeeper(enabled = true): boolean {
   const status = useFamilyFolder(enabled).data;
+  if (status?.setup === "keeper") return Boolean(status.offer_made);
   return status?.setup === "member" && !SENDS.has(status.role ?? "");
 }
 
@@ -149,6 +155,22 @@ export const useRemoveComputer = () =>
   useFolderAction((device: string) =>
     unwrap(api.POST("/api/family-folder/remove", { body: { device } })),
   );
+/** Another role for a computer let in already: held while its changes wait for review. */
+export const useChangeRole = () =>
+  useFolderAction((body: ChangeRole) => unwrap(api.POST("/api/family-folder/role", { body })));
+/** The note that the keeper changed this computer's role, read: a relative's. */
+export const useRoleSeen = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/role-seen")));
+/** The family offered to another of its computers: this one keeps nothing meanwhile. */
+export const useOfferFamily = () =>
+  useFolderAction((body: OfferFamily) => unwrap(api.POST("/api/family-folder/offer", { body })));
+export const useWithdrawOffer = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/offer/withdraw")));
+/** On the computer it's offered to: keep the family, or turn it down. */
+export const useAcceptOffer = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/offer/accept")));
+export const useDeclineOffer = () =>
+  useFolderAction(() => unwrap(api.POST("/api/family-folder/offer/decline")));
 export const useSyncNow = () => useFolderAction(() => unwrap(api.POST("/api/family-folder/sync")));
 export const useAnswersSeen = () =>
   useFolderAction(() => unwrap(api.POST("/api/family-folder/answers-seen")));

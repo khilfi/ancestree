@@ -54,6 +54,24 @@ export function FamilyFolderBar() {
   const sync = useSyncNow();
   if (!status) return null;
 
+  if (status.setup === "keeper" && status.offer_made) {
+    // Offered to another computer: nothing changes here until it's answered.
+    return (
+      <div
+        role="status"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 md:px-4"
+      >
+        <span>
+          The family is offered to {status.offer_made.name}: it can't be changed here until they
+          answer.
+        </span>
+        <Link to="/settings/family-folder" className="text-sky-700 hover:underline">
+          Family folder
+        </Link>
+      </div>
+    );
+  }
+
   if (status.setup === "member") {
     return (
       <div

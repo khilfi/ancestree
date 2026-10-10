@@ -115,6 +115,12 @@ class Mirror:
         known = self.files.get(relative)
         return known.owner if known else ""
 
+    def listed(self, relative: str) -> bool:
+        """Whether a file was in Drive at the last pull: one gone from Drive since stays here
+        a few minutes more, as Drive can be slow to list a file just sent."""
+        known = self.files.get(relative)
+        return known is not None and not known.missing
+
     def sent(self, relative: str) -> bool:
         """Whether a file here is in Drive just as it is here, as this copy last knew Drive."""
         known = self.files.get(relative)

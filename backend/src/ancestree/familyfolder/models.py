@@ -131,3 +131,67 @@ class Recovery(_Model):
     dh: str
     keys: dict[int, str]
     naming: str
+
+
+# Handing over the keeper
+
+Afterwards = Literal["trusted", "contributor", "viewer"]
+
+
+class Newcomer(_Model):
+    """The offering computer's place in the family after a handover: let in by the new keeper
+    under a new identity, without a code, as the offer vouches for it."""
+
+    device: str
+    name: str
+    role: Afterwards
+    sign: str
+    dh: str
+
+
+class KnownComputer(_Model):
+    """A computer of the family, as the keeper knows it."""
+
+    name: str
+    role: Role
+    sign: str
+    dh: str
+    version: int = 0
+
+
+class Offer(_Model):
+    """The family offered to one of its computers, locked for it alone and signed with the
+    keeper's key: the keeper's keys, its list of the family's computers and their Google
+    accounts, what it has answered, and what the offering computer becomes afterwards."""
+
+    id: str
+    to: str
+    made: str
+    keys: Recovery
+    # The key the recovery code stands for: kept by a computer of the keeper's own, whose
+    # owner's code stays; another person's makes a new code.
+    recovery: str
+    known: dict[str, KnownComputer]
+    accounts: dict[str, str]  # each relative's computer's Google account
+    invited: list[str]  # accounts the family folder is shared with, joined or not
+    decided: list[str]  # "computer/proposal", answered
+    newcomer: Newcomer | None  # None: the offering computer leaves the family
+
+
+class About(_Model):
+    """What a relative's computer says of itself, in its own folder: its version, so the keeper
+    knows it can take over, and an offer it turned down."""
+
+    device: str
+    version: str  # the app's, as people read it
+    handover: int = 0  # the way of handing over the keeper it takes part in: 1 since 0.5.0
+    declined: str = ""  # the offer it turned down, if any
+
+
+class TookOver(_Model):
+    """The new keeper's word, in its own folder, signed with the keeper's key: it took the
+    family on the offer, and where the family folder is now ("" for where it was)."""
+
+    offer: str
+    folder: str
+    made: str

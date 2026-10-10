@@ -421,3 +421,54 @@ def test_a_new_recovery_code_is_numbered_after_every_recovery_file(tmp_path: Pat
     with pytest.raises(RefusedError):
         Keeper.recover(copy, tmp_path / "old-code", old)
     assert Keeper.recover(copy, tmp_path / "new-code", new).family == keeper.family
+
+
+def test_a_role_changed_reaches_computers_through_what_they_read_since_0_4_0(
+    drive: Drive, keeper: Keeper
+) -> None:
+    """Changing a role asks nothing new of relatives' computers: a newer member file, and
+    "joined" in the record, which a computer has read since 0.4.0. Its side here is 0.4.0's."""
+    salmah = join(drive, keeper, "salmah")
+    zul = join(drive, keeper, "zul", role="viewer")
+    for role in ("trusted", "viewer", "contributor"):
+        keeper.change_role(salmah.device, role)
+        drive.sync()
+        salmah.receive()
+        zul.receive()
+        assert salmah.role == role
+        assert zul.state["members"][salmah.device]["role"] == role  # every list shows it
+        assert salmah.keys == keeper.keys  # no new family key: every role reads the family
+    with pytest.raises(PermissionError):
+        zul.send([person("Zulkifli bin Hassan")])
+    keeper.change_role(zul.device, "contributor")
+    drive.sync()
+    zul.receive()
+    zul.send([person("Zulkifli bin Hassan")])
+    drive.sync()
+    assert [arrived.device for arrived in keeper.inbox()] == [zul.device]
+
+
+def test_what_was_sent_before_a_role_changed_is_taken_as_it_was_then(
+    drive: Drive, keeper: Keeper
+) -> None:
+    """A contributor's proposal on its way as it became trusted never comes in by itself; a
+    viewer-to-be's is still heard, never dropped unseen."""
+    salmah = join(drive, keeper, "salmah")
+    zul = join(drive, keeper, "zul")
+    salmah.send([person("Aminah binti Hassan")])  # made as contributors...
+    zul.send([person("Zulkifli bin Hassan")])
+    keeper.change_role(salmah.device, "trusted")  # ...reaching the keeper after
+    keeper.change_role(zul.device, "viewer")
+    drive.sync()
+
+    assert keeper.approve_trusted() == []
+    assert sorted(arrived.device for arrived in keeper.inbox()) == sorted(
+        [salmah.device, zul.device]
+    )
+
+    salmah.receive()  # she knows she's trusted now
+    salmah.send([person("Nor binti Hassan")])
+    drive.sync()
+    assert len(keeper.approve_trusted()) == 1  # made as trusted: in by itself
+    assert "Nor binti Hassan" in keeper.state["people"]
+    assert "Aminah binti Hassan" not in keeper.state["people"]  # still the keeper's to look at

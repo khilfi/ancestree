@@ -50,6 +50,41 @@ class FolderChanges(BaseModel):
     role: Role
     proposal: int  # which of its proposals: the newest, standing for those before it
     sent_at: datetime
+    changed: int = 0  # the people and links it changed, as it counted them
+
+
+class RoleChanged(BaseModel):
+    """The keeper gave this computer another role, until its owner has seen so."""
+
+    role: Role
+    backup: str  # the backup of what it changed and hadn't sent, if it made one
+
+
+Afterwards = Literal["trusted", "contributor", "viewer", "leave"]
+
+
+class OfferMade(BaseModel):
+    """The keeper's offer of the family to another of its computers, while it stands."""
+
+    device: str
+    name: str  # the computer offered it, as its owner named it
+    after: Afterwards  # what this computer becomes once it's taken
+    made: datetime
+
+
+class OfferHere(BaseModel):
+    """The family offered to this computer by its keeper, to accept or turn down."""
+
+    keeper: str  # the keeper's computer, as its owner named it
+    made: datetime
+    own: bool  # a computer of the keeper's own: no move in Drive, and the same recovery code
+
+
+class HandedOver(BaseModel):
+    """The family this computer kept, handed to another, until its owner has seen so."""
+
+    to: str  # the new keeper's computer, as its owner named it
+    role: Role  # what this computer is now
 
 
 class FamilyFolderStatus(BaseModel):
@@ -97,6 +132,10 @@ class FamilyFolderStatus(BaseModel):
     moving: bool = False
     old_folder_left: bool = False
     published: datetime | None = None
+    role_changed: RoleChanged | None = None  # a relative's
+    offer_made: OfferMade | None = None  # the keeper's
+    offer_here: OfferHere | None = None  # a relative's
+    handed: HandedOver | None = None  # the old keeper's, as a relative
 
 
 class SignInStarted(BaseModel):
@@ -149,6 +188,20 @@ class InvitationMade(BaseModel):
 class Admit(BaseModel):
     device: str
     role: Choosable
+
+
+class ChangeRole(BaseModel):
+    """Another role for a computer let in already."""
+
+    device: str
+    role: Choosable
+
+
+class OfferFamily(BaseModel):
+    """The family offered to another of its computers, and what this one becomes."""
+
+    device: str
+    after: Afterwards = "trusted"
 
 
 class OneComputer(BaseModel):
