@@ -79,7 +79,8 @@ function answer(
   status: FamilyFolderStatus,
   shared: object[] = [],
   after?: FamilyFolderStatus,
-  other: Record<string, object | Response> = {}, // what other addresses answer, by their ends
+  // What other addresses answer, by their ends: or, given what was sent, what to answer.
+  other: Record<string, object | Response | ((body: unknown) => object | Response)> = {},
 ) {
   asked = [];
   let now = status; // after a change, the app answers with what it became
@@ -97,7 +98,8 @@ function answer(
     if (path === "/api/family-folder/shared") return Response.json(shared);
     const ending = Object.keys(other).find((end) => path.endsWith(end));
     if (ending) {
-      const found = other[ending];
+      const given = other[ending];
+      const found = typeof given === "function" ? given(body) : given;
       return found instanceof Response ? found.clone() : Response.json(found);
     }
     if (request.method === "POST" && after) now = after;
@@ -166,8 +168,53 @@ describe("Settings → Family folder", () => {
     expect(asked).toContainEqual({
       method: "POST",
       path: "/api/family-folder/invitation",
-      body: { invitation: "ATI1-abc-123456" },
+      body: { invitation: "ATI1-abc-123456", confirm: false },
     });
+  });
+
+  it("asks before a signed invitation moves this computer to another project", async () => {
+    const relative = {
+      ...SIGNED_IN,
+      setup: "member",
+      role: "contributor",
+      family: "Keluarga Contoh",
+    };
+    const moves = (body: unknown) =>
+      (body as { confirm?: boolean }).confirm
+        ? relative
+        : new Response(
+            JSON.stringify({
+              detail: {
+                code: "project_change",
+                message: "Your keeper's invitation moves your family to keluarga-lain.",
+                project: "keluarga-lain",
+              },
+            }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          );
+    answer(relative as FamilyFolderStatus, [], undefined, {
+      "/api/family-folder/invitation": moves,
+    });
+    await show(<FamilyFolderSection />, "Your keeper sent a new invitation?");
+    const box = document.querySelector<HTMLTextAreaElement>("#invitation");
+    act(() => {
+      const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      set?.call(box, "ATI1-new-123456");
+      box?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => button("Use this invitation").click());
+    await until("Move to the Google project keluarga-lain?");
+    act(() => button("Move, and sign in again").click());
+    const takes = () => asked.filter((ask) => ask.path === "/api/family-folder/invitation");
+    for (let tries = 0; tries < 100 && takes().length < 2; tries++) {
+      await act(async () => {
+        await new Promise((done) => setTimeout(done, 10));
+      });
+    }
+    expect(takes().map((ask) => ask.body)).toEqual([
+      { invitation: "ATI1-new-123456", confirm: false },
+      { invitation: "ATI1-new-123456", confirm: true },
+    ]);
   });
 
   it("asks to sign in, saying what Google will ask and warn", async () => {

@@ -77,6 +77,8 @@ Each relative who joins has the same family on their own computer. A private fol
 - **a Google account**, to join your family. Tell your keeper which one it is;
 - **the invitation** your keeper sends you, to join your family.
 
+To check that a download is the one AncesTree's maintainer released, see **Checking a download** in [SECURITY.md](SECURITY.md). It's for the careful, and not needed to install.
+
 Phones and tablets can't install AncesTree. Your keeper can send you a copy to look at instead (see [Copies for phones](#16-copies-for-phones-and-other-files)).
 
 **Download AncesTree:**
@@ -371,7 +373,7 @@ AncesTree works out who's eldest from their dates of birth. When it can't be sur
 4. Drag the photo and use **Zoom** to fit their face in the circle.
 5. Click **Save photo**.
 
-Photos can be JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF, up to 20 MB. To crop it again later, click the circle and **Adjust crop**. **Remove** takes the photo off.
+Photos can be JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF, up to 20 MB. To crop it again later, click the circle and **Adjust crop**. **Remove** takes the photo off. AncesTree keeps a photo without what the camera wrote into it, such as where it was taken, so that never travels with the family.
 
 ### Removing someone
 
@@ -658,7 +660,7 @@ When your keeper leaves something out, or writes you a note, **Settings** shows 
 
 If your keeper makes the family folder again, or moves it to another Google account, your computer finds it and carries on by itself.
 
-If they move it to another Google project, AncesTree asks for **your keeper's newest invitation**. In **Settings → Family folder**, click **Your keeper sent a new invitation?**, paste it, click **Use this invitation**, then sign in again.
+If they move it to another Google project, AncesTree asks for **your keeper's newest invitation**. In **Settings → Family folder**, click **Your keeper sent a new invitation?**, paste it, and click **Use this invitation**. AncesTree shows the new project's name and asks first: click **Move, and sign in again** if your keeper told you they're moving the family, then sign in again. An invitation your keeper didn't sign can't move your computer.
 
 ### Leaving the family
 

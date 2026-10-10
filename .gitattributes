@@ -1,0 +1,3 @@
+# What release.py signs in updates/ keeps its bytes in every checkout: a line ending turned by
+# git would fail the signature that a download is checked with (SECURITY.md).
+updates/** -text

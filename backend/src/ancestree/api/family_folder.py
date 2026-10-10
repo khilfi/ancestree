@@ -95,7 +95,7 @@ async def take_family_invitation(request: Request, body: InvitationText) -> Fami
     """A keeper's invitation, pasted on a relative's computer: the family's Google project, to
     sign in through, and the family to ask to join."""
     folder = _folder(request)
-    await folder.take_invitation(body.invitation)
+    await folder.take_invitation(body.invitation, confirm=body.confirm)
     return await folder.status()
 
 

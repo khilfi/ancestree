@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.4.1"
+    "version": "0.4.2"
   },
   "paths": {
     "/api/health": {
@@ -6667,6 +6667,11 @@
             "type": "string",
             "maxLength": 10000,
             "title": "Invitation"
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
           }
         },
         "type": "object",

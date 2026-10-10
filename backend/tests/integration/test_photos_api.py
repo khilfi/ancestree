@@ -1,5 +1,7 @@
 import json
 from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
 
 import httpx
 import pytest
@@ -83,3 +85,29 @@ async def test_a_file_that_is_not_a_photo_is_refused(client: httpx.AsyncClient) 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "bad_photo"
     assert (await get_person(client, person["id"]))["photo_version"] is None
+
+
+async def test_where_a_photo_was_taken_reaches_no_backup(
+    client: httpx.AsyncClient, settings: Settings
+) -> None:
+    """Nor the family folder or a copy, which carry the same originals (0.4.2): what the camera
+    wrote, its make and where it was, is out of the original as the photo comes in."""
+    person = await create_person(client, "Hassan bin Ismail")
+    camera = Image.Exif()
+    camera[0x010F] = "MadeUpCam"
+    camera.get_ifd(0x8825).update({1: "N", 2: (3.0, 8.0, 51.0), 3: "E", 4: (101.0, 41.0, 12.0)})
+    photo = BytesIO()
+    Image.new("RGB", (600, 400), (90, 120, 200)).save(photo, "JPEG", exif=camera.tobytes())
+    sent = {"file": ("photo.jpg", photo.getvalue(), "image/jpeg")}
+    assert (await client.put(f"/api/persons/{person['id']}/photo", files=sent)).status_code == 200
+
+    made = await client.post("/api/exports", json={"format": "archive"})
+    assert made.status_code == 201, made.text
+    archive = Path(made.json()["folder"]) / made.json()["name"]
+    with ZipFile(archive) as backup:
+        [name] = [n for n in backup.namelist() if n.endswith("/profile/original.jpg")]
+        original = backup.read(name)
+    with Image.open(BytesIO(original)) as kept:
+        assert kept.getexif().get(0x010F) is None
+        assert dict(kept.getexif().get_ifd(0x8825)) == {}
+    assert b"MadeUpCam" not in original

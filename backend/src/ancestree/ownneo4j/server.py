@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import secrets
 import signal
@@ -131,7 +132,10 @@ class OwnNeo4j:
             if self.password().startswith("-"):
                 # Made before 0.4.0, and never set: Neo4j's admin tool took it for an option.
                 password.unlink()
-            self._admin("dbms", "set-initial-password", self.password())
+            self.password()  # made now, if it's the first time
+            # The tool reads it from its file, the user's alone, as "@<file>" (0.4.2): on a
+            # command line, another account on the computer could see it while the tool runs.
+            self._admin("dbms", "set-initial-password", f"@{password.resolve()}")
 
     def _environment(self) -> dict[str, str]:
         environment = dict(os.environ)
@@ -203,7 +207,12 @@ class OwnNeo4j:
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         said = (done.stdout + b"\n" + done.stderr).decode("utf-8", errors="replace").strip()
+        hidden = list(arguments[2:])
         for value in arguments[2:]:
+            if value.startswith("@"):  # a value the tool reads from a file: never shown either
+                with contextlib.suppress(OSError):
+                    hidden.append(Path(value[1:]).read_text(encoding="utf-8").strip())
+        for value in hidden:
             if value:
                 said = said.replace(value, "[not shown]")
         what = ADMIN_WORDS.get(tuple(arguments[:2]), "do what the app asked of it")

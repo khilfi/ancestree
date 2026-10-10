@@ -199,33 +199,73 @@ function ChooseClientFile({
   );
 }
 
-/** A keeper's invitation, pasted on a relative's computer (0.4.0). */
+/** A keeper's invitation, pasted on a relative's computer (0.4.0). One that moves a computer
+ *  already in the family to another Google project shows the project first, and asks (0.4.2). */
 function PasteInvitation({ label }: { label: string }) {
   const take = useTakeInvitation();
   const [text, setText] = useState("");
+  // The Google project a signed invitation would move this computer to, while it asks.
+  const [moving, setMoving] = useState<string | null>(null);
+  const use = (confirm: boolean) =>
+    take.mutate(
+      { invitation: text, confirm },
+      {
+        onSuccess: () => {
+          setText("");
+          setMoving(null);
+        },
+        onError: (error) => {
+          if (error instanceof ApiError && error.code === "project_change") {
+            const detail = error.detail as { project?: string } | undefined;
+            setMoving(detail?.project ?? "");
+          } else {
+            setMoving(null);
+            showError(error);
+          }
+        },
+      },
+    );
   return (
-    <form
-      className="space-y-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        take.mutate(text, { onError: showError, onSuccess: () => setText("") });
-      }}
-    >
-      <Label htmlFor="invitation">{label}</Label>
-      <Textarea
-        id="invitation"
-        className="max-w-xl font-mono text-xs"
-        rows={3}
-        placeholder="ATI1-…"
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        spellCheck={false}
-        required
-      />
-      <Button type="submit" disabled={take.isPending || !text.trim()}>
-        {take.isPending ? "Reading it…" : "Use this invitation"}
-      </Button>
-    </form>
+    <>
+      <form
+        className="space-y-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          use(false);
+        }}
+      >
+        <Label htmlFor="invitation">{label}</Label>
+        <Textarea
+          id="invitation"
+          className="max-w-xl font-mono text-xs"
+          rows={3}
+          placeholder="ATI1-…"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          spellCheck={false}
+          required
+        />
+        <Button type="submit" disabled={take.isPending || !text.trim()}>
+          {take.isPending ? "Reading it…" : "Use this invitation"}
+        </Button>
+      </form>
+      <AlertDialog open={moving !== null} onOpenChange={(open) => !open && setMoving(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move to the Google project {moving}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your keeper signed this invitation. From now on, this computer signs in to Google
+              through the project <strong>{moving}</strong>, and asks you to sign in again. If your
+              keeper hasn't told you they're moving the family, choose Cancel, and ask them first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => use(true)}>Move, and sign in again</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

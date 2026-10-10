@@ -576,10 +576,12 @@ class FamilyFolder:
             self.invited = None
             (self.dir / JOINING).unlink(missing_ok=True)
 
-    async def take_invitation(self, text: str) -> None:
+    async def take_invitation(self, text: str, *, confirm: bool = False) -> None:
         """A keeper's invitation, pasted on a relative's computer: its Google project becomes
         this family's, to sign in through, and the family it names is the one to join. On a
-        computer already in that family, a newer invitation brings the family's new project."""
+        computer already in that family, a newer invitation brings the family's new project:
+        only one signed with the family's keeper key, and once `confirm`ed, the project shown
+        first (0.4.2)."""
         async with self.lock:
             if self.broken:
                 raise RuleError("cant_be_opened", self.broken)
@@ -601,6 +603,24 @@ class FamilyFolder:
                     "family for it, or leave this family folder first.",
                 )
             moved = self.client is not None and self.client.number != invitation.client.number
+            if setup is not None and moved and isinstance(computer, Member):
+                # Anyone can make an invitation naming the family: only its keeper can send its
+                # computers to sign in through another Google project, and not unasked.
+                if not invitation.signed_by(computer.keeper):
+                    raise RuleError(
+                        "unsigned_invitation",
+                        "That invitation names your family, but your keeper didn't sign it, so "
+                        "this computer won't sign in through the Google project it names. Ask "
+                        "your keeper for their newest invitation.",
+                    )
+                if not confirm:
+                    project = invitation.client.project or invitation.client.number
+                    raise RuleError(
+                        "project_change",
+                        f"Your keeper's invitation moves your family to the Google project "
+                        f"{project}. Sign in through it from now on?",
+                        project=project,
+                    )
             await self._keep_client(invitation.client)
             if setup is not None and moved:
                 # The new project's client can't write in the own folder the old one made: a
@@ -623,7 +643,8 @@ class FamilyFolder:
         if self.client is None:
             raise RuleError("no_google_client", "Give AncesTree the family's Google project first.")
         own = Client(self.client.client_id, self.client.client_secret, self.client.project)
-        return Invitation(own, computer.family)
+        # Signed with the family's keeper key (0.4.2): its computers trust no other to move them.
+        return Invitation(own, computer.family).signed(computer.sign)
 
     def _own_account(self) -> str:
         """The Google account this computer keeps its family folder with."""

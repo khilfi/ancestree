@@ -58,10 +58,29 @@ struct Engine {
 #[derive(Default)]
 struct LoadingPage(Mutex<Option<Url>>);
 
+/// Whether settings for tests are read from the environment (0.4.2): in a debug build, or a
+/// test build made with the `test-settings` feature, as the Desktop app workflow makes one. A
+/// release ignores them, so no other program can steer the app through them.
+const TEST_SETTINGS: bool = cfg!(any(debug_assertions, feature = "test-settings"));
+
+/// A setting for tests and development alone: ANCESTREE_SESSION, _ENGINE, _UPDATE_URL,
+/// _DOWNLOADS or _BENCH, from the environment where `allowed`.
+fn test_setting_in(allowed: bool, name: &str) -> Option<String> {
+    if allowed {
+        std::env::var(name).ok()
+    } else {
+        None
+    }
+}
+
+fn test_setting(name: &str) -> Option<String> {
+    test_setting_in(TEST_SETTINGS, name)
+}
+
 /// 32 random bytes, made afresh at each start, as hex. The tests give their own, in
 /// ANCESTREE_SESSION, to reach the engine as the window does.
 fn session_secret() -> String {
-    if let Ok(secret) = std::env::var("ANCESTREE_SESSION") {
+    if let Some(secret) = test_setting("ANCESTREE_SESSION") {
         if secret.len() >= 32 {
             return secret;
         }
@@ -72,7 +91,7 @@ fn session_secret() -> String {
 }
 
 fn bench_mode() -> bool {
-    std::env::var("ANCESTREE_BENCH").is_ok_and(|value| value == "1")
+    test_setting("ANCESTREE_BENCH").is_some_and(|value| value == "1")
 }
 
 fn data_dir(app: &AppHandle) -> PathBuf {
@@ -106,7 +125,7 @@ fn show_main(app: &AppHandle) {
 }
 
 fn engine_program(app: &AppHandle) -> PathBuf {
-    if let Ok(path) = std::env::var("ANCESTREE_ENGINE") {
+    if let Some(path) = test_setting("ANCESTREE_ENGINE") {
         return PathBuf::from(path); // for trying an engine built elsewhere
     }
     let name = if cfg!(windows) {
@@ -328,7 +347,7 @@ fn updater(app: &AppHandle, timeout: Duration) -> Result<Updater, BoxError> {
             );
             stop_engine(&before_exit);
         });
-    if let Ok(address) = std::env::var("ANCESTREE_UPDATE_URL") {
+    if let Some(address) = test_setting("ANCESTREE_UPDATE_URL") {
         builder = builder.endpoints(vec![Url::parse(&address)?])?;
     }
     Ok(builder.build()?)
@@ -611,10 +630,10 @@ fn open_elsewhere(app: &AppHandle, url: &Url) {
 
 /// Downloads go to the Downloads folder, never over a file already there.
 fn download_to(app: &AppHandle, url: &Url, suggested: &std::path::Path) -> PathBuf {
-    let folder = std::env::var("ANCESTREE_DOWNLOADS")
-        .map(PathBuf::from)
-        .or_else(|_| app.path().download_dir())
-        .unwrap_or_else(|_| data_dir(app));
+    let folder = match test_setting("ANCESTREE_DOWNLOADS") {
+        Some(path) => PathBuf::from(path),
+        None => app.path().download_dir().unwrap_or_else(|_| data_dir(app)),
+    };
     let name = suggested
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -817,5 +836,40 @@ mod job {
             // SAFETY: the handle is ours and closed once.
             unsafe { CloseHandle(self.0) };
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// release.py signs updates in Python alone (0.4.2). The app's updater checks them with
+    /// minisign-verify, as this does, so one signed there must hold here.
+    #[test]
+    fn an_update_signed_in_python_holds_for_the_updater() {
+        let public = minisign_verify::PublicKey::from_base64(
+            include_str!("../tests/fixtures/python-signed.pub").trim(),
+        )
+        .expect("the made-up key");
+        let signature = minisign_verify::Signature::decode(include_str!(
+            "../tests/fixtures/python-signed.minisig"
+        ))
+        .expect("the signature, as Tauri's updater reads it");
+        public
+            .verify(b"AncesTree's update, signed in Python", &signature, false)
+            .expect("the signature holds");
+        assert!(public
+            .verify(b"AncesTree's update, changed", &signature, false)
+            .is_err());
+    }
+
+    #[test]
+    fn a_release_reads_no_test_setting() {
+        std::env::set_var("ANCESTREE_TEST_SETTING_PROBE", "steered");
+        assert_eq!(test_setting_in(false, "ANCESTREE_TEST_SETTING_PROBE"), None);
+        assert_eq!(
+            test_setting_in(true, "ANCESTREE_TEST_SETTING_PROBE").as_deref(),
+            Some("steered")
+        );
     }
 }

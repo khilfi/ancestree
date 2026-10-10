@@ -42,10 +42,16 @@ from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import FamilyFolder, keep_in_step
 from ancestree.services.history import History, Step
 from ancestree.storage.data_dir import ensure_data_dir
-from ancestree.storage.files import TRASH_DAYS, purge_trash
+from ancestree.storage.files import TRASH_DAYS, clean_photos, photos_cleaned, purge_trash
 
 # uvicorn's logger, so startup messages appear in the server console.
 log = logging.getLogger("uvicorn.error")
+
+
+async def _clean_photos(data_dir: Path) -> None:
+    changed = await asyncio.to_thread(clean_photos, data_dir)
+    if changed:
+        log.info("Took what cameras wrote out of %d photos kept from before", changed)
 
 
 def create_app(
@@ -89,6 +95,11 @@ def create_app(
             backing_up = None
             if active.automatic_backups:
                 backing_up = asyncio.create_task(keep_backing_up(context))
+            # Photos kept from before 0.4.2 lose their camera's metadata, once, while the app
+            # runs: started here, it holds nothing up.
+            cleaning = None
+            if not photos_cleaned(active.data_dir):
+                cleaning = asyncio.create_task(_clean_photos(active.data_dir))
             history_now: History = app.state.history
 
             async def take_in(archive: Path, backup_first: bool) -> object:
@@ -113,6 +124,8 @@ def create_app(
             keeping.cancel()
             if backing_up is not None:
                 backing_up.cancel()
+            if cleaning is not None:
+                cleaning.cancel()
         finally:
             await driver.close()
 

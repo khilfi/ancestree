@@ -1,10 +1,19 @@
 [package]
 name = "ancestree-desktop"
-version = "0.4.1"
+version = "0.4.2"
 description = "AncesTree's desktop app"
 license = "MIT"
 edition = "2021"
 publish = false
+
+[dev-dependencies]
+# The app's updater checks signatures with it: its test checks one made in Python (0.4.2).
+minisign-verify = "=0.2.5"
+
+[features]
+# Settings for tests read from the environment (0.4.2): the Desktop app workflow builds with it,
+# a release never does.
+test-settings = []
 
 [profile.release]
 codegen-units = 1

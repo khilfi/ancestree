@@ -15,6 +15,7 @@ from typing import Any
 from zipfile import ZipFile
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from ancestree.domain.familyfolder import (
     Admit,
@@ -1438,7 +1439,10 @@ async def test_the_family_folder_moves_to_another_google_project(
     await relative.sync()  # followed, still through the old project, while its client lasts
     assert relative.setup.folder == keeper.setup.folder
 
-    await relative.take_invitation(keeper.invitation().text())  # the new project
+    with pytest.raises(RuleError) as asked:  # the new project, shown first (0.4.2)
+        await relative.take_invitation(keeper.invitation().text())
+    assert asked.value.code == "project_change"
+    await relative.take_invitation(keeper.invitation().text(), confirm=True)
     assert relative.client is not None
     assert relative.client.project == "keluarga-lain"
     signed_in(relative, RELATIVE)
@@ -1450,6 +1454,57 @@ async def test_the_family_folder_moves_to_another_google_project(
     await relative.sync()
     await keeper.sync()
     assert [changes.name for changes in (await keeper.status()).changes] == ["Mak Long's laptop"]
+
+
+async def test_a_relative_moves_to_another_project_only_on_its_keepers_signed_word(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Anyone could make an invitation naming the family. Only one its keeper signed can send
+    its computers to sign in through another Google project, and only once they've seen which
+    (0.4.2): before, a forged one sent a relative to sign in elsewhere, granting that project
+    sight of their Drive."""
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    before = relative.client
+    assert before is not None
+    others = Client.from_file(OTHER_PROJECT)
+    for forged in (
+        Invitation(others, family_of(keeper)),  # signed by no one
+        Invitation(others, family_of(keeper)).signed(Ed25519PrivateKey.generate()),  # by another
+    ):
+        with pytest.raises(RuleError) as refused:
+            await relative.take_invitation(forged.text(), confirm=True)
+        assert refused.value.code == "unsigned_invitation"
+        assert relative.client == before
+        assert (await relative.status()).email == RELATIVE  # still signed in, as it was
+
+    await keeper.use_project(OTHER_PROJECT, moving=True)
+    signed = keeper.invitation().text()
+    with pytest.raises(RuleError) as asked:
+        await relative.take_invitation(signed)
+    assert (asked.value.code, asked.value.details) == (
+        "project_change",
+        {"project": "keluarga-lain"},
+    )
+    assert relative.client == before  # nothing changed until it's confirmed
+    await relative.take_invitation(signed, confirm=True)
+    assert relative.client is not None
+    assert relative.client.project == "keluarga-lain"
+
+
+async def test_a_project_without_its_id_is_shown_by_its_number(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Settings asks "Move to the Google project …?": a client's file without the project's id
+    gives its number, never "project project …"."""
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    assert isinstance(keeper.computer, Keeper)
+    others = Client.from_file(OTHER_PROJECT)
+    unnamed = Client(others.client_id, others.client_secret, "", invited=True)
+    signed = Invitation(unnamed, family_of(keeper)).signed(keeper.computer.sign)
+    with pytest.raises(RuleError) as asked:
+        await relative.take_invitation(signed.text())
+    assert asked.value.details == {"project": "987654321098"}
+    assert "the Google project 987654321098." in asked.value.message
 
 
 async def test_an_old_folder_left_in_drive_is_said_until_its_deleted(

@@ -105,7 +105,8 @@ def test_its_settings_take_the_place_of_neo4js_own_and_keep_the_rest(
     ]
     assert "db.tx_log.rotation.retention_policy=2 days" in lines
     assert "#server.jvm.additional=-Dnot.this.one=1" in lines
-    assert admin_calls == [("dbms", "set-initial-password", own.password())]
+    password = own.root / "password"
+    assert admin_calls == [("dbms", "set-initial-password", f"@{password.resolve()}")]
 
 
 def test_the_password_is_set_in_neo4j_only_before_its_first_start(
@@ -185,8 +186,30 @@ def test_a_password_that_reads_as_an_option_and_was_never_set_is_made_again(
 
     monkeypatch.setattr(subprocess, "run", working)
     own.configure(7690)
-    assert given == [own.password()]
+    assert given == [f"@{(own.root / 'password').resolve()}"]
     assert not own.password().startswith("-")
+
+
+def test_the_first_password_is_never_on_a_command_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Neo4j's admin tool reads it from its file, the user's alone: on a command line, another
+    account on a Mac or Linux computer could see it while the tool runs (0.4.2)."""
+    own = OwnNeo4j(tmp_path / "neo4j", made_up_runtime(tmp_path), ["helper"])
+    commands: list[list[str]] = []
+
+    def working(command: list[str], **_: Any) -> subprocess.CompletedProcess[bytes]:
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, b"Changed password for user 'neo4j'.", b"")
+
+    monkeypatch.setattr(subprocess, "run", working)
+    own.configure(7690)
+    [command] = commands
+    assert not any(own.password() in part for part in command)
+    file = Path(command[-1].removeprefix("@"))
+    assert command[-1].startswith("@")
+    assert file.is_absolute()
+    assert file.read_text(encoding="utf-8") == own.password()  # whole, as the tool reads it
 
 
 def test_asked_to_stop_while_starting_it_stops_at_once(own: OwnNeo4j) -> None:
@@ -204,7 +227,8 @@ def test_a_failed_first_password_says_why_and_never_shows_the_password(
     said = f"Picked up options\nCould not write {password}: the file is locked by another program\n"
 
     def failing(command: list[str], **_: Any) -> subprocess.CompletedProcess[bytes]:
-        assert password in command  # Neo4j's tool is given it, and no one else
+        # Neo4j's tool reads it from its file, and is given that alone (0.4.2)
+        assert command[-1] == f"@{(own.root / 'password').resolve()}"
         return subprocess.CompletedProcess(command, 1, b"Selecting JVM\n", said.encode())
 
     monkeypatch.setattr(subprocess, "run", failing)

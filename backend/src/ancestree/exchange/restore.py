@@ -8,6 +8,7 @@ swapped back: a restore happens completely or not at all.
 """
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import re
@@ -29,6 +30,7 @@ from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.exchange.backup import ARCHIVE_FORMAT, DATA_FOLDERS, create_backup
 from ancestree.migrations.runner import load_migrations
 from ancestree.services.context import Context, read, write
+from ancestree.storage.files import clean_photos
 
 _TIMES = ("created_at", "updated_at")  # stored as date-times, written as ISO 8601 text
 _LINK_TYPES = ("PARENT_OF", "SPOUSE_OF")
@@ -400,6 +402,10 @@ async def restore_archive(ctx: Context, path: Path, *, backup_first: bool = True
             await asyncio.to_thread(undo)
             raise
         done = True
+        # What the backup brings back loses its camera's metadata too (0.4.2): one made before
+        # holds the photos as they were.
+        with contextlib.suppress(OSError):
+            await asyncio.to_thread(clean_photos, ctx.data_dir)
     finally:
         await asyncio.to_thread(_remove, staging)  # only copies from the archive, if anything
         if done:

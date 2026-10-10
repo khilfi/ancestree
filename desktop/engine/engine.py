@@ -53,6 +53,18 @@ from ancestree.ownneo4j.server import OwnNeo4j, StoppedError, send_ctrl_c
 from ancestree.services.familyfolder import FamilyFolder
 
 FROZEN = getattr(sys, "frozen", False)
+# For development and tests alone (0.4.2): a packed engine, as every release is, takes none of
+# these from its environment, so no other program can point it at another database, Neo4j,
+# Google client, or a copy's app of its own making for the copies a family sends.
+DEVELOPMENT_SETTINGS = (
+    "ANCESTREE_NEO4J_URI",
+    "ANCESTREE_NEO4J_PASSWORD",
+    "ANCESTREE_NEO4J_USER",
+    "ANCESTREE_NEO4J_DATABASE",
+    "ANCESTREE_NEO4J_RUNTIME",
+    "ANCESTREE_GOOGLE_CLIENT",
+    PREBUILT,
+)
 
 
 def emit(**event: Any) -> None:
@@ -429,6 +441,12 @@ def _announce(server: uvicorn.Server, port: int) -> None:
     emit(stage="ready", port=port)
 
 
+def drop_development_settings() -> None:
+    """Settings for development and tests, gone from the environment: a packed engine's."""
+    for name in DEVELOPMENT_SETTINGS:
+        os.environ.pop(name, None)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="AncesTree's engine for the desktop app")
     parser.add_argument("--data", type=Path, help="the app's data folder")
@@ -442,6 +460,8 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args.data is None:
         parser.error("--data is required")
+    if FROZEN:
+        drop_development_settings()
 
     root: Path = args.data.resolve()
     root.mkdir(parents=True, exist_ok=True)

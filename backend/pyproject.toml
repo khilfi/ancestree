@@ -1,6 +1,6 @@
 [project]
 name = "ancestree"
-version = "0.4.1"
+version = "0.4.2"
 description = "Private family-history app: people, relationships, kinship, timeline."
 requires-python = ">=3.14"
 license = "MIT"

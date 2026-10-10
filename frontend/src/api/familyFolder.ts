@@ -110,9 +110,11 @@ export const useOldFolderDeleted = () =>
 
 /** A keeper's invitation, pasted on a relative's computer (0.4.0): the family's Google project,
  *  to sign in through, and the family to ask to join. */
+/** `confirm`: moving a computer already in the family to the project the invitation names,
+ *  once it's been shown (0.4.2). */
 export const useTakeInvitation = () =>
-  useFolderAction((invitation: string) =>
-    unwrap(api.POST("/api/family-folder/invitation", { body: { invitation } })),
+  useFolderAction(({ invitation, confirm = false }: { invitation: string; confirm?: boolean }) =>
+    unwrap(api.POST("/api/family-folder/invitation", { body: { invitation, confirm } })),
   );
 
 /** The family's invitation, for its keeper to send (0.4.0). */

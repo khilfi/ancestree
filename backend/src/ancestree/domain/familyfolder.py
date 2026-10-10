@@ -135,6 +135,8 @@ class InvitationText(BaseModel):
     """A keeper's invitation, pasted on a relative's computer (0.4.0)."""
 
     invitation: Annotated[str, StringConstraints(max_length=10_000)]
+    # Moving a computer already in the family to the project it names, once shown (0.4.2).
+    confirm: bool = False
 
 
 class InvitationMade(BaseModel):

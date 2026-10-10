@@ -239,3 +239,18 @@ def test_the_icon_by_the_clock_says_how_the_family_stands() -> None:
     assert engine.in_step_line(folder, "Keluarga Contoh").endswith("sign in to Google, in Settings")
     folder.setup = None
     assert engine.in_step_line(folder, "A" * 200) == "AncesTree · " + "A" * 40
+
+
+def test_a_packed_engine_takes_no_development_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Another program setting them can't point a release at another database, Neo4j, Google
+    client, or a copy's app of its own for the copies a family sends (0.4.2)."""
+    for name in engine.DEVELOPMENT_SETTINGS:
+        monkeypatch.setenv(name, "planted")
+    monkeypatch.setenv("ANCESTREE_SESSION", "f" * 64)  # the shell's own word to the engine
+    engine.drop_development_settings()
+    import os
+
+    assert [name for name in engine.DEVELOPMENT_SETTINGS if name in os.environ] == []
+    assert os.environ["ANCESTREE_SESSION"] == "f" * 64
+    assert "ANCESTREE_COPY_APP" in engine.DEVELOPMENT_SETTINGS
+    assert "ANCESTREE_NEO4J_URI" in engine.DEVELOPMENT_SETTINGS

@@ -2777,6 +2777,11 @@ export interface components {
         InvitationText: {
             /** Invitation */
             invitation: string;
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
         };
         /** Invite */
         Invite: {

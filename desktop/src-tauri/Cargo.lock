@@ -34,10 +34,11 @@ dependencies = [
 
 [[package]]
 name = "ancestree-desktop"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "getrandom 0.4.3",
  "libc",
+ "minisign-verify",
  "serde",
  "serde_json",
  "tauri",

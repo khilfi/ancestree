@@ -27,3 +27,19 @@ You'll hear back within a week. A fix goes out as a new version, which installs 
 - Google, Microsoft or Apple themselves.
 
 Only the latest version is looked after. Updates come by themselves; to look for one now, use **Settings → About → Check for updates**.
+
+## Checking a download
+
+Each release's files are listed with their SHA-256 sums in `SHA256SUMS.txt`, which is signed with AncesTree's update key, the key every install checks updates with. To check that a download is the one its maintainer released:
+
+1. From this repository's `updates/<version>/` folder, download `SHA256SUMS.txt` and `SHA256SUMS.txt.minisig`, beside the file you downloaded.
+2. Check the signature with [minisign](https://jedisct1.github.io/minisign/):
+
+   ```
+   minisign -Vm SHA256SUMS.txt -P RWTXGNqmlL+M/X+GU62idHfQ6mEu1C39ZdBKztWk4MmiYZkbYcqzqXY4
+   ```
+
+   It says `Signature and comment signature verified` when the sums are the maintainer's. The key's id is `FD8CBF94A6DA18D7`.
+3. Check your file's sum against its line in `SHA256SUMS.txt`: on Windows, `Get-FileHash <file>` in PowerShell; on a Mac or Linux, `shasum -a 256 <file>`.
+
+Signed sums are there from version 0.4.2 on.

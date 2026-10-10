@@ -5,6 +5,7 @@ atomic (temp file, then rename), so a crash can't leave half a file behind.
 """
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -16,9 +17,16 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from PIL import Image
+
+from ancestree.media.metadata import without_metadata
 from ancestree.media.photos import AVATAR_SIZES, Crop, ProcessedPhoto
 
+log = logging.getLogger(__name__)
+
 TRASH_DAYS = 30
+# In settings/: every photo kept here has been through clean_photos (0.4.2).
+PHOTOS_CLEANED = "photos-without-metadata"
 _TRASH_ENTRY = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_[0-9a-f-]{36}$")
 
 
@@ -105,9 +113,54 @@ def store_photo(
     """The new photo in place, the one before kept: its stamp in previous/, if there was one."""
     profile = _profile(data_dir, person_id)
     stamp = _keep_previous(profile)
-    atomic_write(profile / f"original.{photo.extension}", original)
+    # Without what the camera wrote into it, where it was taken included (0.4.2): the original
+    # travels in backups, the family folder and copies.
+    cleaned = without_metadata(original, photo.extension)
+    atomic_write(profile / f"original.{photo.extension}", cleaned)
     store_rendering(data_dir, person_id, photo)
     return stamp
+
+
+def photo_originals(data_dir: Path) -> list[Path]:
+    """Every photo's original kept here: people's, their earlier ones, and the Trash's."""
+    found: list[Path] = []
+    for root in (data_dir / "people", data_dir / "trash"):
+        if root.is_dir():
+            found += [
+                path
+                for path in root.rglob("*")
+                if path.is_file()
+                and path.parent.name in ("profile", "previous")
+                and (path.name.startswith("original.") or "-original." in path.name)
+            ]
+    return sorted(found)
+
+
+def photos_cleaned(data_dir: Path) -> bool:
+    return (data_dir / "settings" / PHOTOS_CLEANED).is_file()
+
+
+def clean_photos(data_dir: Path) -> int:
+    """Every photo's original kept here without what its camera wrote into it (0.4.2): those
+    from before, and those a backup brings back. How many changed; one that can't be read is
+    left as it is."""
+    changed = 0
+    for path in photo_originals(data_dir):
+        try:
+            data = path.read_bytes()
+            cleaned = without_metadata(data, path.suffix.removeprefix(".").lower())
+        except (OSError, ValueError, SyntaxError, Image.DecompressionBombError) as error:
+            log.warning("A photo's metadata couldn't be taken out of %s: %s", path.name, error)
+            continue
+        if cleaned != data:
+            atomic_write(path, cleaned)
+            changed += 1
+    marker = data_dir / "settings" / PHOTOS_CLEANED
+    if not marker.is_file():  # one a backup brings back stays as the backup holds it
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        when = datetime.now().astimezone().isoformat(timespec="seconds")
+        marker.write_text(when, encoding="utf-8")
+    return changed
 
 
 def store_rendering(data_dir: Path, person_id: UUID | str, photo: ProcessedPhoto) -> None:
