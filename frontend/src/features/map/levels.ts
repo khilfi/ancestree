@@ -13,6 +13,7 @@ export type Spot = {
   x: number;
   y: number;
   place: string; // what it was found as: the town, or the state or country for a rough one
+  district: string | null; // a town's, where the gazetteer gives one
   state: string | null;
   country: string;
   rough: boolean; // only its state or country is known: it sits at the middle of that

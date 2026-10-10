@@ -33,7 +33,7 @@ try {
         Invoke-Step 'backend: all tests (starts a throwaway Neo4j)' { uv run pytest -q }
     }
     Invoke-Step 'desktop: lint and formatting (ruff)' { uv run ruff check ../desktop; if ($LASTEXITCODE -eq 0) { uv run ruff format --check ../desktop } }
-    $desktop = @('../desktop/engine', '../desktop/tools' | Where-Object { Test-Path $_ })  # the tools aren't published
+    $desktop = @('../desktop/engine', '../desktop/maps', '../desktop/tools' | Where-Object { Test-Path $_ })  # the tools aren't published
     Invoke-Step 'desktop: types (mypy, strict)' { $env:MYPYPATH = 'src'; uv run mypy @desktop; Remove-Item Env:MYPYPATH }
     Invoke-Step 'desktop: the engine and its tools (tests)' { uv run pytest -q -p no:cacheprovider @desktop }
     Invoke-Step 'api: export schema' { uv run ancestree openapi --out ../frontend/openapi.json }

@@ -16,5 +16,6 @@ async def refresh_snapshots(ctx: Context, person_ids: Iterable[str]) -> None:
         except NotFoundError:
             continue
         if not detail.placeholder:
-            snapshot = detail.model_dump(mode="json")
+            # The app's own words for where they live stay out, as they always were.
+            snapshot = detail.model_dump(mode="json", exclude={"residence_district"})
             await asyncio.to_thread(write_snapshot, ctx.data_dir, person_id, snapshot)

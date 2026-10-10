@@ -87,6 +87,12 @@ export const appRoutes: RouteObject[] = [
             }),
           },
           {
+            path: "map",
+            lazy: async () => ({
+              Component: (await import("@/features/settings/MapSection")).MapSection,
+            }),
+          },
+          {
             path: "backups",
             lazy: async () => ({
               Component: (await import("@/features/settings/BackupsSection")).BackupsSection,

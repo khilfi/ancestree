@@ -19,6 +19,7 @@ from ancestree.api import (
     history,
     imports,
     kinship,
+    map_packs,
     persons,
     places,
     relationship_kinds,
@@ -34,6 +35,7 @@ from ancestree.familyfolder.google import GoogleError, OfflineError
 from ancestree.familyfolder.protect import ProtectError
 from ancestree.familyfolder.seals import RefusedError
 from ancestree.importing.sheet import SheetError
+from ancestree.maps.packs import PackStore
 from ancestree.media.photos import PhotoError
 from ancestree.migrations.runner import apply_migrations
 from ancestree.services import journal
@@ -76,6 +78,9 @@ def create_app(
                 log.info("Emptied %d Trash entries older than %d days", purged, TRASH_DAYS)
             app.state.settings = active
             app.state.driver = driver
+            app.state.map_packs = PackStore(active.maps)  # the map's packs
+            if tidied := await asyncio.to_thread(app.state.map_packs.tidy):
+                log.info("Removed map packs of an earlier build: %s", ", ".join(tidied))
             context = Context(
                 driver,
                 active.neo4j_database,
@@ -157,6 +162,7 @@ def create_app(
         family_folder,
         imports,
         places,
+        map_packs,
     ):
         app.include_router(module.router, prefix="/api")
 

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "paths": {
     "/api/health": {
@@ -2432,7 +2432,7 @@
           "family folder"
         ],
         "summary": "Sign Out Of Google",
-        "description": "Forget the sign-in here and give it back to Google. The family folder waits.",
+        "description": "Forget the sign-in on this computer, never giving it back to Google, which would end it on\nthe family's other computers with that account too. The family folder waits.",
         "operationId": "sign_out_of_google",
         "responses": {
           "200": {
@@ -2454,7 +2454,7 @@
           "family folder"
         ],
         "summary": "Use Family Project",
-        "description": "The family's own Google project, from the file Google's console gives for its client of\nthe Desktop app type: kept with this family, to sign in through. A sign-in made with\nanother client is given back: sign in again.",
+        "description": "The family's own Google project, from the file Google's console gives for its client of\nthe Desktop app type: kept with this family, to sign in through. A sign-in made with\nanother client is forgotten: sign in again.",
         "operationId": "use_family_project",
         "requestBody": {
           "content": {
@@ -3788,6 +3788,309 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/packs": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Map Packs",
+        "description": "Each of the map's packs, and how it stands on this computer.",
+        "operationId": "get_map_packs",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/online": {
+      "put": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Choose Online Map",
+        "description": "Turn the map's online extra on or off: OpenFreeMap's tiles, where the packs end.",
+        "operationId": "choose_online_map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnlineMap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/online/{z}/{x}/{y}": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Online Tile",
+        "description": "A tile of OpenFreeMap's, for the map's online extra, fetched by the engine so the\nwindow still reaches nothing outside this computer. Asked only where no pack here has the\ntile: no content where one has, or below zoom 7, where the world's pack has them all. Not\nfound while the extra is off.",
+        "operationId": "get_online_tile",
+        "parameters": [
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 14,
+              "minimum": 0,
+              "title": "Z"
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "X"
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Y"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.mapbox-vector-tile": {}
+            }
+          },
+          "204": {
+            "description": "A pack here has the tile, or OpenFreeMap has nothing there"
+          },
+          "502": {
+            "description": "OpenFreeMap couldn't be reached"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/packs/{key}": {
+      "post": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Fetch Map Pack",
+        "description": "Fetch a pack in the background, unless it's here or on its way: the answer says how\nit stands, and asking again says how it's going.",
+        "operationId": "fetch_map_pack",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "world",
+                "malaysia",
+                "indonesia"
+              ],
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Remove Map Pack",
+        "description": "Take a pack off this computer, stopping it first if it's on its way.",
+        "operationId": "remove_map_pack",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "world",
+                "malaysia",
+                "indonesia"
+              ],
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/tiles/{key}/{z}/{x}/{y}": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Map Tile",
+        "description": "A tile of a pack, as Protomaps cut it from OpenStreetMap: vector data, gzipped. No\ncontent where the pack has none.",
+        "operationId": "get_map_tile",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "world",
+                "malaysia",
+                "indonesia"
+              ],
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "z",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 15,
+              "minimum": 0,
+              "title": "Z"
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "X"
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Y"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.mapbox-vector-tile": {}
+            }
+          },
+          "204": {
+            "description": "No tile there"
           },
           "422": {
             "description": "Validation Error",
@@ -5478,6 +5781,13 @@
             },
             "type": "array",
             "title": "Pins"
+          },
+          "towns": {
+            "items": {
+              "$ref": "#/components/schemas/Town"
+            },
+            "type": "array",
+            "title": "Towns"
           }
         },
         "type": "object",
@@ -5486,7 +5796,7 @@
           "pins"
         ],
         "title": "FamilyMap",
-        "description": "Everyone but unknown parents, with where they live and were born, and the pins."
+        "description": "Everyone but unknown parents, with where they live and were born, the pins, and the\ntowns around the family's places, the most worth naming first."
       },
       "FillIn": {
         "properties": {
@@ -7824,6 +8134,17 @@
           "country": {
             "type": "string",
             "title": "Country"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
           }
         },
         "type": "object",
@@ -7833,6 +8154,103 @@
         ],
         "title": "Located",
         "description": "A place as written, and where it goes on the map: `found` says how. None there means it\nwasn't found: a country the gazetteer doesn't know."
+      },
+      "MapPack": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "world",
+              "malaysia",
+              "indonesia"
+            ],
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "minzoom": {
+            "type": "integer",
+            "title": "Minzoom"
+          },
+          "maxzoom": {
+            "type": "integer",
+            "title": "Maxzoom"
+          },
+          "first": {
+            "type": "boolean",
+            "title": "First"
+          },
+          "installed": {
+            "type": "boolean",
+            "title": "Installed"
+          },
+          "fetching": {
+            "type": "boolean",
+            "title": "Fetching"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "size",
+          "minzoom",
+          "maxzoom",
+          "first",
+          "installed",
+          "fetching",
+          "done"
+        ],
+        "title": "MapPack",
+        "description": "One of the map's packs of OpenStreetMap's tiles, and how it stands on this\ncomputer: the world, fetched on first opening the map, or a region, when chosen."
+      },
+      "MapPacks": {
+        "properties": {
+          "build": {
+            "type": "string",
+            "title": "Build"
+          },
+          "packs": {
+            "items": {
+              "$ref": "#/components/schemas/MapPack"
+            },
+            "type": "array",
+            "title": "Packs"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "build",
+          "packs"
+        ],
+        "title": "MapPacks",
+        "description": "The packs, all cut from one of Protomaps' builds of OpenStreetMap, and whether the map's\nonline extra is on: OpenFreeMap's tiles, where the packs end."
       },
       "MapPerson": {
         "properties": {
@@ -8223,6 +8641,20 @@
         ],
         "title": "OneComputer"
       },
+      "OnlineMap": {
+        "properties": {
+          "on": {
+            "type": "boolean",
+            "title": "On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "on"
+        ],
+        "title": "OnlineMap",
+        "description": "The map's online extra turned on or off."
+      },
       "Pair": {
         "properties": {
           "a": {
@@ -8483,6 +8915,17 @@
                 "type": "null"
               }
             ]
+          },
+          "residence_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residence District"
           },
           "living": {
             "anyOf": [
@@ -9720,6 +10163,35 @@
           "no_birth_order"
         ],
         "title": "ToFillIn"
+      },
+      "Town": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "people": {
+            "type": "integer",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lat",
+          "lon",
+          "people"
+        ],
+        "title": "Town",
+        "description": "A town or kampung around the family's places, named on the map: from a state's\nzoom when it has 1,000 people or more, else as you zoom closer."
       },
       "TrashEntry": {
         "properties": {

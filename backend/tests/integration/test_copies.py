@@ -18,6 +18,7 @@ from ancestree.config import Settings
 from ancestree.domain.search import find_people
 from ancestree.exchange.copies import CopyOptions, family_snapshot, read_page, unseal
 from ancestree.exchange.restore import read_info
+from ancestree.places.gazetteer import km_between
 from ancestree.seed.loader import load_seed
 from ancestree.services import exports as exports_service
 from ancestree.services.context import Context
@@ -260,6 +261,7 @@ async def test_hiding_living_people_leaves_out_their_details(
             None,
         )
         assert shown["birth_place"] is shown["residence"] is shown["occupation"] is None
+        assert shown["residence_district"] is None  # nor their district
         assert shown["full_name"] == "Ali bin Rosli"  # who they are stays
         # Those who have died keep theirs.
         assert copy["persons"][hassan][language]["birth_date"]["text"] == "14/3/1938"
@@ -269,6 +271,18 @@ async def test_hiding_living_people_leaves_out_their_details(
     mapped = {person["id"]: person for person in copy["map"]["people"]}
     assert mapped[ali]["lives"] is mapped[ali]["born"] is None
     assert mapped[hassan]["born"]["name"] == "Kota Bharu"
+    # No town is named around their places either: each is near a place still shown.
+    shown = [
+        (located["lat"], located["lon"])
+        for person in copy["map"]["people"]
+        for located in (person["lives"], person["born"])
+        if located and located["found"] in ("town", "pin")
+    ]
+    towns = copy["map"]["towns"]
+    assert towns, "named around Kota Bharu"
+    assert all(min(km_between(t["lat"], t["lon"], *at) for at in shown) <= 30.01 for t in towns)
+    in_the_app = {town["name"] for town in (await client.get("/api/map")).json()["towns"]}
+    assert in_the_app - {town["name"] for town in towns}, "the app names towns around them"
     # Their stories and the stories' pictures stay behind; their photos come along.
     assert set(copy["stories"]) == {hassan}
     assert all(f"/{hassan}/media/" in a for a in copy["files"] if "/media/" in a)

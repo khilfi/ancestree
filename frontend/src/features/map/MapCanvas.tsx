@@ -1,4 +1,3 @@
-import { MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
 import {
   type MouseEvent,
   type PointerEvent,
@@ -9,29 +8,23 @@ import {
   useRef,
   useState,
 } from "react";
-import type { GraphPerson } from "@/api/types";
-import { PersonAvatar } from "@/components/PersonAvatar";
-import { Button } from "@/components/ui/button";
-import { shortName } from "@/features/tree/words";
+import type { GraphPerson, MapTown } from "@/api/types";
 import { typing } from "@/lib/keyboard";
-import { lifeYears } from "@/lib/people";
 import { cn } from "@/lib/utils";
-import { BASE, BORDERS, fromPlane, PLANE_PER_KM, STATE_MIDDLES } from "./geo";
+import { BASE, BORDERS, DISTRICT_NAMES, fromPlane, onPlane, PLANE_PER_KM } from "./geo";
+import { BIG_TOWN, type Box, type Label, type Placed, placeLabels, roomFor } from "./labels";
 import {
   bubbleRadius,
   flowerRadius,
   type Group,
-  gather,
   levelAt,
   MOST,
-  mergeTowns,
   NAMES_FROM,
   PHOTO,
   type Point,
   type Spot,
-  separate,
-  sunflower,
 } from "./levels";
+import { FamilyPlaces, familyGroups, MapButtons, PlacingHint } from "./places";
 
 /** Someone who moved: from where they were born to where they live, on the plane. */
 export type Move = { id: string; from: Point; to: Point };
@@ -43,7 +36,9 @@ const MIN_K = 0.04; // the whole world
 const MAX_K = 90; // a kampung's houses would be apart, if the map had them
 const SEA = "#eef4f7";
 const LAND = "#f5f5f4";
-const MARGIN = 200; // drawn this far outside the screen, so panning shows no gaps
+// The corners the map's own buttons and credits take, which no name on the map covers.
+const BUTTONS = { width: 48, height: 112 };
+const CREDITS = { width: 290, height: 22 };
 
 function framed(
   box: { x0: number; y0: number; x1: number; y1: number },
@@ -74,11 +69,13 @@ const ONE_PERSON_K = 3 / PLANE_PER_KM;
 /**
  * The map: the borders, drawn once and scaled, and over them the
  * people for the zoom: a circle for each country or state with how many are there, then each
- * town's people as their photos, as on the tree and the timeline. Scroll or pinch to zoom,
- * drag to move; +, − and F as on the tree.
+ * town's people as their photos, as on the tree and the timeline. From a state's zoom, the
+ * districts and the towns around the family's places are named too. Scroll or pinch to
+ * zoom, drag to move; +, − and F as on the tree.
  */
 export function MapCanvas({
   spots,
+  towns,
   moves,
   people,
   colourOf,
@@ -91,6 +88,7 @@ export function MapCanvas({
   onCancelPlace,
 }: {
   spots: Spot[];
+  towns: MapTown[]; // around the family's places, the most worth naming first
   moves: Move[] | null; // null: not shown
   people: Map<string, GraphPerson>;
   colourOf: (id: string) => string | null;
@@ -302,20 +300,68 @@ export function MapCanvas({
   const groups = useMemo((): Group[] => {
     if (!view) return [];
     const toScreen = (p: Point) => ({ x: p.x * view.k + view.x, y: p.y * view.k + view.y });
-    const middle = (state: string) => {
-      const found = STATE_MIDDLES.get(state);
-      return found ? { x: found[0], y: found[1] } : null;
-    };
-    const gathered = gather(spots, level, toScreen, middle);
-    if (level !== "towns") return separate(gathered, (g) => bubbleRadius(g.members.length));
-    const shown = (count: number) => (withNames ? count : Math.min(count, MOST));
-    return mergeTowns(gathered, (g) =>
-      g.towns > 1 ? bubbleRadius(g.members.length) : flowerRadius(shown(g.members.length), spacing),
-    );
+    return familyGroups(spots, level, toScreen, withNames, spacing);
   }, [spots, level, view, withNames, spacing]);
 
-  const visible = (at: Point) =>
-    at.x > -MARGIN && at.y > -MARGIN && at.x < size.width + MARGIN && at.y < size.height + MARGIN;
+  // The towns around the family's places, on the plane once.
+  const named = useMemo(
+    () =>
+      towns.map((town, index) => {
+        const [x, y] = onPlane(town.lat, town.lon);
+        return { key: `town:${index}`, text: town.name, x, y, big: town.people >= BIG_TOWN };
+      }),
+    [towns],
+  );
+  // The names besides the family's, from a state's zoom: each district with room for its
+  // name, first, as there are few and they give the land its shape; then the bigger towns
+  // around the family's places; closer, the kampungs too. None covers another, nor the
+  // family's photos and circles.
+  const labels = useMemo((): Placed[] => {
+    if (!view || level !== "towns") return [];
+    const toScreen = (x: number, y: number) => ({ x: x * view.k + view.x, y: y * view.k + view.y });
+    const close = perKm >= NAMES_FROM;
+    const wanted: Label[] = [
+      ...DISTRICT_NAMES.flatMap((area, index): Label[] =>
+        roomFor(area, view.k, area.name)
+          ? [
+              {
+                key: `district:${index}`,
+                text: area.name,
+                at: toScreen(area.x, area.y),
+                kind: "district",
+              },
+            ]
+          : [],
+      ),
+      ...named.flatMap((town): Label[] =>
+        town.big
+          ? [{ key: town.key, text: town.text, at: toScreen(town.x, town.y), kind: "town" }]
+          : [],
+      ),
+      ...named.flatMap((town): Label[] =>
+        close && !town.big
+          ? [{ key: town.key, text: town.text, at: toScreen(town.x, town.y), kind: "place" }]
+          : [],
+      ),
+    ];
+    const taken = groups.map((group): Box => {
+      const photos = withNames ? group.members.length : Math.min(group.members.length, MOST);
+      const reach =
+        group.towns > 1
+          ? bubbleRadius(group.members.length)
+          : flowerRadius(photos, spacing) + (withNames ? 14 : 0);
+      const half = Math.max(reach, group.label.length * 3.5 + 6);
+      const { x, y } = group.at;
+      return { x0: x - half, y0: y - reach, x1: x + half, y1: y + reach + 24 };
+    });
+    const { width, height } = size;
+    taken.push(
+      { x0: 0, y0: height - BUTTONS.height, x1: BUTTONS.width, y1: height },
+      { x0: width - CREDITS.width, y0: height - CREDITS.height, x1: width, y1: height },
+    );
+    return placeLabels(wanted, taken, size);
+  }, [named, view, level, perKm, groups, withNames, spacing, size]);
+
   // A click on a circle zooms in on it, bringing it to the middle.
   const zoomInto = (group: Group) => {
     const now = current.current;
@@ -324,8 +370,6 @@ export function MapCanvas({
     const [px, py] = [(group.at.x - now.x) / now.k, (group.at.y - now.y) / now.k];
     glide({ k, x: size.width / 2 - k * px, y: size.height / 2 - k * py });
   };
-  const nameOf = (id: string) => people.get(id)?.full_name ?? "";
-
   // Drawn once, on the plane: zooming only moves and scales the layer they're in. Lines and
   // dots keep their width on screen whatever the zoom (non-scaling strokes).
   const borders = useMemo(
@@ -351,7 +395,30 @@ export function MapCanvas({
             vectorEffect="non-scaling-stroke"
           />
         ))}
+        {/* The nearby countries' states and provinces, drawn as Malaysia's are. */}
+        <path
+          d={BORDERS.provinces}
+          fill="none"
+          stroke="#d6d3d1"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+        />
       </>
+    ),
+    [],
+  );
+  // Malaysia's and Indonesia's districts, lighter than a state's border, from a state's
+  // zoom.
+  const districts = useMemo(
+    () => (
+      <path
+        d={BORDERS.districts}
+        fill="none"
+        stroke="#d6d3d1"
+        strokeWidth={0.75}
+        strokeDasharray="3 3"
+        vectorEffect="non-scaling-stroke"
+      />
     ),
     [],
   );
@@ -408,66 +475,60 @@ export function MapCanvas({
         <svg className="absolute inset-0 size-full" aria-hidden="true">
           <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
             {borders}
+            {level === "towns" && districts}
             {lines}
           </g>
         </svg>
       )}
 
-      <div
-        key={`${level}${withNames ? ":names" : ""}`}
-        className="absolute inset-0 animate-in fade-in duration-300"
-      >
-        {groups
-          .filter((group) => visible(group.at))
-          .map((group) =>
-            level !== "towns" || group.towns > 1 ? (
-              <Bubble
-                key={group.key}
-                group={group}
-                onOpen={() => zoomInto(group)}
-                nameOf={nameOf}
-              />
+      {labels.length > 0 && (
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          {labels.map((label) =>
+            label.kind === "district" ? (
+              <span
+                key={label.key}
+                className="absolute -translate-x-1/2 -translate-y-1/2 text-[10px] whitespace-nowrap text-stone-400 italic"
+                style={{ left: label.at.x, top: label.at.y }}
+              >
+                {label.text}
+              </span>
             ) : (
-              <Town
-                key={group.key}
-                group={group}
-                people={people}
-                spacing={spacing}
-                withNames={withNames}
-                colourOf={colourOf}
-                faded={faded}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                onMore={() => zoomInto(group)}
-              />
+              <span
+                key={label.key}
+                className={cn(
+                  "absolute flex -translate-y-1/2 items-center gap-1 whitespace-nowrap [text-shadow:0_0_2px_#fff,0_0_2px_#fff]",
+                  label.kind === "town"
+                    ? "text-[11px] text-stone-600"
+                    : "text-[10px] text-stone-500",
+                )}
+                style={{ left: label.at.x - 2.5, top: label.at.y }}
+              >
+                <span className="size-[5px] shrink-0 rounded-full bg-stone-500" />
+                {label.text}
+              </span>
             ),
           )}
-      </div>
-
-      {placing && (
-        <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center">
-          <div className="rounded-full bg-sky-700 px-4 py-1.5 text-sm text-white shadow">
-            Click where {placing} is · Esc to cancel
-          </div>
         </div>
       )}
 
-      <div className="absolute bottom-3 left-3 flex flex-col gap-1">
-        <Button variant="outline" size="icon-sm" aria-label="Zoom in" onClick={() => zoomBy(1.8)}>
-          <PlusIcon />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Zoom out"
-          onClick={() => zoomBy(1 / 1.8)}
-        >
-          <MinusIcon />
-        </Button>
-        <Button variant="outline" size="icon-sm" aria-label="Show Malaysia" onClick={showMalaysia}>
-          <ScanIcon />
-        </Button>
-      </div>
+      <FamilyPlaces
+        key={`${level}${withNames ? ":names" : ""}`}
+        groups={groups}
+        level={level}
+        size={size}
+        withNames={withNames}
+        spacing={spacing}
+        people={people}
+        colourOf={colourOf}
+        faded={faded}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onZoomInto={zoomInto}
+      />
+
+      {placing && <PlacingHint placing={placing} />}
+
+      <MapButtons onZoomBy={zoomBy} onShowMalaysia={showMalaysia} />
       <div className="absolute right-2 bottom-1 text-[10px] text-stone-500">
         Places ©{" "}
         <a
@@ -478,157 +539,16 @@ export function MapCanvas({
         >
           GeoNames
         </a>{" "}
-        · borders: Natural Earth
-      </div>
-    </div>
-  );
-}
-
-/** A country's or a state's people as a number, or towns too close together to show apart. */
-function Bubble({
-  group,
-  onOpen,
-  nameOf,
-}: {
-  group: Group;
-  onOpen: () => void;
-  nameOf: (id: string) => string;
-}) {
-  const radius = bubbleRadius(group.members.length);
-  const count = group.members.length;
-  const what = group.towns > 1 ? `${group.label} and ${group.towns - 1} more` : group.label;
-  const who = count === 1 ? nameOf(group.members[0] ?? "") : `${count} people`;
-  return (
-    <div
-      className="absolute flex flex-col items-center"
-      style={{
-        transform: `translate(${group.at.x}px, ${group.at.y}px) translate(-50%, -${radius}px)`,
-      }}
-    >
-      <button
-        type="button"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpen();
-        }}
-        className={cn(
-          "flex items-center justify-center rounded-full border-2 font-semibold shadow-sm transition-transform hover:scale-105",
-          group.rough
-            ? "border-dashed border-stone-400 bg-white/90 text-stone-600"
-            : "border-white bg-sky-600/85 text-white",
-        )}
-        style={{ width: radius * 2, height: radius * 2, fontSize: Math.min(18, 10 + radius / 5) }}
-        aria-label={`${what}: ${who}. Zoom in`}
-        title={`${what}: ${who}`}
-      >
-        {count}
-      </button>
-      <span className="mt-0.5 max-w-40 truncate rounded bg-white/80 px-1 text-xs font-medium text-stone-700">
-        {what}
-      </span>
-    </div>
-  );
-}
-
-/** A town's people, as their photos around its point, and its name. */
-function Town({
-  group,
-  people,
-  spacing,
-  withNames,
-  colourOf,
-  faded,
-  selectedId,
-  onSelect,
-  onMore,
-}: {
-  group: Group;
-  people: Map<string, GraphPerson>;
-  spacing: number;
-  withNames: boolean;
-  colourOf: (id: string) => string | null;
-  faded: ReadonlySet<string> | null;
-  selectedId: string | null;
-  onSelect?: (id: string) => void;
-  onMore: () => void;
-}) {
-  const all = group.members;
-  const cut = !withNames && all.length > MOST;
-  const shown = cut ? all.slice(0, MOST - 1) : all;
-  const spots = sunflower(shown.length + (cut ? 1 : 0), spacing);
-  const reach = flowerRadius(spots.length, spacing);
-  return (
-    <div className="absolute" style={{ transform: `translate(${group.at.x}px, ${group.at.y}px)` }}>
-      {shown.map((id, index) => {
-        const person = people.get(id);
-        const at = spots[index] ?? { x: 0, y: 0 };
-        if (!person) return null;
-        const colour = colourOf(id);
-        const years = lifeYears(person);
-        return (
-          <button
-            key={id}
-            type="button"
-            className={cn(
-              "absolute flex flex-col items-center rounded-full transition-transform hover:z-10 hover:scale-110",
-              faded && !faded.has(id) && "opacity-30",
-            )}
-            style={{ transform: `translate(${at.x - PHOTO / 2}px, ${at.y - PHOTO / 2}px)` }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect?.(id);
-            }}
-            title={[person.full_name, years, group.label].filter(Boolean).join(" · ")}
-            aria-label={`${person.full_name}, ${group.label}`}
-          >
-            <PersonAvatar
-              person={person}
-              size="sm"
-              className={cn(
-                "size-[34px] shadow-sm",
-                group.rough && "border-dashed",
-                id === selectedId && "ring-2 ring-sky-500 ring-offset-1",
-              )}
-              style={colour ? { borderColor: colour } : undefined}
-            />
-            {withNames && (
-              <span className="mt-0.5 w-20 truncate text-center text-[10px] leading-tight text-stone-700">
-                {shortName(person)}
-              </span>
-            )}
-          </button>
-        );
-      })}
-      {cut && (
-        <button
-          type="button"
-          className="absolute flex items-center justify-center rounded-full border-2 border-white bg-stone-700 text-xs font-semibold text-white shadow-sm"
-          style={{
-            width: PHOTO,
-            height: PHOTO,
-            transform: `translate(${(spots[shown.length]?.x ?? 0) - PHOTO / 2}px, ${(spots[shown.length]?.y ?? 0) - PHOTO / 2}px)`,
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            onMore();
-          }}
-          aria-label={`${all.length - shown.length} more in ${group.label}. Zoom in`}
+        · borders: Natural Earth,{" "}
+        <a
+          href="https://www.geoboundaries.org/"
+          target="_blank"
+          rel="noreferrer"
+          className="underline-offset-2 hover:underline"
         >
-          +{all.length - shown.length}
-        </button>
-      )}
-      <span
-        className={cn(
-          "absolute left-0 w-max max-w-44 -translate-x-1/2 truncate rounded bg-white/80 px-1 text-xs font-medium",
-          group.rough ? "text-stone-500 italic" : "text-stone-700",
-        )}
-        style={{ top: reach + (withNames ? 14 : 2) }}
-      >
-        {group.label}
-      </span>
+          geoBoundaries
+        </a>
+      </div>
     </div>
   );
 }

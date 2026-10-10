@@ -1,19 +1,28 @@
 """The map: where everyone lives and was born, found in the
-gazetteer that comes with the app, and the places put on the map by hand. Nothing is looked
-up online."""
+gazetteer that comes with the app, and the places put on the map by hand, with the towns
+around them named. Nothing is looked up online."""
 
 import asyncio
 import random
-from collections.abc import Mapping
+from collections.abc import Collection, Iterable, Mapping
 from uuid import UUID
 
-from ancestree.domain.map import FamilyMap, Located, MapPerson, MapPins, Pin
+from ancestree.domain.map import FamilyMap, Located, MapPerson, MapPins, Pin, Town
 from ancestree.domain.person import Place
-from ancestree.places.gazetteer import Gazetteer, Pinned, gazetteer, pin_key
+from ancestree.places.gazetteer import Entry, Gazetteer, Pinned, gazetteer, pin_key
 from ancestree.repo.places import read_places
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import Context, RuleError, read
 from ancestree.storage.settings import read_pins, write_pins
+
+# The towns named around the family's places, as you chose on 10 Oct 2026: towns of
+# 1,000 people or more within 30 km, named from a state's zoom; and the 20 nearest places of
+# any size within 10 km, kampungs too, named as you zoom closer (features/map/labels.ts).
+BIG = 1_000  # people
+FAR_KM = 30.0
+CLOSE_KM = 10.0
+NEAREST = 20
+MOST_TOWNS = 4_000  # names one map carries at most: the biggest, then the nearest
 
 
 def _pinned(pins: MapPins) -> dict[str, Pinned]:
@@ -44,20 +53,76 @@ class _Finder:
                     name=spot.name,
                     state=spot.state,
                     country=spot.country,
+                    district=spot.district,
                 )
             )
         return self.found[place]
 
 
-async def family_map(ctx: Context) -> FamilyMap:
-    """Everyone but unknown parents, with where they live and were born, and the pins."""
+def towns_around(places: Gazetteer, people: Iterable[MapPerson]) -> list[Town]:
+    """The towns named around where these people live and were born: around each place found
+    as a town or put on the map by hand, never a state's or a country's middle, and never the
+    family's own places, which the map names already. The biggest first, then the nearest."""
+    points = {
+        (located.lat, located.lon)
+        for person in people
+        for located in (person.lives, person.born)
+        if located is not None
+        and located.found in ("town", "pin")
+        and located.lat is not None
+        and located.lon is not None
+    }
+    nearest: dict[Entry, float] = {}  # each with how far it is from the family's nearest place
+    for lat, lon in points:
+        close = 0
+        for distance, entry in places.near(lat, lon, FAR_KM):
+            if (entry.lat, entry.lon) in points:
+                continue
+            counted = distance <= CLOSE_KM and close < NEAREST
+            close += counted
+            if counted or entry.population >= BIG:
+                nearest[entry] = min(distance, nearest.get(entry, distance))
+    chosen = sorted(
+        nearest,
+        key=lambda entry: (
+            entry.population < BIG,
+            -entry.population if entry.population >= BIG else nearest[entry],
+            entry.name,
+        ),
+    )
+    return [
+        Town(
+            name=entry.name,
+            lat=round(entry.lat, 4),
+            lon=round(entry.lon, 4),
+            people=entry.population,
+        )
+        for entry in chosen[:MOST_TOWNS]
+    ]
+
+
+async def family_map(ctx: Context, hidden: Collection[str] = ()) -> FamilyMap:
+    """Everyone but unknown parents, with where they live and were born, the pins, and the
+    towns around the family's places. The `hidden` people's places stay off it, and no town is
+    named for them: a copy hiding living people's details."""
     rows = await read(ctx, read_places)
     pins = await asyncio.to_thread(read_pins, ctx.data_dir)
-    find = _Finder(await asyncio.to_thread(gazetteer), _pinned(pins))
+    places = await asyncio.to_thread(gazetteer)
+    shown = [row for row in rows if row.id not in hidden]
+    # The family's countries' places, read in one go and off the event loop.
+    written = {place.country for row in shown for place in (row.lives, row.born) if place}
+    await asyncio.to_thread(places.load, [places.country_code(country) for country in written])
+    find = _Finder(places, _pinned(pins))
     people = [
-        MapPerson(id=UUID(row.id), lives=find(row.lives), born=find(row.born)) for row in rows
+        MapPerson(id=UUID(row.id))
+        if row.id in hidden
+        else MapPerson(id=UUID(row.id), lives=find(row.lives), born=find(row.born))
+        for row in rows
     ]
-    return FamilyMap(people=sorted(people, key=lambda person: str(person.id)), pins=pins.pins)
+    towns = await asyncio.to_thread(towns_around, places, people)
+    return FamilyMap(
+        people=sorted(people, key=lambda person: str(person.id)), pins=pins.pins, towns=towns
+    )
 
 
 def _named(place: Place) -> str:
@@ -122,4 +187,4 @@ def sample_map(size: int) -> FamilyMap:
         for row in rows
         if not row.get("placeholder")
     ]
-    return FamilyMap(people=people, pins=[])
+    return FamilyMap(people=people, pins=[], towns=towns_around(places, people))

@@ -80,7 +80,9 @@ export function WhereList({
       const state = spot.state ?? "";
       const towns = states.get(state) ?? new Map<string, string[]>();
       states.set(state, towns);
-      const town = spot.rough ? "" : spot.place;
+      // A town with its district: two of one name in a state are two towns.
+      const said = spot.district && spot.district !== spot.place ? `, ${spot.district}` : "";
+      const town = spot.rough ? "" : `${spot.place}${said}`;
       towns.set(town, [...(towns.get(town) ?? []), spot.id]);
     }
     return [...tree]

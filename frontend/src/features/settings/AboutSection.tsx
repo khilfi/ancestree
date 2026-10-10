@@ -18,6 +18,14 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function Site({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="text-sky-700 hover:underline">
+      {children}
+    </a>
+  );
+}
+
 function Folder({ path, note }: { path: string | undefined; note: string }) {
   return (
     <>
@@ -65,7 +73,8 @@ function Updates({ update }: { update: DesktopUpdate }) {
   );
 }
 
-/** Settings → About: the database, the app's version and where the files are kept. */
+/** Settings → About: the database, the app's version and where the files are kept, and
+ *  the map's credits, each with its licence. */
 export function AboutSection() {
   const health = useHealth();
   const about = health.data;
@@ -126,17 +135,35 @@ export function AboutSection() {
           <Folder path={about?.backup_folder} note="Where Settings → Backups puts new backups." />
         </Row>
         <Row label="The map">
-          Places from{" "}
-          <a
-            href="https://www.geonames.org/"
-            target="_blank"
-            rel="noreferrer"
-            className="text-sky-700 hover:underline"
-          >
-            GeoNames
-          </a>{" "}
-          (CC BY), and borders from Natural Earth (public domain). Both come with the app, so the
-          map looks nothing up online.
+          <ul className="space-y-1.5">
+            <li>
+              Map data © <Site href="https://www.openstreetmap.org/copyright">OpenStreetMap</Site>{" "}
+              contributors, under the Open Database License, in packs cut by{" "}
+              <Site href="https://protomaps.com/">Protomaps</Site>.
+            </li>
+            <li>
+              Drawn by <Site href="https://maplibre.org/">MapLibre GL JS</Site> in Protomaps' light
+              style, both under the BSD 3-Clause License; names in Noto Sans, under the SIL Open
+              Font License; icons from Mapzen, under the MIT License.
+            </li>
+            <li>
+              Places from <Site href="https://www.geonames.org/">GeoNames</Site> (CC BY 4.0);
+              borders from Natural Earth (public domain); and districts from{" "}
+              <Site href="https://www.geoboundaries.org/">geoBoundaries</Site>: Malaysia's from
+              citypopulation.de (CC BY 3.0), Indonesia's from Statistics Indonesia (BPS), the World
+              Food Programme and OCHA (CC BY 3.0 IGO).
+            </li>
+            <li>
+              With online detail on, in Settings → Map:{" "}
+              <Site href="https://openfreemap.org/">OpenFreeMap</Site>'s tiles of the same data (MIT
+              License), in <Site href="https://openmaptiles.org/">OpenMapTiles</Site>' form (CC BY
+              4.0).
+            </li>
+          </ul>
+          <div className="mt-1.5 text-xs text-stone-500">
+            The packs are fetched once and kept, and the rest comes with the app, so the map looks
+            nothing up online as you use it, unless you choose online detail.
+          </div>
         </Row>
       </dl>
     </section>

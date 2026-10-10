@@ -20,6 +20,7 @@ from ancestree.domain.views import (
     RestoreResult,
     TrashEntry,
 )
+from ancestree.places.gazetteer import district_of
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import links as links_repo
 from ancestree.repo import people as people_repo
@@ -49,8 +50,11 @@ from ancestree.storage.settings import read_kinship_settings
 
 
 async def get_person(ctx: Context, person_id: UUID) -> PersonDetail:
+    """A person, as the app shows them: where they live said to the district too."""
     language = await kinship_language(ctx)
-    return await read(ctx, lambda tx: load_detail(tx, str(person_id), language))
+    detail = await read(ctx, lambda tx: load_detail(tx, str(person_id), language))
+    district = await asyncio.to_thread(district_of, detail.residence)
+    return detail.model_copy(update={"residence_district": district}) if district else detail
 
 
 async def kinship_language(ctx: Context) -> str:

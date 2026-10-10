@@ -51,7 +51,8 @@ async def sign_in_to_google(request: Request) -> SignInStarted:
 
 @router.post("/sign-out")
 async def sign_out_of_google(request: Request) -> FamilyFolderStatus:
-    """Forget the sign-in here and give it back to Google. The family folder waits."""
+    """Forget the sign-in on this computer, never giving it back to Google, which would end it on
+    the family's other computers with that account too. The family folder waits."""
     folder = _folder(request)
     await folder.sign_out()
     return await folder.status()
@@ -61,7 +62,7 @@ async def sign_out_of_google(request: Request) -> FamilyFolderStatus:
 async def use_family_project(request: Request, body: ProjectFile) -> FamilyFolderStatus:
     """The family's own Google project, from the file Google's console gives for its client of
     the Desktop app type: kept with this family, to sign in through. A sign-in made with
-    another client is given back: sign in again."""
+    another client is forgotten: sign in again."""
     folder = _folder(request)
     await folder.use_project(body.client, moving=body.moving)
     return await folder.status()

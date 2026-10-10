@@ -100,7 +100,9 @@ def helper_command() -> list[str]:
 
 
 def add_pages(app: FastAPI, pages: Path) -> None:
-    """The app's pages at every address but /api, where the app's own router takes over."""
+    """The app's pages at every address but /api, where the app's own router takes over. A
+    file the pages fetch that isn't there is not found, never the page: the map's fonts and
+    icons would be read as the page otherwise."""
     # Windows can map .js to text/plain in its registry; browsers refuse such a module.
     for kind, suffix in (
         ("text/javascript", ".js"),
@@ -109,18 +111,23 @@ def add_pages(app: FastAPI, pages: Path) -> None:
         ("font/woff2", ".woff2"),
         ("application/json", ".json"),
         ("image/webp", ".webp"),
+        ("application/x-protobuf", ".pbf"),
     ):
         mimetypes.add_type(kind, suffix)
     root = pages.resolve()
     index = root / "index.html"
+    not_found = JSONResponse(
+        {"detail": {"code": "not_found", "message": "Nothing at this address"}},
+        status_code=404,
+    )
 
     @app.get("/{path:path}", include_in_schema=False, response_model=None)
     async def page(path: str) -> FileResponse | JSONResponse:
-        if path == "api" or path.startswith("api/"):
-            return JSONResponse(
-                {"detail": {"code": "not_found", "message": "Nothing at this address"}},
-                status_code=404,
-            )
+        if path == "api" or path.startswith(("api/", "assets/", "map/")):
+            file = (root / path).resolve()
+            if path.startswith("api") or not (file.is_file() and file.is_relative_to(root)):
+                return not_found
+            return FileResponse(file)
         file = (root / path).resolve()
         if path and file.is_file() and file.is_relative_to(root):
             return FileResponse(file)
@@ -531,6 +538,7 @@ def main(argv: list[str] | None = None) -> None:
             family_id=family.id,
             family_name=family.name,
             restore_first=places.backups / family.restore if family.restore else None,
+            maps_dir=root / "maps",  # every family's, beside Neo4j
         )
         # Tried once, as the family opens: one that can't be restored stays in its backups.
         families.note(family.id, restore="")

@@ -8,6 +8,12 @@ narrowest that S6's test showed working: every file read, only AncesTree's own c
 What's kept is the sign-in's refresh token and the account's address, locked on this computer
 (protect.py). Access tokens live an hour and are made again from it as needed.
 
+A sign-in is never given back to Google (0.6.0). Google takes one given back as the end of
+every sign-in of that account through the family's project, so the family's other computers
+signed in with that account, such as the keeper's own laptop, would be signed out too. Signing
+out forgets it on this computer; the Google account's own page takes AncesTree's access away
+everywhere at once.
+
 The Google client is the family's own (0.4.0): no release carries one. The keeper sets up a
 Google Cloud project for the family, and gives AncesTree the file Google's console gives for
 its client of the Desktop app type; relatives' computers take it from the keeper's invitation
@@ -18,7 +24,6 @@ ANCESTREE_GOOGLE_CLIENT names a client file to use instead, while developing.
 from __future__ import annotations
 
 import base64
-import contextlib
 import hashlib
 import json
 import os
@@ -42,7 +47,6 @@ SCOPES = (
 )
 AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"  # noqa: S105 - Google's address, not a secret
-REVOKE = "https://oauth2.googleapis.com/revoke"
 SIGN_IN_MINUTES = 10
 # A client's id, as Google makes it: the project's number, then the client's own part.
 CLIENT_ID = re.compile(r"(\d+)-[0-9a-z]+\.apps\.googleusercontent\.com")
@@ -217,12 +221,6 @@ class Session:
             self.tokens.access = answer["access_token"]
             self.tokens.expires = time.time() + float(answer.get("expires_in", 3600))
             return self.tokens.access
-
-    def sign_out(self) -> None:
-        """Give the sign-in back to Google, so it can't be used again."""
-        # Forgotten here anyway, if Google can't be told: the Google account can take it back.
-        with contextlib.suppress(GoogleError, OfflineError):
-            _post(REVOKE, {"token": self.tokens.refresh})
 
 
 class SignIn:

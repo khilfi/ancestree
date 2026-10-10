@@ -1,0 +1,36 @@
+{
+  "build": "20261010",
+  "release": "https://github.com/khilfi/ancestree/releases/download/maps-{build}/",
+  "packs": [
+    {
+      "key": "world",
+      "title": "The world",
+      "minzoom": 0,
+      "maxzoom": 6,
+      "region": null,
+      "first": true,
+      "size": 45058792,
+      "sha256": "7ca3b21ebfb531090713fd9a76a7525ac262d2246bbf05c4bc1d179dde6afe03"
+    },
+    {
+      "key": "malaysia",
+      "title": "Malaysia, Singapore and Brunei",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "malaysia.geojson",
+      "first": false,
+      "size": 168037092,
+      "sha256": "39b719d4c5948a7625d8bc9edf248995fa31e5e87ce0bc9df2a6bff885edfc19"
+    },
+    {
+      "key": "indonesia",
+      "title": "Indonesia",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "indonesia.geojson",
+      "first": false,
+      "size": 337704723,
+      "sha256": "44e83e878b63ec17da45a073f06822ed3308b6d90b0d7446c45ef2e8534d5150"
+    }
+  ]
+}

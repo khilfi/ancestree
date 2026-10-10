@@ -67,6 +67,9 @@ class PersonDetail(BaseModel):
     death_place: Place | None
     burial_place: str | None
     residence: Place | None
+    # Where they live, to the district, as the gazetteer has it: the app's alone, never
+    # in person.json, which explains a folder without the app.
+    residence_district: str | None = None
     living: bool | None  # as set; None means "work it out"
     is_living: bool | None  # as worked out; None means unknown
     occupation: str | None

@@ -82,8 +82,8 @@ export default defineConfig(({ mode }) => {
           },
         }
       : // The story editor (MDXEditor, ~590 kB) is its own chunk, loaded when a story is first
-        // opened.
-        { chunkSizeWarningLimit: 650 },
+        // opened; so is MapLibre, about 1 MB, when the map is first drawn from its packs.
+        { chunkSizeWarningLimit: 1100 },
     test: {
       environment: "node",
       include: ["src/**/*.test.{ts,tsx}"],

@@ -13,6 +13,7 @@ const SECTIONS = [
   { to: "kinds", label: "Relationship kinds" },
   { to: "missing", label: "What's missing" },
   { to: "import", label: "Import" },
+  { to: "map", label: "Map" },
   { to: "backups", label: "Backups" },
   { to: "trash", label: "Trash" },
   { to: "about", label: "About" },

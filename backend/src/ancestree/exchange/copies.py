@@ -42,6 +42,7 @@ from ancestree.exchange.gedcom import write_gedcom
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
 from ancestree.importing.template import template_csv
 from ancestree.media.photos import AVATAR_SIZES
+from ancestree.places.gazetteer import district_of
 from ancestree.repo.graph import read_family
 from ancestree.repo.kinds import list_relationship_kinds
 from ancestree.services import kinds as kinds_service
@@ -141,6 +142,7 @@ def hidden_detail(detail: PersonDetail) -> PersonDetail:
             "birth_date": _date_view(year_only(born)),
             "birth_place": None,
             "residence": None,
+            "residence_district": None,
             "occupation": None,
             "notes": None,
         }
@@ -181,6 +183,11 @@ def living_people(data: FamilyData, today: date) -> set[str]:
 
 async def _details(tx: Tx, ids: Sequence[str], language: str) -> dict[str, PersonDetail]:
     return {pid: await load_detail(tx, pid, language) for pid in ids}
+
+
+def _districts(details: Mapping[str, PersonDetail]) -> dict[str, str | None]:
+    """Where each lives, to the district, as the app says it."""
+    return {pid: district_of(detail.residence) for pid, detail in details.items()}
 
 
 def _pictures(
@@ -239,19 +246,10 @@ async def family_snapshot(
         graph = graph.model_copy(update={"people": people})
 
     # The map: the points were found here, so a copy needs no gazetteer and no pins.
-    # Hidden living people's places stay out, as in their panels.
-    family_map = await places_service.family_map(ctx)
-    family_map = family_map.model_copy(
-        update={
-            "people": [
-                person.model_copy(update={"lives": None, "born": None})
-                if str(person.id) in living
-                else person
-                for person in family_map.people
-            ],
-            "pins": [],
-        }
-    )
+    # Hidden living people's places stay out, as in their panels, and so do the towns named
+    # around them.
+    family_map = await places_service.family_map(ctx, hidden=living)
+    family_map = family_map.model_copy(update={"pins": []})
 
     kinds = {kind.key: kind for kind in await list_relationship_kinds(ctx.driver, ctx.database)}
     fact_rows = [hidden_row(row) if str(row["id"]) in living else row for row in rows]
@@ -308,10 +306,13 @@ async def family_snapshot(
 
     ids = [str(row["id"]) for row in rows]
     persons: dict[str, dict[str, Any]] = {pid: {} for pid in ids}
+    districts: dict[str, str | None] = {}
     for language in LANGUAGES:
         details = await read(ctx, partial(_details, ids=ids, language=language))
+        districts = districts or await asyncio.to_thread(_districts, details)
         for pid, detail in details.items():
-            persons[pid][language] = _json(hidden_detail(detail) if pid in living else detail)
+            placed = detail.model_copy(update={"residence_district": districts.get(pid)})
+            persons[pid][language] = _json(hidden_detail(placed) if pid in living else placed)
 
     stamp = f"{made_at:%Y-%m-%dT%H-%M-%S}"
     shared = hidden_family(family, living) if living else family

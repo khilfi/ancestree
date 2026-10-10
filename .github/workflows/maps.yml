@@ -1,0 +1,77 @@
+# The map's packs: a tag naming one of Protomaps' builds of OpenStreetMap, such as
+# maps-20261010, cuts from it a pack for the world and one for each region, as
+# backend/src/ancestree/maps/packs.json says, with Protomaps' own pmtiles program, and puts them
+# in the tag's release, with their SHA-256 sums. The app fetches them from there.
+#
+# Each pack must be the very one the app pins, byte for byte, or nothing is published: cutting
+# is the same each time from the same build. The cutting fetches from Protomaps, so it can change
+# nothing here; only the last job, which runs nothing but GitHub's own tools, may write to the
+# release, and it has GitHub attest where each pack was made. Every action is pinned to the commit
+# of the version named beside it, and the pmtiles program to its SHA-256.
+
+name: Map packs
+
+on:
+  push:
+    tags: ["maps-*"]
+
+permissions:
+  contents: read
+
+jobs:
+  cut:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: The tag names the build packs.json pins
+        run: |
+          build=$(python3 -c "import json; print(json.load(open('backend/src/ancestree/maps/packs.json'))['build'])")
+          [ "$GITHUB_REF_NAME" = "maps-$build" ] || { echo "::error::packs.json pins build $build: tag it maps-$build"; exit 1; }
+
+      - name: Protomaps' pmtiles program, as pinned
+        run: |
+          curl -sSLf --retry 3 -o pmtiles.tar.gz \
+            https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz
+          echo "3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f  pmtiles.tar.gz" | sha256sum --check
+          tar -xzf pmtiles.tar.gz pmtiles
+
+      - name: The packs, cut and checked against the app's pins
+        run: python3 desktop/maps/cut.py ./pmtiles packs
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packs
+          path: packs/*.pmtiles
+          if-no-files-found: error
+          retention-days: 2
+
+  publish:
+    needs: cut
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # to make the release
+      id-token: write  # to attest where the packs were made
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packs
+          path: packs
+
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: packs/*.pmtiles
+
+      - name: The release, with SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd packs
+          sha256sum *.pmtiles > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" ./*.pmtiles SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
+            --title "Map packs, from OpenStreetMap (${GITHUB_REF_NAME#maps-})" --verify-tag \
+            --notes "The map's packs of OpenStreetMap's tiles, which AncesTree fetches as it needs them, each checked against its SHA-256. Map data © OpenStreetMap contributors, under the Open Database License (ODbL); cut from Protomaps' build ${GITHUB_REF_NAME#maps-}."

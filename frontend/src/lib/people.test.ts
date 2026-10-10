@@ -34,4 +34,14 @@ describe("formatPlace", () => {
     expect(formatPlace({ town: null, state: null, country: "Singapore" })).toBe("Singapore");
     expect(formatPlace(null)).toBe("");
   });
+
+  it("says the district where the gazetteer knows the town, not twice", () => {
+    const laut = { town: "Kampung Laut", state: "Kelantan", country: "Malaysia" };
+    expect(formatPlace(laut, "Tumpat")).toBe("Kampung Laut, Tumpat, Kelantan");
+    const bharu = { town: "Kota Bharu", state: "Kelantan", country: "Malaysia" };
+    expect(formatPlace(bharu, "Kota Bharu")).toBe("Kota Bharu, Kelantan");
+    const ubud = { town: "Ubud", state: "Bali", country: "Indonesia" };
+    expect(formatPlace(ubud, "Kabupaten Gianyar")).toBe("Ubud, Kabupaten Gianyar, Bali, Indonesia");
+    expect(formatPlace(laut, null)).toBe("Kampung Laut, Kelantan");
+  });
 });

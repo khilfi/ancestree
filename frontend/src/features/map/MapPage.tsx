@@ -1,6 +1,16 @@
 import { ListIcon } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { megabytes, useFetchPack, useMapPacks } from "@/api/mapPacks";
 import {
   useFamilyMap,
   useGraph,
@@ -10,7 +20,7 @@ import {
   useSampleMap,
   useTreeSettings,
 } from "@/api/queries";
-import type { GraphPerson, Place } from "@/api/types";
+import type { GraphPerson, MapTown, Place } from "@/api/types";
 import { useCopy } from "@/app/copy";
 import { StartAdvice } from "@/app/StartAdvice";
 import { Button } from "@/components/ui/button";
@@ -37,6 +47,7 @@ import { onPlane } from "./geo";
 import type { Spot } from "./levels";
 import { MapCanvas, type MapTarget, type Move } from "./MapCanvas";
 import { WhereList } from "./WhereList";
+import { drawnFromPacks, drawsWebGL2 } from "./webgl";
 
 function Message({ children }: { children: ReactNode }) {
   return (
@@ -45,6 +56,12 @@ function Message({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+const NO_TOWNS: MapTown[] = [];
+// MapLibre and its map, in the app alone: a copy keeps its own light drawing, so its
+// one file never carries them.
+const MapLibreCanvas =
+  import.meta.env.MODE === "viewer" ? null : lazy(() => import("./MapLibreCanvas"));
 
 /**
  * The map: where the family lives, or was born, with the same side
@@ -133,6 +150,7 @@ export function MapPage() {
         x,
         y,
         place: located.name ?? located.place.town ?? located.country,
+        district: located.district ?? null,
         state: located.state ?? null,
         country: located.country,
         rough: isRough,
@@ -167,6 +185,41 @@ export function MapPage() {
       { replace: true },
     );
   }, [focusId, map.data, show, setParams]);
+
+  // The world's pack of OpenStreetMap's tiles comes the first time the map opens. A copy
+  // keeps its own light drawing, and the made-up family needs none.
+  const packs = useMapPacks(editable);
+  const fetchPack = useFetchPack();
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current || !packs.data || sample) return;
+    const wanted = packs.data.packs.filter(
+      (pack) => pack.first && !pack.installed && !pack.fetching && !pack.error,
+    );
+    asked.current = true;
+    for (const pack of wanted) fetchPack.mutate(pack.key);
+  }, [packs.data, fetchPack, sample]);
+  const coming = packs.data?.packs.find((pack) => pack.first && pack.fetching);
+  // MapLibre draws the map from the packs once the world's is here, where the web view
+  // can: WebGL 2. Elsewhere, and in a copy, today's map.
+  const [cannotDraw, setCannotDraw] = useState(false);
+  const canDraw = useMemo(() => drawsWebGL2(), []);
+  const world = packs.data?.packs.find((pack) => pack.first);
+  const detailed = drawnFromPacks({
+    inCopy: !editable,
+    worldHere: world?.installed === true,
+    webgl2: canDraw,
+    failed: cannotDraw,
+  });
+  const regionKeys = (packs.data?.packs ?? [])
+    .filter((pack) => !pack.first && pack.installed)
+    .map((pack) => pack.key)
+    .join(",");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: regionKeys stands for the regions here
+  const regions = useMemo(
+    () => (packs.data?.packs ?? []).filter((pack) => !pack.first && pack.installed),
+    [regionKeys],
+  );
 
   // Putting a place on the map by hand: click where it is.
   const [placing, setPlacing] = useState<Place | null>(null);
@@ -207,6 +260,21 @@ export function MapPage() {
         onRemovePin={(pin) => removePin.mutate(pin, { onError: showError })}
       />
     );
+    // What both drawings show, and today's own.
+    const drawn = {
+      spots: found.spots,
+      moves: showMoves ? found.moves : null,
+      people,
+      colourOf,
+      faded: hideOthers ? null : kept,
+      selectedId,
+      onSelect: sample ? undefined : select,
+      target,
+      placing: placing ? formatPlace(placing) || placing.country : null,
+      onPlace: place,
+      onCancelPlace: () => setPlacing(null),
+    };
+    const todaysMap = <MapCanvas {...drawn} towns={map.data?.towns ?? NO_TOWNS} />;
     content = (
       <div className="flex h-full flex-col bg-stone-50">
         <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200 bg-white px-3 py-2 text-sm">
@@ -251,6 +319,11 @@ export function MapPage() {
           <span className="text-xs text-stone-500">
             {touch ? "Pinch to zoom · drag to move" : "Scroll to zoom · drag to move"}
           </span>
+          {coming && (
+            <span className="text-xs text-stone-500" role="status">
+              Fetching the map's detail: {megabytes(coming.done)} of {megabytes(coming.size)}
+            </span>
+          )}
           <Button
             variant={listOpen ? "secondary" : "outline"}
             size="sm"
@@ -279,19 +352,19 @@ export function MapPage() {
         )}
         <div className="relative flex min-h-0 flex-1">
           <div className="relative min-w-0 flex-1">
-            <MapCanvas
-              spots={found.spots}
-              moves={showMoves ? found.moves : null}
-              people={people}
-              colourOf={colourOf}
-              faded={hideOthers ? null : kept}
-              selectedId={selectedId}
-              onSelect={sample ? undefined : select}
-              target={target}
-              placing={placing ? formatPlace(placing) || placing.country : null}
-              onPlace={place}
-              onCancelPlace={() => setPlacing(null)}
-            />
+            {detailed && MapLibreCanvas ? (
+              // Today's map while MapLibre's own code comes.
+              <Suspense fallback={todaysMap}>
+                <MapLibreCanvas
+                  {...drawn}
+                  regions={regions}
+                  online={packs.data?.online === true}
+                  onCannotDraw={() => setCannotDraw(true)}
+                />
+              </Suspense>
+            ) : (
+              todaysMap
+            )}
           </div>
           {listOpen &&
             (narrow ? (

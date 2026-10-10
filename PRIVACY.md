@@ -8,7 +8,9 @@ Your family (its people, links, life stories and photos) is kept on your compute
 
 If you choose to keep copies of your backups in a second place, such as a USB stick or a folder a cloud service keeps, they go where you choose, and can be locked with a password that AncesTree keeps nowhere.
 
-On its own, it asks the internet for two things: whether there's a new version of AncesTree, from this repository; and, the first time it starts, for its database (Neo4j and Java). Neither carries anything about your family.
+On its own, it asks the internet for three things: whether there's a new version of AncesTree, from this repository; the first time it starts, for its database (Neo4j and Java); and the map's detail, from OpenStreetMap, in packs from this repository: the world's the first time you open the map, and each region's when you choose it. None carries anything about your family.
+
+If you turn on the map's online detail, in **Settings → Map**, AncesTree also asks [OpenFreeMap](https://openfreemap.org/) for the parts of the map no pack on your computer has, as you look at them. OpenFreeMap then learns which parts of the world you look at, from your computer's internet address. It's told nothing about your family. The online detail is off unless you turn it on.
 
 ## The family folder, through Google Drive
 
@@ -25,7 +27,7 @@ Your Google sign-in is kept on your computer, protected for your Windows user (o
 
 AncesTree's use and transfer of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements.
 
-You can sign out in AncesTree, in **Settings → Family folder**, at any time, and remove AncesTree's access from your Google account at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+You can sign out in AncesTree, in **Settings → Family folder**, at any time: AncesTree then forgets your sign-in on that computer. To take AncesTree's access away from your Google account on every computer at once, remove it at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
 ## Questions
 

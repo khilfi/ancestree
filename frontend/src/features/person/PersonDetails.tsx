@@ -49,7 +49,10 @@ export function PersonDetails({ person }: { person: PersonDetail }) {
     ["Status", lifeStatus(person)],
     ["Died", lifeEvent(person.death_date, person.death_place)],
     ["Buried at", person.burial_place],
-    [person.is_living === false ? "Lived in" : "Lives in", formatPlace(person.residence)],
+    [
+      person.is_living === false ? "Lived in" : "Lives in",
+      formatPlace(person.residence, person.residence_district),
+    ],
     ["Occupation", person.occupation],
     ["Notes", person.notes && <p className="whitespace-pre-wrap">{person.notes}</p>],
   ];

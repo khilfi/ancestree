@@ -9,6 +9,7 @@
       "!src/api/schema.d.ts",
       "!openapi.json",
       "!src/features/map/shapes.json",
+      "!public/map",
       "!src/styles/shadcn-tailwind.css"
     ]
   },

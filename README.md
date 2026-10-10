@@ -2,7 +2,8 @@
 
 A family-history app for your family, on its own computers. Add relatives with their photos and life stories, link them by dragging arrows, and see the family laid out in rings around its oldest ancestor, as a family tree, on a timeline or on a map. Ask how any two people are related, and get the answer in English, Malay or Javanese, with the path between them highlighted.
 
-- **Private by design.** The family lives on your computer, in a database of its own. On its own, the app asks the internet only whether there's a new version of itself, and, the first time it starts, for its database. Nothing about the family leaves the computer, unless the family keeps its AncesTree in step through Google Drive, and then only encrypted. See the [privacy policy](PRIVACY.md).
+- **Private by design.** The family lives on your computer, in a database of its own. On its own, the app asks the internet only whether there's a new version of itself; the first time it starts, for its database; and for the map's detail, in packs from this repository. Nothing about the family leaves the computer, unless the family keeps its AncesTree in step through Google Drive, and then only encrypted. The map's online detail, off unless you turn it on, asks OpenFreeMap for the parts of the map no pack on your computer has. See the [privacy policy](PRIVACY.md).
+- **A map in detail**, from OpenStreetMap: towns, kampungs, roads and districts as you zoom in, each place in its own name with its English beneath, kept on your computer.
 - **Every family its own.** Whoever installs AncesTree keeps their own family, as its keeper, through their own Google account and Google project. No family goes through anyone else's, this repository's maintainer's included.
 - **For the whole family.** One relative keeps the family; the others' computers receive it, and send their changes for the keeper to look at.
 - **Several families on one computer**, such as both sides of yours, each kept completely apart.
@@ -18,7 +19,7 @@ Download the installer for your system from the [latest release](../../releases/
 | macOS | `AncesTree_<version>_aarch64.dmg` | The app isn't signed by Apple. Open it once, then go to **System Settings → Privacy & Security** and choose **Open Anyway**. |
 | Linux | `AncesTree_<version>_amd64.AppImage` | Make it executable (`chmod +x`), then run it. |
 
-The first start fetches the app's database, Neo4j Community, and the Java it runs on: about 330 MB, once. Both are checked against fingerprints built into the app before they're used.
+The first start fetches the app's database, Neo4j Community, and the Java it runs on: about 330 MB, once. Both are checked against fingerprints built into the app before they're used. So is the map's detail: the world's, 45 MB, the first time you open the map, and, chosen in **Settings → Map**, Malaysia's with Singapore and Brunei (168 MB) or Indonesia's (338 MB).
 
 ## The family folder
 

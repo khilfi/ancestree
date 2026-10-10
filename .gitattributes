@@ -1,3 +1,7 @@
 # What release.py signs in updates/ keeps its bytes in every checkout: a line ending turned by
 # git would fail the signature that a download is checked with (SECURITY.md).
 updates/** -text
+
+# The map's fonts are glyphs in binary, whatever their bytes look like: a turned line ending
+# would spoil them.
+*.pbf binary

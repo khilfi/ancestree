@@ -968,7 +968,8 @@ export interface paths {
         put?: never;
         /**
          * Sign Out Of Google
-         * @description Forget the sign-in here and give it back to Google. The family folder waits.
+         * @description Forget the sign-in on this computer, never giving it back to Google, which would end it on
+         *     the family's other computers with that account too. The family folder waits.
          */
         post: operations["sign_out_of_google"];
         delete?: never;
@@ -990,7 +991,7 @@ export interface paths {
          * Use Family Project
          * @description The family's own Google project, from the file Google's console gives for its client of
          *     the Desktop app type: kept with this family, to sign in through. A sign-in made with
-         *     another client is given back: sign in again.
+         *     another client is forgotten: sign in again.
          */
         post: operations["use_family_project"];
         delete?: never;
@@ -1711,6 +1712,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/map/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Map Packs
+         * @description Each of the map's packs, and how it stands on this computer.
+         */
+        get: operations["get_map_packs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/online": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose Online Map
+         * @description Turn the map's online extra on or off: OpenFreeMap's tiles, where the packs end.
+         */
+        put: operations["choose_online_map"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/online/{z}/{x}/{y}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Online Tile
+         * @description A tile of OpenFreeMap's, for the map's online extra, fetched by the engine so the
+         *     window still reaches nothing outside this computer. Asked only where no pack here has the
+         *     tile: no content where one has, or below zoom 7, where the world's pack has them all. Not
+         *     found while the extra is off.
+         */
+        get: operations["get_online_tile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/packs/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch Map Pack
+         * @description Fetch a pack in the background, unless it's here or on its way: the answer says how
+         *     it stands, and asking again says how it's going.
+         */
+        post: operations["fetch_map_pack"];
+        /**
+         * Remove Map Pack
+         * @description Take a pack off this computer, stopping it first if it's on its way.
+         */
+        delete: operations["remove_map_pack"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/tiles/{key}/{z}/{x}/{y}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Map Tile
+         * @description A tile of a pack, as Protomaps cut it from OpenStreetMap: vector data, gzipped. No
+         *     content where the pack has none.
+         */
+        get: operations["get_map_tile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2339,13 +2449,16 @@ export interface components {
         };
         /**
          * FamilyMap
-         * @description Everyone but unknown parents, with where they live and were born, and the pins.
+         * @description Everyone but unknown parents, with where they live and were born, the pins, and the
+         *     towns around the family's places, the most worth naming first.
          */
         FamilyMap: {
             /** People */
             people: components["schemas"]["MapPerson"][];
             /** Pins */
             pins: components["schemas"]["Pin"][];
+            /** Towns */
+            towns?: components["schemas"]["Town"][];
         };
         /**
          * FillIn
@@ -3246,6 +3359,54 @@ export interface components {
             state?: string | null;
             /** Country */
             country: string;
+            /** District */
+            district?: string | null;
+        };
+        /**
+         * MapPack
+         * @description One of the map's packs of OpenStreetMap's tiles, and how it stands on this
+         *     computer: the world, fetched on first opening the map, or a region, when chosen.
+         */
+        MapPack: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "world" | "malaysia" | "indonesia";
+            /** Title */
+            title: string;
+            /** Size */
+            size: number;
+            /** Minzoom */
+            minzoom: number;
+            /** Maxzoom */
+            maxzoom: number;
+            /** First */
+            first: boolean;
+            /** Installed */
+            installed: boolean;
+            /** Fetching */
+            fetching: boolean;
+            /** Done */
+            done: number;
+            /** Error */
+            error?: string | null;
+        };
+        /**
+         * MapPacks
+         * @description The packs, all cut from one of Protomaps' builds of OpenStreetMap, and whether the map's
+         *     online extra is on: OpenFreeMap's tiles, where the packs end.
+         */
+        MapPacks: {
+            /** Build */
+            build: string;
+            /** Packs */
+            packs: components["schemas"]["MapPack"][];
+            /**
+             * Online
+             * @default false
+             */
+            online: boolean;
         };
         /** MapPerson */
         MapPerson: {
@@ -3442,6 +3603,14 @@ export interface components {
             device: string;
         };
         /**
+         * OnlineMap
+         * @description The map's online extra turned on or off.
+         */
+        OnlineMap: {
+            /** On */
+            on: boolean;
+        };
+        /**
          * Pair
          * @description Two people and what joins them: the links between them, or a kinship word.
          */
@@ -3515,6 +3684,8 @@ export interface components {
             /** Burial Place */
             burial_place: string | null;
             residence: components["schemas"]["Place"] | null;
+            /** Residence District */
+            residence_district?: string | null;
             /** Living */
             living: boolean | null;
             /** Is Living */
@@ -3902,6 +4073,21 @@ export interface components {
             no_birth_year: components["schemas"]["FactPerson"][];
             /** No Birth Order */
             no_birth_order: components["schemas"]["SiblingGroup"][];
+        };
+        /**
+         * Town
+         * @description A town or kampung around the family's places, named on the map: from a state's
+         *     zoom when it has 1,000 people or more, else as you zoom closer.
+         */
+        Town: {
+            /** Name */
+            name: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** People */
+            people: number;
         };
         /** TrashEntry */
         TrashEntry: {
@@ -6792,6 +6978,209 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MapPins"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_map_packs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+        };
+    };
+    choose_online_map: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnlineMap"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_online_tile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                z: number;
+                x: number;
+                y: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.mapbox-vector-tile": unknown;
+                };
+            };
+            /** @description A pack here has the tile, or OpenFreeMap has nothing there */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description OpenFreeMap couldn't be reached */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    fetch_map_pack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: "world" | "malaysia" | "indonesia";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_map_pack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: "world" | "malaysia" | "indonesia";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_map_tile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: "world" | "malaysia" | "indonesia";
+                z: number;
+                x: number;
+                y: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.mapbox-vector-tile": unknown;
+                };
+            };
+            /** @description No tile there */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

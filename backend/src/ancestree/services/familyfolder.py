@@ -510,14 +510,12 @@ class FamilyFolder:
         except (GoogleError, OfflineError) as error:
             self.problem = str(error)
             return
-        # A sign-in not kept is given back to Google at once (0.4.0): kept nowhere, it would
-        # only stay on that account's list of apps with access to it.
-        give_back = Session(client, tokens).sign_out
+        # A sign-in not kept is forgotten, never given back to Google (0.6.0): that would end
+        # the account's sign-ins on the family's other computers too (google.py).
         try:
             drive = self._make_drive(Session(client, tokens))
             tokens.email = await asyncio.to_thread(drive.account)
         except (GoogleError, OfflineError, DriveError) as error:
-            await asyncio.to_thread(give_back)
             self.problem = str(error)
             return
         if (
@@ -525,7 +523,6 @@ class FamilyFolder:
             and not self.moving
             and tokens.email.casefold() != self.setup.account.casefold()
         ):
-            await asyncio.to_thread(give_back)
             self.problem = (
                 f"That was {tokens.email}. This computer's family folder is with "
                 f"{self.setup.account}: sign in with that account."
@@ -534,7 +531,6 @@ class FamilyFolder:
         try:
             tokens.save(self.dir / "google.bin")
         except (ProtectError, OSError) as error:
-            await asyncio.to_thread(give_back)
             self.problem = f"The sign-in to Google couldn't be kept on this computer ({error})."
             return
         self._signed_in(client, tokens)
@@ -542,12 +538,11 @@ class FamilyFolder:
         self.problem = self.broken
 
     async def sign_out(self) -> None:
+        """The sign-in forgotten on this computer, never given back to Google (0.6.0)."""
         async with self.lock:
             if self.signing_in is not None:
                 self.signing_in.close()
                 self.signing_in = None
-            if self.session is not None:
-                await asyncio.to_thread(self.session.sign_out)
             (self.dir / "google.bin").unlink(missing_ok=True)
             self.session = self.drive = self.mirror = None
 
@@ -555,7 +550,7 @@ class FamilyFolder:
 
     async def _keep_client(self, client: Client) -> None:
         """The family's Google client, kept here. A sign-in belongs to the client it was made
-        with, so one made with another is given back: sign in again. One the keeper is moving
+        with, so one made with another is forgotten: sign in again. One the keeper is moving
         from is kept until the rebuild is done with it."""
         if client != self.client:
             if self.signing_in is not None:
@@ -563,8 +558,6 @@ class FamilyFolder:
                 self.signing_in = None
             if self.moving and self.session is not None and self._before is None:
                 self._before = self.session
-            elif self.session is not None:
-                await asyncio.to_thread(self.session.sign_out)
             (self.dir / "google.bin").unlink(missing_ok=True)
             self.session = self.drive = self.mirror = None
         try:
@@ -2038,8 +2031,7 @@ class FamilyFolder:
                     setup.moved_from = "" if error.status == 404 and same else old
                 except GoogleError, OfflineError:
                     setup.moved_from = old
-                if before is not None and before.email.casefold() != session.email.casefold():
-                    await asyncio.to_thread(before.sign_out)
+                # The sign-in moved from is forgotten with `_before`, never given back (0.6.0).
                 setup.folder, setup.account, setup.unshare = root, session.email, []
                 self._save_setup()
                 self._before = None

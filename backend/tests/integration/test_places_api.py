@@ -2,6 +2,7 @@
 places put on it by hand, and the quick fixes that give someone a place. The test family is
 fictional; its places are real towns."""
 
+import json
 from typing import Any
 
 import httpx
@@ -49,6 +50,50 @@ async def test_everyones_places_are_found_on_the_map(
         assert located["state"]
         assert 0 < located["lat"] < 8  # Malaysia
         assert 99 < located["lon"] < 120
+
+
+async def test_where_someone_lives_is_said_to_the_district(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """ "Kampung Laut, Tumpat, Kelantan": on the map's places and in the person's
+    details; never in person.json, which explains a folder without the app as before."""
+    ids = await family(client, driver, settings)
+    ali = ids["Ali bin Rosli"]
+    place = {"town": "Kampung Laut", "state": "Kelantan", "country": "Malaysia"}
+    await ok(await client.patch(f"/api/persons/{ali}", json={"residence": place}))
+
+    detail = await ok(await client.get(f"/api/persons/{ali}"))
+    assert detail["residence_district"] == "Tumpat"
+    lives = by_id(await ok(await client.get("/api/map")))[ali]["lives"]
+    assert (lives["name"], lives["district"], lives["state"]) == (
+        "Kampong Laut",
+        "Tumpat",
+        "Kelantan",
+    )
+    written = settings.data_dir / "people" / ali / "person.json"
+    assert "residence_district" not in json.loads(written.read_text(encoding="utf-8"))
+
+
+async def test_towns_are_named_around_the_familys_places(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """Towns of 1,000 people or more within 30 km, the biggest first; then the kampungs
+    nearest each place. Never one of the family's own places: the map names those."""
+    ids = await family(client, driver, settings)
+    place = {"town": "Kampung Laut", "state": "Kelantan", "country": "Malaysia"}
+    await ok(await client.patch(f"/api/persons/{ids['Ali bin Rosli']}", json={"residence": place}))
+
+    towns = (await ok(await client.get("/api/map")))["towns"]
+
+    names = [town["name"] for town in towns]
+    assert "Pasir Mas" in names  # 15 km from Kampung Laut
+    for own in ("Kampong Laut", "Kota Bharu", "Shah Alam", "Klang", "Ipoh"):
+        assert own not in names, own
+    big = [town["people"] for town in towns if town["people"] >= 1000]
+    assert big == sorted(big, reverse=True)
+    assert all(town["people"] >= 1000 for town in towns[: len(big)])
+    assert len(towns) > len(big), "and the kampungs around them, nearest first"
+    assert len(towns) == len({(t["name"], t["lat"], t["lon"]) for t in towns})  # each once
 
 
 async def test_a_place_put_on_the_map_by_hand_is_one_undo_step(

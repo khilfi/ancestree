@@ -477,12 +477,17 @@ Click **Map** in the top bar. It shows where the family lives, or where they wer
 - **Show** chooses **Where they live** or **Where they were born**.
 - **Moves** draws a line from where each person was born to where they live.
 - Turn the mouse wheel to zoom. Each circle shows how many people are there. Click a circle to zoom in; close up, you see each person's photo in their town.
-- The list on the right counts people by country, state and town. Click a name to see them on the map.
+- Zoom in for more. Once the map's detail is on your computer (below), the map shows the land as OpenStreetMap draws it: towns, kampungs, roads, rivers and districts, each in its own name, with the English beneath where it differs. Without it, and in a view-only copy, the map draws each district and names the towns around your family's places as you zoom in.
+- The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. Click a name to see them on the map.
 - **Not on the map yet** lists those with no place recorded. Click **Add where they live** to fill it in there and then.
 
 **A town the map doesn't know** is placed at the middle of its state or country, under **Placed roughly**. Click **Put it on the map**, then click the right spot on the map.
 
-The map needs no internet: its towns and borders come with AncesTree.
+The map's towns and borders come with AncesTree, so it needs no internet for them. It knows every town and kampung in Malaysia, Indonesia, Singapore and Brunei, by its other spellings too, and towns of 1,000 people or more elsewhere. A person's **Lives in** says their district too, where the map knows their town. The map's corner names who made it, OpenStreetMap's contributors first, and **Settings → About** says who made each part, under what licence.
+
+**The map's detail.** The first time you open the map, AncesTree fetches the world's map from OpenStreetMap, 45 MB, once. For Malaysia, Singapore and Brunei close up, or Indonesia, open **Settings → Map** and click **Fetch**: 168 MB and 338 MB. Each is checked before it's used, and kept on your computer, so the map looks nothing up online as you use it. **Remove** takes a region off again.
+
+**Online detail where the packs end.** Beyond the packs, such as a town abroad close up, or Indonesia closer than its pack goes, the map is drawn more coarsely. To see those places in detail too, turn on **Online detail where the packs end** in **Settings → Map**. AncesTree then asks OpenFreeMap, a free map service, for those parts of the map as you look at them, so OpenFreeMap learns which parts of the world you look at, from your computer's internet address. It's told nothing about your family, and nothing where a pack has the detail. It's off unless you turn it on; turned off, the map asks nothing of the internet. Without the internet, the map carries on from the packs.
 
 ## 14. Family facts, and what's missing
 

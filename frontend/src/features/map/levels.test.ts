@@ -20,6 +20,7 @@ const spot = (id: string, x: number, y: number, more: Partial<Spot> = {}): Spot 
   x,
   y,
   place: "Shah Alam",
+  district: "Petaling",
   state: "Selangor",
   country: "Malaysia",
   rough: false,

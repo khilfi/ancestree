@@ -54,8 +54,10 @@ export const MALAYSIAN_STATES = [
   "W.P. Putrajaya",
 ];
 
-export function formatPlace(place: Place | null | undefined): string {
+export function formatPlace(place: Place | null | undefined, district?: string | null): string {
   if (!place) return "";
   const country = place.country && place.country !== "Malaysia" ? place.country : null;
-  return [place.town, place.state, country].filter(Boolean).join(", ");
+  // Its district, where the gazetteer knows the town, unless the town is named for it.
+  const said = district && district.toLowerCase() !== place.town?.toLowerCase() ? district : null;
+  return [place.town, said, place.state, country].filter(Boolean).join(", ");
 }

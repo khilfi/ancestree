@@ -37,10 +37,17 @@ class Settings(BaseSettings):
     family_id: str | None = None
     family_name: str = ""
     restore_first: Path | None = None
+    # The map's packs: the app's own, shared by every family on the computer, which the
+    # desktop app keeps beside Neo4j. Unset: DATA_DIR/maps, which no backup takes.
+    maps_dir: Path | None = None
 
     @property
     def family(self) -> WhichFamily | None:
         return WhichFamily(self.family_id, self.family_name) if self.family_id else None
+
+    @property
+    def maps(self) -> Path:
+        return self.maps_dir or self.data_dir / "maps"
 
 
 @lru_cache

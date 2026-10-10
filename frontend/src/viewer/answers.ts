@@ -217,6 +217,11 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
   // Found when the copy was made: a copy carries the points, not the gazetteer.
   "/api/map": () => ok(family().map),
   "/api/sample/map": NOT_IN_COPY,
+  // The app's packs of OpenStreetMap's tiles: a copy keeps its own light drawing.
+  "/api/map/packs": NOT_IN_COPY,
+  "/api/map/tiles/{key}/{z}/{x}/{y}": NOT_IN_COPY,
+  // Nor the online extra: a copy asks nothing of the internet.
+  "/api/map/online/{z}/{x}/{y}": NOT_IN_COPY,
   // Each computer's own part in the family folder: a copy has none.
   "/api/family-folder": NOT_IN_COPY,
   "/api/family-folder/shared": NOT_IN_COPY,
@@ -311,6 +316,9 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "POST /api/imports/{import_id}/take-back": REFUSED,
   "PUT /api/places/pins": REFUSED,
   "DELETE /api/places/pins": REFUSED,
+  "POST /api/map/packs/{key}": REFUSED,
+  "DELETE /api/map/packs/{key}": REFUSED,
+  "PUT /api/map/online": REFUSED,
   "POST /api/family-folder/sign-in": REFUSED,
   "POST /api/family-folder/sign-out": REFUSED,
   "POST /api/family-folder/move-account": REFUSED,

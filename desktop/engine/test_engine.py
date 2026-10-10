@@ -50,6 +50,32 @@ def test_what_the_shell_never_writes_is_ignored() -> None:
     assert updates.state() == engine.Updates("0.1.0").state()
 
 
+async def test_the_pages_files_are_served_and_one_not_there_is_not_found(tmp_path: Path) -> None:
+    """The map's fonts are files the pages fetch: one that isn't there is not found,
+    never the page, which MapLibre would read as a font. Any other address is the page."""
+    (tmp_path / "index.html").write_text("<!doctype html>the page", encoding="utf-8")
+    glyphs = tmp_path / "map" / "fonts" / "Noto Sans Regular"
+    glyphs.mkdir(parents=True)
+    (glyphs / "0-255.pbf").write_bytes(b"\x0a\x03abc")
+    app = FastAPI()
+    engine.add_pages(app, tmp_path)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        font = await client.get("/map/fonts/Noto%20Sans%20Regular/0-255.pbf")
+        assert (font.status_code, font.content) == (200, b"\x0a\x03abc")
+        assert font.headers["content-type"] == "application/x-protobuf"
+        for missing in (
+            "/map/fonts/Noto%20Sans%20Regular/65280-65535.pbf",
+            "/assets/index-gone.js",
+            "/map/sprites/dark.json",
+            "/api/nothing",
+        ):
+            assert (await client.get(missing)).status_code == 404, missing
+        assert (await client.get("/map")).text == "<!doctype html>the page"  # the map's page
+        assert (await client.get("/tree?person=1")).text == "<!doctype html>the page"
+
+
 def app_with(updates: object) -> httpx.AsyncClient:
     app = FastAPI()
     engine.add_desktop_routes(app, Path("."), {"app": "0.1.0"}, updates)

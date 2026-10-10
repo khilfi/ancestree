@@ -40,6 +40,7 @@ class Located(BaseModel):
     name: str | None = None  # what it was found as: "Kota Bharu", "Kelantan", "Malaysia"
     state: str | None = None  # the state it counts under: the person form's name in Malaysia
     country: str  # the country it counts under, in English
+    district: str | None = None  # a town's, where the gazetteer gives one: "Tumpat"
 
 
 class MapPerson(BaseModel):
@@ -48,8 +49,54 @@ class MapPerson(BaseModel):
     born: Located | None = None  # None: no birthplace
 
 
+class Town(BaseModel):
+    """A town or kampung around the family's places, named on the map: from a state's
+    zoom when it has 1,000 people or more, else as you zoom closer."""
+
+    name: str
+    lat: float
+    lon: float
+    people: int  # as GeoNames knows it: 0 for most kampungs
+
+
 class FamilyMap(BaseModel):
-    """Everyone but unknown parents, with where they live and were born, and the pins."""
+    """Everyone but unknown parents, with where they live and were born, the pins, and the
+    towns around the family's places, the most worth naming first."""
 
     people: list[MapPerson]
     pins: list[Pin]
+    towns: list[Town] = Field(default_factory=list)
+
+
+PackKey = Literal["world", "malaysia", "indonesia"]
+
+
+class MapPack(BaseModel):
+    """One of the map's packs of OpenStreetMap's tiles, and how it stands on this
+    computer: the world, fetched on first opening the map, or a region, when chosen."""
+
+    key: PackKey
+    title: str  # "Malaysia, Singapore and Brunei"
+    size: int  # bytes
+    minzoom: int
+    maxzoom: int
+    first: bool  # fetched on first opening the map
+    installed: bool
+    fetching: bool
+    done: int  # bytes fetched so far, while it's on its way
+    error: str | None = None  # why the last try failed
+
+
+class MapPacks(BaseModel):
+    """The packs, all cut from one of Protomaps' builds of OpenStreetMap, and whether the map's
+    online extra is on: OpenFreeMap's tiles, where the packs end."""
+
+    build: str  # "20261010"
+    packs: list[MapPack]
+    online: bool = False
+
+
+class OnlineMap(BaseModel):
+    """The map's online extra turned on or off."""
+
+    on: bool

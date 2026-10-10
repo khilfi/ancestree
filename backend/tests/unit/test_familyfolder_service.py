@@ -30,9 +30,10 @@ from ancestree.domain.familyfolder import (
     StartFamily,
     TurnDown,
 )
+from ancestree.familyfolder import google
 from ancestree.familyfolder.computers import Keeper, Member
 from ancestree.familyfolder.drive import DriveError
-from ancestree.familyfolder.google import Client, Session, SignedOutError, Tokens
+from ancestree.familyfolder.google import Client, SignedOutError, Tokens
 from ancestree.familyfolder.invitations import Invitation
 from ancestree.familyfolder.mirror import Mirror
 from ancestree.familyfolder.protect import read_secret
@@ -1005,27 +1006,54 @@ class Answered:
         pass
 
 
-async def test_a_sign_in_turned_away_is_given_back_to_google(
+async def test_a_sign_in_is_forgotten_here_and_never_given_back_to_google(
     tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The keeper's computer signed in with another account, as a browser holding two will
-    offer: refused, and given back to Google at once, rather than left on that account's list
-    of apps with access to it (0.4.0)."""
-    given_back: list[str] = []
-    monkeypatch.setattr(
-        Session, "sign_out", lambda session: given_back.append(session.tokens.refresh)
-    )
+    """Google takes a sign-in given back as the end of every sign-in of that account through the
+    family's project: the keeper's own laptop, with the same account, would be signed out too.
+    So whether it's turned away, can't be looked up, is signed out, or was made with a client
+    left behind, a sign-in is forgotten on this computer alone, and Google is told nothing
+    (0.6.0; until then, each was given back)."""
+    asked: list[str] = []
+
+    def post(url: str, form: dict[str, str]) -> dict[str, Any]:
+        asked.append(url)
+        return {}
+
+    monkeypatch.setattr(google, "_post", post)
     keeper, _ = await keeper_with_project(tmp_path, cloud)
     assert keeper.client is not None
+    kept = keeper.dir / "google.bin"
+
+    # Another account, as a browser holding two will offer: refused, and nothing kept.
     keeper.signing_in = Answered(keeper.client, RELATIVE)  # type: ignore[assignment]
     status = await keeper.status()
     assert status.problem.startswith(f"That was {RELATIVE}. This computer's family folder")
-    assert given_back == [f"refresh of {RELATIVE}"]
+    assert not kept.exists()
+
+    # One Drive can't look up just then.
+    cloud.failing.add("account")
+    keeper.signing_in = Answered(keeper.client, KEEPER)  # type: ignore[assignment]
+    assert (await keeper.status()).problem == "Google Drive said no (500): Internal Error"
+    assert not kept.exists()
+    cloud.failing.clear()
 
     keeper.signing_in = Answered(keeper.client, KEEPER)  # type: ignore[assignment]
     status = await keeper.status()
     assert (status.email, status.problem) == (KEEPER, "")
-    assert given_back == [f"refresh of {RELATIVE}"]  # the right account's, kept
+    assert kept.exists()
+
+    await keeper.sign_out()
+    assert (await keeper.status()).email is None
+    assert not kept.exists()
+
+    keeper.signing_in = Answered(keeper.client, KEEPER)  # type: ignore[assignment]
+    assert (await keeper.status()).email == KEEPER
+    await keeper.use_project(SAME_PROJECT)  # a new client: the old one's sign-in forgotten
+    assert (await keeper.status()).email is None
+    assert not kept.exists()
+
+    assert asked == []  # Google was told nothing, at any step
 
 
 async def test_a_file_that_isnt_a_desktop_apps_client_is_refused(
