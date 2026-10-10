@@ -19,7 +19,8 @@ class ExportRequest(BaseModel):
     # For a copy:
     title: str = Field(default="", max_length=60)  # at its top, and in its file name
     hide_living: bool = False  # living people's details left out
-    password: str | None = Field(default=None, min_length=6, max_length=200)  # kept nowhere
+    # Kept nowhere. Ten characters at least: a copy can be tried offline, guess after guess.
+    password: str | None = Field(default=None, min_length=10, max_length=200)
     archive: bool = True  # the full archive among its exports
 
 

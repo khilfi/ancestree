@@ -74,3 +74,12 @@ def test_files_that_are_not_photos_are_refused(data: bytes) -> None:
 def test_files_over_the_size_limit_are_refused() -> None:
     with pytest.raises(PhotoError, match="larger than 20 MB"):
         process_photo(b"\0" * (MAX_UPLOAD_BYTES + 1))
+
+
+def test_a_photo_over_80_megapixels_is_refused_before_it_is_decoded() -> None:
+    """Pillow only warns up to twice its limit: a small file of 100 megapixels would still be
+    decoded, gigabytes of it. Its size is read first, and it's refused."""
+    buffer = BytesIO()
+    Image.new("1", (10_000, 10_000)).save(buffer, "PNG")  # 100 MP, a few kilobytes
+    with pytest.warns(Image.DecompressionBombWarning), pytest.raises(PhotoError, match="80 mega"):
+        process_photo(buffer.getvalue())

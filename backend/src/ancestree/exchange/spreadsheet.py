@@ -73,7 +73,13 @@ _VERSION = "v1."
 _BYTES = 3  # of each detail's fingerprint
 _GENDER = {Gender.MALE: "Male", Gender.FEMALE: "Female", Gender.UNKNOWN: ""}
 _SPOUSE = {Gender.MALE: "husband", Gender.FEMALE: "wife", Gender.UNKNOWN: "spouse"}
-_FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
+# How a cell Excel or another spreadsheet would run as a formula starts, also in full width,
+# and after spaces, which Excel passes over.
+_FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r", *map(chr, (0xFF1D, 0xFF0B, 0xFF0D, 0xFF20)))
+
+
+def _formula(text: str) -> bool:
+    return text.lstrip(" ").startswith(_FORMULA_STARTS)
 
 
 def place_shown(place: Place | None) -> str:
@@ -127,14 +133,14 @@ def read_version(text: str) -> dict[str, bytes] | None:
 
 def guard(value: object) -> object:
     """A cell Excel would run as a formula ("=HYPERLINK(...)"), made plain text."""
-    if isinstance(value, str) and value.startswith(_FORMULA_STARTS):
+    if isinstance(value, str) and _formula(value):
         return "'" + value
     return value
 
 
 def unguard(text: str) -> str:
     """A guarded cell as it was written."""
-    if text.startswith("'") and text[1:].startswith(_FORMULA_STARTS):
+    if text.startswith("'") and _formula(text[1:]):
         return text[1:]
     return text
 
@@ -204,7 +210,9 @@ def write_people_csv(data: FamilyData) -> str:
         return "; ".join(name(child) for child in data.eldest_first(kids))
 
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)  # Excel's own dialect: commas, "quotes", \r\n
+    # Excel's own dialect: commas, "quotes", \r\n. Every cell quoted, so that an Excel that
+    # splits on ";", as it does where commas are decimal points, never splits one.
+    writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)
     writer.writerow(COLUMNS)
     rows = sorted(data.people(), key=lambda m: (m.person.full_name.casefold(), m.id))
     for member in rows:

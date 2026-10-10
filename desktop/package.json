@@ -1,6 +1,7 @@
 {
   "name": "ancestree-desktop",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "tauri": "tauri"

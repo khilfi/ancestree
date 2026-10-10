@@ -93,6 +93,7 @@ class FakeDrive:
             folder=item.folder,
             md5=None if item.folder else md5(item.data),
             owner=item.owner,
+            size=None if item.folder else len(item.data),
         )
 
     def _role(self, item: _Item) -> str | None:

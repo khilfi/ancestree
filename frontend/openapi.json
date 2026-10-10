@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.4.0"
+    "version": "0.4.1"
   },
   "paths": {
     "/api/health": {
@@ -4739,7 +4739,7 @@
               {
                 "type": "string",
                 "maxLength": 200,
-                "minLength": 6
+                "minLength": 10
               },
               {
                 "type": "null"

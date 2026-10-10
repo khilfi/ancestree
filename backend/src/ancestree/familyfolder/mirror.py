@@ -21,7 +21,9 @@ so a connection lost midway never leaves a file sent twice.
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -35,6 +37,26 @@ GONE_AFTER = 300.0
 # A file written this recently could be written again within the same tick of the clock, the
 # same size, and look unchanged: it's read again next time instead (git's "racy" files).
 RACY_NS = 2_000_000_000
+# The largest file a folder in Drive may hold: a relative's whole family, sent for review, is
+# the largest the family folder writes. Anything bigger isn't AncesTree's, and isn't fetched.
+LARGEST = 300 * 1024 * 1024
+# Each part of a path here, as AncesTree names its files: a file in Drive named otherwise is
+# never brought down. Its name could otherwise lead outside this folder ("..", "/", "\\",
+# a drive letter), and the folder in Drive may be a relative's, written by anyone.
+PART = re.compile(r"[A-Za-z0-9_-](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9_-])?")
+# Names Windows keeps for its devices, with any extension: "NUL.txt" is the device too.
+DEVICES = re.compile(r"(?:CON|PRN|AUX|NUL|COM\d|LPT\d)(?:\..*)?", re.IGNORECASE)
+
+log = logging.getLogger(__name__)
+
+
+def safe_path(relative: str) -> bool:
+    """Whether a path in the folder is one AncesTree could have written: parts of letters,
+    digits, dots, dashes and underscores only, none of them "." or "..", and not too deep."""
+    parts = relative.split("/")
+    return 0 < len(parts) <= 4 and all(
+        PART.fullmatch(part) and ".." not in part and not DEVICES.fullmatch(part) for part in parts
+    )
 
 
 @dataclass
@@ -70,6 +92,7 @@ class Mirror:
         self.root = root
         self.local = local
         self.state = state
+        self.passed_over: set[str] = set()  # files in Drive this mirror won't bring down
         self.files: dict[str, Known] = {}
         self.folders: dict[str, str] = {"": root}
         if state.is_file():
@@ -101,6 +124,13 @@ class Mirror:
             return False
         return known is not None and known.md5 == md5(data)
 
+    def _here(self, relative: str) -> Path:
+        """Where a file of the folder is kept here: always inside this folder."""
+        path = self.local / relative
+        if not safe_path(relative) or not path.resolve().is_relative_to(self.local.resolve()):
+            raise ValueError(f"Not a path in the family folder: {relative!r}")
+        return path
+
     def bin(self, relative: str) -> None:
         """One of this account's files taken out of the folder for good: put in Drive's bin,
         where it stays a while, and gone from here."""
@@ -113,7 +143,7 @@ class Mirror:
                     raise
             del self.files[relative]
             self._save()
-        (self.local / relative).unlink(missing_ok=True)
+        self._here(relative).unlink(missing_ok=True)
 
     def _walk(self) -> dict[str, tuple[str, str | None, str]]:
         """Every file in the folder in Drive: its path here, with its id, checksum and owner.
@@ -127,16 +157,28 @@ class Mirror:
             path, folder_id = pending.pop()
             for item in self.drive.children(folder_id):
                 relative = f"{path}/{item.name}" if path else item.name
-                if item.folder:
+                if not safe_path(relative):
+                    self._pass_over(relative, "its name isn't one AncesTree gives")
+                elif item.folder:
                     folders.setdefault(relative, item.id)
                     pending.append((relative, item.id))
-                elif relative not in files and self.carries(relative):
+                elif relative in files or not self.carries(relative):
+                    continue
+                elif item.size is not None and item.size > LARGEST:
+                    self._pass_over(relative, f"it's too large ({item.size} bytes)")
+                else:
                     files[relative] = (item.id, item.md5, item.owner)
         self.folders = folders
         return files
 
+    def _pass_over(self, relative: str, why: str) -> None:
+        """A file in Drive that isn't brought down, said once in the log."""
+        if relative not in self.passed_over:
+            self.passed_over.add(relative)
+            log.warning("A file in the family folder in Drive was passed over: %s", why)
+
     def _write_here(self, relative: str, data: bytes) -> os.stat_result:
-        path = self.local / relative
+        path = self._here(relative)
         path.parent.mkdir(parents=True, exist_ok=True)
         partial = path.with_name(path.name + ".part")
         partial.write_bytes(data)
@@ -154,6 +196,9 @@ class Mirror:
                     known.owner, known.missing = owner, 0.0
                     continue
                 data = self.drive.download(file_id)
+                if len(data) > LARGEST:
+                    self._pass_over(relative, f"it's too large ({len(data)} bytes)")
+                    continue
                 if checksum and md5(data) != checksum:
                     continue  # changed while it came down: next time
                 stat = self._write_here(relative, data)
@@ -166,7 +211,8 @@ class Mirror:
                 if not known.missing:
                     known.missing = now
                 elif now - known.missing >= GONE_AFTER:
-                    (self.local / relative).unlink(missing_ok=True)
+                    if safe_path(relative):
+                        self._here(relative).unlink(missing_ok=True)
                     del self.files[relative]
         finally:
             self._save()

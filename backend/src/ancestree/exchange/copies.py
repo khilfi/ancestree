@@ -434,4 +434,5 @@ async def make_copy(ctx: Context, app: str, options: CopyOptions) -> str:
     """A copy's page: the copy's app with the family inside."""
     snapshot = await family_snapshot(ctx, options)
     sealed = await asyncio.to_thread(seal, snapshot, options.password)
-    return page(app, sealed, options.title)
+    # A locked copy says nothing of its family until it's opened: its title is inside.
+    return page(app, sealed, "" if options.password else options.title)

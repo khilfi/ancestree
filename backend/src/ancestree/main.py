@@ -52,10 +52,11 @@ def create_app(
     settings: Settings | None = None,
     *,
     on_round: Callable[[FamilyFolder], None] | None = None,
+    docs: bool = True,
 ) -> FastAPI:
     """Build the app. Settings are read at startup unless given (tests pass their own).
     `on_round`: told after each round with the family folder, as the desktop app's engine is
-    (0.4.0)."""
+    (0.4.0). `docs`: the API's own pages (/docs, /redoc, /openapi.json), for development."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -122,6 +123,10 @@ def create_app(
         # Readable operation ids ("get_graph") for the generated frontend client. FastAPI
         # passes a route-like object here, not always an APIRoute, so don't isinstance-check.
         generate_unique_id_function=lambda route: route.name,
+        # The API's own pages, for development: the desktop app's engine has none (`docs`).
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
     )
     app.state.history = History()  # undo and redo, for as long as the app runs
     for module in (

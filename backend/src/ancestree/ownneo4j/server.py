@@ -78,9 +78,13 @@ class OwnNeo4j:
             return path.read_text(encoding="utf-8").strip()
         self.root.mkdir(parents=True, exist_ok=True)
         value = secrets.token_hex(24)
-        path.write_text(value, encoding="utf-8")
-        if sys.platform != "win32":
-            path.chmod(0o600)
+        partial = path.with_name(path.name + ".part")
+        partial.unlink(missing_ok=True)
+        # Readable by this user alone from its first byte: never, for a moment, by everyone.
+        handle = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(handle, "w", encoding="utf-8") as written:
+            written.write(value)
+        os.replace(partial, path)
         return value
 
     def settings(self, bolt_port: int, browser_port: int | None, memory: Memory) -> dict[str, str]:

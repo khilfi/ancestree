@@ -36,6 +36,21 @@ _LINK_TYPES = ("PARENT_OF", "SPOUSE_OF")
 # (M21). Nothing reads them now: they're left out.
 _RETIRED = ("copies",)
 _SAFE_PART = re.compile(r'^[^\\/:*?"<>|\x00-\x1f]+$')  # a file or folder name, on Windows too
+# Names Windows keeps for its devices, with any extension: "NUL.txt" is the device too.
+_DEVICE = re.compile(r"(?:CON|PRN|AUX|NUL|COM\d|LPT\d)(?:\..*)?", re.IGNORECASE)
+
+
+def safe_parts(parts: list[str]) -> bool:
+    """Whether each part of a path is a plain file or folder name, on Windows too: not "." or
+    "..", no separators or drive letters, no name Windows keeps for a device, and no ending
+    in a dot or space, which Windows drops."""
+    return all(
+        part not in (".", "..")
+        and _SAFE_PART.match(part)
+        and not part.endswith((".", " "))
+        and not _DEVICE.fullmatch(part)
+        for part in parts
+    )
 
 
 class ArchiveError(Exception):
@@ -64,14 +79,38 @@ class ArchiveInfo:
     family_name: str = ""
 
 
+# What an AncesTree archive can hold, at most: far beyond any family's, so that an archive made
+# to fill the disk or the memory as it's read (a "zip bomb") is refused before it can.
+MOST_MANIFEST = 16 * 1024 * 1024  # bytes: a checksum for each of the files below
+MOST_GRAPH = 512 * 1024 * 1024  # bytes: graph.json, read into memory
+MOST_FILE = 256 * 1024 * 1024  # bytes: each photo, story or setting
+MOST_FILES = 200_000
+MOST_TOTAL = 64 * 1024 * 1024 * 1024  # bytes, unpacked
+
+
 def _manifest(archive: ZipFile, name: str) -> _Manifest:
     try:
-        manifest = _Manifest.model_validate_json(archive.read("manifest.json"))
+        info = archive.getinfo("manifest.json")
+        if info.file_size > MOST_MANIFEST:
+            raise ArchiveError(f"{name} isn't an AncesTree backup archive.")
+        with archive.open(info) as source:
+            text = source.read(MOST_MANIFEST + 1)
+        if len(text) > MOST_MANIFEST:
+            raise ArchiveError(f"{name} isn't an AncesTree backup archive.")
+        manifest = _Manifest.model_validate_json(text)
     except (KeyError, ValidationError, ValueError) as error:
         raise ArchiveError(f"{name} isn't an AncesTree backup archive.") from error
+    if len(manifest.sha256) > MOST_FILES:
+        raise ArchiveError(f"{name} holds more files than any AncesTree backup.")
     if manifest.format != ARCHIVE_FORMAT:
         raise ArchiveError(f"{name} was made by a newer AncesTree. Update AncesTree first.")
     return manifest
+
+
+def _family_id(found: object) -> str | None:
+    """A manifest's family id, if it's one AncesTree makes (16 hex digits). One that isn't
+    names no family: it's never used as a folder's name."""
+    return found if isinstance(found, str) and re.fullmatch(r"[0-9a-f]{16}", found) else None
 
 
 def read_info(path: Path) -> ArchiveInfo:
@@ -89,7 +128,7 @@ def read_info(path: Path) -> ArchiveInfo:
         people=manifest.counts.get("people", 0),
         links=manifest.counts.get("links", 0),
         files=manifest.counts.get("files", 0),
-        family_id=family.get("id") or None,
+        family_id=_family_id(family.get("id")),
         family_name=family.get("name", ""),
     )
 
@@ -97,11 +136,7 @@ def read_info(path: Path) -> ArchiveInfo:
 def _target(staging: Path, name: str) -> Path:
     """Where an archived file goes: only inside people/, settings/ or trash/."""
     parts = name.split("/")
-    if (
-        len(parts) < 2
-        or parts[0] not in DATA_FOLDERS
-        or any(part in (".", "..") or not _SAFE_PART.match(part) for part in parts)
-    ):
+    if len(parts) < 2 or parts[0] not in DATA_FOLDERS or not safe_parts(parts):
         raise ArchiveError(f"The archive has a file in an unexpected place: {name}")
     return staging.joinpath(*parts)
 
@@ -113,11 +148,20 @@ def _copy_checked(archive: ZipFile, name: str, expected: str, target: Path | Non
         info = archive.getinfo(name)
     except KeyError as error:
         raise ArchiveError(f"The archive is missing {name}.") from error
+    most = MOST_FILE if target else MOST_GRAPH
+    if info.file_size > most:
+        raise ArchiveError(f"The archive's {name} is larger than any AncesTree backup holds.")
     digest = hashlib.sha256()
     kept = bytearray()
+    read = 0
     try:
         with archive.open(info) as source, target.open("wb") if target else nullcontext() as out:
             while chunk := source.read(1 << 20):
+                read += len(chunk)
+                if read > most:  # a size the archive misstates
+                    raise ArchiveError(
+                        f"The archive's {name} is larger than any AncesTree backup holds."
+                    )
                 digest.update(chunk)
                 if out:
                     out.write(chunk)
@@ -186,6 +230,9 @@ def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:
                 )
             if "graph.json" not in manifest.sha256:
                 raise ArchiveError(f"{path.name} has no graph.json.")
+            listed = {info.filename: info.file_size for info in archive.infolist()}
+            if sum(listed.get(name, 0) for name in manifest.sha256) > MOST_TOTAL:
+                raise ArchiveError(f"{path.name} is larger than any AncesTree backup.")
             graph_bytes = _copy_checked(archive, "graph.json", manifest.sha256["graph.json"], None)
             for name, expected in manifest.sha256.items():
                 if name == "graph.json" or name.split("/")[0] in _RETIRED:
@@ -197,7 +244,7 @@ def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:
         raise ArchiveError(f"{path.name} can't be read as a backup archive.") from error
     try:
         graph = json.loads(graph_bytes)
-    except ValueError as error:
+    except (ValueError, RecursionError) as error:
         raise ArchiveError("The archive's graph.json can't be read.") from error
     _check_graph(graph)
     return graph, manifest

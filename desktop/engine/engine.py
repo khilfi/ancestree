@@ -43,7 +43,7 @@ from pydantic import BaseModel, SecretStr, StringConstraints
 from ancestree import __version__
 from ancestree.config import Settings
 from ancestree.desktop.families import Families, FamiliesError, Family
-from ancestree.desktop.guard import SessionGuard
+from ancestree.desktop.guard import PageHeaders, SessionGuard
 from ancestree.exchange.copy_app import PREBUILT
 from ancestree.exchange.locked import MAGIC, LockedError, key_for, unlock
 from ancestree.exchange.restore import ArchiveError, read_info
@@ -445,6 +445,12 @@ def main(argv: list[str] | None = None) -> None:
 
     root: Path = args.data.resolve()
     root.mkdir(parents=True, exist_ok=True)
+    if sys.platform != "win32":
+        # The family's photos, stories, backups and database are this user's alone: on the Mac
+        # and Linux, everything made from here on is, and so is the folder that holds it all.
+        # Windows keeps a user's own app data folder to them already.
+        os.umask(0o077)
+        root.chmod(0o700)
     families = Families.load(root, first_name(root))
     external = os.environ.get("ANCESTREE_NEO4J_URI")
     if external:
@@ -523,11 +529,12 @@ def main(argv: list[str] | None = None) -> None:
             )
             emit(stage="in-step", family=family.name, text=in_step_line(folder, family.name))
 
-        app = create_app(settings, on_round=in_step)
+        app = create_app(settings, on_round=in_step, docs=False)
         stop.app = app
         add_desktop_routes(app, root, about, updates)
         add_family_routes(app, families, family, external=bool(external))
         add_pages(app, pages_folder())
+        app.add_middleware(PageHeaders)
         port = args.port or free_port()
         if secret := os.environ.get("ANCESTREE_SESSION"):
             app.add_middleware(SessionGuard, secret=secret, port=port)

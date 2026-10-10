@@ -648,7 +648,7 @@ def _what_happened(change: ImportChange, carried: bool) -> str:
 def _report(plan: ReturnedPlan, done: _Done) -> bytes:
     """Each change and what happened to it; what was left out, and why."""
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)
+    writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)  # no ";" splits a cell in Excel
     writer.writerow(("Who", "What", "In the tree", "As they sent it", "What happened"))
     for change in plan.changes:
         if change.id in done.refused_ids:

@@ -50,6 +50,8 @@ GitHub Actions builds and checks it on all three systems (`.github/workflows/des
 
 ## This repository
 
-It holds the app's code and a made-up test family, never a real family's data. It takes changes from its maintainer only.
+It holds the app's code and a made-up test family, never a real family's data. It takes changes from its maintainer only. To report a security problem privately, see [SECURITY.md](SECURITY.md).
+
+AncesTree is under the MIT licence ([LICENSE](LICENSE)): anyone may use, copy, change and share it, keeping its notice.
 
 Neo4j Community Edition, which AncesTree fetches on its first start, is made by Neo4j, Inc. and licensed under the GNU General Public License v3; its source is at [github.com/neo4j/neo4j](https://github.com/neo4j/neo4j). Its Java runtime is Eclipse Temurin, from [adoptium.net](https://adoptium.net).

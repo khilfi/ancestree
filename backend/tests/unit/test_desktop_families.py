@@ -144,3 +144,33 @@ def test_what_a_family_says_of_itself_is_kept(tmp_path: Path) -> None:
         "2026-10-03T14:02:00+00:00",
     )
     families.note("not-here", role="member")  # a family no longer here: nothing to note
+
+
+@pytest.mark.parametrize("family_id", ["../../Documents", "..", "0123456789ABCDEF", "x" * 16, ""])
+def test_a_backup_naming_its_family_otherwise_gets_a_new_id(tmp_path: Path, family_id: str) -> None:
+    """A family's id names its folder: one from a backup that isn't 16 hex digits was tampered
+    with, and never becomes a folder's name."""
+    families = Families.load(tmp_path / "ancestree", "Keluarga Contoh")
+    added = families.add("From a backup", family_id=family_id)
+    assert added.id != family_id
+    assert added.folder == f"families/{added.id}"
+    assert families.places(added).data.resolve().is_relative_to((tmp_path / "ancestree").resolve())
+    assert not (tmp_path / "Documents").exists()
+
+
+def test_a_family_whose_folder_lies_outside_is_never_used_or_deleted(tmp_path: Path) -> None:
+    root = tmp_path / "ancestree"
+    families = Families.load(root, "Keluarga Contoh")
+    outside = tmp_path / "Documents"
+    (outside / "keep.txt").parent.mkdir(parents=True)
+    (outside / "keep.txt").write_text("mine", encoding="utf-8")
+    saved = json.loads((root / FILE).read_text(encoding="utf-8"))
+    stray = {**saved["families"][0], "id": "0123456789abcdef", "folder": "../Documents"}
+    saved["removed"] = [{**stray, "removed": "2020-01-01T00:00:00+00:00"}]
+    saved["families"].append({**stray, "id": "fedcba9876543210"})
+    (root / FILE).write_text(json.dumps(saved), encoding="utf-8")
+    families = Families.load(root)
+    with pytest.raises(FamiliesError):
+        families.places(families.get("fedcba9876543210"))
+    families.tidy()
+    assert (outside / "keep.txt").read_text(encoding="utf-8") == "mine"

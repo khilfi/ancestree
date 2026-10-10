@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { ReactNode } from "react";
 import { Controller, type UseFormRegister, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { ApiError } from "@/api/errors";
 import { useCreateKind, useUpdateKind } from "@/api/queries";
 import type { KindView, KindWords } from "@/api/types";
@@ -19,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { showError } from "@/lib/notify";
+import { z } from "@/lib/schema";
 
 const wording = z.object({
   neutral: z.string().trim().min(1, "Needed.").max(60),

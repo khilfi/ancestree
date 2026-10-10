@@ -3,7 +3,9 @@
 import csv
 import io
 
-from ancestree.exchange.spreadsheet import COLUMNS, ENCODING, write_people_csv
+import pytest
+
+from ancestree.exchange.spreadsheet import COLUMNS, ENCODING, guard, unguard, write_people_csv
 from tests.unit.export_family import NOTES, sample_family
 
 
@@ -66,3 +68,33 @@ def test_other_kinds_of_parent_and_former_spouses_are_named_as_such() -> None:
 
 def test_excel_reads_it_as_utf8() -> None:
     assert ENCODING == "utf-8-sig"  # the byte-order mark Excel looks for
+
+
+FULL_WIDTH_EQUALS, FULL_WIDTH_AT = chr(0xFF1D), chr(0xFF20)
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        "=1+1",
+        "+1",
+        "-1",
+        "@SUM(A1)",
+        " =1+1",
+        f"{FULL_WIDTH_EQUALS}HYPERLINK(1)",
+        f"{FULL_WIDTH_AT}x",
+    ],
+)
+def test_a_cell_a_spreadsheet_would_run_is_written_as_plain_text(written: str) -> None:
+    guarded = guard(written)
+    assert guarded == "'" + written
+    assert unguard(str(guarded)) == written
+
+
+def test_every_cell_is_quoted_so_no_semicolon_splits_one() -> None:
+    """Excel splits on ";" where commas are decimal points: a quoted cell it never splits."""
+    family, _ = sample_family()
+    header = write_people_csv(family).lstrip(chr(0xFEFF)).splitlines()[0]
+    assert header.startswith('"')
+    assert header.endswith('"')
+    assert next(csv.reader(io.StringIO(header))) == list(COLUMNS)

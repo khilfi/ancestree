@@ -4,7 +4,7 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from ancestree.desktop.guard import COOKIE, ENTER, SessionGuard
+from ancestree.desktop.guard import COOKIE, ENTER, PageHeaders, SessionGuard
 
 SECRET = "s" * 43
 PORT = 51234
@@ -81,3 +81,22 @@ async def test_entering_only_leads_to_this_app_s_own_pages() -> None:
 def test_a_short_secret_is_refused() -> None:
     with pytest.raises(ValueError, match="too short"):
         SessionGuard(guarded(), secret="short", port=PORT)
+
+
+async def test_every_answer_says_what_the_page_may_load() -> None:
+    """Only the engine's own scripts, nothing from the internet, no guessing at types."""
+    app = FastAPI()
+
+    @app.get("/tree")
+    async def page() -> dict[str, str]:
+        return {"page": "tree"}
+
+    app.add_middleware(PageHeaders)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=HERE) as engine:
+        answer = await engine.get("/tree")
+    policy = answer.headers["content-security-policy"]
+    assert "script-src 'self'" in policy
+    assert "connect-src 'self'" in policy
+    assert "https:" not in policy
+    assert answer.headers["x-content-type-options"] == "nosniff"
+    assert answer.headers["referrer-policy"] == "no-referrer"

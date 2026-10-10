@@ -27,9 +27,10 @@ jobs:
       from: ${{ steps.pick.outputs.from }}
       to: ${{ steps.pick.outputs.to }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0  # every release's tag, to read the key it trusts
+          persist-credentials: false
 
       - id: pick
         env:

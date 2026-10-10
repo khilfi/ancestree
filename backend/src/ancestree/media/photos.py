@@ -12,7 +12,10 @@ from pillow_heif import register_heif_opener
 from pydantic import BaseModel, Field
 
 register_heif_opener()  # iPhone photos (HEIC)
-Image.MAX_IMAGE_PIXELS = 80_000_000  # refuse "decompression bombs" beyond ~80 megapixels
+# Refuse "decompression bombs": Pillow itself only warns up to twice this, so _decode checks
+# the size first, before any pixels are read.
+MAX_PIXELS = 80_000_000
+Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 AVATAR_SIZES = (512, 128)
@@ -89,6 +92,8 @@ def _decode(data: bytes) -> tuple[str, Image.Image]:
             image_format = image.format or ""
             if image_format not in _EXTENSIONS:
                 raise PhotoError("Use a JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF photo.")
+            if image.width * image.height > MAX_PIXELS:
+                raise PhotoError("That photo is too large: use one under 80 megapixels.")
             upright = ImageOps.exif_transpose(image)  # also loads the pixels
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError) as error:
         raise PhotoError("That file isn't a photo AncesTree can read.") from error

@@ -60,3 +60,50 @@ def test_a_backup_from_before_0_4_0_or_outside_the_desktop_app_is_let_through(
         write_archive(graph(), tmp_path / "data", tmp_path / "backups", family=FATHERS).path
     )
     ours(context(tmp_path, None), fathers)  # one family alone, as in development
+
+
+def _crafted(path: Path, manifest: dict[str, Any], files: dict[str, bytes] | None = None) -> Path:
+    """An archive made by hand, as someone could send one: not by AncesTree."""
+    import json
+    from zipfile import ZIP_DEFLATED, ZipFile
+
+    with ZipFile(path, "w", ZIP_DEFLATED) as archive:
+        archive.writestr("manifest.json", json.dumps(manifest))
+        for name, data in (files or {}).items():
+            archive.writestr(name, data)
+    return path
+
+
+MANIFEST = {
+    "format": 1,
+    "app_version": "0.4.0",
+    "schema_version": 1,
+    "created_at": "2026-10-01T09:00:00+00:00",
+    "counts": {"people": 0},
+    "sha256": {},
+}
+
+
+@pytest.mark.parametrize("family_id", ["../../Documents", "C:/Windows", "..", "0123456789ABCDEF"])
+def test_a_backup_naming_its_family_otherwise_names_none(tmp_path: Path, family_id: str) -> None:
+    """A family's id names its folder: one that isn't 16 hex digits is never read as one."""
+    made = {**MANIFEST, "family": {"id": family_id, "name": "Not ours"}}
+    info = read_info(_crafted(tmp_path / "crafted.zip", made))
+    assert info.family_id is None
+
+
+def test_a_backup_made_to_fill_the_disk_is_refused_unread(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A "zip bomb": a file that unpacks to far more than any family's is refused by its size,
+    before anything of it is written."""
+    from ancestree.exchange import restore
+
+    monkeypatch.setattr(restore, "MOST_GRAPH", 1024 * 1024)
+    made = {**MANIFEST, "sha256": {"graph.json": "0" * 64}}
+    path = _crafted(tmp_path / "bomb.zip", made, {"graph.json": bytes(2 * 1024 * 1024)})
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    with pytest.raises(restore.ArchiveError, match="larger than any"):
+        restore._stage(path, staging)
+    assert not any(staging.iterdir())

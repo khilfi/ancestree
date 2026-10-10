@@ -143,13 +143,20 @@ class Families:
 
     def places(self, family: Family) -> Places:
         folder = self.root / family.folder
+        if not folder.resolve().is_relative_to(self.root.resolve()):
+            # Never a folder outside AncesTree's own, whatever families.json says.
+            raise FamiliesError("no_such_family", "There's no such family on this computer.")
         return Places(folder / "family", folder / "neo4j", folder / "backups")
 
     # Changing
 
     def add(self, name: str, family_id: str | None = None) -> Family:
         """A new family, empty, in a folder of its own; `family_id`: the id it had elsewhere,
-        when it comes from a backup."""
+        when it comes from a backup. An id that isn't one AncesTree makes (16 hex digits) is
+        a backup's that was tampered with: the family gets a new one, and never a folder named
+        by it."""
+        if family_id is not None and not ID.fullmatch(family_id):
+            family_id = None
         if family_id is not None and (self.find(family_id) or self._removed(family_id)):
             raise FamiliesError(
                 "family_here",
@@ -251,7 +258,10 @@ class Families:
         for family in list(self.removed):
             if now - datetime.fromisoformat(family.removed) < KEEP_REMOVED:
                 continue
-            shutil.rmtree(self.root / family.folder, ignore_errors=True)
+            folder = self.root / family.folder
+            inside = folder.resolve().is_relative_to(self.root.resolve())
+            if inside and folder.resolve() != self.root.resolve():
+                shutil.rmtree(folder, ignore_errors=True)
             self.removed.remove(family)
             gone.append(family.name)
         if gone:

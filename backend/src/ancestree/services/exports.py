@@ -67,7 +67,9 @@ def _slug(title: str) -> str:
 
 def _copy_name(options: CopyOptions) -> str:
     """ "ancestree-keluarga-contoh-2026-09-29.html"."""
-    parts = ["ancestree", _slug(options.title), date.today().isoformat()]
+    # A locked copy's name says nothing of its family either: its title is inside it.
+    named = "" if options.password else _slug(options.title)
+    parts = ["ancestree", named, date.today().isoformat()]
     return "-".join(part for part in parts if part) + ".html"
 
 

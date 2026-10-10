@@ -68,6 +68,9 @@ def _build(frontend: Path) -> None:
         done = subprocess.run(  # noqa: S603
             [node, str(vite), "build", "--mode", "viewer"],
             cwd=frontend,
+            # An input of its own (0.4.1): on Windows, Node sharing the engine's would wait as
+            # long as the engine waits on it for the shell's word, and the copy with it.
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             encoding="utf-8",

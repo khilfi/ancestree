@@ -1417,7 +1417,7 @@ class FamilyFolder:
                     if data is not None:
                         text = data.decode("utf-8", errors="replace")
                         stories[parts[2]] = biography_from(text).model_dump(mode="json")
-        except (UnpackError, ReturnedError, RefusedError, ValueError) as error:
+        except (UnpackError, ReturnedError, RefusedError, ValueError, RecursionError) as error:
             raise RuleError(
                 "unreadable_changes",
                 f"What {arrived.name} sent can't be read here ({error}). Take none of it: "

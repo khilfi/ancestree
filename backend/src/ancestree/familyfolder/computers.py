@@ -748,6 +748,10 @@ class Keeper(Computer):
                     proposal = Proposal.model_validate_json(opened.payload)
                     if proposal.seq != seq:
                         raise RefusedError("numbered wrongly")
+                    try:
+                        datetime.fromisoformat(proposal.made)
+                    except ValueError:
+                        raise RefusedError("dated wrongly") from None
                 except (RefusedError, ValidationError) as error:
                     self._refused(path, error)
                     continue

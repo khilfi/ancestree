@@ -18,7 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { fileSize } from "@/lib/files";
 import { ACTION_MS, showError } from "@/lib/notify";
 
-const SHORTEST_PASSWORD = 6;
+const SHORTEST_PASSWORD = 10; // a copy can be tried offline, guess after guess
 
 /**
  * Export → View-only copy: the app with the family inside, as one .html file to

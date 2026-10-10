@@ -8,8 +8,8 @@ import "@/index.css";
 
 import { createRoot } from "react-dom/client";
 import { createHashRouter } from "react-router";
-import { z } from "zod";
 import { Root } from "@/app/Root";
+import { z } from "@/lib/schema";
 import { installCopy } from "./answers";
 import { LockScreen } from "./LockScreen";
 import { copyRoutes } from "./routes";

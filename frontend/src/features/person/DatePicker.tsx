@@ -1,5 +1,4 @@
 import { XIcon } from "lucide-react";
-import { z } from "zod";
 import type { PartialDate } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { daysInMonth, describeDate, MONTH_NAMES, type Qualifier } from "@/lib/dates";
+import { z } from "@/lib/schema";
 
 /** A date as the picker holds it. A typed date the parts can't show, from an old
  *  import, is kept as its text until a date is picked. */

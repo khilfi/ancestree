@@ -1,6 +1,14 @@
 # Local settings and secrets
 .env
+.env.*
+!.env.example
 *.local
+# Keys and Google clients, wherever they're put: the update key, a family's Google client
+*.key
+*.key.pub
+*.pem
+client_secret*.json
+**/google-client*.json
 
 # Real family data never goes in git.
 # (Fictional test fixtures live under backend/tests/fixtures and backend/src/ancestree/seed.)

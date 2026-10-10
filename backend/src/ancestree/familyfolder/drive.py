@@ -59,6 +59,7 @@ class RemoteFile:
     folder: bool
     md5: str | None  # none for folders
     owner: str  # the address of the account the file belongs to
+    size: int | None = None  # in bytes, as Drive lists it; none for folders
 
 
 class DriveLike(Protocol):
@@ -87,6 +88,7 @@ def _remote(item: dict[str, Any]) -> RemoteFile:
         folder=item.get("mimeType") == FOLDER,
         md5=item.get("md5Checksum"),
         owner=str(owners[0].get("emailAddress", "")),
+        size=int(item["size"]) if str(item.get("size", "")).isdigit() else None,
     )
 
 

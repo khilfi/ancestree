@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { type ReactNode, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { ApiError } from "@/api/errors";
 import { useAddRelative, useLink, useSearchPeople } from "@/api/queries";
 import type { PersonDetail, PersonSummary, Relation, SpouseStatus } from "@/api/types";
@@ -35,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ACTION_MS, showError } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
+import { z } from "@/lib/schema";
 import { useDebounced } from "@/lib/useDebounced";
 import { DatePicker, dateInput, datePartsSchema, NO_DATE } from "./DatePicker";
 import { KindSelect } from "./KindSelect";

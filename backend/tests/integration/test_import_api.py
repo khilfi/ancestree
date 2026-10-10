@@ -83,7 +83,10 @@ async def test_the_template_and_its_example_download_as_csv(client: httpx.AsyncC
     assert template.status_code == 200
     assert template.headers["content-type"].startswith("text/csv")
     assert "ancestree-import-template.csv" in template.headers["content-disposition"]
-    assert template.content.decode("utf-8-sig").startswith("ID,Full name,Nickname")
+    header = next(csv.reader(io.StringIO(template.content.decode("utf-8-sig"))))
+    assert header[:3] == ["ID", "Full name", "Nickname"]
+    # Every cell quoted: an Excel that splits on ";" never splits one.
+    assert template.content.decode("utf-8-sig").startswith('"ID","Full name","Nickname"')
 
     example = await client.get("/api/imports/template", params={"example": "true"})
     assert "Hassan bin Ismail" in example.content.decode("utf-8-sig")
@@ -230,7 +233,7 @@ async def test_an_import_is_kept_with_its_report(
     report = await client.get(f"/api/imports/{done['id']}/report")
     assert report.status_code == 200
     text = report.content.decode("utf-8-sig")
-    assert text.splitlines()[0] == "Row,Column,Written,What happened"
+    assert next(csv.reader(io.StringIO(text))) == ["Row", "Column", "Written", "What happened"]
     assert "Left out. Use Male or Female" in text
     folder: Path = settings.data_dir / "imports" / done["id"]
     assert (folder / "source.csv").read_bytes().startswith(b"\xef\xbb\xbfID,Full name")

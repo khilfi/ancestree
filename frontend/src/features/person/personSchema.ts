@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { PersonDetail, PersonInput, Place } from "@/api/types";
+import { z } from "@/lib/schema";
 import { dateInput, datePartsSchema, partsOf } from "./DatePicker";
 
 const place = z.object({ town: z.string(), state: z.string(), country: z.string() });

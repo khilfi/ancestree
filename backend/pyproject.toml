@@ -1,8 +1,9 @@
 [project]
 name = "ancestree"
-version = "0.4.0"
+version = "0.4.1"
 description = "Private family-history app: people, relationships, kinship, timeline."
 requires-python = ">=3.14"
+license = "MIT"
 dependencies = [
     "cryptography>=50.0.1",
     "defusedxml>=0.7.1",
@@ -25,6 +26,9 @@ requires = ["uv_build>=0.12.19,<0.13.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
+build = [
+    "pyinstaller>=6.22.3",
+]
 dev = [
     "httpx>=0.28.1",
     "hypothesis>=6.168.1",

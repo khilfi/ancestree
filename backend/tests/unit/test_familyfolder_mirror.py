@@ -203,3 +203,62 @@ def test_a_file_written_again_within_the_same_tick_still_goes_up(
     os.utime(path, ns=(first.st_atime_ns, first.st_mtime_ns))  # and, as by the clock, time
     assert ours.push() == 1
     assert cloud.find("AncesTree family/record/00000001-abcd.chg").data == b"tampered"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "../../escaped.txt",
+        r"..\..\escaped.txt",
+        "..",
+        "C:escaped.txt",
+        "NUL.prop",
+        "00000001.prop.",
+        ".hidden",
+        "has space.prop",
+    ],
+)
+def test_a_file_named_to_lead_outside_is_never_brought_down(
+    cloud: Cloud, tmp_path: Path, name: str
+) -> None:
+    """A folder in Drive may be a relative's, written by anyone with that account: a file
+    whose name could lead out of the folder here, or that AncesTree would never name so, stays
+    in Drive."""
+    ours, _, root = two_computers(cloud, tmp_path)
+    relative_drive = cloud.as_account(RELATIVE)
+    inbox = relative_drive.create_folder("inbox", root).id
+    device = relative_drive.create_folder("0123456789abcdef", inbox).id
+    relative_drive.upload(name, device, b"not AncesTree's")
+    relative_drive.upload("00000001.prop", device, b"a proposal")
+    assert ours.pull() == 1
+    assert (ours.local / "inbox/0123456789abcdef/00000001.prop").is_file()
+    assert not (tmp_path / "escaped.txt").exists()
+    written = {
+        path.relative_to(tmp_path).as_posix() for path in tmp_path.rglob("*") if path.is_file()
+    }
+    assert written <= {
+        "keeper/inbox/0123456789abcdef/00000001.prop",
+        "keeper.json",
+    }
+
+
+def test_a_folder_named_to_lead_outside_is_never_walked(cloud: Cloud, tmp_path: Path) -> None:
+    ours, _, root = two_computers(cloud, tmp_path)
+    relative_drive = cloud.as_account(RELATIVE)
+    up = relative_drive.create_folder("..", root).id
+    relative_drive.upload("escaped.txt", up, b"not AncesTree's")
+    assert ours.pull() == 0
+    assert not (tmp_path / "escaped.txt").exists()
+
+
+def test_a_file_too_large_for_the_family_folder_isnt_fetched(
+    cloud: Cloud, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(mirror_module, "LARGEST", 10)
+    ours, theirs, _ = two_computers(cloud, tmp_path)
+    write(theirs.local, "join/0123456789abcdef.req", b"far more than ten bytes")
+    write(theirs.local, "join/fedcba9876543210.req", b"short")
+    assert theirs.push() == 2
+    assert ours.pull() == 1
+    assert not (ours.local / "join/0123456789abcdef.req").exists()
+    assert (ours.local / "join/fedcba9876543210.req").read_bytes() == b"short"

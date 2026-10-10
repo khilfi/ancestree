@@ -309,7 +309,7 @@ def _report(done: _Done) -> bytes:
         rows.append((look.row or "", "", "", f"Worth a second look: {look.message}"))
     rows.sort(key=lambda row: row[0] if isinstance(row[0], int) else 0)
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)
+    writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)  # no ";" splits a cell in Excel
     writer.writerow(("Row", "Column", "Written", "What happened"))
     for row in rows:
         writer.writerow(guard(cell) for cell in row)

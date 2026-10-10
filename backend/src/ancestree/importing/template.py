@@ -56,7 +56,7 @@ def _example_rows(family: SeedFamily) -> list[dict[str, str]]:
 def template_csv(*, example: bool = False) -> str:
     """The template's text; save it as UTF-8 with a byte-order mark, as Excel expects."""
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)
+    writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)  # no ";" splits a cell in Excel
     writer.writerow(TEMPLATE)
     for row in _example_rows(load_seed_family()) if example else []:
         writer.writerow(guard(row.get(column, "")) for column in TEMPLATE)

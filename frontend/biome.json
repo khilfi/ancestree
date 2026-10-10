@@ -8,12 +8,34 @@
       "!node_modules",
       "!src/api/schema.d.ts",
       "!openapi.json",
-      "!src/features/map/shapes.json"
+      "!src/features/map/shapes.json",
+      "!src/styles/shadcn-tailwind.css"
     ]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "css": { "parser": { "tailwindDirectives": true } },
-  "linter": { "enabled": true, "rules": { "preset": "recommended" } },
-  "overrides": [{ "includes": ["src/components/ui/**"], "linter": { "enabled": false } }],
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "zod": "Import z from @/lib/schema, which sets Zod for the pages' policy (no eval)."
+            }
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    { "includes": ["src/components/ui/**"], "linter": { "enabled": false } },
+    {
+      "includes": ["src/lib/schema.ts"],
+      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+    }
+  ],
   "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }

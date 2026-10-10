@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from ancestree.exchange.backup import write_archive
+from ancestree.exchange.restore import safe_parts
 from ancestree.familyfolder.models import Delete, Put
 from ancestree.familyfolder.seals import RefusedError
 from ancestree.storage.files import write_json
@@ -137,10 +138,10 @@ def build_archive(
                 return None
             if hashlib.sha256(data).hexdigest() != value["sha256"]:
                 raise RefusedError(f"{key} isn't the file its entry names")
-            relative = key.removeprefix("file/")
-            if not relative.startswith("people/") or ".." in relative.split("/"):
+            parts = key.removeprefix("file/").split("/")
+            if len(parts) < 2 or parts[0] != "people" or not safe_parts(parts):
                 raise RefusedError(f"{key} lies outside the people's folders")
-            target = staging / relative
+            target = staging.joinpath(*parts)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
         settings = _settings(data_dir)

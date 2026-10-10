@@ -191,8 +191,8 @@ def copy_command(
     secret = (
         typer.prompt("Password", hide_input=True, confirmation_prompt=True) if password else None
     )
-    if secret is not None and len(secret) < 6:
-        raise _fail("A password needs at least 6 characters.")
+    if secret is not None and len(secret) < 10:
+        raise _fail("A password needs at least 10 characters.")
     options = CopyOptions(
         title=" ".join(title.split())[:60],
         hide_living=hide_living,
