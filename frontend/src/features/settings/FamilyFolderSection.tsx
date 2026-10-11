@@ -57,6 +57,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
+import { type GuidePlace, guideAt } from "@/features/guide/places";
 import { ago } from "@/lib/ago";
 import { showError } from "@/lib/notify";
 import { FolderReview } from "./FolderReview";
@@ -67,9 +69,9 @@ const ROLES = {
   viewer: "Viewer: they receive the family, and change nothing",
 } as const;
 
-/** AncesTree's guide, and its releases: the same for every family. */
+/** AncesTree's guide online, for an invitation's words to someone without AncesTree yet, and
+ *  its releases: the same for every family. In the app, the guide is its own. */
 const GUIDE = "https://github.com/khilfi/ancestree/blob/main/GUIDE.md";
-const GUIDE_PROJECT = `${GUIDE}#your-familys-google-project`;
 const RELEASES = "https://github.com/khilfi/ancestree/releases/latest";
 
 const ROLE_NAMES: Record<string, string> = {
@@ -81,10 +83,23 @@ const ROLE_NAMES: Record<string, string> = {
   waiting: "Waiting to be let in",
 };
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+/** A part of the family folder's page, with **How does this work?** opening the guide at its
+ *  section. */
+function Panel({
+  title,
+  guide,
+  children,
+}: {
+  title: string;
+  guide?: GuidePlace;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-3 rounded-lg border border-stone-200 p-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {guide && <HowDoesThisWork at={guide} />}
+      </div>
       {children}
     </div>
   );
@@ -136,7 +151,7 @@ function SignIn({ status }: { status: FamilyFolderStatus }) {
   const signIn = useSignInToGoogle();
   const waiting = status.signing_in || signIn.isPending;
   return (
-    <Panel title="Sign in to Google">
+    <Panel title="Sign in to Google" guide="signIn">
       <p className="max-w-2xl text-sm text-stone-600">
         The family folder is in Google Drive, so AncesTree needs your Google account. Google asks
         whether AncesTree may see your Drive's files and change only the files it makes: tick both.
@@ -284,7 +299,7 @@ function PasteInvitation({ label }: { label: string }) {
 function NoProject() {
   return (
     <div className="space-y-4">
-      <Panel title="Join your family's AncesTree">
+      <Panel title="Join your family's AncesTree" guide="join">
         <p className="max-w-2xl text-sm text-stone-600">
           Your family's keeper sends you an invitation: a line of text that starts with{" "}
           <span className="font-mono">ATI1-</span>. Paste it here, then sign in to Google with the
@@ -292,13 +307,13 @@ function NoProject() {
         </p>
         <PasteInvitation label="Your keeper's invitation" />
       </Panel>
-      <Panel title="Start your family's folder, as its keeper">
+      <Panel title="Start your family's folder, as its keeper" guide="startFolder">
         <p className="max-w-2xl text-sm text-stone-600">
           The family folder signs in to Google through a Google Cloud project of your own family's:
           free, and set up once, in about 20 minutes.{" "}
-          <a href={GUIDE_PROJECT} target="_blank" rel="noreferrer" className="text-sky-700">
+          <Link to={guideAt("project")} className="text-sky-700">
             The guide shows each step
-          </a>
+          </Link>
           . Then choose the file Google gives you for its client.
         </p>
         <ChooseClientFile>Choose the client's file…</ChooseClientFile>
@@ -340,7 +355,7 @@ function Join() {
   const join = useJoinFamily();
   const [computer, setComputer] = useState("");
   return (
-    <Panel title="Join your family's AncesTree">
+    <Panel title="Join your family's AncesTree" guide="join">
       <form
         className="space-y-3"
         onSubmit={(event) => {
@@ -392,7 +407,7 @@ function Start() {
       },
     );
   return (
-    <Panel title="Start your family's folder, as its keeper">
+    <Panel title="Start your family's folder, as its keeper" guide="startFolder">
       <p className="max-w-2xl text-sm text-stone-600">
         Your family, as it is in AncesTree here, goes into a new folder in your Google Drive,
         encrypted. You then invite relatives, and let each of their computers in.
@@ -519,7 +534,7 @@ function InvitationDialog({ to, onClose }: { to: string | null; onClose: () => v
   const message = invitation.data ? invitationMessage(invitation.data.invitation) : "";
   return (
     <AlertDialog open={to !== null} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className="sm:max-w-xl">
+      <AlertDialogContent className="data-[size=default]:sm:max-w-xl">
         <AlertDialogHeader>
           <AlertDialogTitle>The invitation to send</AlertDialogTitle>
           <AlertDialogDescription asChild>
@@ -537,7 +552,7 @@ function InvitationDialog({ to, onClose }: { to: string | null; onClose: () => v
                 <Textarea
                   readOnly
                   aria-label="The invitation, with how to use it"
-                  className="font-mono text-xs"
+                  className="font-mono text-xs wrap-anywhere"
                   rows={8}
                   value={message || "…"}
                   onFocus={(event) => event.target.select()}
@@ -586,7 +601,10 @@ function Invite() {
         }}
       >
         <div className="min-w-64 flex-1 space-y-1">
-          <Label htmlFor="invite-email">Invite a relative, by their Google account</Label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label htmlFor="invite-email">Invite a relative, by their Google account</Label>
+            <HowDoesThisWork at="invite" />
+          </div>
           <Input
             id="invite-email"
             type="email"
@@ -609,7 +627,7 @@ function Invite() {
         >
           Show the invitation
         </button>{" "}
-        to paste on it, or to send again.
+        to paste on it, or to send again. <HowDoesThisWork at="ownComputers" />
       </p>
       <InvitationDialog to={sending} onClose={() => setSending(null)} />
     </>
@@ -892,14 +910,17 @@ function Leave({ keeper }: { keeper: boolean }) {
   const [asking, setAsking] = useState(false);
   return (
     <>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => setAsking(true)}
-        disabled={leave.isPending}
-      >
-        {leave.isPending ? "Leaving…" : "Leave the family folder…"}
-      </Button>
+      <span className="inline-flex flex-wrap items-center gap-3">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setAsking(true)}
+          disabled={leave.isPending}
+        >
+          {leave.isPending ? "Leaving…" : "Leave the family folder…"}
+        </Button>
+        {!keeper && <HowDoesThisWork at="leave" />}
+      </span>
       <AlertDialog open={asking} onOpenChange={setAsking}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -949,7 +970,7 @@ function ChangesWaiting({ changes }: { changes: FolderChanges[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const shown = changes.find((item) => item.device === open) ?? null;
   return (
-    <Panel title={`Changes waiting (${changes.length})`}>
+    <Panel title={`Changes waiting (${changes.length})`} guide="changesWaiting">
       <p className="max-w-2xl text-sm text-stone-600">
         What relatives changed on their computers, for you to look at. Nothing comes in until you
         bring it in; what you don't take goes back to them, with your note.
@@ -1032,7 +1053,7 @@ function Move({ status }: { status: FamilyFolderStatus }) {
   const move = useMoveAccount();
   if (status.moving) {
     return (
-      <Panel title="Moving the family folder">
+      <Panel title="Moving the family folder" guide="moveFolder">
         <p className="max-w-2xl text-sm text-stone-600">
           Signed in as {status.email}, through <span className="font-mono">{status.project}</span>.
           Rebuild the family folder here: relatives' computers follow it. If the family's Google
@@ -1108,9 +1129,12 @@ function HandOver({ status }: { status: FamilyFolderStatus }) {
           lets computers in, and the family folder moves to its owner's Google Drive. They're asked
           first, on that computer.
         </p>
-        <Button variant="outline" disabled={others.length === 0} onClick={() => setOpen(true)}>
-          Hand the family to someone else…
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" disabled={others.length === 0} onClick={() => setOpen(true)}>
+            Hand the family to someone else…
+          </Button>
+          <HowDoesThisWork at="handOver" />
+        </div>
         {others.length === 0 && (
           <p className="text-xs text-stone-500">
             Their computer joins the family first, as any relative's does.
@@ -1185,7 +1209,7 @@ function HandOver({ status }: { status: FamilyFolderStatus }) {
 function Offered({ offer, to }: { offer: OfferMade; to: string }) {
   const withdraw = useWithdrawOffer();
   return (
-    <Panel title={`Offered to ${offer.name}`}>
+    <Panel title={`Offered to ${offer.name}`} guide="handOver">
       <p className="max-w-2xl text-sm text-stone-600">
         Sent {ago(offer.made)}: they're asked on their computer to keep the family, or to turn it
         down. While the offer stands, this computer keeps nothing, and the family can't be changed
@@ -1213,7 +1237,7 @@ function OfferedHere({ offer }: { offer: OfferHere }) {
   const decline = useDeclineOffer();
   const busy = accept.isPending || decline.isPending;
   return (
-    <Panel title={`${offer.keeper} asks you to keep the family`}>
+    <Panel title={`${offer.keeper} asks you to keep the family`} guide="takeOver">
       <ul className="max-w-2xl list-disc space-y-0.5 pl-5 text-sm text-stone-600">
         <li>You review relatives' changes, and let computers in.</li>
         {offer.own ? (
@@ -1248,7 +1272,7 @@ function OfferedHere({ offer }: { offer: OfferHere }) {
 function Handed({ handed }: { handed: HandedOver }) {
   const seen = useRoleSeen();
   return (
-    <Panel title={`You handed the family to ${handed.to}`}>
+    <Panel title={`You handed the family to ${handed.to}`} guide="handOver">
       <p className="max-w-2xl text-sm">
         They keep it now. This computer carries on as <strong>{ROLE_NAMES[handed.role]}</strong>.{" "}
         {ROLE_HERE[handed.role] ?? ""}
@@ -1302,6 +1326,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
               ? "The family folder was made through another Google project"
               : "The family folder is gone from Google Drive"
           }
+          guide="rebuild"
         >
           <p className="max-w-2xl text-sm text-stone-600">
             {status.trouble === "foreign"
@@ -1312,7 +1337,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         </Panel>
       )}
       {status.old_folder_left && (
-        <Panel title="The old family folder is still in Google Drive">
+        <Panel title="The old family folder is still in Google Drive" guide="moveFolder">
           <p className="max-w-2xl text-sm text-stone-600">
             AncesTree couldn't put it in Drive's bin. Delete it in Google Drive, so relatives'
             computers move to the new one, then say so here.
@@ -1329,7 +1354,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
       {status.moving && <Move status={status} />}
       {changes.length > 0 && <ChangesWaiting changes={changes} />}
       {asking.length > 0 && (
-        <Panel title={`Asking to join (${asking.length})`}>
+        <Panel title={`Asking to join (${asking.length})`} guide="letIn">
           <ul className="space-y-3">
             {asking.map((ask) => (
               <Asking key={ask.device} ask={ask} />
@@ -1337,7 +1362,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
           </ul>
         </Panel>
       )}
-      <Panel title="The family's computers">
+      <Panel title="The family's computers" guide="computers">
         <Members members={status.members ?? []} keeper={!offered} changes={changes} />
         {!offered && <Invite />}
       </Panel>
@@ -1353,7 +1378,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
 function Answers({ answers }: { answers: FolderAnswer[] }) {
   const seen = useAnswersSeen();
   return (
-    <Panel title="The keeper's answer">
+    <Panel title="The keeper's answer" guide="answer">
       {answers.map((answer) => (
         <div key={answer.proposal} className="space-y-1 text-sm">
           {answer.note && <p className="whitespace-pre-line">“{answer.note}”</p>}
@@ -1395,7 +1420,7 @@ function RoleNote({ status }: { status: FamilyFolderStatus }) {
   const changed = status.role_changed;
   if (!changed) return null;
   return (
-    <Panel title="Your keeper changed what this computer may do">
+    <Panel title="Your keeper changed what this computer may do" guide="yourComputer">
       <p className="text-sm">
         Now <strong>{ROLE_NAMES[changed.role]}</strong>. {ROLE_HERE[changed.role] ?? ""}
       </p>
@@ -1438,7 +1463,7 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
   if (status.role === "waiting") {
     return (
       <div className="space-y-4">
-        <Panel title="Waiting to be let in">
+        <Panel title="Waiting to be let in" guide="join">
           <p className="max-w-2xl text-sm text-stone-600">
             Read this code to your family's keeper, by phone or message. Once they let this computer
             in, the family arrives here by itself.
@@ -1477,7 +1502,7 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
       {sendsToTheKeeper(status) && <Sending status={status} />}
       {(status.answers ?? []).length > 0 && <Answers answers={status.answers ?? []} />}
       <InStep status={status} />
-      <Panel title="The family's computers">
+      <Panel title="The family's computers" guide="yourComputer">
         <Members members={members} keeper={false} />
       </Panel>
       <GoogleAccount status={status} />
@@ -1505,16 +1530,19 @@ function ProjectNeeded({ status }: { status: FamilyFolderStatus }) {
   const keeper = status.setup === "keeper";
   return (
     <div className="space-y-4">
-      <Panel title={keeper ? "Your family's Google project" : "Your keeper's invitation"}>
+      <Panel
+        title={keeper ? "Your family's Google project" : "Your keeper's invitation"}
+        guide={keeper ? "project" : "join"}
+      >
         <p className="max-w-2xl text-sm text-stone-600">
           {keeper ? (
             <>
               Each family signs in to Google through its own Google project. Choose the file Google
               gives for your project's client, then sign in again: the family folder carries on as
               it was.{" "}
-              <a href={GUIDE_PROJECT} target="_blank" rel="noreferrer" className="text-sky-700">
+              <Link to={guideAt("project")} className="text-sky-700">
                 The guide shows how
-              </a>
+              </Link>
               .
             </>
           ) : (

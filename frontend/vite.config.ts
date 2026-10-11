@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -52,12 +54,26 @@ function oneFile(): Plugin {
   };
 }
 
+/**
+ * The user guide's folder: `public/` here, and the root of the public repository, where
+ * the publish puts `GUIDE.md` and `guide/` and from where its Release workflow builds the app.
+ * The app reads the guide from there as it is, so the app and GitHub show one file.
+ */
+function guideFolder(): string {
+  const folder = [new URL("../public/", import.meta.url), new URL("../", import.meta.url)]
+    .map((url) => fileURLToPath(url))
+    .find((each) => existsSync(join(each, "GUIDE.md")));
+  if (!folder) throw new Error("GUIDE.md isn't in public/ or beside frontend/");
+  return folder;
+}
+
 export default defineConfig(({ mode }) => {
   const viewer = mode === "viewer";
+  const guide = guideFolder();
   return {
     plugins: [react(), tailwindcss(), ...(viewer ? [oneFile()] : [])],
     resolve: {
-      alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+      alias: { "@": fileURLToPath(new URL("./src", import.meta.url)), "@guide": guide },
     },
     // Local only: listen on 127.0.0.1 and forward /api to the backend.
     server: {
@@ -65,6 +81,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: { "/api": "http://127.0.0.1:8000" },
+      fs: { allow: [".", guide] }, // the guide, outside frontend/
     },
     preview: { host: "127.0.0.1" },
     build: viewer
@@ -82,7 +99,8 @@ export default defineConfig(({ mode }) => {
           },
         }
       : // The story editor (MDXEditor, ~590 kB) is its own chunk, loaded when a story is first
-        // opened; so is MapLibre, about 1 MB, when the map is first drawn from its packs.
+        // opened; so is MapLibre, about 1 MB, when the map is first drawn from its packs;
+        // and Mermaid, in its own chunks, when the guide first shows a diagram.
         { chunkSizeWarningLimit: 1100 },
     test: {
       environment: "node",

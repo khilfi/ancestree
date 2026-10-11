@@ -1,6 +1,6 @@
 import { ChevronDownIcon } from "lucide-react";
 import { Fragment, useState } from "react";
-import { useSaveTreeSettings, useTreeSettings } from "@/api/queries";
+import { TREE_DEFAULTS, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
 import type { Graph, TreeSettings } from "@/api/types";
 import { useCopy } from "@/app/copy";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export function FamiliesMenu({
   // A view-only copy moves its centre only where it carries the seats for it.
   const copy = useCopy();
   const [open, setOpen] = useState(false);
-  const current: TreeSettings = settings.data ?? { centre: null, colours: "branch" };
+  const current: TreeSettings = settings.data ?? TREE_DEFAULTS;
   const byId = new Map(graph.people.map((person) => [person.id, person]));
   const name = (id: string | null) => {
     const person = id ? byId.get(id) : undefined;

@@ -79,6 +79,16 @@ class Graph(BaseModel):
     layout: GraphLayout
 
 
+class SampleFamily(BaseModel):
+    """A made-up family whose married-in families hang off it in a hard way, for trying ways
+    of placing them side by side."""
+
+    key: str
+    title: str
+    about: str
+    graph: Graph
+
+
 class Position(BaseModel):
     id: UUID
     x: float | None  # None puts them back on their place on the rings
@@ -95,6 +105,10 @@ class TreeSettings(BaseModel):
     centre: UUID | None = None  # None: the oldest ancestor
     # "closeness": how close each person is to you, once you've chosen who you are
     colours: Literal["branch", "generation", "closeness", "off"] = "branch"
+    # How married-in families are placed on the rings: as fans from their
+    # person; as discs of whole rings, apart; as fans gently settled; or tucked into the
+    # host's own rings. Each computer's own, like the colours.
+    married_in: Literal["fans", "discs", "settled", "tucked"] = "fans"
 
 
 class MeSettings(BaseModel):

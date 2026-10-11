@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
 import { fileSize } from "@/lib/files";
 import { ACTION_MS, showError } from "@/lib/notify";
 import { ElsewherePanel } from "./ElsewherePanel";
@@ -146,6 +147,7 @@ export function BackupsSection() {
               </>
             )}
           </p>
+          <HowDoesThisWork at="backups" />
         </div>
         <div className="flex shrink-0 gap-2">
           <Button variant="outline" onClick={() => input.current?.click()} disabled={busy}>

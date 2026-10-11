@@ -35,6 +35,18 @@ export const appRoutes: RouteObject[] = [
         path: "sample",
         lazy: async () => ({ Component: (await import("@/features/tree/SamplePage")).SamplePage }),
       },
+      // Spike S7: ways of placing married-in families, side by side. The app's alone.
+      ...(import.meta.env.MODE === "viewer"
+        ? []
+        : [
+            {
+              path: "sample/families",
+              lazy: async () => ({
+                Component: (await import("@/features/tree/sideBySide/SideBySidePage"))
+                  .SideBySidePage,
+              }),
+            },
+          ]),
       {
         // Sections with their own addresses; /settings opens the first.
         path: "settings",
@@ -104,6 +116,18 @@ export const appRoutes: RouteObject[] = [
               Component: (await import("@/features/settings/TrashSection")).TrashSection,
             }),
           },
+          // The guide's pages are the app's alone: written out for a copy's build, so its
+          // one file never carries the guide, its pictures or Mermaid.
+          ...(import.meta.env.MODE === "viewer"
+            ? []
+            : [
+                {
+                  path: "help",
+                  lazy: async () => ({
+                    Component: (await import("@/features/settings/HelpSection")).HelpSection,
+                  }),
+                },
+              ]),
           {
             path: "about",
             lazy: async () => ({
@@ -112,6 +136,17 @@ export const appRoutes: RouteObject[] = [
           },
         ],
       },
+      // The user guide, at /guide#<a heading's address>, as on GitHub.
+      ...(import.meta.env.MODE === "viewer"
+        ? []
+        : [
+            {
+              path: "guide",
+              lazy: async () => ({
+                Component: (await import("@/features/guide/GuidePage")).GuidePage,
+              }),
+            },
+          ]),
       // The Trash and What's missing moved into Settings; old links still arrive.
       { path: "trash", element: <Navigate to="/settings/trash" replace /> },
       { path: "missing", element: <Navigate to="/settings/missing" replace /> },

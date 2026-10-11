@@ -111,9 +111,11 @@ function exportNamed(name: string): CopyFile | null {
   return files.find((file) => file.name === name) ?? null;
 }
 
-/** The tree's settings: the centre and the colours, each the viewer's own once they choose.
- *  Closeness is to whoever looks: the maker's was to them, so a copy opens with branch
- *  colours instead, until its viewer picks closeness to the person they chose as "Me". */
+/** The tree's settings: the centre, the colours and how married-in families are placed, each
+ *  the viewer's own once they choose. Closeness is to whoever looks: the maker's was to them,
+ *  so a copy opens with branch colours instead, until its viewer picks closeness to the person
+ *  they chose as "Me". A copy made before there was a way to choose opens with fans,
+ *  the first choice. */
 function treeSettings(): TreeSettings {
   const madeWith = family().tree_settings;
   const colours =
@@ -122,6 +124,7 @@ function treeSettings(): TreeSettings {
   return {
     ...madeWith,
     colours,
+    married_in: choices().married_in ?? madeWith.married_in ?? "fans",
     centre: chosen === undefined ? (madeWith.centre ?? null) : chosen,
   };
 }
@@ -167,6 +170,7 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
   "/api/health": () => ok(family().health),
   "/api/graph": () => ok(graphNow()),
   "/api/sample/graph": NOT_IN_COPY,
+  "/api/sample/families": NOT_IN_COPY,
   "/api/settings": () => ok(treeSettings()),
   "/api/persons": ({ query }) =>
     ok(findPeople(family().search, query.get("q") ?? "", Number(query.get("limit") ?? 20))),
@@ -240,7 +244,7 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
       }
       choose({ centre });
     }
-    choose({ colours: wanted.colours });
+    choose({ colours: wanted.colours, married_in: wanted.married_in });
     return ok(treeSettings());
   },
   "PUT /api/kinship/settings": ({ body }) => {
@@ -311,6 +315,7 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "DELETE /api/relationship-kinds/{key}": REFUSED,
   "POST /api/backups": REFUSED,
   "POST /api/backups/{name}/restore": REFUSED,
+  "POST /api/sample/families/backup": REFUSED, // the app's alone: a copy reads no backups
   "POST /api/imports/preview": REFUSED,
   "POST /api/imports": REFUSED,
   "POST /api/imports/{import_id}/take-back": REFUSED,

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
-import { usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
+import { TREE_DEFAULTS, usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
 import type { PersonDetail } from "@/api/types";
 import { CanEdit, InAppOnly, useCanEdit } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -77,7 +77,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
 function CentreButton({ person }: { person: PersonDetail }) {
   const settings = useTreeSettings();
   const save = useSaveTreeSettings();
-  const current = settings.data ?? { centre: null, colours: "branch" as const };
+  const current = settings.data ?? TREE_DEFAULTS;
   if (current.centre === person.id) {
     return (
       <Button

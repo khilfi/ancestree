@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Layout, layoutsFor, type TreeView } from "./filters";
+import { WAYS, type Way } from "./placing";
 
 const NAMES: Record<Layout, string> = {
   rings: "Rings",
@@ -53,18 +54,23 @@ export const DEFAULT_DEPTH: Record<"hourglass" | "fan", number> = { hourglass: 3
 
 /**
  * The Layout menu: the rings and the other fits, those that suit the filter
- * first; and Tidy up, which was Rearrange, for the rings.
+ * first; on the rings, how married-in families are placed; and Tidy up, which was
+ * Rearrange, for the rings.
  */
 export function LayoutMenu({
   view,
   onView,
   focusName,
   onTidyUp,
+  married = "fans",
+  onMarried,
 }: {
   view: TreeView;
   onView: (view: TreeView) => void;
   focusName: string; // whom an hourglass or fan chart would be around
   onTidyUp?: () => void; // none in read-only trees, or away from the rings
+  married?: Way; // how married-in families are placed on the rings
+  onMarried?: (way: Way) => void; // none in read-only trees
 }) {
   return (
     <DropdownMenu>
@@ -90,6 +96,22 @@ export function LayoutMenu({
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
+        {onMarried && view.layout === "rings" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Married-in families</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={married} onValueChange={(way) => onMarried(way as Way)}>
+              {WAYS.map(({ way, name, hint: how }) => (
+                <DropdownMenuRadioItem key={way} value={way} className="items-start py-1.5">
+                  <span className="flex flex-col">
+                    <span className="font-medium">{name}</span>
+                    <span className="text-xs text-stone-500">{how}</span>
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </>
+        )}
         {onTidyUp && (
           <>
             <DropdownMenuSeparator />

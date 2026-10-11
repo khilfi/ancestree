@@ -1,6 +1,7 @@
 import { FoldVerticalIcon, UnfoldVerticalIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
+  TREE_DEFAULTS,
   useClearPositions,
   useSavePositions,
   useSaveTreeSettings,
@@ -70,7 +71,7 @@ export function TreeToolbar({
     .filter((person) => person && !person.placeholder)
     .map((person) => person && shortName(person))
     .join(" & ");
-  const current: TreeSettings = settings.data ?? { centre: null, colours: "branch" };
+  const current: TreeSettings = settings.data ?? TREE_DEFAULTS;
   const focused = focus ? byId.get(focus) : undefined;
   const focusName = focused ? shortName(focused) : "someone";
   const shownReal = shown ? [...shown].filter((id) => !byId.get(id)?.placeholder).length : null;
@@ -108,6 +109,12 @@ export function TreeToolbar({
                 !readOnly && canTidy && view.layout === "rings" && !clear.isPending
                   ? tidyUp
                   : undefined
+              }
+              married={current.married_in}
+              onMarried={
+                readOnly
+                  ? undefined
+                  : (way) => save.mutate({ ...current, married_in: way }, { onError: showError })
               }
             />
             <DepthStepper view={view} onView={onView} />

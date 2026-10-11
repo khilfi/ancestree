@@ -1,13 +1,15 @@
 import type { KinshipLanguage, TreeSettings } from "@/api/types";
 
 /**
- * What someone looking at a view-only copy chooses for themselves: the colours, the language
- * of kinship words, who they are, and which family is at the centre. Kept in their browser,
- * never in the file, and per family, so a newer copy of the same family keeps them.
- * The copy works just as well without it: a private window may keep nothing.
+ * What someone looking at a view-only copy chooses for themselves: the colours, how married-in
+ * families are placed, the language of kinship words, who they are, and which family is at the
+ * centre. Kept in their browser, never in the file, and per family, so a newer copy of the same
+ * family keeps them. The copy works just as well without it: a private window may keep
+ * nothing.
  */
 export type Choices = {
   colours?: TreeSettings["colours"];
+  married_in?: TreeSettings["married_in"];
   language?: KinshipLanguage;
   me?: string | null; // "Me", each viewer's own
   centre?: string | null; // null: the oldest ancestor; missing: the copy's own centre

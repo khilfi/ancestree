@@ -2,7 +2,8 @@ import { hierarchy, tree } from "d3-hierarchy";
 import type { Gender, Graph } from "@/api/types";
 import { standings } from "@/features/timeline/lanes";
 import { type Layout, Links } from "./filters";
-import { type Fold, type Point, RING_GAP, type RingLayout, ringLayout, SPACING } from "./rings";
+import { ringLayout, type Way } from "./placing";
+import { type Fold, type Point, RING_GAP, type RingLayout, SPACING } from "./rings";
 
 /*
  * The layouts beside the rings, worked out in the browser from
@@ -105,14 +106,16 @@ function everyoneElse(
   );
 }
 
-/** The rings as an arrangement: positions dragged there are kept by the canvas. A
- *  filter leaves the others' places empty rather than moving anyone. */
+/** The rings as an arrangement, married-in families placed the way this computer chose,
+ *  and positions dragged there kept by the canvas. A filter leaves the others' places
+ *  empty rather than moving anyone. */
 export function ringsArrangement(
   graph: Graph,
   open: ReadonlySet<string>,
   kept: Set<string> | null,
+  way: Way = "fans",
 ): Arrangement {
-  const rings = ringLayout(graph, open);
+  const rings = ringLayout(graph, open, way);
   if (kept)
     for (const person of graph.people) if (!kept.has(person.id)) rings.hidden.add(person.id);
   return { ...rings, layout: "rings", guides: [], elbows: false, focus: null };

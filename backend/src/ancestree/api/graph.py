@@ -1,15 +1,17 @@
 import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, File, Query, UploadFile, status
 
 from ancestree.api.deps import Ctx, Hist
-from ancestree.domain.graph import Graph, Positions, TreeSettings
+from ancestree.domain.graph import Graph, Positions, SampleFamily, TreeSettings
+from ancestree.exchange.restore import read_graph
 from ancestree.repo import graph as graph_repo
 from ancestree.repo import people as people_repo
+from ancestree.seed.clusters import clustered_families
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import read
-from ancestree.services.graph import build_graph, load_graph
+from ancestree.services.graph import build_graph, graph_from_archive, load_graph
 from ancestree.storage.settings import read_tree_settings, write_tree_settings
 
 router = APIRouter(tags=["tree"])
@@ -19,6 +21,12 @@ _COLOURS = {
     "generation": "Colour by generation",
     "closeness": "Colour by closeness to me",
     "off": "No colours",
+}
+_MARRIED_IN = {
+    "fans": "Married-in families as fans",
+    "discs": "Married-in families as discs",
+    "settled": "Married-in families as settled fans",
+    "tucked": "Married-in families tucked in",
 }
 
 
@@ -34,6 +42,33 @@ async def get_sample_graph(people: Annotated[int, Query(ge=10, le=5000)] = 2000)
     """A generated, fictional family, for trying the canvas at size. Nothing is stored."""
     rows, links = generated_family(people)
     return build_graph(rows, links, {"biological": True}, None)
+
+
+@router.get("/sample/families")
+async def get_sample_families() -> list[SampleFamily]:
+    """Six made-up families whose married-in families hang off them in hard ways, each seated
+    as the tree seats it, for trying ways of placing those families side by side.
+    Nothing is stored."""
+    return [
+        SampleFamily(
+            key=family.key,
+            title=family.title,
+            about=family.about,
+            graph=build_graph(family.people, family.links, {"biological": True}, None),
+        )
+        for family in clustered_families()
+    ]
+
+
+@router.post("/sample/families/backup")
+async def get_family_from_backup(
+    file: Annotated[UploadFile, File(description="An AncesTree backup archive (.zip)")],
+) -> Graph:
+    """The family in a backup archive, seated as the tree seats it, to try the same ways on
+    (S7). Read in memory and checked as a restore checks it: nothing is restored or kept.
+    Refused (422, "bad_archive") if it isn't a backup that can be read."""
+    archive = await asyncio.to_thread(read_graph, file.file, file.filename or "The file")
+    return graph_from_archive(archive)
 
 
 @router.put("/layout/positions", status_code=status.HTTP_204_NO_CONTENT)
@@ -61,7 +96,8 @@ async def read_settings(ctx: Ctx) -> TreeSettings:
 
 @router.put("/settings")
 async def save_settings(ctx: Ctx, history: Hist, body: TreeSettings) -> TreeSettings:
-    """The centre of the tree (none: the oldest ancestor) and how the rings are coloured."""
+    """The centre of the tree (none: the oldest ancestor), how the rings are coloured, and how
+    married-in families are placed on them."""
     async with history.settings_change(ctx) as step:
         before = await asyncio.to_thread(read_tree_settings, ctx.data_dir)
         await asyncio.to_thread(write_tree_settings, ctx.data_dir, body)
@@ -71,6 +107,8 @@ async def save_settings(ctx: Ctx, history: Hist, body: TreeSettings) -> TreeSett
             else:
                 person = await read(ctx, lambda tx: people_repo.fetch_person(tx, str(body.centre)))
                 step.label = f"Centre the tree on {(person or {}).get('full_name', 'someone')}"
+        elif body.married_in != before.married_in:
+            step.label = _MARRIED_IN[body.married_in]
         else:
             step.label = _COLOURS.get(body.colours, "Change the colours")
     return body

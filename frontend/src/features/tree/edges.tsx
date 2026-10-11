@@ -1,7 +1,7 @@
 import { BaseEdge, type Edge, type EdgeProps, useInternalNode } from "@xyflow/react";
 import { memo } from "react";
 import type { GraphLink } from "@/api/types";
-import { midpoint, photoCentre, photoRadius, rim } from "./geometry";
+import { midpoint, photoCentre, photoRadius, rim, roundedPath } from "./geometry";
 import type { Point } from "./rings";
 
 /*
@@ -16,6 +16,9 @@ export type ChildEdgeData = {
   look: "blood" | "care" | "loose"; // biological; adoptive, foster; a kind not on the rings
   middle: Point | null; // the middle of their rings: the line curves around it, not across
   elbow?: boolean; // top to bottom: down, across and down, as in a printed tree
+  // A link between families, or of a kind not on the rings, routed through the openings:
+  // the points it passes, between its two ends.
+  route?: Point[];
 };
 export type ChildFlowEdge = Edge<ChildEdgeData, "child">;
 
@@ -57,12 +60,13 @@ export function outward(start: Point, to: Point, middle: Point | null, childRadi
 }
 
 /** A parent's line to a child: from the dot between the parents (or the parent's rim) to the
- *  child's rim. Top to bottom it drops down, across and down; on the rings it goes outward. */
+ *  child's rim. Top to bottom it drops down, across and down; on the rings it goes outward, or
+ *  along its route, its corners rounded, when it has one. */
 export function childPath(
   parent: { centre: Point; radius: number },
   partner: Point | null,
   child: { centre: Point; radius: number },
-  data: Pick<ChildEdgeData, "middle" | "elbow"> | undefined,
+  data: Pick<ChildEdgeData, "middle" | "elbow" | "route"> | undefined,
 ): string {
   const to = child.centre;
   const below = parent.centre.y < to.y - child.radius - 24;
@@ -73,6 +77,15 @@ export function childPath(
     const top = to.y - child.radius - 3;
     const bend = start.y + (top - start.y) / 2;
     return `M ${start.x},${start.y} L ${start.x},${bend} L ${to.x},${bend} L ${to.x},${top}`;
+  }
+  const route = data?.route ?? [];
+  const [first] = route;
+  const last = route.at(-1);
+  if (first && last) {
+    const start = partner
+      ? midpoint(parent.centre, partner)
+      : rim(parent.centre, parent.radius, first);
+    return roundedPath([start, ...route, rim(to, child.radius + 3, last)]);
   }
   const start = partner ? midpoint(parent.centre, partner) : rim(parent.centre, parent.radius, to);
   return outward(start, to, data?.middle ?? null, child.radius + 3).path;

@@ -16,6 +16,7 @@ const SECTIONS = [
   { to: "map", label: "Map" },
   { to: "backups", label: "Backups" },
   { to: "trash", label: "Trash" },
+  { to: "help", label: "Help" }, // the user guide
   { to: "about", label: "About" },
 ] as const;
 

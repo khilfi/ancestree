@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "paths": {
     "/api/health": {
@@ -71,6 +71,74 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/families": {
+      "get": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Get Sample Families",
+        "description": "Six made-up families whose married-in families hang off them in hard ways, each seated\nas the tree seats it, for trying ways of placing those families side by side.\nNothing is stored.",
+        "operationId": "get_sample_families",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SampleFamily"
+                  },
+                  "type": "array",
+                  "title": "Response Get Sample Families"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/families/backup": {
+      "post": {
+        "tags": [
+          "tree"
+        ],
+        "summary": "Get Family From Backup",
+        "description": "The family in a backup archive, seated as the tree seats it, to try the same ways on\n(S7). Read in memory and checked as a restore checks it: nothing is restored or kept.\nRefused (422, \"bad_archive\") if it isn't a backup that can be read.",
+        "operationId": "get_family_from_backup",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_get_family_from_backup"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -168,7 +236,7 @@
           "tree"
         ],
         "summary": "Save Settings",
-        "description": "The centre of the tree (none: the oldest ancestor) and how the rings are coloured.",
+        "description": "The centre of the tree (none: the oldest ancestor), how the rings are coloured, and how\nmarried-in families are placed on them.",
         "operationId": "save_settings",
         "requestBody": {
           "content": {
@@ -4469,6 +4537,21 @@
           "file"
         ],
         "title": "Body_add_picture"
+      },
+      "Body_get_family_from_backup": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "An AncesTree backup archive (.zip)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_get_family_from_backup"
       },
       "Body_preview_import": {
         "properties": {
@@ -9945,6 +10028,34 @@
         "title": "RoleChanged",
         "description": "The keeper gave this computer another role, until its owner has seen so."
       },
+      "SampleFamily": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "about": {
+            "type": "string",
+            "title": "About"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/Graph"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "about",
+          "graph"
+        ],
+        "title": "SampleFamily",
+        "description": "A made-up family whose married-in families hang off it in a hard way, for trying ways\nof placing them side by side."
+      },
       "Seat": {
         "properties": {
           "unit": {
@@ -10258,6 +10369,17 @@
             ],
             "title": "Colours",
             "default": "branch"
+          },
+          "married_in": {
+            "type": "string",
+            "enum": [
+              "fans",
+              "discs",
+              "settled",
+              "tucked"
+            ],
+            "title": "Married In",
+            "default": "fans"
           }
         },
         "type": "object",

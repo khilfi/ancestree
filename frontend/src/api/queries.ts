@@ -52,6 +52,7 @@ export const keys = {
   imports: ["imports"] as const,
   map: ["map"] as const,
   sampleMap: (people: number) => ["sample-map", people] as const,
+  sampleFamilies: ["sample-families"] as const,
 };
 
 export function useHealth() {
@@ -88,6 +89,28 @@ export function useSampleMap(people: number, enabled = true) {
     queryFn: () => unwrap(api.GET("/api/sample/map", { params: { query: { people } } })),
     staleTime: Number.POSITIVE_INFINITY,
     enabled,
+  });
+}
+
+/** Made-up families whose married-in families hang off them in hard ways, for trying ways of
+ *  placing those families side by side; nothing is stored. */
+export function useSampleFamilies() {
+  return useQuery({
+    queryKey: keys.sampleFamilies,
+    queryFn: () => unwrap(api.GET("/api/sample/families")),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+/** The family in a backup archive, seated, to try the same ways on. It's read, not
+ *  restored: nothing is kept. */
+export function useFamilyFromBackup() {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return sendForm<Graph>("/api/sample/families/backup", "POST", form);
+    },
   });
 }
 
@@ -129,6 +152,10 @@ export function useRemovePin() {
 export function useTreeSettings() {
   return useQuery({ queryKey: keys.treeSettings, queryFn: () => unwrap(api.GET("/api/settings")) });
 }
+
+/** The tree's settings until this computer's own have come: the oldest ancestor at the
+ *  centre, coloured by branch, married-in families as fans. */
+export const TREE_DEFAULTS: TreeSettings = { centre: null, colours: "branch", married_in: "fans" };
 
 export function useSaveTreeSettings() {
   const client = useQueryClient();

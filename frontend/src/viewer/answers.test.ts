@@ -157,7 +157,7 @@ describe("a view-only copy", () => {
 
   it("moves its centre to a family it carries the seats for, in the viewer's browser", async () => {
     const moved = await ask("/api/settings", "PUT", { centre: AMINAH, colours: "generation" });
-    expect(moved.json).toEqual({ centre: AMINAH, colours: "generation" });
+    expect(moved.json).toEqual({ centre: AMINAH, colours: "generation", married_in: "fans" });
     expect((await ask("/api/graph")).json).toEqual({ ...family.graph, layout: AROUND_AMINAH });
     expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").centre).toBe(AMINAH);
 
@@ -165,6 +165,19 @@ describe("a view-only copy", () => {
     const back = await ask("/api/settings", "PUT", { centre: null, colours: "generation" });
     expect(back.json.centre).toBeNull();
     expect((await ask("/api/graph")).json).toEqual(family.graph);
+  });
+
+  it("places married-in families the way its viewer chooses, in their browser", async () => {
+    // Made before there was a way to choose, so made with none: fans, the first choice.
+    expect((await ask("/api/settings")).json.married_in).toBe("fans");
+    const chosen = await ask("/api/settings", "PUT", {
+      centre: null,
+      colours: "branch",
+      married_in: "discs",
+    });
+    expect(chosen.json.married_in).toBe("discs");
+    expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("discs");
+    expect((await ask("/api/settings")).json.married_in).toBe("discs");
   });
 
   it("changes nothing in the family", async () => {

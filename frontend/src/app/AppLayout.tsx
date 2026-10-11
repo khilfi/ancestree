@@ -1,4 +1,4 @@
-import { BookOpenIcon, InfoIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { BookOpenIcon, CircleHelpIcon, InfoIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useFamilyFolder, waitingIn } from "@/api/familyFolder";
@@ -52,6 +52,23 @@ export function SettingsLink() {
           {waiting}
         </span>
       )}
+    </NavLink>
+  );
+}
+
+/** **? Guide**: the user guide, inside the app. Only in the app itself: a copy
+ *  carries no guide. Its word comes last, from 1760 pixels across: narrower, it would take the
+ *  search's room, or the family's name. */
+export function GuideLink() {
+  return (
+    <NavLink
+      to="/guide"
+      className={iconLinkClass}
+      aria-label="Guide"
+      title="The guide to AncesTree"
+    >
+      <CircleHelpIcon className="size-4" />
+      <span className="hidden min-[1760px]:inline">Guide</span>
     </NavLink>
   );
 }
@@ -148,6 +165,7 @@ export function AppLayout() {
               <span className="hidden 2xl:inline">Dictionary</span>
             </NavLink>
             <InAppOnly>
+              <GuideLink />
               <SettingsLink />
             </InAppOnly>
           </div>

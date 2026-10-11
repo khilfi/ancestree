@@ -11,7 +11,7 @@ A family-history app for your family, on its own computers. Add relatives with t
 
 ## Install
 
-Download the installer for your system from the [latest release](../../releases/latest). **[The guide](GUIDE.md)** takes you through each step, and each warning your computer shows: installing, starting the family folder or joining it, updates, and what to do when something goes wrong.
+Download the installer for your system from the [latest release](../../releases/latest). **[The guide](GUIDE.md)** takes you through each step, and each warning your computer shows: installing, starting the family folder or joining it, updates, and what to do when something goes wrong. Once AncesTree is installed, the guide is inside it too: click **?** at the top of the window. New to it? Begin at the guide's [Start here](GUIDE.md#start-here); a relative with an invitation from the family's keeper, at its [Quick start for relatives](GUIDE.md#quick-start-for-relatives).
 
 | System | File | The first time |
 |---|---|---|

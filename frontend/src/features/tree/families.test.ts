@@ -3,7 +3,7 @@ import type { Graph, GraphPerson, LayoutUnit, Seat } from "@/api/types";
 import { branchColours, generationColour, RING_LINE, ringStroke, tint } from "./colours";
 import { branchMembers, familiesOf, familyMembers } from "./families";
 import { generationShifts, treeGeneration } from "./generations";
-import { ringLayout } from "./rings";
+import { ringLayout } from "./placing";
 import { colourer } from "./toFlow";
 
 /*
@@ -115,10 +115,14 @@ describe("married-in families on the tree's own generations", () => {
     expect(treeGeneration(deeper, shifts, "pak")).toBe(2);
     expect(treeGeneration(deeper, shifts, "daud")).toBe(3);
 
-    const siti = ringLayout(deeper, new Set(["cluster:siti"])).rings.filter(
-      (ring) => ring.unit === "cluster:siti",
-    );
-    expect(siti.map((ring) => ring.generation)).toEqual([3]);
+    // As discs, a ring round her parents for her brothers and sisters; as a fan, an arc
+    // for her parents too. Each in the tree's generations.
+    const rings = (way: "discs" | "fans") =>
+      ringLayout(deeper, new Set(["cluster:siti"]), way)
+        .rings.filter((ring) => ring.unit === "cluster:siti")
+        .map((ring) => ring.generation);
+    expect(rings("discs")).toEqual([3]);
+    expect(rings("fans")).toEqual([2, 3]);
   });
 
   it("colours them by generation like everyone else, but by branch not at all", () => {

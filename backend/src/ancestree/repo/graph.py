@@ -9,7 +9,9 @@ from typing import Any
 
 from neo4j import AsyncDriver, RoutingControl
 
-_PERSON_FIELDS = (
+# Each person's values, in the order `read_family` returns them; a backup's family is read into
+# the same shape (`services.graph.graph_from_archive`).
+PERSON_FIELDS = (
     "id",
     "full_name",
     "nickname",
@@ -74,7 +76,7 @@ async def read_family(
         routing_=RoutingControl.READ,
     )
     return (
-        [dict(zip(_PERSON_FIELDS, row, strict=True)) for row in people[0]["rows"]],
+        [dict(zip(PERSON_FIELDS, row, strict=True)) for row in people[0]["rows"]],
         [dict(zip(_LINK_FIELDS, row, strict=True)) for row in links[0]["rows"]],
         {record["key"]: bool(record["in_layout"]) for record in kinds},
     )

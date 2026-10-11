@@ -53,6 +53,7 @@ import { type PersonFlowNode, PersonNode } from "./PersonNode";
 import type { TreeSnapshot } from "./picture";
 import { RingsBackdrop } from "./RingsBackdrop";
 import type { Point } from "./rings";
+import { routesOf } from "./routing";
 import { type TreeActions, TreeActionsContext } from "./TreeActions";
 import { TreeToolbar } from "./TreeToolbar";
 import { type TreeEdge, toFlow } from "./toFlow";
@@ -141,6 +142,8 @@ export function TreeCanvas({
 }) {
   const settings = useTreeSettings();
   const colours = readOnly ? "branch" : (settings.data?.colours ?? "branch");
+  // How married-in families are placed: this computer's choice, or a copy's viewer's.
+  const way = readOnly ? "fans" : (settings.data?.married_in ?? "fans");
   // Nothing on the canvas changes the family in the made-up sample or a view-only
   // copy. A copy still keeps its viewer's colours and folds; the sample doesn't.
   // What can be changed here: nothing in a view-only copy, the made-up sample, or on a
@@ -181,12 +184,23 @@ export function TreeCanvas({
     if (view.layout === "fan" && focus) {
       return fanLayout(graph, focus, depth ?? DEFAULT_DEPTH.fan, hidden);
     }
-    return ringsArrangement(graph, open, hidden);
-  }, [graph, open, kept, hideOthers, focus, viewKey]);
+    return ringsArrangement(graph, open, hidden, way);
+  }, [graph, open, kept, hideOthers, focus, viewKey, way]);
   const leaveCare = view.filter.leave.has("care");
   // "Me": who you are, to colour everyone by how close they are to you.
   const meId = useMeId();
   const me = readOnly ? null : meId;
+  // The links between families, routed through the openings on the rings: worked out
+  // again when someone moves or a link changes, not for a new colour.
+  const routes = useMemo(
+    () =>
+      layout.layout === "rings"
+        ? routesOf(
+            toFlow(graph, layout, "off", { saved: true, care: !leaveCare, route: true }).edges,
+          )
+        : undefined,
+    [graph, layout, leaveCare],
+  );
   const flow = useMemo(
     () =>
       toFlow(graph, layout, colours, {
@@ -195,8 +209,9 @@ export function TreeCanvas({
         elbows: layout.elbows,
         faded: hideOthers ? null : kept,
         care: !leaveCare,
+        routes,
       }),
-    [graph, layout, colours, me, hideOthers, kept, leaveCare],
+    [graph, layout, colours, me, hideOthers, kept, leaveCare, routes],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<PersonFlowNode>([]);
   const [edges, setEdges] = useEdgesState<Edge>([]);

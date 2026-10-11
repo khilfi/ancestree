@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
 import { ACTION_MS, showError } from "@/lib/notify";
 import { carriedOut, type Ticks, tickAll, tickedIds } from "./importTicks";
 import { count, Group, LeftOut, Question, quoted, Review, Row, SecondLook, when } from "./review";
@@ -479,6 +480,7 @@ export function ImportSection() {
             additions sent back on an export. You tick what should happen before anything changes,
             and the whole import can be undone.
           </p>
+          <HowDoesThisWork at="import" />
         </div>
 
         <div className="space-y-2">

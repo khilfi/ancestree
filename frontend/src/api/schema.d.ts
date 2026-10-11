@@ -64,6 +64,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sample/families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sample Families
+         * @description Six made-up families whose married-in families hang off them in hard ways, each seated
+         *     as the tree seats it, for trying ways of placing those families side by side.
+         *     Nothing is stored.
+         */
+        get: operations["get_sample_families"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sample/families/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Family From Backup
+         * @description The family in a backup archive, seated as the tree seats it, to try the same ways on
+         *     (S7). Read in memory and checked as a restore checks it: nothing is restored or kept.
+         *     Refused (422, "bad_archive") if it isn't a backup that can be read.
+         */
+        post: operations["get_family_from_backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/layout/positions": {
         parameters: {
             query?: never;
@@ -99,7 +143,8 @@ export interface paths {
         get: operations["read_settings"];
         /**
          * Save Settings
-         * @description The centre of the tree (none: the oldest ancestor) and how the rings are coloured.
+         * @description The centre of the tree (none: the oldest ancestor), how the rings are coloured, and how
+         *     married-in families are placed on them.
          */
         put: operations["save_settings"];
         post?: never;
@@ -1975,6 +2020,14 @@ export interface components {
             /**
              * File
              * @description JPEG, PNG, WebP, HEIC, GIF, BMP or TIFF
+             */
+            file: string;
+        };
+        /** Body_get_family_from_backup */
+        Body_get_family_from_backup: {
+            /**
+             * File
+             * @description An AncesTree backup archive (.zip)
              */
             file: string;
         };
@@ -3986,6 +4039,20 @@ export interface components {
             backup: string;
         };
         /**
+         * SampleFamily
+         * @description A made-up family whose married-in families hang off it in a hard way, for trying ways
+         *     of placing them side by side.
+         */
+        SampleFamily: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** About */
+            about: string;
+            graph: components["schemas"]["Graph"];
+        };
+        /**
          * Seat
          * @description Where someone sits on the rings; the browser draws it.
          */
@@ -4126,6 +4193,12 @@ export interface components {
              * @enum {string}
              */
             colours: "branch" | "generation" | "closeness" | "off";
+            /**
+             * Married In
+             * @default fans
+             * @enum {string}
+             */
+            married_in: "fans" | "discs" | "settled" | "tucked";
         };
         /**
          * TurnDown
@@ -4212,6 +4285,59 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Graph"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sample_families: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleFamily"][];
+                };
+            };
+        };
+    };
+    get_family_from_backup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_get_family_from_backup"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

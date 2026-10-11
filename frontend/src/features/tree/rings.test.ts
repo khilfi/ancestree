@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Graph, GraphPerson, LayoutUnit, Seat } from "@/api/types";
-import { RING_GAP, ringLayout, SPACING } from "./rings";
+import { ringLayout } from "./placing";
+import { RING_GAP, SPACING } from "./rings";
 
 function person(id: string): GraphPerson {
   return {

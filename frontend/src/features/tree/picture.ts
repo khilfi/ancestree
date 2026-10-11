@@ -13,7 +13,7 @@ import { type ChildEdgeData, childPath, type SpouseEdgeData } from "./edges";
 import { midpoint, NODE_HEIGHT, NODE_WIDTH, PHOTO, rim, SMALL_PHOTO } from "./geometry";
 import type { Guide } from "./layouts";
 import type { PersonFlowNode } from "./PersonNode";
-import type { Point, RingLayout } from "./rings";
+import { ARC_LABEL, type Point, polar, type RingLayout } from "./rings";
 import type { TreeEdge } from "./toFlow";
 
 export type TreeSnapshot = {
@@ -59,6 +59,12 @@ function xml(text: string): string {
 }
 
 const n = (value: number) => Math.round(value * 100) / 100;
+
+/** A point on a ring at `angle`, counted as `polar` counts it: 0 straight up, clockwise. */
+function arcPoint(ring: Pick<RingLayout["rings"][number], "x" | "y" | "radius">, angle: number) {
+  const { x, y } = polar(ring.radius, angle);
+  return { x: ring.x + x, y: ring.y + y };
+}
 
 /** A name on at most two lines of `width`, like the canvas's line clamp: "…" if longer. */
 export function wrapName(name: string, width: number, measure: Measure): string[] {
@@ -115,6 +121,21 @@ export function drawTree(
     });
   }
   for (const ring of snapshot.rings) {
+    if (ring.span) {
+      // An arc: the points along it, and its label just before its start.
+      const { from, to } = ring.span;
+      const along = Array.from({ length: 17 }, (_, i) =>
+        arcPoint(ring, from + ((to - from) * i) / 16),
+      );
+      const label = arcPoint(ring, from - ARC_LABEL / ring.radius);
+      boxes.push({
+        x1: Math.min(...along.map((p) => p.x), label.x - 48) - 8,
+        y1: Math.min(...along.map((p) => p.y), label.y - 12) - 8,
+        x2: Math.max(...along.map((p) => p.x), label.x + 48) + 8,
+        y2: Math.max(...along.map((p) => p.y), label.y + 12) + 8,
+      });
+      continue;
+    }
     boxes.push({
       x1: ring.x - ring.radius,
       y1: ring.y - ring.radius - 24, // the generation label above
@@ -152,14 +173,25 @@ export function drawTree(
   // tree's own generations.
   const tinted = snapshot.tinted ?? false;
   for (const ring of snapshot.rings) {
+    const stroke = ringStroke(ring.generation, tinted);
+    if (ring.span) {
+      const [start, end] = [arcPoint(ring, ring.span.from), arcPoint(ring, ring.span.to)];
+      const large = ring.span.to - ring.span.from > Math.PI ? 1 : 0;
+      out.push(
+        `<path d="M ${n(start.x)},${n(start.y)} A ${n(ring.radius)} ${n(ring.radius)} 0 ${large} 1 ${n(end.x)},${n(end.y)}" fill="none" stroke="${stroke}" stroke-width="1.5"/>`,
+      );
+      continue;
+    }
     out.push(
-      `<circle cx="${n(ring.x)}" cy="${n(ring.y)}" r="${n(ring.radius)}" fill="none" stroke="${ringStroke(ring.generation, tinted)}" stroke-width="1.5"/>`,
+      `<circle cx="${n(ring.x)}" cy="${n(ring.y)}" r="${n(ring.radius)}" fill="none" stroke="${stroke}" stroke-width="1.5"/>`,
     );
   }
   for (const ring of snapshot.rings) {
     const text = `Generation ${ring.generation}`;
     const textWidth = measure(text, `400 11px ${FAMILY}`);
-    const [x, y] = [ring.x, ring.y - ring.radius - 10];
+    // A circle's label sits above it; an arc's just before its start, where nobody sits.
+    const label = ring.span ? arcPoint(ring, ring.span.from - ARC_LABEL / ring.radius) : null;
+    const [x, y] = label ? [label.x, label.y + 4] : [ring.x, ring.y - ring.radius - 10];
     out.push(
       `<rect x="${n(x - textWidth / 2 - 4)}" y="${n(y - 12)}" width="${n(textWidth + 8)}" height="16" rx="4" fill="#fafaf9" fill-opacity="0.8"/>`,
       `<text x="${n(x)}" y="${n(y)}" text-anchor="middle" font-size="11" fill="${COLOURS.label}">${xml(text)}</text>`,

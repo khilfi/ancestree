@@ -2,7 +2,7 @@ import { useStore } from "@xyflow/react";
 import { memo } from "react";
 import { RING_LINE, ringStroke } from "./colours";
 import type { Guide } from "./layouts";
-import type { RingLayout } from "./rings";
+import { ARC_LABEL, polar, type Ring, type RingLayout } from "./rings";
 
 type Props = Pick<RingLayout, "rings" | "tray"> & {
   guides: Guide[];
@@ -50,6 +50,21 @@ function GuideLine({ guide, tinted }: { guide: Guide; tinted: boolean }) {
   return null;
 }
 
+/** A married-in family's arc, drawn as a fan's ring: over its people alone. */
+function arcPath(ring: Ring, span: { from: number; to: number }): string {
+  const [start, end] = [polar(ring.radius, span.from), polar(ring.radius, span.to)];
+  const large = span.to - span.from > Math.PI ? 1 : 0;
+  return `M ${ring.x + start.x},${ring.y + start.y} A ${ring.radius} ${ring.radius} 0 ${large} 1 ${ring.x + end.x},${ring.y + end.y}`;
+}
+
+/** Where a ring's label goes: above a whole circle; just before the start of an arc, in line
+ *  with it, where nobody sits (a fan's people fill its arc's middle). */
+function ringLabel(ring: Ring): string {
+  if (!ring.span) return `translate(${ring.x}px, ${ring.y - ring.radius}px) translate(-50%, -140%)`;
+  const at = polar(ring.radius, ring.span.from - ARC_LABEL / ring.radius);
+  return `translate(${ring.x + at.x}px, ${ring.y + at.y}px) translate(-50%, -50%)`;
+}
+
 function guideLabel(guide: Guide): { x: number; y: number; label: string; start: boolean } | null {
   if (guide.kind === "row")
     return { x: guide.x1, y: guide.y - 22, label: guide.label, start: true };
@@ -71,17 +86,27 @@ const Drawing = memo(function Drawing({ rings, tray, guides, tinted = false }: P
         aria-hidden="true"
       >
         {/* Solid, not dashed: a dashed ring thousands of pixels round costs a frame to draw. */}
-        {rings.map((ring) => (
-          <circle
-            key={`${ring.unit}:${ring.generation}`}
-            cx={ring.x}
-            cy={ring.y}
-            r={ring.radius}
-            fill="none"
-            stroke={ringStroke(ring.generation, tinted)}
-            strokeWidth={1.5}
-          />
-        ))}
+        {rings.map((ring) =>
+          ring.span ? (
+            <path
+              key={`${ring.unit}:${ring.generation}`}
+              d={arcPath(ring, ring.span)}
+              fill="none"
+              stroke={ringStroke(ring.generation, tinted)}
+              strokeWidth={1.5}
+            />
+          ) : (
+            <circle
+              key={`${ring.unit}:${ring.generation}`}
+              cx={ring.x}
+              cy={ring.y}
+              r={ring.radius}
+              fill="none"
+              stroke={ringStroke(ring.generation, tinted)}
+              strokeWidth={1.5}
+            />
+          ),
+        )}
         {guides.map((guide, index) => (
           // Guides only change all together, with the layout.
           // biome-ignore lint/suspicious/noArrayIndexKey: a new layout draws a new set
@@ -108,9 +133,7 @@ const Drawing = memo(function Drawing({ rings, tray, guides, tinted = false }: P
         <div
           key={`label:${ring.unit}:${ring.generation}`}
           className="absolute top-0 left-0 px-1 text-[11px] whitespace-nowrap text-stone-500"
-          style={{
-            transform: `translate(${ring.x}px, ${ring.y - ring.radius}px) translate(-50%, -140%)`,
-          }}
+          style={{ transform: ringLabel(ring) }}
         >
           Generation {ring.generation}
         </div>

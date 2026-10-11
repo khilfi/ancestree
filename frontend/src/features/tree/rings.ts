@@ -1,19 +1,20 @@
 import { type HierarchyPointNode, hierarchy, tree } from "d3-hierarchy";
 import type { Graph, LayoutUnit, Seat } from "@/api/types";
-import { generationShifts } from "./generations";
 
 /*
  * The lineage rings. The backend decides the seats (who is at
  * the centre, each generation, who hangs from whom, who sits beside whom); this turns
  * them into coordinates. d3-hierarchy's radial tree spreads each family around its
- * parent, eldest first clockwise; a crowded ring widens until everyone fits.
+ * parent, eldest first clockwise; a crowded ring widens until everyone fits. Married-in
+ * families are placed around them in `placing.ts`.
  */
 
 export const SPACING = 136; // centre to centre along a ring: a name fits under each photo
 export const RING_GAP = 210; // between rings: a photo, its name and a line
-const UNIT_GAP = 420; // between families with no link to each other
-const TRAY_COLUMNS = 4;
-const TRAY_ROW = 170;
+export const UNIT_GAP = 420; // between families with no link to each other
+export const ARC_LABEL = 56; // an arc's label, this far before its start: past its people's names
+export const TRAY_COLUMNS = 4;
+export const TRAY_ROW = 170;
 
 export type Point = { x: number; y: number };
 
@@ -24,6 +25,9 @@ export type Ring = {
   y: number;
   radius: number;
   cluster: boolean;
+  // Only part of the circle, from one angle clockwise to the other, as `polar` counts them:
+  // a married-in family drawn as a fan. No span: the whole circle.
+  span?: { from: number; to: number };
 };
 
 export type Fold = { unit: string; size: number; open: boolean };
@@ -38,7 +42,7 @@ export type RingLayout = {
 };
 
 type TreeNode = { id: string; children: TreeNode[] };
-type Local = { points: Map<string, Point>; radii: number[]; anchor: Point | null };
+export type Local = { points: Map<string, Point>; radii: number[]; anchor: Point | null };
 
 function append<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   const list = map.get(key);
@@ -47,12 +51,12 @@ function append<K, V>(map: Map<K, V[]>, key: K, value: V): void {
 }
 
 /** A point `radius` from the middle at `angle`: 0 is straight up, growing clockwise. */
-function polar(radius: number, angle: number): Point {
+export function polar(radius: number, angle: number): Point {
   return { x: radius * Math.sin(angle), y: -radius * Math.cos(angle) };
 }
 
 /** One set of rings around (0, 0). */
-function unitLayout(
+export function unitLayout(
   unit: LayoutUnit,
   seatOf: (id: string) => Seat | undefined,
   members: string[],
@@ -120,72 +124,34 @@ function unitLayout(
   return { points, radii, anchor };
 }
 
-/** Coordinates for everyone shown; clusters in `open` are unfolded. */
-export function ringLayout(graph: Graph, open: ReadonlySet<string>): RingLayout {
+/**
+ * The family at the centre, and each family with no link to it, on its own rings side by side,
+ * and people with no links in their tray: everyone but the married-in families, which
+ * `placing.ts` places, the way this computer chose.
+ */
+export function centreLayout(graph: Graph): RingLayout {
   const seats = new Map(Object.entries(graph.layout.seats));
   const membersOf = new Map<string, string[]>();
   for (const [id, seat] of seats) append(membersOf, seat.unit, id);
-  // A married-in family's rings are named in the tree's own generations.
-  const shifts = generationShifts(graph);
 
   const points = new Map<string, Point>();
   const rings: Ring[] = [];
-  const hidden = new Set<string>();
-  const folds = new Map<string, Fold[]>();
   const placed = new Map<string, Point & { outer: number }>();
   let cursor = 0;
 
   for (const unit of graph.layout.units) {
+    if (unit.anchor) continue;
     const members = membersOf.get(unit.id) ?? [];
-    const anchorAt = unit.anchor ? points.get(unit.anchor) : undefined;
-    if (unit.anchor) {
-      const isOpen = open.has(unit.id) && anchorAt !== undefined;
-      append(folds, unit.anchor, { unit: unit.id, size: unit.size, open: isOpen });
-      if (!isOpen) {
-        for (const id of members) hidden.add(id);
-        continue;
-      }
-    }
-    const seatOf = (id: string) =>
-      id === unit.anchor ? (unit.anchor_seat ?? undefined) : seats.get(id);
-    const local = unitLayout(unit, seatOf, unit.anchor ? [...members, unit.anchor] : members);
+    const local = unitLayout(unit, (id) => seats.get(id), members);
     const outer = Math.max(...local.radii) + SPACING;
-
-    let centre: Point;
-    let turn = 0;
-    if (unit.anchor && anchorAt) {
-      // Outside the rings it hangs from, turned so its own place for the anchor faces them.
-      const host = placed.get(seats.get(unit.anchor)?.unit ?? "") ?? { x: 0, y: 0, outer: 0 };
-      const away = Math.atan2(anchorAt.y - host.y, anchorAt.x - host.x);
-      centre = {
-        x: host.x + (host.outer + outer + SPACING) * Math.cos(away),
-        y: host.y + (host.outer + outer + SPACING) * Math.sin(away),
-      };
-      if (local.anchor && (local.anchor.x || local.anchor.y)) {
-        turn = away + Math.PI - Math.atan2(local.anchor.y, local.anchor.x);
-      }
-    } else {
-      centre = { x: cursor + outer, y: 0 };
-      cursor = centre.x + outer + UNIT_GAP;
-    }
-    const [cos, sin] = [Math.cos(turn), Math.sin(turn)];
+    const centre = { x: cursor + outer, y: 0 };
+    cursor = centre.x + outer + UNIT_GAP;
     for (const [id, point] of local.points) {
-      if (id === unit.anchor) continue;
-      points.set(id, {
-        x: centre.x + point.x * cos - point.y * sin,
-        y: centre.y + point.x * sin + point.y * cos,
-      });
+      points.set(id, { x: centre.x + point.x, y: centre.y + point.y });
     }
-    const shift = shifts.get(unit.id) ?? 0;
     local.radii.forEach((radius, depth) => {
       if (depth > 0) {
-        rings.push({
-          unit: unit.id,
-          generation: depth + 1 + shift,
-          ...centre,
-          radius,
-          cluster: !!unit.anchor,
-        });
+        rings.push({ unit: unit.id, generation: depth + 1, ...centre, radius, cluster: false });
       }
     });
     placed.set(unit.id, { ...centre, outer });
@@ -209,5 +175,5 @@ export function ringLayout(graph: Graph, open: ReadonlySet<string>): RingLayout 
     tray = { x: left - 24, y: top - 24, width: width + 48, height: height + 48 };
   }
   const middles = new Map([...placed].map(([unit, { x, y }]) => [unit, { x, y }]));
-  return { points, rings, hidden, folds, tray, middles };
+  return { points, rings, hidden: new Set(), folds: new Map(), tray, middles };
 }

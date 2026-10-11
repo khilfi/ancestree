@@ -315,6 +315,21 @@ describe("Settings → Family folder", () => {
     expect(message).toContain("Settings → Family folder");
   });
 
+  it("keeps the invitation's long line inside its window, with Copy in reach", async () => {
+    // The window is as wide as it asks to be, not the alert dialog's narrow default, and the
+    // invitation's long line wraps anywhere: unwrapped, it widened the box past the window's
+    // edge, and Copy went off the screen with it.
+    const invitation = { invitation: `ATI1-${"x".repeat(300)}-123456`, project: "keluarga-contoh" };
+    answer(KEEPER, [], undefined, { "/api/family-folder/invitation": invitation });
+    await show(<FamilyFolderSection />, "Show the invitation");
+    act(() => button("Show the invitation").click());
+    await until("ATI1-xxx");
+    const dialog = document.querySelector("[role=alertdialog]")?.className ?? "";
+    expect(dialog).toContain("data-[size=default]:sm:max-w-xl");
+    expect(dialog).not.toContain("data-[size=default]:sm:max-w-sm");
+    expect(document.querySelector("textarea")?.className).toContain("wrap-anywhere");
+  });
+
   it("asks a keeper from before each family's own project for its client file", async () => {
     answer({ ...KEEPER, available: false, project: "" });
     await show(<FamilyFolderSection />, "Your family's Google project");
@@ -621,6 +636,29 @@ describe("Settings → Family folder", () => {
     await until("Ask your keeper to remove this computer too");
     act(() => button("Leave").click());
     await askedFor("/api/family-folder/leave");
+  });
+
+  it("opens the guide from inviting, a computer of your own, and leaving", async () => {
+    const guide = () =>
+      [...document.querySelectorAll("a")]
+        .filter((link) => link.textContent === "How does this work?")
+        .map((link) => link.getAttribute("href"));
+    answer({ ...KEEPER, asking: [] });
+    await show(<FamilyFolderSection />, "Invite a relative, by their Google account");
+    expect(guide()).toEqual(
+      expect.arrayContaining(["/guide#invite-a-relative", "/guide#your-own-other-computers"]),
+    );
+    act(() => root?.unmount());
+    document.body.replaceChildren();
+    answer({
+      ...SIGNED_IN,
+      setup: "member",
+      role: "contributor",
+      family: "Keluarga Contoh",
+      may_leave: true,
+    });
+    await show(<FamilyFolderSection />, "Leave the family folder…");
+    expect(guide()).toContain("/guide#leaving-the-family");
   });
 
   it("makes the keeper a new recovery code, once they're sure", async () => {

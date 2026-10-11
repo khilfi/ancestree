@@ -1,7 +1,7 @@
 import { ChevronDownIcon, UserRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
+import { TREE_DEFAULTS, usePerson, useSaveTreeSettings, useTreeSettings } from "@/api/queries";
 import type { TreeSettings } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ export function MeButton() {
   const params = new URLSearchParams(useLocation().search);
   const settings = useTreeSettings();
   const save = useSaveTreeSettings();
-  const current: TreeSettings = settings.data ?? { centre: null, colours: "branch" };
+  const current: TreeSettings = settings.data ?? TREE_DEFAULTS;
 
   if (!me || !person.data) {
     return (

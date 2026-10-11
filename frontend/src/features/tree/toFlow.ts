@@ -7,7 +7,8 @@ import type { ChildFlowEdge, PairFlowEdge, SpouseFlowEdge } from "./edges";
 import { generationShifts, treeGeneration } from "./generations";
 import { cornerFor, nodeHandles, nodeSize } from "./geometry";
 import type { PersonFlowNode } from "./PersonNode";
-import type { RingLayout } from "./rings";
+import type { Point, RingLayout } from "./rings";
+import { routeLinks } from "./routing";
 
 export type TreeEdge = ChildFlowEdge | SpouseFlowEdge | PairFlowEdge;
 
@@ -55,6 +56,8 @@ export type FlowOptions = {
   elbows?: boolean; // links from parents drop down, across and down (the top-to-bottom layouts)
   faded?: ReadonlySet<string> | null; // a filter's others, shown faded; null: none
   care?: boolean; // adoptive and foster links; false when a filter leaves them out
+  route?: boolean; // links between families through the openings, on the rings only
+  routes?: ReadonlyMap<string, Point[]>; // or those routes, worked out already, by link
 };
 
 /** The graph as the canvas's people and links. Selection is applied separately. */
@@ -68,6 +71,8 @@ export function toFlow(
     elbows = false,
     faded = null,
     care = true,
+    route = false,
+    routes,
   }: FlowOptions = {},
 ): { nodes: PersonFlowNode[]; edges: TreeEdge[] } {
   const shown = (id: string) => !layout.hidden.has(id) && layout.points.has(id);
@@ -210,5 +215,14 @@ export function toFlow(
       data: { children: true },
     });
   }
-  return { nodes, edges: edges as Edge[] as TreeEdge[] };
+  const all = edges as Edge[] as TreeEdge[];
+  if (route) return { nodes, edges: routeLinks(graph, nodes, all) };
+  if (!routes?.size) return { nodes, edges: all };
+  return {
+    nodes,
+    edges: all.map((edge) => {
+      const way = edge.type === "child" ? routes.get(edge.id) : undefined;
+      return way ? ({ ...edge, data: { ...edge.data, route: way } } as ChildFlowEdge) : edge;
+    }),
+  };
 }

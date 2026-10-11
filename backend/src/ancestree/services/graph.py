@@ -11,15 +11,51 @@ from ancestree.domain.graph import Graph, GraphLayout, GraphLink, GraphPerson, L
 from ancestree.domain.person import Gender, PartialDate
 from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.lineage import seating
-from ancestree.repo.graph import read_family
+from ancestree.repo.graph import PERSON_FIELDS, read_family
 from ancestree.services.detail import living_from
 
 LAYOUT_SEATS = 60_000  # the most seats a view-only copy carries for other centres
+# A person's values in a backup's graph.json, under the names the database query gives them.
+_ARCHIVE_NAMES = {"x": "layout_x", "y": "layout_y"}
 
 
 async def load_graph(driver: AsyncDriver, database: str, centre: UUID | None) -> Graph:
     people, links, in_layout = await read_family(driver, database)
     return build_graph(people, links, in_layout, centre)
+
+
+def graph_from_archive(archive: Mapping[str, Any]) -> Graph:
+    """The graph of a family in a backup archive's graph.json (`restore.read_graph`), as
+    `load_graph` makes it from the database, around its oldest ancestor: to look at a family
+    without restoring it."""
+    people = []
+    for person in archive["people"]:
+        row = {name: person.get(_ARCHIVE_NAMES.get(name, name)) for name in PERSON_FIELDS}
+        row["gender"] = row["gender"] or Gender.UNKNOWN.value
+        row["placeholder"] = bool(row["placeholder"])
+        row["photo_version"] = person.get("photo_version") if person.get("has_photo") else None
+        people.append(row)
+    # In the database's order: by year of birth, the unknown last, then by name.
+    people.sort(
+        key=lambda row: (row["birth_year"] is None, row["birth_year"] or 0, row["full_name"])
+    )
+    links = sorted(
+        (
+            {
+                "id": link["properties"]["id"],
+                "type": "parent" if link["type"] == "PARENT_OF" else "spouse",
+                "source": link["source"],
+                "target": link["target"],
+            }
+            | {key: link["properties"].get(key) for key in ("kind", "status", "order")}
+            for link in archive["links"]
+        ),
+        key=lambda link: (link["type"], link["id"]),
+    )
+    in_layout = {
+        kind["key"]: bool(kind.get("in_layout", True)) for kind in archive["relationship_kinds"]
+    }
+    return build_graph(people, links, in_layout, None)
 
 
 def centre_layouts(

@@ -19,7 +19,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, LiteralString
+from typing import IO, Any, LiteralString
 from zipfile import BadZipFile, ZipFile
 
 from neo4j import AsyncManagedTransaction as Tx
@@ -244,12 +244,34 @@ def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:
                 _copy_checked(archive, name, expected, target)
     except (BadZipFile, OSError) as error:
         raise ArchiveError(f"{path.name} can't be read as a backup archive.") from error
+    return _parsed(graph_bytes), manifest
+
+
+def _parsed(graph_bytes: bytes) -> dict[str, Any]:
+    """graph.json, read, and checked to hang together."""
     try:
-        graph = json.loads(graph_bytes)
+        graph: dict[str, Any] = json.loads(graph_bytes)
     except (ValueError, RecursionError) as error:
         raise ArchiveError("The archive's graph.json can't be read.") from error
     _check_graph(graph)
-    return graph, manifest
+    return graph
+
+
+def read_graph(source: IO[bytes], name: str) -> dict[str, Any]:
+    """An archive's family alone: its graph.json read and checked as a restore reads it, with
+    nothing unpacked, restored or kept. To look at a family without taking it in (S7)."""
+    latest = max(migration.version for migration in load_migrations())
+    try:
+        with ZipFile(source) as archive:
+            manifest = _manifest(archive, name)
+            if manifest.schema_version > latest:
+                raise ArchiveError(f"{name} was made by a newer AncesTree. Update AncesTree first.")
+            if "graph.json" not in manifest.sha256:
+                raise ArchiveError(f"{name} has no graph.json.")
+            graph_bytes = _copy_checked(archive, "graph.json", manifest.sha256["graph.json"], None)
+    except (BadZipFile, OSError) as error:
+        raise ArchiveError(f"{name} can't be read as a backup archive.") from error
+    return _parsed(graph_bytes)
 
 
 def check_archive(path: Path) -> ArchiveInfo:

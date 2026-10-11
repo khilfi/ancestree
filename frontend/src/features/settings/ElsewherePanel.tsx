@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
 import { ago } from "@/lib/ago";
 import { showError } from "@/lib/notify";
 
@@ -37,7 +38,7 @@ function ChoosePlace({ open, onClose }: { open: boolean; onClose: () => void }) 
   const ready = folder !== "" && (!lock || (password.length >= 8 && password === again));
   return (
     <AlertDialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className="sm:max-w-lg">
+      <AlertDialogContent className="data-[size=default]:sm:max-w-lg">
         <AlertDialogHeader>
           <AlertDialogTitle>Keep copies of the backups in another place</AlertDialogTitle>
           <AlertDialogDescription>
@@ -148,7 +149,10 @@ export function ElsewherePanel({ elsewhere }: { elsewhere: Elsewhere | null | un
   const stop = useStopCopying();
   return (
     <div className="space-y-2 rounded-lg border border-stone-200 p-4 text-sm">
-      <h3 className="font-semibold">Copies in another place</h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="font-semibold">Copies in another place</h3>
+        <HowDoesThisWork at="elsewhere" />
+      </div>
       {!elsewhere ? (
         <>
           <p className="max-w-2xl text-stone-600">
