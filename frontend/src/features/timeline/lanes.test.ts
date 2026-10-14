@@ -38,6 +38,7 @@ function person(id: string, fields: Partial<GraphPerson> = {}): GraphPerson {
     birth_order: null,
     placeholder: false,
     photo_version: null,
+    has_story: false,
     ...fields,
   };
 }

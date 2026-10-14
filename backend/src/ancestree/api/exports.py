@@ -1,7 +1,7 @@
 import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, File, Form, Request, UploadFile, status
 from fastapi.responses import FileResponse
 
 from ancestree.api.deps import Ctx, Hist
@@ -17,6 +17,7 @@ from ancestree.domain.exports import (
 )
 from ancestree.exchange.copies import CopyOptions
 from ancestree.services import elsewhere, exports
+from ancestree.services.familyfolder import FamilyFolder
 
 router = APIRouter(tags=["export"])
 
@@ -29,16 +30,19 @@ _MEDIA_TYPES = {
 
 
 @router.post("/exports", status_code=status.HTTP_201_CREATED)
-async def make_export(ctx: Ctx, request: ExportRequest) -> ExportFile:
+async def make_export(ctx: Ctx, http: Request, request: ExportRequest) -> ExportFile:
     """Make an export in DATA_DIR/exports: the full archive, GEDCOM 5.5.1, a spreadsheet, or
     a view-only copy of the app with the family inside, following its choices."""
+    folder: FamilyFolder | None = getattr(http.app.state, "family_folder", None)
     copy = CopyOptions(
         title=" ".join(request.title.split()),
         hide_living=request.hide_living,
         password=request.password,
         archive=request.archive,
+        here=folder.here()[0] if folder is not None else None,
+        computers=folder.computers() if folder is not None else {},
     )
-    return await exports.make_export(ctx, request.format, copy=copy)
+    return await exports.make_export(ctx, request.format, copy=copy, addresses=request.addresses)
 
 
 @router.get("/exports/{name}", response_class=FileResponse)

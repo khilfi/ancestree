@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 from ancestree.domain.dates import DateParseError, parse_partial_date
-from ancestree.domain.person import Gender, OptionalText, PartialDate, Place
+from ancestree.domain.person import Gender, LivesWith, OptionalText, PartialDate, Place
 from ancestree.domain.relationship import BIOLOGICAL, GenderedLabel, KindWords, SpouseStatus
 
 
@@ -43,6 +43,7 @@ class PersonInput(BaseModel):
     death_place: Place | None = None
     burial_place: OptionalText = Field(default=None, max_length=200)
     residence: Place | None = None
+    lives_with: LivesWith | None = None
     living: bool | None = None
     occupation: OptionalText = Field(default=None, max_length=200)
     notes: OptionalText = Field(default=None, max_length=5000)

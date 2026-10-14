@@ -52,13 +52,17 @@ from ancestree.importing.returned import (
     Relink,
     Remove,
     ReturnedPlan,
+    Sender,
     SetDetail,
     Siblings,
     Story,
     TreeNow,
     Unlink,
+    Words,
     asked_stories,
     plan_returned,
+    with_said,
+    without_said,
 )
 from ancestree.media.photos import PhotoError, process_photo, process_picture, thumbnail
 from ancestree.repo import history as history_repo
@@ -144,13 +148,15 @@ class Sent:
     email: str  # its owner's Google account
     sent_at: datetime
     packed: bytes  # what it sent, gzipped JSON: kept with the import
+    words_only: bool = False  # a viewer's: only its words about people are taken
 
 
 async def _compare_sent(ctx: Context, sent: Sent, answers: Mapping[str, str]) -> _Compared:
     tree = await _tree_now(ctx, asked_stories(sent.base, sent.returned))
-    return _Compared(
-        sent.returned, sent.base, plan_returned(sent.base, sent.returned, tree, answers)
-    )
+    sender = Sender(sent.device, sent.computer, words_only=sent.words_only)
+    # Off the event loop (0.8.0): a big family's comparing never holds up the app meanwhile.
+    plan = await asyncio.to_thread(plan_returned, sent.base, sent.returned, tree, answers, sender)
+    return _Compared(sent.returned, sent.base, plan)
 
 
 def _photos_shown(compared: _Compared) -> None:
@@ -557,10 +563,11 @@ async def preview_sent(ctx: Context, sent: Sent, answers: Mapping[str, str]) -> 
 
 
 def _write_story(ctx: Context, operation: Story, returned: Returned) -> dict[str, Any] | str:
-    """The story as they sent it, with its new pictures made again and kept here: what was
-    done, or why not."""
+    """The story as they sent it, with its new pictures made again and kept here, and what
+    people say about them as it is here: what was done, or why not."""
     now = stories_storage.read_story(ctx.data_dir, operation.person)
-    if (now or "") != (operation.was or ""):
+    story_now, said_now = without_said(now or "")
+    if story_now != without_said(operation.was or "")[0]:
         return "Their story has been changed in the app since, so it's kept."
     text = operation.text
     for name, address in operation.pictures.items():
@@ -573,20 +580,44 @@ def _write_story(ctx: Context, operation: Story, returned: Returned) -> dict[str
             continue
         kept = stories_storage.store_picture(ctx.data_dir, operation.person, webp)
         text = text.replace(f"media/{name}", f"media/{kept}")
+    text = with_said(text, said_now)
+    stories_storage.write_story(ctx.data_dir, operation.person, text)
+    return {"person": operation.person, "before": now, "after": text or None}
+
+
+def _write_words(ctx: Context, operation: Words) -> dict[str, Any] | str:
+    """What someone says about them, written, changed or taken back as they sent it, in the
+    story as it is here now: what was done, or why not."""
+    now = stories_storage.read_story(ctx.data_dir, operation.person)
+    story, said = without_said(now or "")
+    current = next((each for each in said if each.id == operation.said_id), None)
+    if current != operation.was:
+        return "Those words have been changed here since, so they're kept."
+    if operation.said is None:
+        said = [each for each in said if each.id != operation.said_id]
+    elif current is None:
+        said = [*said, operation.said]
+    else:
+        said = [operation.said if each.id == operation.said_id else each for each in said]
+    text = with_said(story, said)
     stories_storage.write_story(ctx.data_dir, operation.person, text)
     return {"person": operation.person, "before": now, "after": text or None}
 
 
 async def _stories(ctx: Context, plan: ReturnedPlan, done: _Done, returned: Returned) -> None:
+    """Stories, and what people say about them, after the people they're about."""
     by_id = {change.id: change for change in plan.changes}
     for change_id, operation in plan.operations.items():
-        if change_id not in done.carried or not isinstance(operation, Story):
+        if change_id not in done.carried or not isinstance(operation, Story | Words):
             continue
         if any(need in done.refused_ids for need in by_id[change_id].needs):
             done.refuse(by_id[change_id], "They couldn't come in, so neither can their story.")
             continue
         async with folder_lock(operation.person):
-            result = await asyncio.to_thread(_write_story, ctx, operation, returned)
+            if isinstance(operation, Words):
+                result = await asyncio.to_thread(_write_words, ctx, operation)
+            else:
+                result = await asyncio.to_thread(_write_story, ctx, operation, returned)
         if isinstance(result, str):
             done.refuse(by_id[change_id], result)
         else:

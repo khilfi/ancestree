@@ -37,9 +37,16 @@ class Settings(BaseSettings):
     family_id: str | None = None
     family_name: str = ""
     restore_first: Path | None = None
+    # The example family: filled with it as it opens, the first time; and, all along, made
+    # up, so never kept in step through a family folder (0.8.0).
+    example_first: bool = False
+    example: bool = False
     # The map's packs: the app's own, shared by every family on the computer, which the
     # desktop app keeps beside Neo4j. Unset: DATA_DIR/maps, which no backup takes.
     maps_dir: Path | None = None
+    # Where an address is looked up online, once and only when chosen: Photon, by komoot.
+    # A stand-in's, in checks, so nothing leaves the computer.
+    photon_url: str = "https://photon.komoot.io/api/"
 
     @property
     def family(self) -> WhichFamily | None:

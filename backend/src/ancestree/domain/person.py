@@ -2,7 +2,7 @@
 
 import calendar
 from enum import StrEnum
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
@@ -70,17 +70,62 @@ def blank_to_none(value: object) -> object:
 OptionalText = Annotated[str | None, BeforeValidator(blank_to_none)]
 
 
+# How exactly a place's location puts it: the house found (street search), the
+# street's middle, the postcode's area, the town's middle; or put there by hand, on the map or
+# as coordinates, which nothing moves again by itself.
+Exactness = Literal["spot", "street", "postcode", "town", "hand"]
+# The finer the better: what a country's places, downloaded later, may move a location up to.
+EXACTER: dict[str, int] = {"town": 0, "postcode": 1, "street": 2, "spot": 3, "hand": 4}
+
+
 class Place(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     town: OptionalText = Field(default=None, max_length=100)
     state: OptionalText = Field(default=None, max_length=100)
     country: str = Field(default="Malaysia", max_length=100)
+    # Since 0.8.0: the address in one line, house and street; the district and the
+    # postcode; and where it is, and how exactly: the house's spot, the street's, the postcode's
+    # or the town's. A place from before has none of them, and reads as it did.
+    address: OptionalText = Field(default=None, max_length=300)
+    district: OptionalText = Field(default=None, max_length=100)
+    postcode: OptionalText = Field(default=None, max_length=20)
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lon: float | None = Field(default=None, ge=-180, le=180)
+    exact: Exactness | None = None
+
+    @model_validator(mode="after")
+    def located_whole(self) -> Self:
+        """A location is both its numbers, and how exact it is says nothing without one."""
+        if (self.lat is None) != (self.lon is None):
+            raise ValueError("A location needs both its latitude and its longitude")
+        if self.lat is None and self.exact is not None:
+            raise ValueError("How exact a location is needs the location")
+        return self
 
     @property
     def is_empty(self) -> bool:
         """Only the default country: nothing was actually entered."""
-        return self.town is None and self.state is None and self.country == "Malaysia"
+        given = (self.town, self.state, self.address, self.district, self.postcode, self.lat)
+        return all(part is None for part in given) and self.country == "Malaysia"
+
+    def over(self, held: Place | None) -> Place:
+        """This place, said by its town, state and country alone, laid over the one held,
+        as a spreadsheet or a computer before 0.8.0 says it: in the same town, the held one's
+        address, district, postcode and location stay; another town is a move, and drops them."""
+        if held is None or (self.town or "").casefold() != (held.town or "").casefold():
+            return self
+        return held.model_copy(update={"state": self.state, "country": self.country})
+
+    def to_the_town(self) -> Place:
+        """This place no closer than its town (0.8.0): its address, postcode and location gone,
+        as a copy hiding living people's details has everyone's."""
+        return self.model_copy(update=dict.fromkeys(("address", "postcode", "lat", "lon", "exact")))
+
+
+# Where someone with no place of their own lives: at their mother's, their father's,
+# or elsewhere, so not at their parents'. None: their parents', the mother's if they live apart.
+LivesWith = Literal["mother", "father", "elsewhere"]
 
 
 class Person(BaseModel):
@@ -96,6 +141,7 @@ class Person(BaseModel):
     death_place: Place | None = None
     burial_place: str | None = None
     residence: Place | None = None
+    lives_with: LivesWith | None = None  # with no residence of their own
     living: bool | None = None  # None: infer from the dates
     occupation: str | None = None
     notes: str | None = None

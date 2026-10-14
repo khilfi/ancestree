@@ -70,6 +70,22 @@ class Spot:
     district: str | None = None  # a town's, where GeoNames gives one: "Tumpat"
 
 
+@dataclass(frozen=True, order=True)
+class Suggestion:
+    """What an address line may be: to fill in the place's town, district, state,
+    postcode and country, and where it is, as exactly as the postcode's spot or the town's; or
+    what's nearest a point put on the map by hand."""
+
+    town: str
+    district: str
+    state: str
+    postcode: str
+    country: str  # its English name, as the person form has it
+    lat: float
+    lon: float
+    exact: Literal["postcode", "town", "hand"]
+
+
 @dataclass(frozen=True)
 class Pinned:
     """Your own point for a place the gazetteer doesn't know."""
@@ -91,16 +107,26 @@ Named = dict[str, Entry | list[Entry]]
 
 
 class Gazetteer:
-    def __init__(self, lines: Iterable[str] | Callable[[], Iterable[str]]) -> None:
+    def __init__(
+        self,
+        lines: Iterable[str] | Callable[[], Iterable[str]],
+        more: Callable[[str], Iterable[str] | None] = lambda key: None,
+    ) -> None:
         """`lines`, as gazetteer.tsv.gz has them, the countries first; or what reads them
-        afresh, each time a country is wanted."""
+        afresh, each time a country is wanted. `more`: the lines of the places downloaded with
+        the map, by key, a country's ("my") or the world's ("world"), or None where none
+        is: a country's own file is read in place of these lines for it, and the world's
+        beside them."""
         if callable(lines):
             self._lines = lines
         else:
             kept = list(lines)
             self._lines = lambda: kept
+        self._more = more
         self.places: dict[str, Named] = {}  # by country, once read
         self._grid: dict[tuple[int, int], list[Entry]] = {}  # the same places, by where
+        # Each postcode, reduced, with the towns it's given for: from downloads alone.
+        self.postcodes: dict[tuple[str, str], list[tuple[str, Entry]]] = {}
         self.states: dict[tuple[str, str], tuple[float, float]] = {}
         self.countries: dict[str, Entry] = {}
         self.codes: dict[str, str] = {}  # a country's name, reduced -> its code
@@ -142,13 +168,19 @@ class Gazetteer:
             weights: dict[tuple[str, str], list[float]] = defaultdict(lambda: [0.0, 0.0, 0.0])
             middles: dict[tuple[str, str], tuple[float, float]] = {}
             grid: dict[tuple[int, int], list[Entry]] = defaultdict(list)
-            for line in self._lines():
-                if line[: line.find("\t")] not in wanted:
+            postcodes: dict[tuple[str, str], list[tuple[str, Entry]]] = defaultdict(list)
+            seen: set[str] = set()  # a town in the app's own lines and the world's, once
+            for read in self._sources(wanted):
+                line = read.rstrip("\n")
+                if line[: line.find("\t")] not in wanted or line in seen:
                     continue
-                fields = line.rstrip("\n").split("\t")
+                seen.add(line)
+                fields = line.split("\t")
                 if fields[3] == "N":
                     continue
                 entry = self._entry(fields)
+                if entry.kind == "Z":  # a postcode, with its town
+                    postcodes[(entry.country, place_key(entry.name))].append((fields[8], entry))
                 if entry.kind == "P":
                     grid[_cell(entry.lat, entry.lon)].append(entry)
                 if entry.kind == "S":
@@ -173,7 +205,23 @@ class Gazetteer:
             self.states |= middles
             # New lists, never longer ones, for a cell on a border: the map may be reading.
             self._grid |= {cell: [*self._grid.get(cell, ()), *got] for cell, got in grid.items()}
+            self.postcodes |= postcodes
             self.places |= named
+
+    def _sources(self, wanted: set[str]) -> Iterator[str]:
+        """The lines for these countries: each one's own file where it's downloaded;
+        for the rest, the app's own lines and the world's file, where that's downloaded."""
+        rest = set(wanted)
+        for code in sorted(wanted):
+            own = self._more(code.lower())
+            if own is not None:
+                rest.discard(code)
+                yield from own
+        if rest:
+            yield from (line for line in self._lines() if line[: line.find("\t")] in rest)
+            yield from (
+                line for line in self._more("world") or () if line[: line.find("\t")] in rest
+            )
 
     def _named(self, code: str, written: str) -> list[Entry]:
         found = self.places.get(code, {}).get(place_key(written))
@@ -206,6 +254,47 @@ class Gazetteer:
         ]
         return sorted(found, key=lambda pair: (pair[0], pair[1].name))
 
+    def postcode_at(
+        self, code: str, postcode: str, town: str | None = None, state: str | None = None
+    ) -> Entry | None:
+        """Where a postcode is, from downloads alone: of one given for several towns, the
+        one in the town written, else in the state written, else the first."""
+        self.load([code])
+        found = self.postcodes.get((code, place_key(postcode)), [])
+        if not found:
+            return None
+
+        def fit(given: tuple[str, Entry]) -> tuple[bool, bool]:
+            named, entry = given
+            return (
+                place_key(named) != place_key(town or ""),
+                place_key(entry.state) != place_key(state or ""),
+            )
+
+        return min(found, key=fit)[1]
+
+    def nearest(self, code: str, lat: float, lon: float) -> Suggestion | None:
+        """The place known nearest a point in a country, for a pin put on the map before
+        its address: its town within 30 km, with its district and state, and the nearest
+        postcode within 15 km. None if no town is that near."""
+        self.load([code])
+        towns = [entry for _, entry in self.near(lat, lon, 30.0) if entry.country == code]
+        if not towns:
+            return None
+        town = towns[0]
+        closest = min(
+            (
+                (km_between(lat, lon, entry.lat, entry.lon), entry.name)
+                for (country, _), given in self.postcodes.items()
+                if country == code
+                for _, entry in given
+            ),
+            default=None,
+        )
+        postcode = closest[1] if closest is not None and closest[0] <= 15.0 else ""
+        country = self.countries[code].name
+        return Suggestion(town.name, town.district, town.state, postcode, country, lat, lon, "hand")
+
     def country_code(self, written: str | None) -> str | None:
         """The code of a country as it's written, or None if it isn't known."""
         name = country_named(written) or written or "Malaysia"
@@ -237,6 +326,63 @@ class Gazetteer:
         capital = self.countries[code]
         return Spot(capital.lat, capital.lon, "country", country, None, country)
 
+    def suggest(self, code: str, line: str, most: int = 8) -> list[Suggestion]:
+        """What an address line, as it's typed, may be, in a country: its postcodes first,
+        each with its town, and of those the one whose town the line names too; then the towns
+        and places lived at that the line names: those in a postcode's state first; then those
+        named later in it, as an address ends with its town ("Taman Bunga Raya, Kajang"); then
+        those named by more of its words (Kota Bharu before Johor Bahru, which "Bharu" alone
+        names too); then the biggest. A town its postcode is suggested with isn't suggested
+        again. Postcodes come from downloads alone."""
+        self.load([code])
+        if code not in self.places:
+            return []
+        country = self.countries[code].name
+        words = line.replace(",", " ").split()
+        runs = [
+            (start + size, size, " ".join(words[start : start + size]))
+            for size in range(min(len(words), 4), 0, -1)
+            for start in range(len(words) - size + 1)
+        ]
+        named = {place_key(run) for _, _, run in runs}
+        found: dict[tuple[str, str], tuple[tuple[int, ...], str, Suggestion]] = {}
+
+        def add(rank: tuple[int, ...], name: str, suggestion: Suggestion) -> None:
+            key = (place_key(suggestion.town), suggestion.postcode)
+            if key not in found or (rank, name) < found[key][:2]:
+                found[key] = (rank, name, suggestion)
+
+        postcodes = [
+            hit for _, _, run in runs for hit in self.postcodes.get((code, place_key(run)), ())
+        ]
+        states = {place_key(entry.state) for _, entry in postcodes}
+        posted = {(place_key(town), place_key(entry.state)) for town, entry in postcodes}
+        for town, entry in postcodes:
+            district = entry.district or self._district(code, town, entry.state)
+            add((0 if place_key(town) in named else 1,), town,
+                Suggestion(town, district, entry.state, entry.name, country,
+                           entry.lat, entry.lon, "postcode"))  # fmt: skip
+        for end, size, run in runs:
+            for entry in self._named(code, run):
+                if entry.kind not in ("P", "L") or (
+                    (place_key(entry.name), place_key(entry.state)) in posted
+                ):
+                    continue
+                elsewhere = 1 if states and place_key(entry.state) not in states else 0
+                add((2, elsewhere, -end, -size, -entry.population), entry.name,
+                    Suggestion(entry.name, entry.district, entry.state, "", country,
+                               entry.lat, entry.lon, "town"))  # fmt: skip
+        return [suggestion for _, _, suggestion in sorted(found.values())[:most]]
+
+    def _district(self, code: str, town: str, state: str) -> str:
+        """A town's district, for a postcode given none: GeoNames gives Malaysia's none."""
+        found = [
+            entry
+            for entry in self._named(code, town)
+            if entry.kind == "P" and entry.district and place_key(entry.state) == place_key(state)
+        ]
+        return max(found, key=lambda entry: entry.population).district if found else ""
+
 
 def district_of(place: Place | None) -> str | None:
     """The district a place's town is in, as the gazetteer has it: None for a town it doesn't
@@ -247,13 +393,28 @@ def district_of(place: Place | None) -> str | None:
     return spot.district if spot is not None and spot.found == "town" else None
 
 
-def _read() -> Iterator[str]:
-    with gzip.open(FILE, "rt", encoding="utf-8") as lines:
+def _read(path: Path = FILE) -> Iterator[str]:
+    with gzip.open(path, "rt", encoding="utf-8") as lines:
         yield from lines
+
+
+def _none_here(key: str) -> Path | None:
+    return None
+
+
+# Where the places downloaded with the map are, by key, "my" or "world": the app tells it
+# as it starts, from the map's packs. None until then, and where none is downloaded.
+places_of: Callable[[str], Path | None] = _none_here
+
+
+def _downloaded(key: str) -> Iterator[str] | None:
+    path = places_of(key)
+    return None if path is None else _read(path)
 
 
 @cache
 def gazetteer() -> Gazetteer:
     """The gazetteer, its countries read the first time a place is looked up; each country's
-    places when one there is."""
-    return Gazetteer(_read)
+    places when one there is, from its download if it has one. Made afresh when a
+    download comes or goes (`gazetteer.cache_clear`)."""
+    return Gazetteer(_read, _downloaded)

@@ -10,13 +10,14 @@ import {
 import type { ExpressionSpecification, StyleSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import type { MapPack } from "@/api/types";
-import { LABEL, mapStyle, ONLINE, ONLINE_LABEL, perKmAt, zoomFor } from "./style";
+import { depths, LABEL, mapStyle, ONLINE, ONLINE_LABEL, perKmAt, zoomFor } from "./style";
 
 const ORIGIN = "http://127.0.0.1:18090";
 const malaysia: MapPack = {
-  key: "malaysia",
-  title: "Malaysia, Singapore and Brunei",
-  size: 168_037_092,
+  key: "my",
+  title: "Malaysia",
+  country: "my",
+  size: 157_000_000,
   minzoom: 7,
   maxzoom: 14,
   first: false,
@@ -25,7 +26,9 @@ const malaysia: MapPack = {
   done: 0,
   error: null,
 };
-const indonesia: MapPack = { ...malaysia, key: "indonesia", title: "Indonesia", maxzoom: 13 };
+// Cut to zoom 14 and 13: one source for each depth, whatever the packs.
+const singapore: MapPack = { ...malaysia, key: "sg", title: "Singapore", country: "sg" };
+const germany: MapPack = { ...malaysia, key: "de", title: "Germany", country: "de", maxzoom: 13 };
 
 /** Every address a style's tiles come from. */
 function tilesOf(style: StyleSpecification): string[] {
@@ -95,25 +98,40 @@ describe("the map's style", () => {
   const style = mapStyle(ORIGIN, [malaysia]);
   const layers = style.layers;
 
-  it("draws the world's pack, and each region's over it from zoom 7", () => {
+  it("draws the world's pack, and the countries' over it from zoom 7, by depth", () => {
     expect(style.sources).toEqual({
       world: expect.objectContaining({
         type: "vector",
-        tiles: [`${ORIGIN}/api/map/tiles/world/{z}/{x}/{y}`],
+        tiles: [`${ORIGIN}/api/map/depth/6/{z}/{x}/{y}`],
         minzoom: 0,
         maxzoom: 6,
       }),
-      malaysia: expect.objectContaining({
-        tiles: [`${ORIGIN}/api/map/tiles/malaysia/{z}/{x}/{y}`],
+      packs14: expect.objectContaining({
+        tiles: [`${ORIGIN}/api/map/depth/14/{z}/{x}/{y}`],
         minzoom: 7,
         maxzoom: 14,
       }),
     });
     expect(layers[0]).toMatchObject({ id: "world:background", type: "background" });
-    expect(layers.filter((layer) => layer.type === "background")).toHaveLength(1); // the region's would hide the world
+    expect(layers.filter((layer) => layer.type === "background")).toHaveLength(1); // a country's would hide the world
     expect(new Set(layers.map((layer) => layer.id)).size).toBe(layers.length);
-    const first = layers.findIndex((layer) => layer.id.startsWith("malaysia:"));
+    const first = layers.findIndex((layer) => layer.id.startsWith("packs14:"));
     expect(layers.slice(0, first).every((layer) => layer.id.startsWith("world:"))).toBe(true);
+  });
+
+  it("draws all the packs cut to one depth as one source, the deeper over the shallower", () => {
+    const many = mapStyle(ORIGIN, [germany, malaysia, singapore]);
+    expect(Object.keys(many.sources)).toEqual(["world", "packs13", "packs14"]);
+    expect(many.sources.packs13).toEqual(
+      expect.objectContaining({ tiles: [`${ORIGIN}/api/map/depth/13/{z}/{x}/{y}`], maxzoom: 13 }),
+    );
+    const order = many.layers.map((layer) => layer.id.split(":")[0]);
+    expect(order.lastIndexOf("packs13")).toBeLessThan(order.indexOf("packs14"));
+    // As many layers for twenty packs as for one of each depth.
+    expect(many.layers).toHaveLength(mapStyle(ORIGIN, [germany, malaysia]).layers.length);
+    expect(depths([singapore, germany, malaysia])).toEqual([13, 14]);
+    expect(depths([])).toEqual([]);
+    expect(Object.keys(mapStyle(ORIGIN, []).sources)).toEqual(["world"]);
   });
 
   it("asks nothing of the internet: tiles, fonts and icons all from the engine", () => {
@@ -137,7 +155,7 @@ describe("the map's style", () => {
       layers.find((layer) => layer.id === id)?.layout as { "text-field"?: unknown } | undefined;
     for (const id of [
       "world:places_locality",
-      "malaysia:places_subplace",
+      "packs14:places_subplace",
       "world:water_label_ocean",
     ]) {
       expect(field(id)?.["text-field"], id).toEqual(LABEL);
@@ -201,13 +219,13 @@ describe("a label from OpenFreeMap's tiles", () => {
 });
 
 describe("the map's style with the online extra", () => {
-  const style = mapStyle(ORIGIN, [malaysia, indonesia], true);
+  const style = mapStyle(ORIGIN, [malaysia, germany], true);
   const layers = style.layers;
   const of = (pack: string) => layers.filter((layer) => layer.id.startsWith(`${pack}:`));
 
   it("is as before while it's off", () => {
     expect(mapStyle(ORIGIN, [malaysia], false)).toEqual(mapStyle(ORIGIN, [malaysia]));
-    expect(Object.keys(mapStyle(ORIGIN, [malaysia]).sources)).toEqual(["world", "malaysia"]);
+    expect(Object.keys(mapStyle(ORIGIN, [malaysia]).sources)).toEqual(["world", "packs14"]);
   });
 
   it("has OpenFreeMap's tiles through the engine, from zoom 7, where no pack has them", () => {
@@ -224,10 +242,10 @@ describe("the map's style with the online extra", () => {
     expect(ONLINE.minzoom).toBe(malaysia.minzoom);
   });
 
-  it("draws the world below zoom 7, then OpenFreeMap's, with each region's over it", () => {
+  it("draws the world below zoom 7, then OpenFreeMap's, with the countries' over it", () => {
     const order = layers.map((layer) => layer.id.split(":")[0]);
     expect(order.lastIndexOf("world")).toBeLessThan(order.indexOf("online"));
-    expect(order.lastIndexOf("online")).toBeLessThan(order.indexOf("malaysia"));
+    expect(order.lastIndexOf("online")).toBeLessThan(order.indexOf("packs13"));
     for (const layer of of("world").filter((layer) => layer.type !== "background")) {
       expect(layer.maxzoom, layer.id).toBeLessThanOrEqual(7);
     }
@@ -242,11 +260,11 @@ describe("the map's style with the online extra", () => {
     ]);
   });
 
-  it("keeps a region's pack where it goes as deep as OpenFreeMap, and gives way past it", () => {
-    const without = mapStyle(ORIGIN, [malaysia, indonesia]).layers;
-    expect(of("malaysia")).toEqual(without.filter((layer) => layer.id.startsWith("malaysia:")));
-    expect(of("indonesia").length).toBeGreaterThan(10);
-    for (const layer of of("indonesia")) expect(layer.maxzoom, layer.id).toBeLessThanOrEqual(14);
+  it("keeps the packs where they go as deep as OpenFreeMap, and gives way past them", () => {
+    const without = mapStyle(ORIGIN, [malaysia, germany]).layers;
+    expect(of("packs14")).toEqual(without.filter((layer) => layer.id.startsWith("packs14:")));
+    expect(of("packs13").length).toBeGreaterThan(10);
+    for (const layer of of("packs13")) expect(layer.maxzoom, layer.id).toBeLessThanOrEqual(14);
   });
 
   it("is one MapLibre takes, with only the fonts that come with the app", () => {

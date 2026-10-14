@@ -3,6 +3,7 @@ import { ArrowRightIcon } from "lucide-react";
 import { memo } from "react";
 import type { GraphPerson } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { StoryMark } from "@/features/biography/StoryMark";
 import { ageOf } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { LINK_HANDLE, PHOTO, SMALL_PHOTO } from "./geometry";
@@ -125,6 +126,10 @@ export const PersonNode = memo(function PersonNode({
           selected && "!border-sky-500 ring-4 ring-sky-200",
         )}
         style={colour && !selected ? { borderColor: colour } : undefined}
+      />
+      <StoryMark
+        person={person}
+        style={{ top: PHOTO - 18, left: `calc(50% + ${PHOTO / 2 - 16}px)` }}
       />
       <div className="person-label mt-1.5 line-clamp-2 text-xs leading-tight font-medium text-stone-800">
         {person.full_name}

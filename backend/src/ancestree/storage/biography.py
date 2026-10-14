@@ -7,10 +7,12 @@ here, never taken from uploads, and every write is atomic.
 
 import re
 import secrets
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
 from uuid import UUID
 
+from ancestree.domain.biography import lines_ended
 from ancestree.storage.files import atomic_write, person_dir
 
 BIOGRAPHY = "biography.md"
@@ -26,14 +28,24 @@ def read_story(data_dir: Path, person_id: UUID | str) -> str | None:
     if not path.is_file():
         return None
     # utf-8-sig: Notepad may have added a byte-order mark.
-    return path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    return lines_ended(path.read_text(encoding="utf-8-sig"))
+
+
+def with_stories(data_dir: Path, ids: Iterable[str]) -> set[str]:
+    """Which of these people have a life story: a `biography.md` with something in it.
+    Read from the folders each time, as Notepad or Obsidian may have written one since."""
+    return {
+        pid
+        for pid in ids
+        if (path := person_dir(data_dir, pid) / BIOGRAPHY).is_file() and path.stat().st_size > 0
+    }
 
 
 def write_story(data_dir: Path, person_id: UUID | str, text: str) -> None:
     """Replace the story; an empty one removes the file."""
     path = person_dir(data_dir, person_id) / BIOGRAPHY
     if text.strip():
-        atomic_write(path, text.encode("utf-8"))
+        atomic_write(path, lines_ended(text).encode("utf-8"))
     else:
         path.unlink(missing_ok=True)
 

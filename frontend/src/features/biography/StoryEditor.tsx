@@ -228,6 +228,7 @@ type Props = {
   onChange: (markdown: string) => void;
   onUnreadable: () => void; // the story has something the editor would lose
   readOnly?: boolean; // a view-only copy: the story shown as the editor shows it
+  part?: boolean; // a part of their life: subheadings alone
 };
 
 /** The word-processor view of a life story. What's typed comes out as plain Markdown. */
@@ -237,6 +238,7 @@ export const StoryEditor = memo(function StoryEditor({
   onChange,
   onUnreadable,
   readOnly = false,
+  part = false,
 }: Props) {
   const unreadable = needsPlainText(markdown);
   useEffect(() => {
@@ -246,24 +248,27 @@ export const StoryEditor = memo(function StoryEditor({
   const plugins = useMemo(
     () =>
       readOnly
-        ? storyPlugins({ preview: async (src) => pictureUrl(personId, src) })
+        ? storyPlugins({ preview: async (src) => pictureUrl(personId, src) }, part)
         : [
             toolbarPlugin({ toolbarContents: Toolbar, toolbarClassName: "story-toolbar" }),
-            ...storyPlugins({
-              // Dropped or pasted pictures; the toolbar's go through PictureDialog.
-              upload: async (file) => {
-                try {
-                  return (await addPicture(personId, file)).src;
-                } catch (error) {
-                  showError(error);
-                  throw error;
-                }
+            ...storyPlugins(
+              {
+                // Dropped or pasted pictures; the toolbar's go through PictureDialog.
+                upload: async (file) => {
+                  try {
+                    return (await addPicture(personId, file)).src;
+                  } catch (error) {
+                    showError(error);
+                    throw error;
+                  }
+                },
+                preview: async (src) => pictureUrl(personId, src),
+                dialog: PictureDialog,
               },
-              preview: async (src) => pictureUrl(personId, src),
-              dialog: PictureDialog,
-            }),
+              part,
+            ),
           ],
-    [personId, readOnly],
+    [personId, readOnly, part],
   );
 
   if (unreadable) return null;

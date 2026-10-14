@@ -174,3 +174,28 @@ def test_a_family_whose_folder_lies_outside_is_never_used_or_deleted(tmp_path: P
         families.places(families.get("fedcba9876543210"))
     families.tidy()
     assert (outside / "keep.txt").read_text(encoding="utf-8") == "mine"
+
+
+def test_the_example_family_is_marked_and_filled_once(tmp_path: Path) -> None:
+    """The example family: a family of its own, marked so, and filled as it first opens;
+    what's said of it after it opened is that it's filled."""
+    families = Families.load(tmp_path)
+    example = families.add("Keluarga Contoh", example=True)
+    assert (example.example, example.fill, example.folder) == (
+        True,
+        True,
+        f"families/{example.id}",
+    )
+    families.note(example.id, fill=False)
+    again = Families.load(tmp_path).get(example.id)
+    assert (again.example, again.fill) == (True, False)
+    shown = Families.load(tmp_path).listed()["families"]
+    assert [family["example"] for family in shown] == [False, True]
+
+
+def test_what_a_later_version_keeps_of_a_family_is_left_aside(tmp_path: Path) -> None:
+    families = Families.load(tmp_path)
+    saved = json.loads((tmp_path / FILE).read_text(encoding="utf-8"))
+    saved["families"][0]["colour"] = "teal"  # as a later version might keep
+    (tmp_path / FILE).write_text(json.dumps(saved), encoding="utf-8")
+    assert Families.load(tmp_path).open.id == families.open.id

@@ -1,6 +1,7 @@
-"""Cutting the map's packs: what the Map packs workflow asks of Protomaps' pmtiles program,
-and its check against the app's pins, which stops a pack that isn't the one pinned. From
-backend/:   uv run pytest ../desktop/maps
+"""Cutting the map's packs: what the Map packs workflow asks of Protomaps' pmtiles
+program, a group at a time, and its check against the app's pins, which stops a pack that isn't
+the one pinned; and the pinning run's sizes and sums, merged into packs.json. From backend/:
+    uv run pytest ../desktop/maps
 """
 
 # ruff: noqa: S101
@@ -42,12 +43,16 @@ def made_by(commands: list[list[str]]) -> Any:
     return run
 
 
+def packs() -> dict[str, Any]:
+    return json.loads(cut.PINNED.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
 def test_each_pack_is_cut_from_the_pinned_build_to_its_zooms_and_area() -> None:
-    packs = json.loads(cut.PINNED.read_text(encoding="utf-8"))
-    build = packs["build"]
-    world, malaysia, indonesia = packs["packs"]
-    target = Path("packs") / "x.pmtiles"
-    assert cut.command("pmtiles", world, build, target) == [
+    listed = packs()
+    build = listed["build"]
+    by_key = {pack["key"]: pack for pack in listed["packs"]}
+    target, areas = Path("packs") / "x.pmtiles", Path("areas")
+    assert cut.command("pmtiles", by_key["world"], build, target, areas) == [
         "pmtiles",
         "extract",
         f"https://build.protomaps.com/{build}.pmtiles",
@@ -55,10 +60,26 @@ def test_each_pack_is_cut_from_the_pinned_build_to_its_zooms_and_area() -> None:
         "--minzoom=0",
         "--maxzoom=6",
     ]
-    words = cut.command("pmtiles", malaysia, build, target)
-    assert words[4:6] == ["--minzoom=7", "--maxzoom=14"]
-    assert words[6] == f"--region={cut.HERE / 'malaysia.geojson'}"
-    assert cut.command("pmtiles", indonesia, build, target)[5] == "--maxzoom=13"
+    words = cut.command("pmtiles", by_key["my"], build, target, areas)
+    assert words[4:] == ["--minzoom=7", "--maxzoom=14", f"--region={areas / 'my.geojson'}"]
+    assert cut.command("pmtiles", by_key["de"], build, target, areas)[5] == "--maxzoom=13"
+
+
+def test_every_country_is_listed_and_every_pack_in_one_group() -> None:
+    """The world first; every country in the list has its packs, whole or by state; and each
+    pack is in one group, none of them over what a machine holds."""
+    listed = packs()
+    assert listed["packs"][0]["key"] == "world"
+    countries = {country["key"] for country in listed["countries"]}
+    assert {pack["country"] for pack in listed["packs"][1:]} == countries
+    assert {"my", "id", "sg", "bn", "us-tx", "ru-mow"} <= {pack["key"] for pack in listed["packs"]}
+    grouped = cut.groups(listed)
+    keys = [key for group in grouped.values() for key in group]
+    assert sorted(keys) == sorted(pack["key"] for pack in listed["packs"])
+    size = {pack["key"]: pack["size"] for pack in listed["packs"]}
+    assert all(sum(size[key] for key in group) <= cut.GROUP for group in grouped.values())
+    assert grouped["world"] == ["world"]
+    assert "seven-seas-1" in grouped
 
 
 def test_a_pack_that_isnt_the_one_pinned_is_not_published(
@@ -66,49 +87,40 @@ def test_a_pack_that_isnt_the_one_pinned_is_not_published(
 ) -> None:
     commands: list[list[str]] = []
     monkeypatch.setattr(cut.subprocess, "run", made_by(commands))
-    build = json.loads(pinned.read_text(encoding="utf-8"))["build"]
-    wrong = cut.cut("pmtiles", tmp_path / "packs", pin=False)
-    assert wrong == [f"{key}-{build}.pmtiles" for key in ("world", "malaysia", "indonesia")]
-    assert len(commands) == 3
+    build = packs()["build"]
+    wrong = cut.cut("pmtiles", tmp_path / "areas", tmp_path / "packs", "oceania-1", None)
+    group = cut.groups(packs())["oceania-1"]
+    assert wrong == [f"{key}-{build}.pmtiles" for key in group]
+    assert len(commands) == len(group)
 
 
-def test_pinning_writes_each_packs_size_and_sum(
+def test_pinning_writes_each_packs_size_and_sum_which_then_check(
     pinned: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """For a newer build: what's pinned is what was cut, and checking it again passes."""
+    """For a newer build: the pinning run's sizes and sums merged into packs.json, then cutting
+    again checks against them, and passes."""
     monkeypatch.setattr(cut.subprocess, "run", made_by([]))
-    assert cut.cut("pmtiles", tmp_path / "packs", pin=True) == []
-    packs = json.loads(pinned.read_text(encoding="utf-8"))
-    world = (tmp_path / "packs" / f"world-{packs['build']}.pmtiles").read_bytes()
-    assert (packs["packs"][0]["size"], packs["packs"][0]["sha256"]) == (
-        len(world),
-        hashlib.sha256(world).hexdigest(),
-    )
+    areas, folder = tmp_path / "areas", tmp_path / "packs"
+    pins = tmp_path / "pins-oceania-1.json"
+    assert cut.cut("pmtiles", areas, folder, "oceania-1", pins) == []
+    assert cut.merge([pins]) == len(cut.groups(packs())["oceania-1"])
+    listed = packs()
+    first = cut.groups(listed)["oceania-1"][0]
+    made = (folder / f"{first}-{listed['build']}.pmtiles").read_bytes()
+    [pack] = [pack for pack in listed["packs"] if pack["key"] == first]
+    assert (pack["size"], pack["sha256"]) == (len(made), hashlib.sha256(made).hexdigest())
     assert pinned.read_bytes().endswith(b"}\n")
     assert b"\r" not in pinned.read_bytes()
-    assert cut.cut("pmtiles", tmp_path / "packs", pin=False) == []
+    assert cut.cut("pmtiles", areas, folder, "oceania-1", None) == []
 
 
-def test_each_area_takes_in_its_countries() -> None:
-    """Every island's tiles: the areas are the countries' own outlines, unsimplified."""
+def test_pins_from_another_build_are_refused(pinned: Path, tmp_path: Path) -> None:
+    pins = tmp_path / "pins.json"
+    pins.write_text(json.dumps({"build": "19990101", "packs": {}}), encoding="utf-8")
+    with pytest.raises(SystemExit, match="19990101"):
+        cut.merge([pins])
 
-    def holds(region: str, lon: float, lat: float) -> bool:
-        shape = json.loads((cut.HERE / region).read_text(encoding="utf-8"))["geometry"]
-        rings = [polygon[0] for polygon in shape["coordinates"]]
-        return any(
-            min(x for x, _ in ring) <= lon <= max(x for x, _ in ring)
-            and min(y for _, y in ring) <= lat <= max(y for _, y in ring)
-            for ring in rings
-        )
 
-    for lon, lat in (
-        (102.24, 6.13),
-        (110.35, 1.55),
-        (103.85, 1.29),
-        (114.94, 4.89),
-        (115.24, 5.28),
-    ):
-        assert holds("malaysia.geojson", lon, lat), (lon, lat)  # Labuan last
-    for lon, lat in ((106.85, -6.21), (140.72, -2.53), (100.35, -0.95)):
-        assert holds("indonesia.geojson", lon, lat), (lon, lat)
-    assert not holds("malaysia.geojson", 106.85, -6.21)
+def test_a_continents_name_as_its_groups_begin() -> None:
+    assert cut.slug("Seven seas (open ocean)") == "seven-seas"
+    assert cut.slug("North America") == "north-america"

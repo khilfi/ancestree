@@ -11,6 +11,7 @@ from ancestree.domain.familyfolder import (
     BringIn,
     ChangeRole,
     FamilyFolderStatus,
+    Helper,
     InvitationMade,
     InvitationText,
     Invite,
@@ -170,7 +171,8 @@ async def recover_family_folder(request: Request, body: Recover) -> FamilyFolder
 
 @router.post("/invite")
 async def invite_to_family_folder(request: Request, body: Invite) -> FamilyFolderStatus:
-    """Share the family folder with a relative's Google account (the keeper's)."""
+    """Share the family folder with a relative's Google account (the keeper's, or another of
+    the keeper's own computers allowed to)."""
     folder = _folder(request)
     await folder.invite(body)
     return await folder.status()
@@ -178,7 +180,8 @@ async def invite_to_family_folder(request: Request, body: Invite) -> FamilyFolde
 
 @router.post("/admit")
 async def admit_to_family_folder(request: Request, body: Admit) -> FamilyFolderStatus:
-    """Let a computer in, with a role, once its code matches (the keeper's)."""
+    """Let a computer in, with a role, once its code matches (the keeper's); or, on another of
+    the keeper's own computers allowed to, ask the keeper's computer to."""
     folder = _folder(request)
     await folder.admit(body)
     return await folder.status()
@@ -206,6 +209,15 @@ async def change_family_folder_role(request: Request, body: ChangeRole) -> Famil
     keeper's."""
     folder = _folder(request)
     await folder.change_role(body)
+    return await folder.status()
+
+
+@router.post("/helper")
+async def allow_family_folder_helper(request: Request, body: Helper) -> FamilyFolderStatus:
+    """Let another of the keeper's own computers invite and let in for it, or no longer: the
+    keeper's."""
+    folder = _folder(request)
+    await folder.allow_helper(body)
     return await folder.status()
 
 

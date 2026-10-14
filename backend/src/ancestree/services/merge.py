@@ -272,8 +272,9 @@ def _copy_story(ctx: Context, keep_id: str, theirs: _Theirs) -> None:
 async def merge_people(
     ctx: Context, history: History, keep_id: UUID, other_id: UUID
 ) -> PersonSaved:
-    """Merge `other` into `keep`: one Undo step for the people and links; the other then to
-    the Trash. A photo or story the one kept lacks is copied from the other's."""
+    """Merge `other` into `keep`: one Undo step for the people, the links and the files; the
+    other then to the Trash. A photo or story the one kept lacks is copied from the other's,
+    inside the step, so Undo takes it back."""
     keep, other = str(keep_id), str(other_id)
 
     async def both(tx: Tx) -> tuple[Props | None, Props | None, list[dict[str, Any]]]:
@@ -290,15 +291,15 @@ async def merge_people(
     theirs = await asyncio.to_thread(_theirs, ctx, merging, photo, story)
     ends = {str(link["source"]) for link in before} | {str(link["target"]) for link in before}
     links = [str(link["props"]["id"]) for link in before]
-    async with history.change(ctx, {keep, other, *ends}, links) as change:
+    async with history.change(ctx, {keep, other, *ends}, links, files_of=[keep]) as change:
         merged = await write(ctx, lambda tx: _merge(tx, keep, other))
         change.label = f"Merge {merged.other['full_name']} into {merged.keep['full_name']}"
         change.removing = [other]
-    if theirs.photo is not None:
-        data, crop = theirs.photo
-        await photos.upload_photo(ctx, keep_id, data, crop)
-    if theirs.story is not None:
-        async with folder_lock(keep):
-            await asyncio.to_thread(_copy_story, ctx, keep, theirs)
+        if theirs.photo is not None:
+            data, crop = theirs.photo
+            await photos.upload_photo(ctx, keep_id, data, crop)
+        if theirs.story is not None:
+            async with folder_lock(keep):
+                await asyncio.to_thread(_copy_story, ctx, keep, theirs)
     await refresh_snapshots(ctx, {keep, *merged.ends})
     return PersonSaved(person=await people_service.get_person(ctx, keep_id), notices=[])

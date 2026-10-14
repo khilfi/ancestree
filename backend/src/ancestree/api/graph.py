@@ -11,7 +11,8 @@ from ancestree.repo import people as people_repo
 from ancestree.seed.clusters import clustered_families
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import read
-from ancestree.services.graph import build_graph, graph_from_archive, load_graph
+from ancestree.services.graph import build_graph, graph_from_archive, load_graph, with_story_marks
+from ancestree.storage.biography import with_stories
 from ancestree.storage.settings import read_tree_settings, write_tree_settings
 
 router = APIRouter(tags=["tree"])
@@ -32,9 +33,13 @@ _MARRIED_IN = {
 
 @router.get("/graph")
 async def get_graph(ctx: Ctx) -> Graph:
-    """Everyone, every link, and where each person sits on the lineage rings."""
+    """Everyone, every link, and where each person sits on the lineage rings; and who has a
+    life story, for its book mark on their photo."""
     settings = await asyncio.to_thread(read_tree_settings, ctx.data_dir)
-    return await load_graph(ctx.driver, ctx.database, settings.centre)
+    graph = await load_graph(ctx.driver, ctx.database, settings.centre)
+    ids = [str(person.id) for person in graph.people if not person.placeholder]
+    told = await asyncio.to_thread(with_stories, ctx.data_dir, ids)
+    return with_story_marks(graph, told)
 
 
 @router.get("/sample/graph")

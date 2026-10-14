@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DesktopFamilies } from "@/api/desktop";
 import { FamiliesSection } from "@/features/settings/FamiliesSection";
 import { until } from "@/viewer/looking";
-import { FamilyMenu } from "./FamilyMenu";
+import { AddFamilyDialog, ExampleBar, FamilyMenu, familyPlace } from "./FamilyMenu";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -39,6 +39,18 @@ const TWO: DesktopFamilies = {
   removed: [{ id: "cccccccccccccccc", name: "Practice", removed: "2026-10-03T10:00:00+00:00" }],
 };
 
+// The example family, added beside them.
+const EXAMPLE = {
+  id: "dddddddddddddddd",
+  name: "Keluarga Contoh",
+  open: false,
+  role: "" as const,
+  in_step: null,
+  added: "2026-10-14T09:00:00+00:00",
+  example: true,
+};
+const WITH_EXAMPLE: DesktopFamilies = { ...TWO, families: [...TWO.families, EXAMPLE] };
+
 let root: Root | undefined;
 let asked: string[] = [];
 
@@ -51,6 +63,7 @@ function answer(listed: DesktopFamilies | null) {
     asked.push(`${method} ${url}`);
     if (!listed) return new Response("{}", { status: 404 });
     if (url.endsWith("/open")) return Response.json({ ...listed, opening: "Keluarga Ibu" });
+    if (url.endsWith("/example")) return Response.json({ ...WITH_EXAMPLE, added: EXAMPLE.id });
     return Response.json(listed);
   });
 }
@@ -132,5 +145,43 @@ describe("Several families on one computer", () => {
     act(() => button("Remove").click());
     await settle();
     expect(asked).toContain("DELETE /api/desktop/families/bbbbbbbbbbbbbbbb");
+  });
+
+  it("adds the example family as a family of its own, and opens it", async () => {
+    answer(TWO);
+    await show(<AddFamilyDialog open onClose={() => {}} />, "the example family");
+    act(() => button("The example family").click());
+    await until("Opening Keluarga Contoh…");
+    expect(asked).toContain("POST /api/desktop/families/example");
+    expect(asked).toContain(`POST /api/desktop/families/${EXAMPLE.id}/open`);
+    expect(familyPlace(EXAMPLE)).toBe("The example family: made up, to look around in");
+  });
+
+  it("offers to open the example family when it's here already", async () => {
+    answer(WITH_EXAMPLE);
+    await show(<AddFamilyDialog open onClose={() => {}} />, "Open the example family");
+  });
+
+  it("says while the example family is open that it's made up, and the way back", async () => {
+    const open: DesktopFamilies = {
+      ...WITH_EXAMPLE,
+      open: EXAMPLE.id,
+      families: [
+        { ...TWO.families[0], open: false } as DesktopFamilies["families"][number],
+        { ...EXAMPLE, open: true },
+      ],
+    };
+    answer(open);
+    await show(<ExampleBar />, "its people are made up");
+    act(() => button("Back to Keluarga Contoh").click());
+    await settle();
+    expect(asked).toContain("POST /api/desktop/families/aaaaaaaaaaaaaaaa/open");
+  });
+
+  it("says nothing of the example when another family is open", async () => {
+    answer(WITH_EXAMPLE);
+    await show(<ExampleBar />);
+    await settle();
+    expect(document.body.textContent).toBe("");
   });
 });

@@ -60,10 +60,16 @@ async def add_picture(client: httpx.AsyncClient, person_id: str) -> str:
     return src
 
 
-async def tell(client: httpx.AsyncClient, person_id: str, story: str, sources: list[str]) -> None:
+async def tell(
+    client: httpx.AsyncClient,
+    person_id: str,
+    story: str,
+    sources: list[str],
+    parts: dict[str, str] | None = None,
+) -> None:
     saved = await client.put(
         f"/api/persons/{person_id}/biography",
-        json={"story": story, "sources": sources, "base_version": "none"},
+        json={"story": story, "parts": parts or {}, "sources": sources, "base_version": "none"},
     )
     assert saved.status_code == 200, saved.text
 
@@ -71,8 +77,9 @@ async def tell(client: httpx.AsyncClient, person_id: str, story: str, sources: l
 async def family(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
 ) -> dict[str, str]:
-    """The test family, with photos, two stories, and a picture taken out of a story. Ali, who
-    is living, also has an occupation and notes. Everyone's id, by name."""
+    """The test family, with photos, two stories (Aminah's picture in a part of her life), and
+    a picture taken out of a story. Ali, who is living, also has an occupation and notes.
+    Everyone's id, by name."""
     await load_seed(driver, settings.neo4j_database)
     graph = (await client.get("/api/graph")).json()
     ids = {p["full_name"]: p["id"] for p in graph["people"] if not p["placeholder"]}
@@ -93,7 +100,7 @@ async def family(
         ["Talk with Nor, 2019"],
     )
     her_picture = await add_picture(client, aminah)
-    await tell(client, aminah, f"She teaches in Shah Alam.\n\n![]({her_picture})", [])
+    await tell(client, aminah, "She teaches in Shah Alam.", [], {"early": f"![]({her_picture})"})
 
     detail = (await client.get(f"/api/persons/{ali}")).json()
     body = {key: detail[key] for key in ("full_name", "gender", "birth_place", "residence")}
@@ -196,7 +203,8 @@ async def test_a_copy_answers_as_the_app_does(
     assert set(copy["persons"]) == {p["id"] for p in copy["graph"]["people"]}
     for person in ids.values():
         story = (await client.get(f"/api/persons/{person}/biography")).json()
-        assert copy["stories"].get(person, {"story": "", "sources": [], "version": "none"}) == story
+        none = {"story": "", "parts": {}, "said": [], "sources": [], "version": "none"}
+        assert copy["stories"].get(person, none) == story
     assert set(copy["stories"]) == {hassan, aminah}
     for text in ("", "a", "hassan", "Bin Ismail", "zul", "nenek f", "tok"):
         found = (await client.get("/api/persons", params={"q": text, "limit": 20})).json()
@@ -236,10 +244,44 @@ async def test_hiding_living_people_leaves_out_their_details(
     ids = await family(client, driver, settings)
     hassan, aminah, ali = ids["Hassan bin Ismail"], ids["Aminah binti Hassan"], ids["Ali bin Rosli"]
 
+    # Someone who has died, whose house a living widow may live in still (0.8.0).
+    house = {
+        "address": "No. 12, Jalan Melati 3",
+        "town": "Kota Bharu",
+        "state": "Kelantan",
+        "postcode": "15050",
+        "country": "Malaysia",
+        "lat": 6.1301,
+        "lon": 102.2402,
+        "exact": "spot",
+    }
+    added = await client.post(
+        "/api/persons",
+        json={"full_name": "Tok Wan Daud", "gender": "male", "living": False, "residence": house},
+    )
+    assert added.status_code == 201, added.text
+    tok_wan = added.json()["person"]["id"]
+
     copy = await copy_of(client, hide_living=True)
 
     exports = copy.pop("exports")
     texts = list(strings(copy))
+    # Those who have died are no closer than their town: no address, postcode or pin.
+    assert not [text for text in texts if "Jalan Melati" in text or "15050" in text]
+    for language in LANGUAGES:
+        lives = copy["persons"][tok_wan][language]["residence"]
+        assert (lives["town"], lives["address"], lives["postcode"], lives["lat"]) == (
+            "Kota Bharu",
+            None,
+            None,
+            None,
+        )
+    [mapped_tok_wan] = [p for p in copy["map"]["people"] if p["id"] == tok_wan]
+    assert mapped_tok_wan["lives"]["found"] == "town"
+    assert mapped_tok_wan["lives"]["exact"] is None
+    assert mapped_tok_wan["lives"]["place"]["address"] is None
+    shown_all = await copy_of(client, hide_living=False)  # all of it, with nothing hidden
+    assert shown_all["persons"][tok_wan]["en"]["residence"]["address"] == house["address"]
     files = {
         "gedcom": carried(exports["gedcom"]).decode("utf-8"),
         "csv": carried(exports["csv"]).decode("utf-8-sig"),
@@ -262,6 +304,10 @@ async def test_hiding_living_people_leaves_out_their_details(
         )
         assert shown["birth_place"] is shown["residence"] is shown["occupation"] is None
         assert shown["residence_district"] is None  # nor their district
+        # Nor where they live through their parents', with whom, nor that their parents
+        # live apart: that last put right in the security review of 0.8.0.
+        assert shown["residence_at_parents"] is shown["lives_with"] is None
+        assert shown["parents_apart"] is False
         assert shown["full_name"] == "Ali bin Rosli"  # who they are stays
         # Those who have died keep theirs.
         assert copy["persons"][hassan][language]["birth_date"]["text"] == "14/3/1938"
@@ -285,6 +331,8 @@ async def test_hiding_living_people_leaves_out_their_details(
     assert in_the_app - {town["name"] for town in towns}, "the app names towns around them"
     # Their stories and the stories' pictures stay behind; their photos come along.
     assert set(copy["stories"]) == {hassan}
+    marked = {person["id"] for person in copy["graph"]["people"] if person.get("has_story")}
+    assert marked == {hassan}  # no book mark says a living person has a story
     assert all(f"/{hassan}/media/" in a for a in copy["files"] if "/media/" in a)
     assert f"/api/persons/{aminah}/photo/avatar?size=512" in copy["files"]
     assert exports["archive"] is None  # it holds everything

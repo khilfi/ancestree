@@ -1,8 +1,9 @@
-import { CheckIcon, ChevronDownIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, PlusIcon, SettingsIcon, SparklesIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import {
   type DesktopFamily,
+  useAddExample,
   useAddFamily,
   useAddFamilyFromBackup,
   useFamilies,
@@ -40,6 +41,7 @@ const PLACES: Record<DesktopFamily["role"], string> = {
 
 /** A family's place in its family folder, and when it was last in step with it. */
 export function familyPlace(family: DesktopFamily): string {
+  if (family.example) return "The example family: made up, to look around in";
   const place = PLACES[family.role] ?? PLACES[""];
   return family.role && family.in_step ? `${place} · in step ${ago(family.in_step)}` : place;
 }
@@ -73,11 +75,30 @@ export function useOpenAnother() {
   return { choose, opening };
 }
 
-/** A new family on this computer, empty or from a backup, then opened (0.4.0). */
+/** The example family: added as a family of its own, if it isn't here yet, then
+ *  opened. AncesTree starts again on it, and it fills itself as it first opens. */
+export function useLookAround() {
+  const add = useAddExample();
+  const another = useOpenAnother();
+  const look = () =>
+    add.mutate(undefined, {
+      onError: showError,
+      onSuccess: (listed) => {
+        const family = listed?.families.find((found) => found.id === listed.added);
+        if (family) another.choose(family);
+      },
+    });
+  return { look, busy: add.isPending || another.opening !== null, opening: another.opening };
+}
+
+/** A new family on this computer, empty or from a backup, then opened (0.4.0); or the example
+ *  family. */
 export function AddFamilyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const add = useAddFamily();
   const fromBackup = useAddFamilyFromBackup();
   const another = useOpenAnother();
+  const around = useLookAround();
+  const example = useFamilies().data?.families.find((family) => family.example);
   const [name, setName] = useState("");
   // A backup locked with a password, waiting for it (0.4.0).
   const [locked, setLocked] = useState<File | null>(null);
@@ -157,6 +178,17 @@ export function AddFamilyDialog({ open, onClose }: { open: boolean; onClose: () 
               if (file) addFrom(file);
             }}
           />
+          <div className="space-y-2 border-t border-stone-200 pt-3 text-sm text-stone-600">
+            <p>
+              Or <strong>the example family</strong>, Keluarga Contoh: made-up people with
+              portraits, life stories and places, to see what AncesTree can do. A family of its own,
+              never mixed with yours.
+            </p>
+            <Button variant="outline" disabled={busy || around.busy} onClick={around.look}>
+              <SparklesIcon />
+              {example ? "Open the example family" : "The example family"}
+            </Button>
+          </div>
           {locked && (
             <form
               className="space-y-2"
@@ -188,8 +220,40 @@ export function AddFamilyDialog({ open, onClose }: { open: boolean; onClose: () 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {another.opening && <Opening name={another.opening} />}
+      {(another.opening ?? around.opening) && (
+        <Opening name={another.opening ?? around.opening ?? ""} />
+      )}
     </>
+  );
+}
+
+/**
+ * While the example family is open: a word that it's made up, and the way back to the
+ * family of your own.
+ */
+export function ExampleBar() {
+  const families = useFamilies().data;
+  const another = useOpenAnother();
+  const open = families?.families.find((family) => family.open);
+  if (!open?.example) return null;
+  const yours = families?.families.find((family) => !family.example);
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-950 md:px-4"
+    >
+      <SparklesIcon className="size-4" aria-hidden />
+      <span>
+        This is <strong>the example family</strong>, Keluarga Contoh: its people are made up, to
+        look around in. Change anything you like.
+      </span>
+      {yours && (
+        <Button size="sm" variant="outline" onClick={() => another.choose(yours)}>
+          Back to {yours.name}
+        </Button>
+      )}
+      {another.opening && <Opening name={another.opening} />}
+    </div>
   );
 }
 

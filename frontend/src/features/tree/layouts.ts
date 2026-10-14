@@ -357,7 +357,9 @@ export function fanRadii(depth: number): number[] {
 /**
  * A fan chart of someone's ancestors: them at the bottom, their parents above, then
  * grandparents, each generation a half-circle further out; every ancestor has their own place
- * on it, the father's side on the left and the mother's on the right.
+ * on it, the father's side on the left and the mother's on the right. Their children stand in
+ * a row beneath, eldest first, so the chart can be drawn from one of them, a generation down
+ *.
  */
 export function fanLayout(
   graph: Graph,
@@ -366,7 +368,7 @@ export function fanLayout(
   kept: Set<string> | null,
 ): Arrangement {
   const links = new Links(graph, false);
-  const { people, fathersFirst } = nearby(graph);
+  const { people, fathersFirst, eldestFirst } = nearby(graph);
   const radii = fanRadii(depth);
   const points = new Map<string, Point>([[focus, { x: 0, y: 0 }]]);
   const seen = new Set([focus]);
@@ -400,16 +402,32 @@ export function fanLayout(
     generation = next;
   }
 
+  const children = [...links.down(focus)].sort(eldestFirst).filter((child) => !seen.has(child));
+  children.forEach((child, index) => {
+    points.set(child, { x: (index - (children.length - 1) / 2) * SPACING, y: ROW });
+  });
+
   const outer = radii[reached] ?? 0;
   const guides: Guide[] = [];
   for (let g = 1; g <= reached; g++) {
     guides.push({ kind: "arc", radius: radii[g] ?? 0, label: generationWord(-g) });
   }
+  if (children.length) {
+    const half = ((children.length - 1) / 2) * SPACING;
+    guides.push({
+      kind: "row",
+      y: ROW,
+      x1: -half - SPACING,
+      x2: half + SPACING,
+      label: generationWord(1),
+    });
+  }
   if (reached) {
     guides.push(
       { kind: "line", x1: 0, y1: -SPACING / 2, x2: 0, y2: -outer - SPACING / 2 },
-      { kind: "text", x: -outer / 2, y: SPACING / 2, label: "Father's side" },
-      { kind: "text", x: outer / 2, y: SPACING / 2, label: "Mother's side" },
+      // Under the half-circle's two ends: clear of the lines down to the children's row.
+      { kind: "text", x: -outer, y: SPACING / 2, label: "Father's side" },
+      { kind: "text", x: outer, y: SPACING / 2, label: "Mother's side" },
     );
   }
   return {

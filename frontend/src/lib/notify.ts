@@ -1,13 +1,25 @@
 import { toast } from "sonner";
 import type { Notice, RestoreResult, Suggestion } from "@/api/types";
+import { askSamePerson, canAskSamePerson } from "./samePerson";
 
 /** Long enough to read the message and reach its button. */
 export const ACTION_MS = 8000;
 export const UNDO_MS = 15_000;
 
-/** Things worth a second look; the change itself was saved. */
+/** Things worth a second look; the change itself was saved. Someone who may be in the tree
+ *  already comes with Same person as…, where the family can be changed: the one already
+ *  there is kept, with their links and history, and the one just added made one with them. */
 export function showNotices(notices: Notice[]): void {
-  for (const notice of notices) toast.warning(notice.message, { duration: 8000 });
+  for (const notice of notices) {
+    const { person, other } = notice;
+    const same = person && other && canAskSamePerson();
+    toast.warning(notice.message, {
+      duration: 8000,
+      action: same
+        ? { label: "Same person as…", onClick: () => askSamePerson(other, person) }
+        : undefined,
+    });
+  }
 }
 
 /** "Are Hassan and Mariam married?" with a one-click answer. */

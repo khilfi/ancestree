@@ -148,3 +148,37 @@ describe("a view-only copy, looked around", () => {
     expect(changes()).toEqual([]);
   });
 });
+
+describe("a view-only copy's fan chart, drawn from someone", () => {
+  it("offers Fan from here in the panel, and nothing that changes the family", async () => {
+    installCopy(copy);
+    let drawn = 0;
+    const panel = (fromHere?: { layout: "hourglass" | "fan"; onClick: () => void }) => (
+      <PersonPanel
+        personId={HASSAN}
+        onSelect={nothing}
+        onClose={nothing}
+        onDelete={nothing}
+        fromHere={fromHere}
+      />
+    );
+    const router = createMemoryRouter([
+      {
+        path: "/",
+        element: <AppLayout />,
+        children: [{ index: true, element: panel({ layout: "fan", onClick: () => drawn++ }) }],
+      },
+    ]);
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    act(() => root.render(<Root router={router} copy={copy.about} />));
+    await until("Hassan bin Ismail");
+
+    act(() => named("Fan from here").click());
+    expect(drawn).toBe(1);
+    expect(changes()).toEqual([]);
+    act(() => root.unmount());
+    document.body.replaceChildren();
+  });
+});

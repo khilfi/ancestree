@@ -25,7 +25,7 @@ import { showError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { ChildEdge, type ChildEdgeData, PairEdge, SpouseEdge, type SpouseEdgeData } from "./edges";
 import { familyMembers } from "./families";
-import { applyFilter, NO_FILTER, type TreeView, writeView } from "./filters";
+import { applyFilter, drawnFrom, NO_FILTER, type TreeView, writeView } from "./filters";
 import {
   BIG_FAMILY,
   everything,
@@ -55,8 +55,9 @@ import { RingsBackdrop } from "./RingsBackdrop";
 import type { Point } from "./rings";
 import { routesOf } from "./routing";
 import { type TreeActions, TreeActionsContext } from "./TreeActions";
-import { TreeToolbar } from "./TreeToolbar";
+import { type Steps, TreeToolbar } from "./TreeToolbar";
 import { type TreeEdge, toFlow } from "./toFlow";
+import { focusFor } from "./trail";
 import { UnknownParentCard } from "./UnknownParentCard";
 import { shortName } from "./words";
 
@@ -100,20 +101,7 @@ type Pending =
   | { kind: "edit"; pick: EdgePick; at: Point }
   | { kind: "unknown"; id: string; at: Point };
 
-const EVERYONE: TreeView = { layout: "rings", depth: null, filter: NO_FILTER };
-
-/** Whom an hourglass or fan chart is around: the filter's person, else whoever is open in
- *  the panel, else the centre of the rings. */
-function focusFor(graph: Graph, view: TreeView, selectedId: string | null): string | null {
-  const real = (id: string | null | undefined) =>
-    id && graph.people.some((person) => person.id === id && !person.placeholder) ? id : null;
-  return (
-    real(view.filter.around) ??
-    real(selectedId) ??
-    graph.layout.units[0]?.centre.map(real).find(Boolean) ??
-    null
-  );
-}
+const EVERYONE: TreeView = { layout: "rings", depth: null, filter: NO_FILTER, from: null };
 
 export function TreeCanvas({
   graph,
@@ -127,6 +115,8 @@ export function TreeCanvas({
   onStopRelating,
   view = EVERYONE,
   onView,
+  onFrom,
+  steps,
 }: {
   graph: Graph;
   selectedId: string | null;
@@ -139,6 +129,8 @@ export function TreeCanvas({
   onStopRelating?: () => void;
   view?: TreeView; // the layout and the filter, from the address
   onView?: (view: TreeView) => void;
+  onFrom?: (id: string) => void; // draw the hourglass or fan chart from them
+  steps?: Steps; // Back and Forward through those it was drawn from before
 }) {
   const settings = useTreeSettings();
   const colours = readOnly ? "branch" : (settings.data?.colours ?? "branch");
@@ -172,7 +164,7 @@ export function TreeCanvas({
   const hideOthers = view.filter.others === "hidden";
   // Whom an hourglass or fan chart is (or would be) around: the Layout menu names them.
   const around = focusFor(graph, view, selectedId);
-  const focus = view.layout === "hourglass" || view.layout === "fan" ? around : null;
+  const focus = drawnFrom(view.layout) ? around : null;
   // biome-ignore lint/correctness/useExhaustiveDependencies: viewKey stands for the view
   const layout = useMemo((): Arrangement => {
     const hidden = hideOthers ? kept : null;
@@ -485,6 +477,33 @@ export function TreeCanvas({
     [fixed, relating, relative, onSelect, onPick],
   );
 
+  // In an hourglass or fan chart, a double-click draws it from them; a click only opens
+  // their panel, above.
+  const onNodeDoubleClick = useCallback(
+    (_: MouseEvent, node: PersonFlowNode) => {
+      if (relating || node.type === "unknown" || !drawnFrom(view.layout)) return;
+      onFrom?.(node.id);
+    },
+    [relating, view.layout, onFrom],
+  );
+  // The mouse's back and forward buttons step through those it was drawn from, rather than
+  // through the pages: the browser goes back on the button's release, unless told not to.
+  const stepsNow = useRef(steps);
+  stepsNow.current = steps;
+  useEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const onMouseUp = (event: globalThis.MouseEvent) => {
+      const now = stepsNow.current;
+      const by = event.button === 3 ? -1 : event.button === 4 ? 1 : 0;
+      if (!by || !now || !(by < 0 ? now.back : now.forward)) return;
+      event.preventDefault();
+      now.onStep(by);
+    };
+    element.addEventListener("mouseup", onMouseUp);
+    return () => element.removeEventListener("mouseup", onMouseUp);
+  }, []);
+
   // Handlers keep their identity: React Flow stores each new one, and every store update
   // reaches every person and link on screen (it adds up while dragging among 500 people).
   const onChange = useCallback(
@@ -556,6 +575,9 @@ export function TreeCanvas({
           edgeTypes={edgeTypes}
           onNodesChange={onChange}
           onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
+          // A double-click on someone draws an hourglass or fan from them, not a zoom.
+          zoomOnDoubleClick={!drawnFrom(view.layout)}
           onEdgeClick={onEdgeClick}
           onPaneClick={onPaneClick}
           onConnect={onConnect}
@@ -597,6 +619,7 @@ export function TreeCanvas({
             view={view}
             onView={onView}
             focus={around}
+            steps={steps}
             shown={kept}
             onRearranged={() => {
               setMoving(true);

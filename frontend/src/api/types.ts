@@ -56,6 +56,7 @@ export type DictionaryRow = Schemas["DictionaryRow"];
 export type DictionaryWord = Schemas["DictionaryWord"];
 export type Biography = Schemas["Biography"];
 export type BiographyUpdate = Schemas["BiographyUpdate"];
+export type Said = Schemas["Said"];
 export type PictureAdded = Schemas["PictureAdded"];
 export type ExportFormat = Schemas["ExportFormat"];
 export type ExportRequest = Schemas["ExportRequest"];
@@ -90,6 +91,18 @@ export type MapTown = Schemas["Town"];
 export type MapPack = Schemas["MapPack"];
 export type MapPacks = Schemas["MapPacks"];
 export type PackKey = MapPack["key"];
+// Every country's packs
+export type MapCountry = Schemas["MapCountry"];
+export type MapPlaces = Schemas["MapPlaces"];
+// Addresses, filled in
+export type PlaceSuggestion = Schemas["PlaceSuggestion"];
+export type PlaceSuggestions = Schemas["PlaceSuggestions"];
+export type AtParents = Schemas["AtParents"];
+// Pins placed by themselves
+export type Exactness = PlaceSuggestion["exact"];
+export type Lookup = MapPacks["lookup"];
+export type Placed = Schemas["Placed"];
+export type FamilyCountries = Schemas["FamilyCountries"];
 export type Pin = Schemas["Pin"];
 export type MapPins = Schemas["MapPins"];
 export type HistoryStep = Schemas["HistoryStep"];
@@ -130,3 +143,7 @@ export type OfferFamily = Schemas["OfferFamily"];
 export type OfferMade = Schemas["OfferMade"];
 export type OfferHere = Schemas["OfferHere"];
 export type HandedOver = Schemas["HandedOver"];
+// Your own computers inviting and letting in
+export type Helper = Schemas["Helper"];
+export type Helped = Schemas["Helped"];
+export type HelpingView = Schemas["HelpingView"];

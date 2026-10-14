@@ -144,7 +144,8 @@ async def test_a_quick_fix_can_clear_a_place_or_give_a_birthplace(
     assert saved["person"]["residence"] is None
     assert saved["person"]["birth_place"]["town"] == "Ipoh"
     mapped = by_id(await ok(await client.get("/api/map")))[ali]
-    assert mapped["lives"] is None
+    assert mapped["at_parents"] is not None  # with no place of his own, at his parents'
+    assert mapped["lives"]["name"] == "Shah Alam"
     assert (mapped["born"]["found"], mapped["born"]["name"]) == ("town", "Ipoh")
     nothing = await client.patch(f"/api/persons/{ali}", json={})
     assert nothing.status_code == 409
@@ -158,3 +159,15 @@ async def test_the_made_up_family_is_spread_over_real_towns(client: httpx.AsyncC
     assert len(placed) > len(answer["people"]) / 2
     assert all(located["found"] == "town" for located in placed)
     assert len({located["state"] for located in placed if located["country"] == "Malaysia"}) > 5
+
+
+async def test_the_familys_countries_are_said_for_the_maps_list(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """Settings → Map lists first the countries anyone lives or was born in, by the keys
+    the packs have."""
+    ids = await family(client, driver, settings)
+    assert await ok(await client.get("/api/map/countries/family")) == {"countries": ["my"]}
+    berlin = {"town": "Berlin", "country": "Germany"}
+    await ok(await client.patch(f"/api/persons/{ids['Ali bin Rosli']}", json={"residence": berlin}))
+    assert await ok(await client.get("/api/map/countries/family")) == {"countries": ["de", "my"]}

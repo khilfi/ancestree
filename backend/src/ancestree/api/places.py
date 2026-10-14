@@ -4,12 +4,23 @@ on the map by hand."""
 import asyncio
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from ancestree.api.deps import Ctx, Hist
-from ancestree.domain.map import FamilyMap, MapPins, Pin
+from ancestree.config import Settings
+from ancestree.domain.map import (
+    FamilyMap,
+    LookupAsked,
+    MapPins,
+    Pin,
+    PlaceSuggestion,
+    PlaceSuggestions,
+)
 from ancestree.domain.person import Place
+from ancestree.maps.packs import PackStore
+from ancestree.maps.photon import PhotonError
 from ancestree.services import places as places_service
+from ancestree.services.context import RuleError
 
 router = APIRouter(tags=["map"])
 
@@ -19,6 +30,50 @@ async def get_map(ctx: Ctx) -> FamilyMap:
     """Everyone but unknown parents, with where they live and were born, each found on the
     map: by your pin for the place, its town, its state's middle, or its country."""
     return await places_service.family_map(ctx)
+
+
+@router.get("/places/suggest")
+async def suggest_place(
+    line: Annotated[str, Query(max_length=300)], country: Annotated[str, Query(max_length=100)]
+) -> PlaceSuggestions:
+    """What an address line, as it's typed, may be, in a country: its postcodes and
+    towns, from the country's places, each with its district, state and where it is; and
+    whether those places are on this computer, so their download can be offered."""
+    return await asyncio.to_thread(places_service.suggest, line, country)
+
+
+@router.get("/places/near")
+async def place_near(
+    lat: Annotated[float, Query(ge=-90, le=90)],
+    lon: Annotated[float, Query(ge=-180, le=180)],
+    country: Annotated[str, Query(max_length=100)],
+) -> PlaceSuggestion | None:
+    """What's nearest a point put on the map before its address: the town within 30 km,
+    with its district and state, and the nearest postcode, to fill the address in. None where
+    nothing is that near, or the country isn't known."""
+    return await asyncio.to_thread(places_service.near, lat, lon, country)
+
+
+@router.post(
+    "/places/lookup",
+    responses={502: {"description": "Photon couldn't be reached, or answered otherwise"}},
+)
+async def look_up_place(asked: LookupAsked, request: Request) -> PlaceSuggestions:
+    """Look one address up online, once: the engine asks Photon (komoot), sending the
+    line as typed, with its country, so the pages reach nothing outside this computer. Refused
+    where this computer looks nothing up online. What it finds is to check, never an answer."""
+    store: PackStore = request.app.state.map_packs
+    if store.lookup == "never":
+        raise RuleError("lookup_off", "Looking addresses up online is off on this computer.")
+    settings: Settings = request.app.state.settings
+    try:
+        return await asyncio.to_thread(
+            places_service.look_up, settings.photon_url, asked.line, asked.country
+        )
+    except PhotonError as error:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, {"code": "photon", "message": str(error)}
+        ) from error
 
 
 @router.get("/sample/map")

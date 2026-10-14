@@ -1,14 +1,14 @@
 """People: create, edit, find, order children, and delete to (and restore from) the Trash."""
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import timedelta
 from typing import Any
 from uuid import UUID, uuid7
 
 from neo4j import AsyncManagedTransaction as Tx
 
-from ancestree.domain.person import Gender, PartialDate
+from ancestree.domain.person import Gender, PartialDate, Place
 from ancestree.domain.requests import FillIn, NewRelative, PersonInput, PersonPatch
 from ancestree.domain.search import find_people
 from ancestree.domain.views import (
@@ -20,7 +20,6 @@ from ancestree.domain.views import (
     RestoreResult,
     TrashEntry,
 )
-from ancestree.places.gazetteer import district_of
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import links as links_repo
 from ancestree.repo import people as people_repo
@@ -33,8 +32,9 @@ from ancestree.services.context import (
     read,
     write,
 )
-from ancestree.services.detail import load_detail, summary
+from ancestree.services.detail import districted, load_detail, summary
 from ancestree.services.families import by_blood, family_key
+from ancestree.services.placing import placed, share_location
 from ancestree.services.relationships import Linked, connect
 from ancestree.services.rules import Facts, life_notices, parent_child_notices
 from ancestree.services.snapshots import refresh_snapshots
@@ -50,11 +50,11 @@ from ancestree.storage.settings import read_kinship_settings
 
 
 async def get_person(ctx: Context, person_id: UUID) -> PersonDetail:
-    """A person, as the app shows them: where they live said to the district too."""
+    """A person, as the app shows them: where they live said to the district too, as
+    written, or as the gazetteer has it; at their parents' too."""
     language = await kinship_language(ctx)
     detail = await read(ctx, lambda tx: load_detail(tx, str(person_id), language))
-    district = await asyncio.to_thread(district_of, detail.residence)
-    return detail.model_copy(update={"residence_district": district}) if district else detail
+    return await asyncio.to_thread(districted, detail)
 
 
 async def kinship_language(ctx: Context) -> str:
@@ -68,27 +68,40 @@ async def search(ctx: Context, text: str, limit: int) -> list[PersonSummary]:
     return [summary(row) for row in find_people(rows, text, limit)]
 
 
-async def create_person(ctx: Context, data: PersonInput) -> PersonSaved:
+async def create_person(ctx: Context, data: PersonInput, mates: Sequence[str] = ()) -> PersonSaved:
+    """Someone new; each place with an address given its location, and where they live shared
+    with `mates`, the others at that address."""
     person_id = str(uuid7())
     language = await kinship_language(ctx)
+    data = await asyncio.to_thread(placed, data)
 
     async def work(tx: Tx) -> tuple[PersonDetail, list[dict[str, Any]]]:
         namesakes = await people_repo.find_by_name(tx, data.full_name)
-        await people_repo.create_person(tx, _new_person_props(person_id, data))
+        props = _new_person_props(person_id, data)
+        if mates and data.residence is not None:
+            home = await share_location(tx, data.residence, mates)
+            props |= place_props("residence", home)
+        await people_repo.create_person(tx, props)
         return await load_detail(tx, person_id, language), namesakes
 
     detail, namesakes = await write(ctx, work)
-    await refresh_snapshots(ctx, [person_id])
-    notices = life_notices(_facts(detail)) + _namesake_notices(data, namesakes)
+    await refresh_snapshots(ctx, [person_id, *mates])
+    notices = life_notices(_facts(detail)) + _namesake_notices(data, namesakes, detail.id)
     return PersonSaved(person=detail, notices=notices)
 
 
-async def update_person(ctx: Context, person_id: UUID, data: PersonInput) -> PersonSaved:
-    return await _save(ctx, person_id, editable_props(data))
+async def update_person(
+    ctx: Context, person_id: UUID, data: PersonInput, mates: Sequence[str] = ()
+) -> PersonSaved:
+    data = await asyncio.to_thread(placed, data)
+    return await _save(ctx, person_id, editable_props(data), mates, data.residence)
 
 
-async def patch_person(ctx: Context, person_id: UUID, patch: PersonPatch) -> PersonSaved:
+async def patch_person(
+    ctx: Context, person_id: UUID, patch: PersonPatch, mates: Sequence[str] = ()
+) -> PersonSaved:
     """A quick fix from What's missing: only what's given changes."""
+    patch = await asyncio.to_thread(placed, patch)
     props: dict[str, Any] = {}
     changes = patch.changes()
     if "gender" in changes and patch.gender is not None:
@@ -99,17 +112,29 @@ async def patch_person(ctx: Context, person_id: UUID, patch: PersonPatch) -> Per
         props |= place_props("residence", patch.residence)
     if "birth_place" in changes:
         props |= place_props("birth", patch.birth_place)
-    return await _save(ctx, person_id, props)
+    home = patch.residence if "residence" in changes else None
+    return await _save(ctx, person_id, props, mates, home)
 
 
-async def _save(ctx: Context, person_id: UUID, props: dict[str, Any]) -> PersonSaved:
+async def _save(
+    ctx: Context,
+    person_id: UUID,
+    props: dict[str, Any],
+    mates: Sequence[str] = (),
+    residence: Place | None = None,
+) -> PersonSaved:
     """Write these properties; answer with the person as they are now, and what's worth a
-    second look (an unlikely age gap, say)."""
+    second look (an unlikely age gap, say). Where they live, given, is shared with `mates`, the
+    others at that address."""
     pid = str(person_id)
     language = await kinship_language(ctx)
 
     async def work(tx: Tx) -> tuple[PersonDetail, list[Notice]]:
-        if not await people_repo.update_person(tx, pid, props):
+        written = props
+        if mates and residence is not None:
+            home = await share_location(tx, residence, mates)
+            written = props | place_props("residence", home)
+        if not await people_repo.update_person(tx, pid, written):
             raise NotFoundError("That person isn't in the tree.")
         detail = await load_detail(tx, pid, language)
         kinds = await kinds_repo.fetch_kinds(tx)
@@ -126,7 +151,7 @@ async def _save(ctx: Context, person_id: UUID, props: dict[str, Any]) -> PersonS
         return detail, notices
 
     detail, notices = await write(ctx, work)
-    await refresh_snapshots(ctx, [pid])
+    await refresh_snapshots(ctx, [pid, *mates])
     return PersonSaved(person=detail, notices=notices)
 
 
@@ -134,12 +159,13 @@ async def add_relative(ctx: Context, person_id: UUID, request: NewRelative) -> R
     """Create someone already linked; if a link is refused, nobody is created."""
     anchor, new_id = str(person_id), str(uuid7())
     language = await kinship_language(ctx)
+    person = await asyncio.to_thread(placed, request.person)
 
     async def work(tx: Tx) -> tuple[Linked, list[dict[str, Any]], PersonDetail]:
         if await people_repo.fetch_person(tx, anchor) is None:
             raise NotFoundError("That person isn't in the tree.")
         namesakes = await people_repo.find_by_name(tx, request.person.full_name)
-        await people_repo.create_person(tx, _new_person_props(new_id, request.person))
+        await people_repo.create_person(tx, _new_person_props(new_id, person))
         shared = None
         if request.relation == "sibling":
             # A new brother or sister shares the birth parents already recorded, if any.
@@ -156,13 +182,17 @@ async def add_relative(ctx: Context, person_id: UUID, request: NewRelative) -> R
 
     linked, namesakes, detail = await write(ctx, work)
     await refresh_snapshots(ctx, linked.people | {new_id, anchor})
-    notices = _namesake_notices(request.person, namesakes) + linked.notices
+    notices = _namesake_notices(request.person, namesakes, UUID(new_id)) + linked.notices
     return RelativeAdded(person=detail, notices=notices, suggestions=linked.suggestions)
 
 
 async def fill_in(ctx: Context, placeholder_id: UUID, request: FillIn) -> RelativeAdded:
     """An unknown parent becomes a real one; the children they joined stay together."""
     unknown, new_id = str(placeholder_id), str(uuid7())
+    if request.person is not None:
+        request = request.model_copy(
+            update={"person": await asyncio.to_thread(placed, request.person)}
+        )
 
     async def work(tx: Tx) -> tuple[Linked, str, list[dict[str, Any]]]:
         props = await people_repo.fetch_person(tx, unknown)
@@ -188,7 +218,7 @@ async def fill_in(ctx: Context, placeholder_id: UUID, request: FillIn) -> Relati
 
     linked, parent, namesakes = await write(ctx, work)
     await refresh_snapshots(ctx, linked.people | {parent})
-    notices = _namesake_notices(request.person, namesakes) if request.person else []
+    notices = _namesake_notices(request.person, namesakes, UUID(parent)) if request.person else []
     return RelativeAdded(
         person=await get_person(ctx, UUID(parent)),
         notices=notices + linked.notices,
@@ -350,8 +380,11 @@ def _new_person_props(person_id: str, data: PersonInput) -> dict[str, Any]:
     }
 
 
-def _namesake_notices(data: PersonInput, namesakes: list[dict[str, Any]]) -> list[Notice]:
-    """Warn about a possible duplicate: same name, and no birth years that tell them apart."""
+def _namesake_notices(
+    data: PersonInput, namesakes: list[dict[str, Any]], saved: UUID
+) -> list[Notice]:
+    """Warn about a possible duplicate: same name, and no birth years that tell them apart.
+    It names both, `saved` and the one already there, for Same person as...."""
     year = data.birth_date.year if data.birth_date else None
     for other in namesakes:
         other_year = other.get("birth_year")
@@ -361,6 +394,8 @@ def _namesake_notices(data: PersonInput, namesakes: list[dict[str, Any]]) -> lis
                 Notice(
                     code="possible_duplicate",
                     message=f"There's already a {other['full_name']}{born} in the tree.",
+                    person=saved,
+                    other=UUID(str(other["id"])),
                 )
             ]
     return []

@@ -23,6 +23,7 @@ function person(id: string, fields: Partial<GraphPerson> = {}): GraphPerson {
     birth_order: null,
     placeholder: false,
     photo_version: null,
+    has_story: false,
     is_living: true,
     ...fields,
   };
@@ -128,6 +129,19 @@ describe("the view in the address", () => {
     expect(withView(params, { person: "siti" }).toString()).toBe("gen=2-2&person=siti");
     expect(viewSearch(params)).toBe("?gen=2-2");
     expect(viewSearch(new URLSearchParams("person=ali"))).toBe("");
+  });
+
+  it("keeps whom an hourglass or fan is drawn from as people are opened, but not on the rings", () => {
+    const params = new URLSearchParams("layout=fan&from=ali&person=siti");
+    expect(readView(params).from).toBe("ali");
+    expect(withView(params, { person: "hassan" }).toString()).toBe(
+      "layout=fan&from=ali&person=hassan",
+    );
+    expect(withView(params, {}).get("from")).toBe("ali"); // the panel closed
+    expect(readView(new URLSearchParams("layout=hourglass&from=ali")).from).toBe("ali");
+    expect(readView(new URLSearchParams("from=ali")).from).toBeNull();
+    const rings = { ...readView(params), layout: "rings" as const };
+    expect(writeView(rings).get("from")).toBeNull();
   });
 });
 

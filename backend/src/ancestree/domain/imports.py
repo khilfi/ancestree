@@ -71,6 +71,7 @@ type ChangeKind = Literal[
     "order",  # the birth order of brothers and sisters
     "story",
     "photo",
+    "said",  # what someone says about them
 ]
 
 
@@ -92,6 +93,7 @@ class ImportChange(BaseModel):
     unsure: bool = False  # the file doesn't say what it started from (no Version)
     removes: bool = False  # takes something out: only ever by its own tick, never Tick all
     picture: str | None = None  # "photo": the new photo, small, as a data: address
+    by: str = ""  # "said": who wrote the words, as they signed them
     needs: list[str] = Field(default_factory=list)  # changes it can't happen without
     blocked_by: list[str] = Field(default_factory=list)  # changes that rule it out
     ticked: bool
@@ -107,6 +109,15 @@ class ImportPerson(BaseModel):
     named_in: list[int]  # the rows that name them, when they have no row of their own
 
 
+class Placed(BaseModel):
+    """Where an import put people on the map from their addresses, with no internet: how
+    many at their postcode's area, at their town, and not found, their town and postcode unknown."""
+
+    postcode: int = 0
+    town: int = 0
+    not_found: int = 0
+
+
 class ImportPreview(BaseModel):
     file_name: str
     rows: int
@@ -120,6 +131,7 @@ class ImportPreview(BaseModel):
     differences: list[ImportDifference]
     columns_not_read: list[str]
     changes: list[ImportChange] = Field(default_factory=list)  # to review and tick
+    placed: Placed | None = None  # where they live put on the map from its address
 
 
 class ChangesPreview(BaseModel):
@@ -142,6 +154,7 @@ class ImportDone(BaseModel):
     photos: int = 0  # photos added, replaced or removed
     left_out: int
     backup: str  # the backup made first
+    placed: Placed | None = None  # where they live put on the map from its address
 
 
 class ImportSummary(BaseModel):

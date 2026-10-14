@@ -15,6 +15,7 @@ import { downloadExport, downloadTemplate, useMakeExport } from "@/api/queries";
 import type { ExportFormat } from "@/api/types";
 import { InAppOnly, useCopy } from "@/app/copy";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { asPng, saveFile, treePicture } from "@/features/tree/picture";
 import { fileSize } from "@/lib/files";
 import { showError } from "@/lib/notify";
@@ -70,11 +72,17 @@ export function ExportButton() {
   const picture = useTreePicture();
   const copy = useCopy();
   const [busy, setBusy] = useState<string | null>(null);
+  // Addresses in GEDCOM and the spreadsheet: left out unless chosen.
+  const [addresses, setAddresses] = useState(false);
 
   async function exportFile(format: ExportFormat) {
     setBusy(format);
     try {
-      const file = await make.mutateAsync(format);
+      const file = await make.mutateAsync(
+        format === "gedcom" || format === "csv"
+          ? { format, title: "", hide_living: false, archive: true, addresses }
+          : format,
+      );
       downloadExport(file.name);
       toast.success(`Saved ${file.name} (${fileSize(file.size)}).`, {
         // A copy's files come from the copy itself: there's no folder they stay in.
@@ -203,6 +211,25 @@ export function ExportButton() {
             >
               One row per person, for Excel.
             </Choice>
+            <InAppOnly>
+              <li className="flex items-start gap-2 py-3 pl-11 text-sm">
+                <Checkbox
+                  id="export-addresses"
+                  className="mt-0.5"
+                  checked={addresses}
+                  onCheckedChange={(on) => setAddresses(on === true)}
+                />
+                <div className="space-y-0.5">
+                  <Label htmlFor="export-addresses" className="font-normal">
+                    Include addresses
+                  </Label>
+                  <p className="text-xs text-stone-500">
+                    In GEDCOM and the spreadsheet: each place's house and street, postcode and where
+                    it is. Off, they stay out, as they're the family's own.
+                  </p>
+                </div>
+              </li>
+            </InAppOnly>
             <Choice
               icon={ImageIcon}
               title="Picture of the tree"

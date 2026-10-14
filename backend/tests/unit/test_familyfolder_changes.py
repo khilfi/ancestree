@@ -186,3 +186,4 @@ def test_only_a_changed_storys_pictures_and_a_changed_photo_are_sent(tmp_path: P
     assert list(sent["photos"]) == [SITI]
     assert sent["photos"][SITI]["display"].startswith("data:image/webp;base64,")
     assert sent["photos"][SITI]["crop"] == {"x": 0, "y": 0, "width": 100, "height": 100}
+    assert sent["addresses"] is True  # its places whole, so none is read as taken away

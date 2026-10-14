@@ -44,6 +44,10 @@ class Kind(IntEnum):
     OFFER = 9  # the family offered to one computer, locked for it alone: the keeper's
     ABOUT = 10  # what a relative's computer says of itself, in its own folder: its own
     TOOK = 11  # the new keeper's word that it took the family, in its own folder: the keeper's
+    # Another of the keeper's own computers inviting and letting in for it: read by
+    # computers since 0.8.0 alone, in places no earlier one reads.
+    HELPING = 12  # what the keeper's computer leaves that computer, locked for it: the keeper's
+    INSTRUCTION = 13  # that computer's word to let one in, in its own folder: its own
 
 
 class RefusedError(Exception):

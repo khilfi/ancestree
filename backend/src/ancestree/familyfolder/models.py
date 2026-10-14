@@ -11,6 +11,10 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Role = Literal["keeper", "trusted", "contributor", "viewer", "removed"]
+# A computer's id, and a public key, as a file another computer wrote carries them (0.8.0):
+# exactly so, or the file is refused whole.
+Device = Annotated[str, Field(pattern=r"^[0-9a-f]{16}$")]
+PublicKey = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 
 
 class _Model(BaseModel):
@@ -86,10 +90,10 @@ class Proposal(_Model):
 
 
 class JoinRequest(_Model):
-    device: str
-    sign: str
-    dh: str
-    name: str  # the computer's name, locked for the keeper
+    device: Device
+    sign: PublicKey
+    dh: PublicKey
+    name: Annotated[str, Field(pattern=r"^[0-9a-f]*$", max_length=1024)]  # locked for the keeper
 
 
 class MemberFile(_Model):
@@ -186,6 +190,58 @@ class About(_Model):
     version: str  # the app's, as people read it
     handover: int = 0  # the way of handing over the keeper it takes part in: 1 since 0.5.0
     declined: str = ""  # the offer it turned down, if any
+
+
+class Waiting(_Model):
+    """A computer asking to join, as the keeper's computer read its request."""
+
+    device: str
+    name: str  # as it named itself, which only the keeper's computer can read
+    email: str  # the Google account whose folder it asked from
+
+
+class Outcome(_Model):
+    """What the keeper's computer did with one of a helping computer's instructions."""
+
+    number: int
+    action: str = ""  # "let_in" or "invited"; empty for one that couldn't be read
+    name: str  # the computer it was about, or the account invited
+    done: bool
+    why: str = ""  # why not, in plain words
+
+
+class Helping(_Model):
+    """What the keeper's computer leaves another of the keeper's own, allowed to invite and let
+    in for it, locked for that computer alone: whether it still may; the invitation, which
+    only the keeper's key can sign; the names of the computers asking to join; what became of
+    that computer's instructions; and when the keeper's computer last looked, so it's known
+    whether it runs."""
+
+    device: str
+    allowed: bool
+    keeper: str  # the keeper's computer's name
+    looked: str  # ISO 8601
+    invitation: str = ""
+    asking: list[Waiting] = Field(default_factory=list)
+    refused: list[str] = Field(default_factory=list)  # computers turned away, not to show
+    done: list[Outcome] = Field(default_factory=list)
+
+
+class Instruction(_Model):
+    """A helping computer's word to the keeper's, in its own folder: let this computer in,
+    whose code its owner compared, with this role; or, it invited this Google account. Numbered,
+    so none is carried out twice."""
+
+    device: Device  # the helping computer
+    number: Annotated[int, Field(ge=1)]
+    made: Annotated[str, Field(max_length=40)]
+    action: Literal["let_in", "invited"]
+    joining: Annotated[str, Field(pattern=r"^([0-9a-f]{16})?$")] = ""  # the computer to let in
+    # Its code, as this computer worked it out and its owner compared.
+    code: Annotated[str, Field(pattern=r"^([A-Z2-7]{4}-[A-Z2-7]{4})?$")] = ""
+    role: Literal["trusted", "contributor", "viewer"] = "contributor"
+    # The account invited, as the invitation's form takes it (0.8.0: never any text at all).
+    email: Annotated[str, Field(max_length=254, pattern=r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$")] = ""
 
 
 class TookOver(_Model):

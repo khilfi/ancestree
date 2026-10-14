@@ -18,7 +18,13 @@ import {
   useRunImport,
   useTakeBack,
 } from "@/api/queries";
-import type { ImportDone, ImportPreview, ImportSummary, ImportTakenBack } from "@/api/types";
+import type {
+  ImportDone,
+  ImportPreview,
+  ImportSummary,
+  ImportTakenBack,
+  Placed,
+} from "@/api/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,6 +155,11 @@ function Preview({
           <p className="text-stone-600">
             Not read: {preview.columns_not_read.join(", ")}. The template shows the columns an
             import reads.
+          </p>
+        )}
+        {preview.placed && (
+          <p className="text-stone-600">
+            On the map from their addresses, with no internet: {placedWords(preview.placed)}.
           </p>
         )}
       </div>
@@ -414,14 +425,29 @@ function EarlierImports() {
 
 /** "3 people added, 2 details changed": what an import did. */
 function imported(done: ImportDone): string {
+  const placed = done.placed ? done.placed.postcode + done.placed.town : 0;
   return [
     done.people > 0 && `${count(done.people, "person", "people")} added`,
     done.links > 0 && `${count(done.links, "link")} made`,
     done.changed > 0 && `${count(done.changed, "detail")} changed`,
     done.removed > 0 && `${count(done.removed, "person", "people")} moved to the Trash`,
+    placed > 0 && `${count(placed, "address", "addresses")} placed on the map`,
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+/** Where an import puts people on the map from their addresses, with no internet:
+ *  "2 at their postcode's area, 30 at their town, and 3 not found". */
+export function placedWords(placed: Placed): string {
+  const parts = [
+    placed.postcode > 0 && `${placed.postcode} at their postcode's area`,
+    placed.town > 0 && `${placed.town} at their town`,
+    placed.not_found > 0 && `${placed.not_found} not found, for you to place`,
+  ].filter(Boolean);
+  return parts.length > 1
+    ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
+    : String(parts[0] ?? "");
 }
 
 /**

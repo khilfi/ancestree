@@ -2,7 +2,19 @@ import type { PersonDetail, PersonInput, Place } from "@/api/types";
 import { z } from "@/lib/schema";
 import { dateInput, datePartsSchema, partsOf } from "./DatePicker";
 
-const place = z.object({ town: z.string(), state: z.string(), country: z.string() });
+// A place as the form holds it: the address in one line, and the rest it's filled in
+// with, every part optional; where it is and how exactly, from a suggestion chosen.
+const place = z.object({
+  address: z.string(),
+  town: z.string(),
+  district: z.string(),
+  state: z.string(),
+  postcode: z.string(),
+  country: z.string(),
+  lat: z.number().nullable(),
+  lon: z.number().nullable(),
+  exact: z.enum(["spot", "street", "postcode", "town", "hand"]).nullable(),
+});
 
 /** The form mirrors the backend's PersonInput; the backend has the final say (dates, blanks). */
 export const personSchema = z.object({
@@ -17,6 +29,9 @@ export const personSchema = z.object({
   death_place: place,
   burial_place: z.string(),
   residence: place,
+  // With no place of their own: their parents' (""), their mother's, their father's, or
+  // elsewhere.
+  lives_with: z.enum(["", "mother", "father", "elsewhere"]),
   living: z.enum(["auto", "living", "deceased"]),
   occupation: z.string(),
   notes: z
@@ -26,11 +41,17 @@ export const personSchema = z.object({
 
 export type PersonFormValues = z.infer<typeof personSchema>;
 
-function placeValues(value: Place | null | undefined): PersonFormValues["residence"] {
+export function placeValues(value: Place | null | undefined): PersonFormValues["residence"] {
   return {
+    address: value?.address ?? "",
     town: value?.town ?? "",
+    district: value?.district ?? "",
     state: value?.state ?? "",
+    postcode: value?.postcode ?? "",
     country: value?.country ?? "Malaysia",
+    lat: value?.lat ?? null,
+    lon: value?.lon ?? null,
+    exact: value?.exact ?? null,
   };
 }
 
@@ -47,6 +68,7 @@ export function formValues(person?: PersonDetail): PersonFormValues {
     death_place: placeValues(person?.death_place),
     burial_place: person?.burial_place ?? "",
     residence: placeValues(person?.residence),
+    lives_with: person?.lives_with ?? "",
     living: person?.living == null ? "auto" : person.living ? "living" : "deceased",
     occupation: person?.occupation ?? "",
     notes: person?.notes ?? "",
@@ -61,5 +83,6 @@ export function toInput(values: PersonFormValues): PersonInput {
     birth_date: dateInput(values.birth_date),
     death_date: dateInput(values.death_date),
     living: values.living === "auto" ? null : values.living === "living",
+    lives_with: values.lives_with || null,
   };
 }

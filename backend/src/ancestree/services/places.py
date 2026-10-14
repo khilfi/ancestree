@@ -5,14 +5,30 @@ around them named. Nothing is looked up online."""
 import asyncio
 import random
 from collections.abc import Collection, Iterable, Mapping
+from dataclasses import asdict
 from uuid import UUID
 
-from ancestree.domain.map import FamilyMap, Located, MapPerson, MapPins, Pin, Town
+from ancestree.domain.map import (
+    FamilyCountries,
+    FamilyMap,
+    Located,
+    MapPerson,
+    MapPins,
+    Pin,
+    PlaceSuggestion,
+    PlaceSuggestions,
+    Town,
+)
 from ancestree.domain.person import Place
+from ancestree.domain.views import AtParents, at_parents
+from ancestree.maps import photon
+from ancestree.places import gazetteer as gazetteer_module
 from ancestree.places.gazetteer import Entry, Gazetteer, Pinned, gazetteer, pin_key
-from ancestree.repo.places import read_places
+from ancestree.places.names import state_named
+from ancestree.repo.places import Places, read_places
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import Context, RuleError, read
+from ancestree.services.detail import living_from
 from ancestree.storage.settings import read_pins, write_pins
 
 # The towns named around the family's places, as you chose on 10 Oct 2026: towns of
@@ -32,17 +48,20 @@ def _pinned(pins: MapPins) -> dict[str, Pinned]:
 class _Finder:
     """Finds places, each once: a family has many people in few places."""
 
-    def __init__(self, places: Gazetteer, pins: Mapping[str, Pinned]) -> None:
+    def __init__(self, places: Gazetteer, pins: Mapping[str, Pinned], exact: bool = True) -> None:
         self.places = places
         self.pins = pins
+        self.exact = exact  # False: each place no closer than its town (0.8.0)
         self.found: dict[Place, Located] = {}
 
     def __call__(self, place: Place | None) -> Located | None:
         if place is None or place.is_empty:
             return None
+        if not self.exact:
+            place = place.to_the_town()
         if place not in self.found:
             spot = self.places.locate(place, self.pins)
-            self.found[place] = (
+            located = (
                 Located(place=place, country=place.country)
                 if spot is None
                 else Located(
@@ -56,6 +75,12 @@ class _Finder:
                     district=spot.district,
                 )
             )
+            if place.lat is not None and place.lon is not None and place.exact != "town":
+                # Its own location, finer than its town, counted under its town and state
+                # as found; one with no "how" is the person's own.
+                own = {"lat": place.lat, "lon": place.lon, "exact": place.exact or "hand"}
+                located = located.model_copy(update=own)
+            self.found[place] = located
         return self.found[place]
 
 
@@ -101,27 +126,113 @@ def towns_around(places: Gazetteer, people: Iterable[MapPerson]) -> list[Town]:
     ]
 
 
-async def family_map(ctx: Context, hidden: Collection[str] = ()) -> FamilyMap:
+async def family_map(
+    ctx: Context, hidden: Collection[str] = (), *, exact: bool = True
+) -> FamilyMap:
     """Everyone but unknown parents, with where they live and were born, the pins, and the
     towns around the family's places. The `hidden` people's places stay off it, and no town is
-    named for them: a copy hiding living people's details."""
+    named for them: a copy hiding living people's details, where, not `exact`, everyone
+    else's are no closer than their town (0.8.0)."""
     rows = await read(ctx, read_places)
     pins = await asyncio.to_thread(read_pins, ctx.data_dir)
     places = await asyncio.to_thread(gazetteer)
     shown = [row for row in rows if row.id not in hidden]
+    # The living with no place of their own, at their parents'.
+    homes = {row.id: _at_parents(row) for row in shown}
     # The family's countries' places, read in one go and off the event loop.
     written = {place.country for row in shown for place in (row.lives, row.born) if place}
     await asyncio.to_thread(places.load, [places.country_code(country) for country in written])
-    find = _Finder(places, _pinned(pins))
-    people = [
-        MapPerson(id=UUID(row.id))
-        if row.id in hidden
-        else MapPerson(id=UUID(row.id), lives=find(row.lives), born=find(row.born))
-        for row in rows
-    ]
+    find = _Finder(places, _pinned(pins), exact)
+    people = []
+    for row in rows:
+        at = homes.get(row.id)
+        if row.id in hidden:
+            people.append(MapPerson(id=UUID(row.id)))
+        elif at is not None:
+            people.append(
+                MapPerson(
+                    id=UUID(row.id), lives=find(at.place), born=find(row.born), at_parents=at.whose
+                )
+            )
+        else:
+            people.append(MapPerson(id=UUID(row.id), lives=find(row.lives), born=find(row.born)))
     towns = await asyncio.to_thread(towns_around, places, people)
     return FamilyMap(
         people=sorted(people, key=lambda person: str(person.id)), pins=pins.pins, towns=towns
+    )
+
+
+def _at_parents(row: Places) -> AtParents | None:
+    """Their parents' place, for the living with no place of their own."""
+    living = living_from(row.living, row.born_on, row.died_on)
+    return at_parents(row.lives, row.lives_with, living, row.parents)
+
+
+async def family_countries(ctx: Context) -> FamilyCountries:
+    """The countries anyone in the family lives or was born in, by their codes in small
+    letters, as the map's packs are keyed."""
+    rows = await read(ctx, read_places)
+    places = await asyncio.to_thread(gazetteer)
+    written = {place.country for row in rows for place in (row.lives, row.born) if place}
+    codes = {places.country_code(country) for country in written}
+    return FamilyCountries(countries=sorted(code.lower() for code in codes if code))
+
+
+def suggest(line: str, country: str) -> PlaceSuggestions:
+    """What an address line may be, in a country: from its places and postcodes,
+    downloaded or the app's own. Reads the gazetteer, so off the event loop."""
+    places = gazetteer()
+    code = places.country_code(country)
+    if code is None:
+        return PlaceSuggestions(country=None, downloaded=False, suggestions=[])
+    found = places.suggest(code, line) if line.strip() else []
+    return PlaceSuggestions(
+        country=code.lower(),
+        downloaded=gazetteer_module.places_of(code.lower()) is not None,
+        suggestions=[PlaceSuggestion(**asdict(each)) for each in found],
+    )
+
+
+def near(lat: float, lon: float, country: str) -> PlaceSuggestion | None:
+    """What's nearest a point put on the map before its address, in its country. Reads
+    the gazetteer, so off the event loop."""
+    places = gazetteer()
+    code = places.country_code(country)
+    found = places.nearest(code, lat, lon) if code is not None else None
+    return PlaceSuggestion(**asdict(found)) if found is not None else None
+
+
+def look_up(url: str, line: str, country: str) -> PlaceSuggestions:
+    """An address looked up online, once, through Photon at `url`: what it found, each to
+    check, in the country written where it found any there, and in its own words otherwise. A
+    state written as the person form has it, in Malaysia. Off the event loop: it waits on the
+    internet."""
+    places = gazetteer()
+    code = places.country_code(country)
+    found = photon.look_up(url, line, country)
+    if code is not None and any(each.country == code for each in found):
+        found = [each for each in found if each.country == code]
+    suggestions = []
+    for each in found:
+        name = places.countries[each.country].name if each.country in places.countries else ""
+        in_malaysia = each.country == "MY"
+        suggestions.append(
+            PlaceSuggestion(
+                town=each.town,
+                district=each.district,
+                state=(state_named(each.state) or each.state) if in_malaysia else each.state,
+                postcode=each.postcode,
+                country=name or country,
+                lat=each.lat,
+                lon=each.lon,
+                exact=each.exact,
+                address=each.address,
+            )
+        )
+    return PlaceSuggestions(
+        country=code.lower() if code else None,
+        downloaded=code is not None and gazetteer_module.places_of(code.lower()) is not None,
+        suggestions=suggestions,
     )
 
 

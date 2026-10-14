@@ -1,5 +1,5 @@
 import { ReactFlowProvider } from "@xyflow/react";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useGraph, useKinship } from "@/api/queries";
 import { useCanEdit } from "@/app/copy";
@@ -9,8 +9,9 @@ import { RelationshipCard } from "@/features/kinship/RelationshipCard";
 import { PersonPanel } from "@/features/person/PersonPanel";
 import { useMoveToTrash } from "@/features/person/useMoveToTrash";
 import { useNarrow } from "@/lib/media";
-import { readView, type TreeView, withView, writeView } from "./filters";
+import { drawnFrom, readView, type TreeView, withView, writeView } from "./filters";
 import { TreeCanvas } from "./TreeCanvas";
+import { focusFor, NO_TRAIL, step, visit } from "./trail";
 
 function Message({ children }: { children: ReactNode }) {
   return (
@@ -48,9 +49,54 @@ export function TreePage() {
   // The layout and the filter live in the address too: opening someone keeps them.
   const view = readView(params);
   const go = (next: Record<string, string>) => setParams(withView(params, next));
-  const changeView = (next: TreeView) => setParams((now) => writeView(next, now));
+  const changeView = (next: TreeView) =>
+    setParams((now) =>
+      // Someone chosen for the filter in an hourglass or fan chart: it's drawn from them, as
+      // it was before charts kept to whom they're drawn from.
+      writeView(
+        drawnFrom(next.layout) && next.filter.around && next.filter.around !== view.filter.around
+          ? { ...next, from: next.filter.around }
+          : next,
+        now,
+      ),
+    );
   const select = (id: string) => go({ person: id });
   const close = () => go({});
+
+  // An hourglass or fan chart is drawn from one person, kept in the address while others are
+  // opened and closed. Moving it adds nothing to the browser's history: Back and Forward
+  // step through the people it was drawn from, the trail, instead.
+  const fanLike = drawnFrom(view.layout);
+  const from = graph.data && fanLike ? focusFor(graph.data, view, selectedId) : null;
+  // A search's person is shown: the chart is drawn from them.
+  const searched =
+    focusId && graph.data?.people.some((person) => person.id === focusId && !person.placeholder)
+      ? focusId
+      : null;
+  const wanted = fanLike ? (searched ?? from) : null;
+  const drawFrom = useCallback(
+    (id: string) =>
+      setParams((now) => writeView({ ...readView(now), from: id }, now), { replace: true }),
+    [setParams],
+  );
+  useEffect(() => {
+    if (wanted && wanted !== view.from) drawFrom(wanted);
+  }, [wanted, view.from, drawFrom]);
+  const [trail, setTrail] = useState(NO_TRAIL);
+  // Wherever the chart's person came from, the trail takes them in; away from the hourglass
+  // and fan chart, it starts again.
+  useEffect(() => setTrail((now) => (view.from ? visit(now, view.from) : NO_TRAIL)), [view.from]);
+  const steps = {
+    back: step(trail, -1)?.ids[trail.at - 1] ?? null,
+    forward: step(trail, 1)?.ids[trail.at + 1] ?? null,
+    onStep: (by: -1 | 1) => {
+      const next = step(trail, by);
+      const id = next?.ids[next.at];
+      if (!next || !id) return;
+      setTrail(next);
+      drawFrom(id);
+    },
+  };
 
   // Finding a relationship lives in the address too: ?person=Ali&relate=pick while
   // the second person is picked, then &relate=<their id> for the answer.
@@ -103,6 +149,8 @@ export function TreePage() {
           onStopRelating={stopRelating}
           view={view}
           onView={changeView}
+          onFrom={drawFrom}
+          steps={fanLike ? steps : undefined}
         />
       </ReactFlowProvider>
     );
@@ -127,6 +175,18 @@ export function TreePage() {
         onClose={close}
         onDelete={moveToTrash}
         onFindRelationship={findRelationship}
+        fromHere={
+          drawnFrom(view.layout) && selectedId && selectedId !== view.from
+            ? {
+                layout: view.layout,
+                // On a phone the panel covers the chart: it closes, to show it.
+                onClick: () =>
+                  narrow
+                    ? setParams(withView(writeView({ ...view, from: selectedId }, params), {}))
+                    : drawFrom(selectedId),
+              }
+            : undefined
+        }
       />
     );
 

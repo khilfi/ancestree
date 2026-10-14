@@ -3,12 +3,23 @@ import json
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 
 from ancestree.api.deps import Ctx, Hist
-from ancestree.domain.biography import Biography, BiographyUpdate, PictureAdded
+from ancestree.domain.biography import Biography, BiographyUpdate, PictureAdded, SaidWords
 from ancestree.domain.merge import MergePreview, MergeRequest
 from ancestree.domain.requests import (
     ChildrenOrder,
@@ -26,8 +37,9 @@ from ancestree.domain.views import (
     TrashEntry,
 )
 from ancestree.media.photos import AVATAR_SIZES, MAX_UPLOAD_BYTES, Crop
-from ancestree.services import biography, journal, merge, people, photos
+from ancestree.services import biography, journal, merge, people, photos, placing
 from ancestree.services.context import RuleError
+from ancestree.services.familyfolder import FamilyFolder
 
 router = APIRouter(prefix="/persons", tags=["people"])
 
@@ -45,8 +57,10 @@ async def search_people(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_person(ctx: Ctx, history: Hist, data: PersonInput) -> PersonSaved:
-    async with history.change(ctx) as change:
-        saved = await people.create_person(ctx, data)
+    """Someone new, placed where they live from its address, with anyone already there."""
+    mates = await placing.household(ctx, data.residence)
+    async with history.change(ctx, mates) as change:
+        saved = await people.create_person(ctx, data, mates)
         change.people.add(str(saved.person.id))
         change.label = f"Add {saved.person.full_name}"
     return saved
@@ -59,9 +73,11 @@ async def get_person(ctx: Ctx, person_id: UUID) -> PersonDetail:
 
 @router.put("/{person_id}")
 async def update_person(ctx: Ctx, history: Hist, person_id: UUID, data: PersonInput) -> PersonSaved:
-    """Replace everything the person form edits."""
-    async with history.change(ctx, [person_id]) as change:
-        saved = await people.update_person(ctx, person_id, data)
+    """Replace everything the person form edits. Where they live is shared by everyone at its
+    address, one Undo step with them."""
+    mates = await placing.household(ctx, data.residence, str(person_id))
+    async with history.change(ctx, [person_id, *mates]) as change:
+        saved = await people.update_person(ctx, person_id, data, mates)
         change.label = f"Edit {saved.person.full_name}"
     return saved
 
@@ -83,8 +99,11 @@ async def patch_person(ctx: Ctx, history: Hist, person_id: UUID, patch: PersonPa
     changes = patch.changes()
     if not changes:
         raise RuleError("nothing_to_change", "Give a gender, a date of birth or a place to change.")
-    async with history.change(ctx, [person_id]) as change:
-        saved = await people.patch_person(ctx, person_id, patch)
+    mates = []
+    if "residence" in changes:
+        mates = await placing.household(ctx, patch.residence, str(person_id))
+    async with history.change(ctx, [person_id, *mates]) as change:
+        saved = await people.patch_person(ctx, person_id, patch, mates)
         what = _PATCHED[next(iter(changes))] if len(changes) == 1 else "details"
         change.label = f"Set {saved.person.full_name}'s {what}"
     return saved
@@ -202,17 +221,57 @@ async def get_journal(ctx: Ctx, person_id: UUID) -> list[JournalEntry]:
     return await asyncio.to_thread(journal.journal_of, ctx.data_dir, str(person_id))
 
 
+async def _writer(request: Request, ctx: Ctx) -> biography.Writer:
+    """Who writes here: their Me's name, or the computer's; this computer, as the family
+    knows it; and whether it keeps the family."""
+    folder: FamilyFolder | None = getattr(request.app.state, "family_folder", None)
+    device, computer = folder.here() if folder is not None else (None, biography.ON_THIS_COMPUTER)
+    keeper = folder is None or folder.editing
+    computers = folder.computers() if folder is not None else {}
+    return biography.Writer(await biography.writer_name(ctx, computer), device, keeper, computers)
+
+
+Writes = Annotated[biography.Writer, Depends(_writer)]
+SaidId = Annotated[str, Path(pattern=r"^[0-9a-f]{8}$")]
+
+
 @router.get("/{person_id}/biography")
-async def get_biography(ctx: Ctx, person_id: UUID) -> Biography:
-    """The life story (Markdown) and its Sources, from biography.md in the person's folder."""
-    return await biography.read_biography(ctx, person_id)
+async def get_biography(ctx: Ctx, writer: Writes, person_id: UUID) -> Biography:
+    """The life story (Markdown), its parts, what people say about them, and its Sources, from
+    biography.md in the person's folder."""
+    return await biography.read_biography(ctx, person_id, writer)
 
 
 @router.put("/{person_id}/biography")
-async def save_biography(ctx: Ctx, person_id: UUID, update: BiographyUpdate) -> Biography:
+async def save_biography(
+    ctx: Ctx, writer: Writes, person_id: UUID, update: BiographyUpdate
+) -> Biography:
     """Save the story. Refused (409, "changed_outside") if the file changed since
-    `base_version`, e.g. in Obsidian; the answer carries the file as it is now."""
-    return await biography.save_biography(ctx, person_id, update)
+    `base_version`, e.g. in Obsidian; the answer carries the file as it is now. What people say
+    about them stays as the file has it."""
+    return await biography.save_biography(ctx, person_id, update, writer)
+
+
+@router.post("/{person_id}/said", status_code=status.HTTP_201_CREATED)
+async def add_said(ctx: Ctx, writer: Writes, person_id: UUID, words: SaidWords) -> Biography:
+    """Your words about them, signed with your Me's name, or your computer's, and
+    today's date. On a viewer's computer too: the keeper's computer takes only these from it."""
+    return await biography.add_said(ctx, person_id, words.text, writer)
+
+
+@router.put("/{person_id}/said/{said_id}")
+async def change_said(
+    ctx: Ctx, writer: Writes, person_id: UUID, said_id: SaidId, words: SaidWords
+) -> Biography:
+    """Change your own words: refused (409, "not_yours") on any other computer."""
+    return await biography.change_said(ctx, person_id, said_id, words.text, writer)
+
+
+@router.delete("/{person_id}/said/{said_id}")
+async def take_out_said(ctx: Ctx, writer: Writes, person_id: UUID, said_id: SaidId) -> Biography:
+    """Take back your own words, or, on the keeper's computer, take out anyone's: refused (409,
+    "not_yours") otherwise."""
+    return await biography.take_out_said(ctx, person_id, said_id, writer)
 
 
 @router.post("/{person_id}/media", status_code=status.HTTP_201_CREATED)

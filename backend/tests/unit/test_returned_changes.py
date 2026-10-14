@@ -4,6 +4,7 @@ fictional family's names; each case built in a few lines."""
 
 import base64
 import io
+from dataclasses import replace
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
@@ -30,11 +31,13 @@ from ancestree.importing.returned import (
     Relink,
     Remove,
     ReturnedPlan,
+    Sender,
     SetDetail,
     Siblings,
     Story,
     TreeNow,
     Unlink,
+    Words,
     plan_returned,
 )
 from tests.kinship_fixtures import KINDS
@@ -221,6 +224,74 @@ def test_the_same_file_again_brings_nothing_new() -> None:
     )
 
     assert plan_returned(brought, back, tree(), {}).changes == []
+
+
+HOME = {
+    "residence_town": "Kajang",
+    "residence_state": "Selangor",
+    "residence_country": "Malaysia",
+    "residence_address": "No. 12, Jalan Melati 3",
+    "residence_postcode": "43000",
+    "residence_lat": 2.993,
+    "residence_lon": 101.788,
+    "residence_exact": "postcode",
+}
+AT_HOME = changed(PEOPLE, "Aminah binti Hassan", **HOME, lives_with="father")
+# As a computer before 0.8.0 sends her: her place's town, state and country alone.
+AS_BEFORE = [
+    {k: v for k, v in p.items() if k in ("id", "full_name", "gender", "placeholder",
+                                          "has_photo", "birth_year", "birth_order",
+                                          "occupation", "residence_town", "residence_state",
+                                          "residence_country")}
+    if p["full_name"] == "Aminah binti Hassan" else p
+    for p in AT_HOME
+]  # fmt: skip
+
+
+def older(people: list[dict[str, Any]]) -> Returned:
+    return replace(came_back(people), addresses=False)
+
+
+def test_a_computer_before_addresses_takes_none_away() -> None:
+    """A relative's computer still on 0.7.0 doesn't say a place's address, postcode or
+    location, nor whom someone lives with, as since 0.8.0: none of it is offered as
+    taken away."""
+    assert plan_returned(base(AT_HOME), older(AS_BEFORE), tree(AT_HOME), {}).changes == []
+    occupation = changed(AS_BEFORE, "Aminah binti Hassan", occupation="Guru besar")
+    [change] = plan_returned(base(AT_HOME), older(occupation), tree(AT_HOME), {}).changes
+    assert change.column == "Occupation"
+
+
+def test_a_place_put_right_by_a_computer_before_addresses_keeps_them_in_the_same_town() -> None:
+    put_right = changed(AS_BEFORE, "Aminah binti Hassan", residence_state="SELANGOR D.E.")
+    plan = plan_returned(base(AT_HOME), older(put_right), tree(AT_HOME), {})
+    [change] = plan.changes
+    operation = plan.operations[change.id]
+    assert isinstance(operation, SetDetail)
+    assert operation.props["residence_state"] == "SELANGOR D.E."
+    assert operation.props["residence_address"] == "No. 12, Jalan Melati 3"
+    moved = changed(AS_BEFORE, "Aminah binti Hassan", residence_town="Semenyih")
+    plan = plan_returned(base(AT_HOME), older(moved), tree(AT_HOME), {})
+    [change] = plan.changes
+    operation = plan.operations[change.id]
+    assert isinstance(operation, SetDetail)
+    assert operation.props["residence_town"] == "Semenyih"
+    assert operation.props["residence_address"] is None  # a move
+
+
+def test_an_address_changed_on_a_computer_with_addresses_shows_in_the_review() -> None:
+    moved = changed(AT_HOME, "Aminah binti Hassan", residence_address="No. 3, Jalan Mawar")
+    [change] = plan_returned(base(AT_HOME), came_back(moved), tree(AT_HOME), {}).changes
+    assert (change.before, change.after) == (
+        "No. 12, Jalan Melati 3 43000, Kajang, Selangor",
+        "No. 3, Jalan Mawar 43000, Kajang, Selangor",
+    )
+
+
+def test_what_a_computer_sends_says_whether_it_keeps_addresses() -> None:
+    sent: dict[str, Any] = {"family": {"people": [], "links": []}}
+    assert sent_family(sent, SENDER).addresses is False  # before 0.8.0
+    assert sent_family({**sent, "addresses": True}, SENDER).addresses is True
 
 
 def test_a_date_the_app_cant_read_is_left_out_and_the_rest_comes_in() -> None:
@@ -475,6 +546,101 @@ def test_a_story_comes_back_with_its_new_pictures() -> None:
         {},
     )
     assert (other.changes[0].clash, other.changes[0].ticked) == (True, False)
+
+
+RELATIVES = "0123456789abcdef"  # the relative's computer
+KEEPERS = "fedcba9876543210"
+
+
+def words(said_id: str, text: str, device: str = RELATIVES) -> str:
+    return f"> {text}\n\n— Mak Long <!-- said {said_id} by {device} -->"
+
+
+def test_what_people_say_is_compared_a_piece_of_words_at_a_time() -> None:
+    """A story changed there, and words the keeper wrote here since, don't clash: they're
+    apart. Their own words changed there and here since do, and wait for a tick."""
+    hassan = pid("Hassan bin Ismail")
+    said = "\n\n## What people say\n\n"
+    then = {
+        hassan: {
+            "story": "He worked on the railway." + said + words("1a2b3c4d", "Kind."),
+            "sources": [],
+        }
+    }
+    now = {
+        hassan: {
+            "story": "He worked on the railway for thirty years."
+            + said
+            + words("1a2b3c4d", "So kind.")
+            + "\n\n"
+            + words("5e6f7a8b", "Patient."),
+            "sources": [],
+        }
+    }
+    keepers_too = said + words("1a2b3c4d", "Kind.") + "\n\n" + words("99999999", "Fair.", KEEPERS)
+    in_tree: dict[str, str | None] = {hassan: "He worked on the railway." + keepers_too + "\n"}
+    sender = Sender(RELATIVES, "Mak Long's laptop")
+
+    plan = plan_returned(
+        base(stories=then), came_back(stories=now), tree(stories=in_tree), {}, sender
+    )
+
+    by_kind = {(c.kind, c.detail): c for c in plan.changes}
+    assert set(by_kind) == {("said", "changed"), ("said", "written"), ("story", "changed")}
+    assert all(c.ticked and not c.clash for c in plan.changes)
+    story = plan.operations[by_kind["story", "changed"].id]
+    assert isinstance(story, Story)
+    assert "What people say" not in story.text  # written beside the words there are then
+    written = plan.operations[by_kind["said", "written"].id]
+    assert isinstance(written, Words)
+    assert written.said is not None
+    assert (written.said.text, written.was) == ("Patient.", None)
+
+    # Their own words changed here too since, by hand: a clash.
+    by_hand = said + words("1a2b3c4d", "Very kind.") + "\n\n" + words("99999999", "Fair.", KEEPERS)
+    other = plan_returned(
+        base(stories=then),
+        came_back(stories=now),
+        tree(stories={hassan: "He worked on the railway." + by_hand + "\n"}),
+        {},
+        sender,
+    )
+    changed = next(c for c in other.changes if c.detail == "changed" and c.kind == "said")
+    assert (changed.clash, changed.ticked) == (True, False)
+
+
+def test_words_longer_than_the_app_takes_are_left_out() -> None:
+    """The attack (security review of 0.8.0): a computer's own words, longer than the app takes
+    written on it, signed with a name as long, or more pieces about one person than it takes.
+    Each is left out, said so; the rest come."""
+    hassan = pid("Hassan bin Ismail")
+    said = "\n\n## What people say\n\n"
+    then = {hassan: {"story": "He worked on the railway.", "sources": []}}
+    pieces = [
+        words("1a2b3c4d", "Kind."),
+        words("2b3c4d5e", "x" * 20_001),
+        f"> Fair.\n\n— {'M' * 201} <!-- said 3c4d5e6f by {RELATIVES} -->",
+        *(words(f"{n:08x}", f"Piece {n}.") for n in range(0x10000000, 0x10000000 + 500)),
+    ]
+    now = {hassan: {"story": "He worked on the railway." + said + "\n\n".join(pieces)}}
+    now[hassan]["sources"] = []  # type: ignore[assignment]
+    sender = Sender(RELATIVES, "Mak Long's laptop")
+
+    plan = plan_returned(
+        base(stories=then),
+        came_back(stories=now),
+        tree(stories={hassan: "He worked on the railway.\n"}),
+        {},
+        sender,
+    )
+
+    came = [c for c in plan.changes if c.kind == "said"]
+    # 503 pieces: the first but for the two after it, too long; then the rest up to 500.
+    assert len(came) == 1 + 497
+    assert {c.after for c in came if c.after in ("Kind.", "x" * 160)} == {"Kind."}
+    too_long = [left for left in plan.left_out if "longer than the app takes" in left.why]
+    assert len(too_long) == 2 + 3
+    assert all(len(left.written) < 200 for left in too_long)
 
 
 def test_photos_come_back_added_and_taken_out() -> None:

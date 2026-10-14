@@ -3,8 +3,9 @@
 import csv
 import io
 from collections.abc import Mapping
+from dataclasses import replace
 
-from ancestree.domain.person import DateQualifier, PartialDate
+from ancestree.domain.person import DateQualifier, PartialDate, Place
 from ancestree.exchange.family import FamilyData
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
 from ancestree.importing.matching import (
@@ -304,6 +305,33 @@ def test_a_detail_changed_in_the_file_is_offered_and_ticked() -> None:
         "Teacher",
     )
     assert (change.ticked, change.clash, change.unsure) == (True, False, False)
+
+
+def test_a_place_changed_in_the_file_keeps_its_address_in_the_same_town() -> None:
+    """A spreadsheet says a place by its town, state and country: a place it doesn't
+    change keeps its address; one put right in the same town keeps it too; another town is a
+    move, and drops it."""
+    family, ids = sample_family()
+    home = Place(town="Kajang", address="No. 12, Jalan Melati 3", postcode="43000")
+    member = family.members[ids["Hassan"]]
+    family.members[ids["Hassan"]] = replace(
+        member, person=member.person.model_copy(update={"residence": home})
+    )
+    assert planned(family, edited(family)).changes == []
+
+    put_right = planned(
+        family, edited(family, {("Hassan bin Ismail", "Lives in"): "Kajang, Selangor"})
+    )
+    [change] = put_right.changes
+    assert change.after == "Kajang, Selangor"
+    [kept] = put_right.sets
+    assert (kept.props["residence_state"], kept.props["residence_address"]) == (
+        "Selangor",
+        "No. 12, Jalan Melati 3",
+    )
+    moved = planned(family, edited(family, {("Hassan bin Ismail", "Lives in"): "Semenyih"}))
+    [gone] = moved.sets
+    assert (gone.props["residence_town"], gone.props["residence_address"]) == ("Semenyih", None)
 
 
 def test_a_detail_changed_in_the_tree_since_stays_and_is_listed_as_newer() -> None:

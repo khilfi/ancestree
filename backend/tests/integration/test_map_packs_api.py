@@ -1,8 +1,10 @@
-"""The map's packs over HTTP: how each stands on this computer,
-fetching and removing one, and their tiles, served to the window gzipped as cut; and the online
-extra. The downloads and OpenFreeMap are made up: nothing here reaches the internet."""
+"""The map's packs over HTTP: how each stands on this
+computer, fetching and removing one, or a whole country's, and their tiles, those cut to one
+depth served to the window as one source, gzipped as cut; and the online extra. The
+downloads and OpenFreeMap are made up: nothing here reaches the internet."""
 
 import asyncio
+import dataclasses
 import gzip
 import hashlib
 import io
@@ -19,7 +21,7 @@ from ancestree.config import Settings
 from ancestree.desktop.guard import PageHeaders
 from ancestree.main import create_app
 from ancestree.maps.online import INDEX, SERVER
-from ancestree.maps.packs import BUILD, CHOSEN, PACKS, Pack
+from ancestree.maps.packs import BUILD, CHOSEN, COUNTRIES, PACKS, PLACE_FILES, Pack, PlaceFile
 from tests.fake_packs import write_pack
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
@@ -36,7 +38,8 @@ async def packs_now(client: httpx.AsyncClient) -> dict[str, dict[str, Any]]:
 
 async def test_each_pack_says_how_it_stands_on_this_computer(client: httpx.AsyncClient) -> None:
     packs = await packs_now(client)
-    assert list(packs) == ["world", "malaysia", "indonesia"]
+    assert list(packs) == list(PACKS)
+    assert next(iter(packs)) == "world"
     world = packs["world"]
     assert (world["title"], world["first"], world["minzoom"], world["maxzoom"]) == (
         "The world",
@@ -46,6 +49,15 @@ async def test_each_pack_says_how_it_stands_on_this_computer(client: httpx.Async
     )
     assert world["size"] == PACKS["world"].size
     assert not any(pack["installed"] or pack["fetching"] for pack in packs.values())
+    assert (packs["us-ca"]["title"], packs["us-ca"]["country"]) == ("California", "us")
+    countries = {c["key"]: c for c in (await client.get("/api/map/packs")).json()["countries"]}
+    assert countries["my"] == {
+        "key": "my",
+        "title": "Malaysia",
+        "continent": "Asia",
+        "packs": ["my"],
+    }
+    assert len(countries["us"]["packs"]) == len(COUNTRIES["us"].packs) > 50
 
 
 async def test_a_packs_tiles_are_served_as_cut(
@@ -54,18 +66,19 @@ async def test_a_packs_tiles_are_served_as_cut(
     (settings.data_dir / "maps").mkdir(parents=True, exist_ok=True)
     write_pack(settings.data_dir / "maps" / f"world-{BUILD}.pmtiles", TILES)
 
-    tile = await client.get("/api/map/tiles/world/5/25/15")
+    tile = await client.get("/api/map/depth/6/5/25/15")
 
     assert tile.status_code == 200
     assert tile.headers["content-type"] == "application/vnd.mapbox-vector-tile"
     assert tile.headers["content-encoding"] == "gzip"  # the window unpacks it
     assert tile.content == b"Malaysia"  # httpx, as the window, unpacks it
-    # Where the pack has nothing, nothing; a pack not here, not found; and nothing else at all.
-    assert (await client.get("/api/map/tiles/world/5/0/0")).status_code == 204
-    assert (await client.get("/api/map/tiles/world/9/400/250")).status_code == 204
-    assert (await client.get("/api/map/tiles/world/2/4/0")).status_code == 204
-    assert (await client.get("/api/map/tiles/malaysia/10/800/500")).status_code == 404
-    for wrong in ("/api/map/tiles/narnia/1/0/0", "/api/map/tiles/world/16/0/0"):
+    # Where no pack of that depth has it, nothing; and nothing else at all.
+    assert (await client.get("/api/map/depth/6/5/0/0")).status_code == 204
+    assert (await client.get("/api/map/depth/6/9/400/250")).status_code == 204
+    assert (await client.get("/api/map/depth/6/2/4/0")).status_code == 204
+    assert (await client.get("/api/map/depth/14/5/25/15")).status_code == 204  # not the world's
+    assert (await client.get("/api/map/depth/14/10/800/500")).status_code == 204  # none here
+    for wrong in ("/api/map/depth/narnia/1/0/0", "/api/map/depth/6/16/0/0"):
         assert (await client.get(wrong)).status_code == 422, wrong
     assert (await packs_now(client))["world"]["installed"]
 
@@ -107,14 +120,14 @@ async def test_a_pack_is_fetched_checked_and_removed(
     assert world["installed"], world
     assert world["error"] is None
     assert (settings.data_dir / "maps" / pinned.name).read_bytes() == content
-    tile = await client.get("/api/map/tiles/world/0/0/0")
+    tile = await client.get("/api/map/depth/6/0/0/0")
     assert tile.content == b"the world"
 
     removed = await client.delete("/api/map/packs/world")
     assert removed.status_code == 200
     assert not {pack["key"]: pack for pack in removed.json()["packs"]}["world"]["installed"]
     assert not (settings.data_dir / "maps" / pinned.name).exists()
-    assert (await client.get("/api/map/tiles/world/0/0/0")).status_code == 404
+    assert (await client.get("/api/map/depth/6/0/0/0")).status_code == 204
 
 
 async def test_a_pack_that_doesnt_match_is_refused_and_says_so(
@@ -144,7 +157,7 @@ async def test_a_pack_that_doesnt_match_is_refused_and_says_so(
     assert not world["installed"]
     assert world["error"] == "The world didn't match its fingerprint, so it wasn't kept"
     assert list((settings.data_dir / "maps").iterdir()) == []
-    assert (await client.get("/api/map/tiles/world/0/0/0")).status_code == 404
+    assert (await client.get("/api/map/depth/6/0/0/0")).status_code == 204
 
 
 # The online extra, with OpenFreeMap made up.
@@ -203,7 +216,7 @@ async def test_the_online_extra_asks_openfreemap_only_for_tiles_no_pack_here_has
     openfreemap = OpenFreeMap()
     monkeypatch.setattr("urllib.request.urlopen", openfreemap.urlopen)
     settings.maps.mkdir(parents=True, exist_ok=True)
-    write_pack(settings.maps / f"malaysia-{BUILD}.pmtiles", {KUALA_LUMPUR: b"Kuala Lumpur"})
+    write_pack(settings.maps / f"my-{BUILD}.pmtiles", {KUALA_LUMPUR: b"Kuala Lumpur"})
 
     async with engine(settings) as client:
         assert await online_now(client) is False
@@ -236,7 +249,8 @@ async def test_the_online_extra_asks_openfreemap_only_for_tiles_no_pack_here_has
         asked = len(openfreemap.asked)
         assert (await client.get(tile_of(BANGKOK))).status_code == 404
         assert len(openfreemap.asked) == asked
-    assert json.loads((settings.maps / CHOSEN).read_text(encoding="utf-8")) == {"online": False}
+    chosen = json.loads((settings.maps / CHOSEN).read_text(encoding="utf-8"))
+    assert chosen == {"online": False, "lookup": "ask"}  # and the address lookup's
 
 
 async def test_without_openfreemap_the_window_is_told_so(
@@ -254,3 +268,71 @@ async def test_without_openfreemap_the_window_is_told_so(
         "code": "openfreemap",
         "message": "OpenFreeMap couldn't be reached: no internet, or the connection broke",
     }
+
+
+async def test_a_whole_country_is_fetched_and_removed(
+    client: httpx.AsyncClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Germany's one Download, its pack and places made up and pinned for the test; then
+    Remove, which takes both. A country or pack that isn't on the list is not found, and one not
+    cut yet says so."""
+    write_pack(settings.data_dir / "pack.tmp", {(10, 550, 335): b"Berlin"}, (5.8, 47.2, 15.1, 55.1))
+    content = (settings.data_dir / "pack.tmp").read_bytes()
+    germany = PACKS["de"]
+    pinned = Pack(
+        key="de",
+        title=germany.title,
+        minzoom=7,
+        maxzoom=13,
+        region="de.geojson",
+        first=False,
+        size=len(content),
+        sha256=hashlib.sha256(content).hexdigest(),
+        country="de",
+    )
+    monkeypatch.setitem(PACKS, "de", pinned)
+    lines = b"DE\tBerlin\t\tP\tBerlin\t52.5244\t13.4105\t3426354\t\n"
+    places = PlaceFile("de", "Germany's places", 100, hashlib.sha256(lines).hexdigest())
+    monkeypatch.setitem(PLACE_FILES, "de", places)
+    served = {pinned.url: content, places.url: gzip.compress(lines)}
+
+    def release(request: Any, timeout: float) -> Any:
+        answer = io.BytesIO(served[request.full_url])
+        answer.status = 200  # type: ignore[attr-defined]
+        return answer
+
+    monkeypatch.setattr("urllib.request.urlopen", release)
+
+    assert (await client.post("/api/map/countries/de")).status_code == 202
+    for _ in range(100):
+        answer = (await client.get("/api/map/packs")).json()
+        packs = {pack["key"]: pack for pack in answer["packs"]}
+        [de] = [each for each in answer["places"] if each["country"] == "de"]
+        if not packs["de"]["fetching"] and not de["fetching"]:
+            break
+        await asyncio.sleep(0.05)
+    assert packs["de"]["installed"], packs["de"]
+    assert de["installed"], de
+    berlin = await client.get("/api/map/depth/13/10/550/335")
+    assert berlin.content == b"Berlin"
+    assert (await client.get("/api/map/depth/14/10/550/335")).status_code == 204
+
+    removed = await client.delete("/api/map/countries/de")
+    assert removed.status_code == 200
+    assert not {pack["key"]: pack for pack in removed.json()["packs"]}["de"]["installed"]
+    [de] = [each for each in removed.json()["places"] if each["country"] == "de"]
+    assert not de["installed"]
+    assert (await client.get("/api/map/depth/13/10/550/335")).status_code == 204
+
+    for wrong in ("/api/map/countries/narnia", "/api/map/packs/narnia"):
+        assert (await client.post(wrong)).status_code == 404, wrong
+    assert (await client.post("/api/map/countries/Not-A-Key!")).status_code == 422
+    # Listed, but not cut yet, as every pack is between a newer build's listing and its pins.
+    monkeypatch.setitem(PACKS, "fr", dataclasses.replace(PACKS["fr"], sha256=""))
+    await client.post("/api/map/packs/fr")
+    for _ in range(100):
+        france = (await packs_now(client))["fr"]
+        if not france["fetching"]:
+            break
+        await asyncio.sleep(0.05)
+    assert france["error"] == "France isn't out yet, so it can't be fetched"

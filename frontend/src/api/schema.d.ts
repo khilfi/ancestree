@@ -33,7 +33,8 @@ export interface paths {
         };
         /**
          * Get Graph
-         * @description Everyone, every link, and where each person sits on the lineage rings.
+         * @description Everyone, every link, and where each person sits on the lineage rings; and who has a
+         *     life story, for its book mark on their photo.
          */
         get: operations["get_graph"];
         put?: never;
@@ -167,7 +168,10 @@ export interface paths {
          */
         get: operations["search_people"];
         put?: never;
-        /** Create Person */
+        /**
+         * Create Person
+         * @description Someone new, placed where they live from its address, with anyone already there.
+         */
         post: operations["create_person"];
         delete?: never;
         options?: never;
@@ -186,7 +190,8 @@ export interface paths {
         get: operations["get_person"];
         /**
          * Update Person
-         * @description Replace everything the person form edits.
+         * @description Replace everything the person form edits. Where they live is shared by everyone at its
+         *     address, one Undo step with them.
          */
         put: operations["update_person"];
         post?: never;
@@ -414,17 +419,65 @@ export interface paths {
         };
         /**
          * Get Biography
-         * @description The life story (Markdown) and its Sources, from biography.md in the person's folder.
+         * @description The life story (Markdown), its parts, what people say about them, and its Sources, from
+         *     biography.md in the person's folder.
          */
         get: operations["get_biography"];
         /**
          * Save Biography
          * @description Save the story. Refused (409, "changed_outside") if the file changed since
-         *     `base_version`, e.g. in Obsidian; the answer carries the file as it is now.
+         *     `base_version`, e.g. in Obsidian; the answer carries the file as it is now. What people say
+         *     about them stays as the file has it.
          */
         put: operations["save_biography"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/persons/{person_id}/said": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Said
+         * @description Your words about them, signed with your Me's name, or your computer's, and
+         *     today's date. On a viewer's computer too: the keeper's computer takes only these from it.
+         */
+        post: operations["add_said"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/persons/{person_id}/said/{said_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change Said
+         * @description Change your own words: refused (409, "not_yours") on any other computer.
+         */
+        put: operations["change_said"];
+        post?: never;
+        /**
+         * Take Out Said
+         * @description Take back your own words, or, on the keeper's computer, take out anyone's: refused (409,
+         *     "not_yours") otherwise.
+         */
+        delete: operations["take_out_said"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1289,7 +1342,8 @@ export interface paths {
         put?: never;
         /**
          * Invite To Family Folder
-         * @description Share the family folder with a relative's Google account (the keeper's).
+         * @description Share the family folder with a relative's Google account (the keeper's, or another of
+         *     the keeper's own computers allowed to).
          */
         post: operations["invite_to_family_folder"];
         delete?: never;
@@ -1309,7 +1363,8 @@ export interface paths {
         put?: never;
         /**
          * Admit To Family Folder
-         * @description Let a computer in, with a role, once its code matches (the keeper's).
+         * @description Let a computer in, with a role, once its code matches (the keeper's); or, on another of
+         *     the keeper's own computers allowed to, ask the keeper's computer to.
          */
         post: operations["admit_to_family_folder"];
         delete?: never;
@@ -1373,6 +1428,27 @@ export interface paths {
          *     keeper's.
          */
         post: operations["change_family_folder_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/family-folder/helper": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Allow Family Folder Helper
+         * @description Let another of the keeper's own computers invite and let in for it, or no longer: the
+         *     keeper's.
+         */
+        post: operations["allow_family_folder_helper"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1713,6 +1789,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/places/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Place
+         * @description What an address line, as it's typed, may be, in a country: its postcodes and
+         *     towns, from the country's places, each with its district, state and where it is; and
+         *     whether those places are on this computer, so their download can be offered.
+         */
+        get: operations["suggest_place"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/places/near": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Place Near
+         * @description What's nearest a point put on the map before its address: the town within 30 km,
+         *     with its district and state, and the nearest postcode, to fill the address in. None where
+         *     nothing is that near, or the country isn't known.
+         */
+        get: operations["place_near"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/places/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look Up Place
+         * @description Look one address up online, once: the engine asks Photon (komoot), sending the
+         *     line as typed, with its country, so the pages reach nothing outside this computer. Refused
+         *     where this computer looks nothing up online. What it finds is to check, never an answer.
+         */
+        post: operations["look_up_place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sample/map": {
         parameters: {
             query?: never;
@@ -1766,9 +1908,31 @@ export interface paths {
         };
         /**
          * Get Map Packs
-         * @description Each of the map's packs, and how it stands on this computer.
+         * @description Each of the map's packs, and how it stands on this computer; the countries; and the
+         *     places that come with them.
          */
         get: operations["get_map_packs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/countries/family": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Family Countries
+         * @description The countries anyone in the family lives or was born in: Settings → Map lists them
+         *     first.
+         */
+        get: operations["get_family_countries"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1790,6 +1954,27 @@ export interface paths {
          * @description Turn the map's online extra on or off: OpenFreeMap's tiles, where the packs end.
          */
         put: operations["choose_online_map"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose Lookup
+         * @description Whether an address may be looked up online on this computer: asked each time,
+         *     without asking, or never.
+         */
+        put: operations["choose_lookup"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1845,7 +2030,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/map/tiles/{key}/{z}/{x}/{y}": {
+    "/api/map/countries/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch Map Country
+         * @description Fetch every pack of a country, its own or each of its states', but those here
+         *     already or on their way.
+         */
+        post: operations["fetch_map_country"];
+        /**
+         * Remove Map Country
+         * @description Take every pack of a country off this computer, stopping any on its way.
+         */
+        delete: operations["remove_map_country"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/map/depth/{depth}/{z}/{x}/{y}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1854,8 +2064,9 @@ export interface paths {
         };
         /**
          * Get Map Tile
-         * @description A tile of a pack, as Protomaps cut it from OpenStreetMap: vector data, gzipped. No
-         *     content where the pack has none.
+         * @description A tile from whichever pack on this computer cut to `depth` has it: the world's to
+         *     6, or the countries' and states', to 13 or 14. As Protomaps cut it from OpenStreetMap:
+         *     vector data, gzipped. No content where no pack here has it.
          */
         get: operations["get_map_tile"];
         put?: never;
@@ -1897,6 +2108,22 @@ export interface components {
             date: string;
             /** Years */
             years: number | null;
+        };
+        /**
+         * AtParents
+         * @description Where someone with no place of their own lives: their parents' place, and
+         *     whose, the app's alone, never written in. Their mother's when the parents live apart,
+         *     unless their father's is chosen.
+         */
+        AtParents: {
+            place: components["schemas"]["Place"];
+            /**
+             * Whose
+             * @enum {string}
+             */
+            whose: "mother" | "father" | "parents";
+            /** District */
+            district?: string | null;
         };
         /**
          * Backup
@@ -1991,6 +2218,12 @@ export interface components {
         Biography: {
             /** Story */
             story: string;
+            /** Parts */
+            parts?: {
+                [key: string]: string;
+            };
+            /** Said */
+            said?: components["schemas"]["Said"][];
             /** Sources */
             sources: string[];
             /** Version */
@@ -2000,6 +2233,10 @@ export interface components {
         BiographyUpdate: {
             /** Story */
             story: string;
+            /** Parts */
+            parts?: {
+                [key: string]: string;
+            };
             /** Sources */
             sources?: string[];
             /** Base Version */
@@ -2097,7 +2334,7 @@ export interface components {
             note: string;
         };
         /** @enum {string} */
-        ChangeKind: "add_person" | "set" | "add_link" | "remove_person" | "remove_link" | "change_link" | "fill_in" | "order" | "story" | "photo";
+        ChangeKind: "add_person" | "set" | "add_link" | "remove_person" | "remove_link" | "change_link" | "fill_in" | "order" | "story" | "photo" | "said";
         /**
          * ChangeRole
          * @description Another role for a computer let in already.
@@ -2346,6 +2583,11 @@ export interface components {
              * @default true
              */
             archive: boolean;
+            /**
+             * Addresses
+             * @default false
+             */
+            addresses: boolean;
         };
         /** FactPerson */
         FactPerson: {
@@ -2356,6 +2598,15 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /**
+         * FamilyCountries
+         * @description The countries anyone in the family lives or was born in, by key ("my"): Settings → Map
+         *     lists them first.
+         */
+        FamilyCountries: {
+            /** Countries */
+            countries: string[];
         };
         /** FamilyFacts */
         FamilyFacts: {
@@ -2499,6 +2750,9 @@ export interface components {
             offer_made?: components["schemas"]["OfferMade"] | null;
             offer_here?: components["schemas"]["OfferHere"] | null;
             handed?: components["schemas"]["HandedOver"] | null;
+            helping?: components["schemas"]["HelpingView"] | null;
+            /** Helped */
+            helped?: components["schemas"]["Helped"][];
         };
         /**
          * FamilyMap
@@ -2576,6 +2830,11 @@ export interface components {
              * @default 0
              */
             changed: number;
+            /**
+             * Words Only
+             * @default false
+             */
+            words_only: boolean;
         };
         /**
          * FolderMember
@@ -2595,6 +2854,16 @@ export interface components {
             email: string;
             /** You */
             you: boolean;
+            /**
+             * Own
+             * @default false
+             */
+            own: boolean;
+            /**
+             * Helps
+             * @default false
+             */
+            helps: boolean;
         };
         /**
          * Gender
@@ -2711,6 +2980,11 @@ export interface components {
             is_living?: boolean | null;
             /** Birth Text */
             birth_text?: string | null;
+            /**
+             * Has Story
+             * @default false
+             */
+            has_story: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2752,6 +3026,59 @@ export interface components {
             data_folder: string;
             /** Backup Folder */
             backup_folder: string;
+        };
+        /**
+         * Helped
+         * @description What the keeper's computer did with one of its own other computers' instructions.
+         */
+        Helped: {
+            /**
+             * Action
+             * @default
+             */
+            action: string;
+            /** Name */
+            name: string;
+            /** Done */
+            done: boolean;
+            /**
+             * Why
+             * @default
+             */
+            why: string;
+            /**
+             * By
+             * @default
+             */
+            by: string;
+            /** At */
+            at?: string | null;
+        };
+        /**
+         * Helper
+         * @description Another of the keeper's own computers allowed to invite and let in for it, or not.
+         */
+        Helper: {
+            /** Device */
+            device: string;
+            /** Allowed */
+            allowed: boolean;
+        };
+        /**
+         * HelpingView
+         * @description On another of the keeper's own computers, allowed to invite and let in for it.
+         */
+        HelpingView: {
+            /** Keeper */
+            keeper: string;
+            /** Running */
+            running: boolean;
+            /** Looked */
+            looked: string | null;
+            /** Waiting */
+            waiting?: string[];
+            /** Done */
+            done?: components["schemas"]["Helped"][];
         };
         /** HistoryMove */
         HistoryMove: {
@@ -2822,6 +3149,11 @@ export interface components {
             removes: boolean;
             /** Picture */
             picture?: string | null;
+            /**
+             * By
+             * @default
+             */
+            by: string;
             /** Needs */
             needs?: string[];
             /** Blocked By */
@@ -2886,6 +3218,7 @@ export interface components {
             left_out: number;
             /** Backup */
             backup: string;
+            placed?: components["schemas"]["Placed"] | null;
         };
         /**
          * ImportLeftOut
@@ -2957,6 +3290,7 @@ export interface components {
             columns_not_read: string[];
             /** Changes */
             changes?: components["schemas"]["ImportChange"][];
+            placed?: components["schemas"]["Placed"] | null;
         };
         /** ImportQuestion */
         ImportQuestion: {
@@ -3414,20 +3748,52 @@ export interface components {
             country: string;
             /** District */
             district?: string | null;
+            /** Exact */
+            exact?: ("spot" | "street" | "postcode" | "town" | "hand") | null;
+        };
+        /**
+         * LookupAsked
+         * @description An address to look up online, once: the line as typed, in its country.
+         */
+        LookupAsked: {
+            /** Line */
+            line: string;
+            /**
+             * Country
+             * @default Malaysia
+             */
+            country: string;
+        };
+        /**
+         * MapCountry
+         * @description A country in Settings → Map, and its packs: its own, or each of its states'.
+         */
+        MapCountry: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** Continent */
+            continent: string;
+            /** Packs */
+            packs: string[];
         };
         /**
          * MapPack
          * @description One of the map's packs of OpenStreetMap's tiles, and how it stands on this
-         *     computer: the world, fetched on first opening the map, or a region, when chosen.
+         *     computer: the world, fetched on first opening the map, or a country or a state of one,
+         *     when chosen.
          */
         MapPack: {
-            /**
-             * Key
-             * @enum {string}
-             */
-            key: "world" | "malaysia" | "indonesia";
+            /** Key */
+            key: string;
             /** Title */
             title: string;
+            /**
+             * Country
+             * @default
+             */
+            country: string;
             /** Size */
             size: number;
             /** Minzoom */
@@ -3447,19 +3813,34 @@ export interface components {
         };
         /**
          * MapPacks
-         * @description The packs, all cut from one of Protomaps' builds of OpenStreetMap, and whether the map's
-         *     online extra is on: OpenFreeMap's tiles, where the packs end.
+         * @description The packs, all cut from one of Protomaps' builds of OpenStreetMap, the countries
+         *     they're of, and whether the map's online extra is on: OpenFreeMap's tiles, where the
+         *     packs end.
          */
         MapPacks: {
             /** Build */
             build: string;
             /** Packs */
             packs: components["schemas"]["MapPack"][];
+            /** Countries */
+            countries?: components["schemas"]["MapCountry"][];
+            /** Places */
+            places?: components["schemas"]["MapPlaces"][];
             /**
              * Online
              * @default false
              */
             online: boolean;
+            /**
+             * Lookup
+             * @default ask
+             * @enum {string}
+             */
+            lookup: "ask" | "always" | "never";
+            /** Placed */
+            placed?: {
+                [key: string]: number;
+            };
         };
         /** MapPerson */
         MapPerson: {
@@ -3470,6 +3851,8 @@ export interface components {
             id: string;
             lives?: components["schemas"]["Located"] | null;
             born?: components["schemas"]["Located"] | null;
+            /** At Parents */
+            at_parents?: ("mother" | "father" | "parents") | null;
         };
         /**
          * MapPins
@@ -3478,6 +3861,25 @@ export interface components {
         MapPins: {
             /** Pins */
             pins?: components["schemas"]["Pin"][];
+        };
+        /**
+         * MapPlaces
+         * @description A country's places, or the world's: fetched with its packs, for finding where
+         *     someone lived or was born, and how they stand on this computer.
+         */
+        MapPlaces: {
+            /** Country */
+            country: string;
+            /** Size */
+            size: number;
+            /** Installed */
+            installed: boolean;
+            /** Fetching */
+            fetching: boolean;
+            /** Done */
+            done: number;
+            /** Error */
+            error?: string | null;
         };
         /**
          * MeSettings
@@ -3600,6 +4002,10 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+            /** Person */
+            person?: string | null;
+            /** Other */
+            other?: string | null;
         };
         /**
          * OfferFamily
@@ -3654,6 +4060,18 @@ export interface components {
         OneComputer: {
             /** Device */
             device: string;
+        };
+        /**
+         * OnlineLookup
+         * @description Whether an address may be looked up online: asked each time, without asking, or
+         *     never.
+         */
+        OnlineLookup: {
+            /**
+             * Lookup
+             * @enum {string}
+             */
+            lookup: "ask" | "always" | "never";
         };
         /**
          * OnlineMap
@@ -3739,6 +4157,14 @@ export interface components {
             residence: components["schemas"]["Place"] | null;
             /** Residence District */
             residence_district?: string | null;
+            /** Lives With */
+            lives_with?: ("mother" | "father" | "elsewhere") | null;
+            residence_at_parents?: components["schemas"]["AtParents"] | null;
+            /**
+             * Parents Apart
+             * @default false
+             */
+            parents_apart: boolean;
             /** Living */
             living: boolean | null;
             /** Is Living */
@@ -3790,6 +4216,8 @@ export interface components {
             /** Burial Place */
             burial_place?: string | null;
             residence?: components["schemas"]["Place"] | null;
+            /** Lives With */
+            lives_with?: ("mother" | "father" | "elsewhere") | null;
             /** Living */
             living?: boolean | null;
             /** Occupation */
@@ -3882,6 +4310,86 @@ export interface components {
              * @default Malaysia
              */
             country: string;
+            /** Address */
+            address?: string | null;
+            /** District */
+            district?: string | null;
+            /** Postcode */
+            postcode?: string | null;
+            /** Lat */
+            lat?: number | null;
+            /** Lon */
+            lon?: number | null;
+            /** Exact */
+            exact?: ("spot" | "street" | "postcode" | "town" | "hand") | null;
+        };
+        /**
+         * PlaceSuggestion
+         * @description What an address line, as it's typed, may be: the place's parts to fill in, and
+         *     where it is, as exactly as the postcode's spot or the town's; what's nearest a point put on
+         *     the map by hand; or what an online lookup found, to the house where it knows
+         *     it, with the address it found it as.
+         */
+        PlaceSuggestion: {
+            /** Town */
+            town: string;
+            /** District */
+            district: string;
+            /** State */
+            state: string;
+            /** Postcode */
+            postcode: string;
+            /** Country */
+            country: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /**
+             * Exact
+             * @enum {string}
+             */
+            exact: "spot" | "street" | "postcode" | "town" | "hand";
+            /**
+             * Address
+             * @default
+             */
+            address: string;
+        };
+        /**
+         * PlaceSuggestions
+         * @description Suggestions for an address line, in a country; and whether that country's places
+         *     are on this computer, so its download can be offered where they aren't.
+         */
+        PlaceSuggestions: {
+            /** Country */
+            country: string | null;
+            /** Downloaded */
+            downloaded: boolean;
+            /** Suggestions */
+            suggestions: components["schemas"]["PlaceSuggestion"][];
+        };
+        /**
+         * Placed
+         * @description Where an import put people on the map from their addresses, with no internet: how
+         *     many at their postcode's area, at their town, and not found, their town and postcode unknown.
+         */
+        Placed: {
+            /**
+             * Postcode
+             * @default 0
+             */
+            postcode: number;
+            /**
+             * Town
+             * @default 0
+             */
+            town: number;
+            /**
+             * Not Found
+             * @default 0
+             */
+            not_found: number;
         };
         /** Position */
         Position: {
@@ -4037,6 +4545,40 @@ export interface components {
             role: "keeper" | "trusted" | "contributor" | "viewer" | "removed";
             /** Backup */
             backup: string;
+        };
+        /**
+         * Said
+         * @description What someone says about them: their own words, kept in biography.md under
+         *     "What people say", each with who wrote them and when.
+         */
+        Said: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            /** Writer */
+            writer: string;
+            /** Device */
+            device?: string | null;
+            /** Written */
+            written?: string | null;
+            /** Changed */
+            changed?: string | null;
+            /**
+             * Yours
+             * @default false
+             */
+            yours: boolean;
+            /** Computer */
+            computer?: string | null;
+        };
+        /**
+         * SaidWords
+         * @description Someone's words about them, written or changed.
+         */
+        SaidWords: {
+            /** Text */
+            text: string;
         };
         /**
          * SampleFamily
@@ -5101,6 +5643,109 @@ export interface operations {
                 "application/json": components["schemas"]["BiographyUpdate"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Biography"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_said: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaidWords"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Biography"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_said: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+                said_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaidWords"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Biography"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_out_said: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+                said_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -6563,6 +7208,39 @@ export interface operations {
             };
         };
     };
+    allow_family_folder_helper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Helper"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyFolderStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     offer_the_family: {
         parameters: {
             query?: never;
@@ -7019,6 +7697,111 @@ export interface operations {
             };
         };
     };
+    suggest_place: {
+        parameters: {
+            query: {
+                line: string;
+                country: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceSuggestions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    place_near: {
+        parameters: {
+            query: {
+                lat: number;
+                lon: number;
+                country: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceSuggestion"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    look_up_place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LookupAsked"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceSuggestions"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Photon couldn't be reached, or answered otherwise */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_sample_map: {
         parameters: {
             query?: {
@@ -7136,6 +7919,26 @@ export interface operations {
             };
         };
     };
+    get_family_countries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyCountries"];
+                };
+            };
+        };
+    };
     choose_online_map: {
         parameters: {
             query?: never;
@@ -7146,6 +7949,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["OnlineMap"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_lookup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnlineLookup"];
             };
         };
         responses: {
@@ -7221,7 +8057,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                key: "world" | "malaysia" | "indonesia";
+                key: string;
             };
             cookie?: never;
         };
@@ -7252,7 +8088,69 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                key: "world" | "malaysia" | "indonesia";
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fetch_map_country: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MapPacks"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_map_country: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
             };
             cookie?: never;
         };
@@ -7283,7 +8181,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                key: "world" | "malaysia" | "indonesia";
+                depth: number;
                 z: number;
                 x: number;
                 y: number;

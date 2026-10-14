@@ -136,3 +136,24 @@ describe("a town's photos", () => {
       expect(Math.hypot(photo.x, photo.y) + spacing / 2).toBeLessThanOrEqual(reach + 0.01);
   });
 });
+
+describe("people pinned where they live", () => {
+  it("sets a household at its own spot apart from its town, and says which is about there", () => {
+    const home = { exact: "hand" as const, place: "Shah Alam" };
+    const spots = [
+      spot("ali", 10, 10),
+      spot("siti", 10, 10, { exact: "postcode" }),
+      spot("aina", 10.4, 10.2, home),
+      spot("zul", 10.4, 10.2, home),
+    ];
+    const groups = gather(spots, "towns", same, () => null);
+    expect(groups.map((g) => [g.members, g.about])).toEqual([
+      [["ali", "siti"], true],
+      [["aina", "zul"], false],
+    ]);
+    // Zoomed out, they count in their state as before.
+    const [selangor] = gather(spots, "states", same, () => null);
+    expect(selangor?.members).toHaveLength(4);
+    expect(selangor?.about).toBe(false);
+  });
+});

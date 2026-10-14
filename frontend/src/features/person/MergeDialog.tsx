@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useMergePeople, useMergePreview, useSearchPeople } from "@/api/queries";
 import type { MergePreview, PersonDetail } from "@/api/types";
@@ -91,24 +92,29 @@ function Preview({ preview }: { preview: MergePreview }) {
 }
 
 /**
- * Merge someone entered twice into this person. Where this person has nothing,
- * they take the other's detail; the other's links move across through the app's rules; the
- * other then goes to the Trash. One step for Undo, and the Trash keeps the other 30 days.
+ * Same person as…, merging: someone entered twice made one with this person.
+ * Where this person has nothing, they take the other's detail, photo and story; the other's
+ * links move across through the app's rules; the other then goes to the Trash. One step for
+ * Undo, photos and stories too, and the Trash keeps the other 30 days. `other`: the one
+ * already chosen, from a warning or What's missing.
  */
 export function MergeDialog({
   person,
+  other: chosen = null,
   open,
   onOpenChange,
 }: {
   person: PersonDetail;
+  other?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const [text, setText] = useState("");
-  const [other, setOther] = useState<string | null>(null);
+  const [other, setOther] = useState<string | null>(chosen);
   const results = useSearchPeople(useDebounced(text.trim(), 150));
   const preview = useMergePreview(person.id, other);
   const merge = useMergePeople();
+  const [, setParams] = useSearchParams();
   const people = (results.data ?? []).filter((p) => !p.placeholder && p.id !== person.id);
 
   function close(next: boolean) {
@@ -126,10 +132,21 @@ export function MergeDialog({
       { keep: person.id, other },
       {
         onSuccess: () => {
-          toast.success(`${name} is merged into ${person.full_name}.`, {
-            description: "Undo puts them back as two, and the Trash keeps them for 30 days.",
+          toast.success(`${name} and ${person.full_name} are one person now.`, {
+            description:
+              "Undo puts them back as two, photos and stories too, and the Trash keeps the other for 30 days.",
             duration: ACTION_MS,
           });
+          // The one gone was open, as after the warning on adding them: the one kept is now.
+          setParams(
+            (now) => {
+              if (now.get("person") !== other) return now;
+              const next = new URLSearchParams(now);
+              next.set("person", person.id);
+              return next;
+            },
+            { replace: true },
+          );
           close(false);
         },
         onError: showError,
@@ -141,11 +158,12 @@ export function MergeDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Merge someone into {person.full_name}</DialogTitle>
+          <DialogTitle>Is {person.full_name} in the tree twice?</DialogTitle>
           <DialogDescription>
-            For someone entered twice. {person.full_name} keeps everything they have, and takes the
-            other's details where they have none; the other's links move across, and the other goes
-            to the Trash.
+            Two records of one person become one, as when two relatives each added them.{" "}
+            {person.full_name} keeps everything they have, and takes the other's details, photo and
+            life story where they have none; the other's links move across, and the other goes to
+            the Trash. Undo takes all of it back.
           </DialogDescription>
         </DialogHeader>
         {other === null ? (
@@ -197,11 +215,7 @@ export function MergeDialog({
             </Button>
           )}
           <Button onClick={run} disabled={other === null || !preview.data || merge.isPending}>
-            {merge.isPending
-              ? "Merging…"
-              : preview.data
-                ? `Merge ${preview.data.other_name} into ${person.full_name}`
-                : "Merge"}
+            {merge.isPending ? "Making them one…" : "Make them one person"}
           </Button>
         </DialogFooter>
       </DialogContent>

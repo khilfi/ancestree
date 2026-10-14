@@ -26,7 +26,14 @@ export type TreeFilter = {
   others: "hidden" | "faded";
 };
 
-export type TreeView = { layout: Layout; depth: number | null; filter: TreeFilter };
+export type TreeView = {
+  layout: Layout;
+  depth: number | null;
+  filter: TreeFilter;
+  // Whom an hourglass or fan chart is drawn from: kept while people are opened and
+  // closed, and changed only by Fan from here, a double-click, Back or Forward.
+  from: string | null;
+};
 
 export const NO_FILTER: TreeFilter = {
   around: null,
@@ -51,6 +58,7 @@ const MISSING: Missing[] = ["year", "photo"];
 export const VIEW_KEYS = [
   "layout",
   "depth",
+  "from",
   "around",
   "scope",
   "links",
@@ -80,12 +88,21 @@ function whole(value: string | null, low: number, high: number): number | null {
   return value && Number.isInteger(number) && number >= low && number <= high ? number : null;
 }
 
+/** The layouts drawn from one person, with their ancestors around them: the hourglass and
+ *  the fan chart. */
+export function drawnFrom(layout: Layout): layout is "hourglass" | "fan" {
+  return layout === "hourglass" || layout === "fan";
+}
+
 export function readView(params: URLSearchParams): TreeView {
-  const layout = params.get("layout");
+  const layout = LAYOUTS.includes(params.get("layout") as Layout)
+    ? (params.get("layout") as Layout)
+    : "rings";
   const scope = params.get("scope");
   return {
-    layout: LAYOUTS.includes(layout as Layout) ? (layout as Layout) : "rings",
+    layout,
     depth: whole(params.get("depth"), 1, 8),
+    from: drawnFrom(layout) ? params.get("from") || null : null,
     filter: {
       around: params.get("around") || null,
       scope: SCOPES.includes(scope as Scope) ? (scope as Scope) : "line",
@@ -105,12 +122,13 @@ export function readView(params: URLSearchParams): TreeView {
 export function writeView(view: TreeView, into = new URLSearchParams()): URLSearchParams {
   const params = new URLSearchParams(into);
   for (const key of VIEW_KEYS) params.delete(key);
-  const { layout, depth, filter } = view;
+  const { layout, depth, filter, from } = view;
   const set = (key: string, value: string | null | false) => {
     if (value) params.set(key, value);
   };
   set("layout", layout !== "rings" && layout);
   set("depth", depth !== null && String(depth));
+  set("from", drawnFrom(layout) && from);
   set("around", filter.around);
   set("scope", filter.around !== null && filter.scope !== "line" && filter.scope);
   set("links", filter.around !== null && filter.scope === "within" && String(filter.links));

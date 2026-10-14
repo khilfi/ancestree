@@ -254,6 +254,15 @@ body > .mdxeditor-popup-container {
   line-height: 1.65;
   color: #292524;
 }
+/* A life story's page reads its story and parts at their own length; a part being
+   written needs less room than the story. */
+.life-story-page .story-editor .story {
+  min-height: 0;
+  padding: 0;
+}
+.life-story-part .story-editor .story {
+  min-height: 5rem;
+}
 /* "Write about their life…" wraps like the text it stands for. */
 .story-editor .story:not([contenteditable]) {
   right: 0;
@@ -436,5 +445,44 @@ body > .mdxeditor-popup-container {
     display: block;
     height: auto;
     overflow: visible;
+  }
+}
+
+/* A life story's Print: its page alone, at its full length, on A4, without the app
+   behind it, the window around it, or the buttons in either (`.life-story-tools`); a card
+   never split between pages. Saved as a PDF from the print window. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body:has(.life-story-print) :is(#root, [data-slot="dialog-overlay"], .life-story-chrome),
+  body:has(.life-story-print) .life-story-print > [data-slot="dialog-close"],
+  body:has(.life-story-print) .life-story-tools {
+    display: none;
+  }
+  body:has(.life-story-print) .life-story-print {
+    position: static;
+    display: block;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    /* Its centring: Tailwind's translate reads these (a plain translate: none is folded away
+       when the stylesheet is built). */
+    --tw-translate-x: 0;
+    --tw-translate-y: 0;
+    transform: none;
+    border: 0;
+    box-shadow: none;
+  }
+  body:has(.life-story-print) .life-story-scroll {
+    height: auto;
+    overflow: visible;
+  }
+  .life-story-card,
+  .life-story-page > header {
+    break-inside: avoid;
   }
 }

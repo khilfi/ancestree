@@ -79,10 +79,13 @@ type Pictures = {
   dialog?: FC;
 };
 
-/** Everything a story may contain: headings, lists, quotes, links, pictures, dividers. */
-export function storyPlugins(pictures: Pictures = {}): RealmPlugin[] {
+/**
+ * Everything a story may contain: headings, lists, quotes, links, pictures, dividers. A part of
+ * their life has subheadings alone, as its own heading is the file's second level.
+ */
+export function storyPlugins(pictures: Pictures = {}, part = false): RealmPlugin[] {
   return [
-    headingsPlugin({ allowedHeadingLevels: [2, 3] }),
+    headingsPlugin({ allowedHeadingLevels: part ? [3] : [2, 3] }),
     listsPlugin(),
     quotePlugin(),
     linkPlugin(),

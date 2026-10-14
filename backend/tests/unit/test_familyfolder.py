@@ -7,7 +7,9 @@ Names are the fictional family's.
 
 from __future__ import annotations
 
+import json
 import random
+import re
 import shutil
 from pathlib import Path
 
@@ -15,6 +17,7 @@ import pytest
 
 from ancestree.familyfolder.computers import Keeper, Member
 from ancestree.familyfolder.models import Delete, Put
+from ancestree.familyfolder.protect import write_secret
 from ancestree.familyfolder.seals import Kind, RefusedError, seal
 
 
@@ -361,11 +364,14 @@ def test_nothing_in_the_folder_names_the_family(drive: Drive, keeper: Keeper) ->
     salmah.put_file(b"a made-up photo of Aminah")
     drive.sync()
 
-    words = [b"Hassan", b"Salmah", b"Aminah", b"Klang", b"1938"]
+    words = [b"Hassan", b"Salmah", b"Aminah", b"Klang"]
+    # The year standing alone: keys written in hex spell it now and then, by chance.
+    year = re.compile(rb"(?<![0-9a-f])1938(?![0-9a-f])")
     for path in drive.copies["keeper"].rglob("*"):
         if path.is_file():
             data = path.read_bytes()
             assert not [word for word in words if word in data], path.name
+            assert year.search(data) is None, path.name
 
 
 # --- Put right in 0.3.1 -------------------------------------------------------------------------
@@ -438,14 +444,27 @@ def test_a_role_changed_reaches_computers_through_what_they_read_since_0_4_0(
         assert salmah.role == role
         assert zul.state["members"][salmah.device]["role"] == role  # every list shows it
         assert salmah.keys == keeper.keys  # no new family key: every role reads the family
-    with pytest.raises(PermissionError):
-        zul.send([person("Zulkifli bin Hassan")])
+    # A viewer sends since 0.8.0: only its words about people are taken from it.
+    zul.send([person("Zulkifli bin Hassan")])
+    drive.sync()
+    assert [(arrived.device, arrived.words_only) for arrived in keeper.inbox()] == [
+        (zul.device, True)
+    ]
     keeper.change_role(zul.device, "contributor")
     drive.sync()
+    keeper.went_up()
     zul.receive()
     zul.send([person("Zulkifli bin Hassan")])
     drive.sync()
-    assert [arrived.device for arrived in keeper.inbox()] == [zul.device]
+    # The one sent as a viewer was made before its role changed, so it's looked at as it is.
+    assert [
+        (arrived.device, arrived.before_role, arrived.words_only) for arrived in keeper.inbox()
+    ] == [(zul.device, True, False), (zul.device, False, False)]
+    keeper.remove(zul.device)
+    drive.sync()
+    zul.receive()
+    with pytest.raises(PermissionError):
+        zul.send([person("Zulkifli bin Hassan")])
 
 
 def test_what_was_sent_before_a_role_changed_is_taken_as_it_was_then(
@@ -462,9 +481,10 @@ def test_what_was_sent_before_a_role_changed_is_taken_as_it_was_then(
     drive.sync()
 
     assert keeper.approve_trusted() == []
-    assert sorted(arrived.device for arrived in keeper.inbox()) == sorted(
-        [salmah.device, zul.device]
-    )
+    assert sorted(
+        (arrived.device, arrived.before_role, arrived.words_only) for arrived in keeper.inbox()
+    ) == sorted([(salmah.device, True, False), (zul.device, True, False)])
+    keeper.went_up()  # the keeper's round sends the new roles up
 
     salmah.receive()  # she knows she's trusted now
     salmah.send([person("Nor binti Hassan")])
@@ -472,3 +492,83 @@ def test_what_was_sent_before_a_role_changed_is_taken_as_it_was_then(
     assert len(keeper.approve_trusted()) == 1  # made as trusted: in by itself
     assert "Nor binti Hassan" in keeper.state["people"]
     assert "Aminah binti Hassan" not in keeper.state["people"]  # still the keeper's to look at
+
+
+def test_a_computer_saying_it_sent_before_its_role_changed_is_held_to_what_the_keeper_saw(
+    drive: Drive, keeper: Keeper
+) -> None:
+    """Which proposals were made before a role changed is the keeper's computer's to know: those
+    it had by the time the change went up to Drive. What a proposal says of itself, the record
+    it was made on, is its sender's to choose: a viewer claiming an old one is still held to its
+    words, and a trusted computer's own comes in by itself."""
+    salmah = join(drive, keeper, "salmah", role="viewer")  # a viewer from the first
+    zul = join(drive, keeper, "zul")
+    zul.send([person("Zulkifli bin Hassan")], family="whole", changed=1)  # made as a contributor
+    drive.sync()
+    keeper.change_role(zul.device, "viewer")
+    drive.sync()
+    keeper.went_up()
+    salmah.receive()
+    zul.receive()
+    assert zul.role == "viewer"
+
+    # Each says it was made on the record as it was before the keeper's first change set.
+    salmah.send([person("Salmah binti Hassan")], family="whole", changed=1, base=0)
+    zul.send([person("Zulkifli bin Hassan")], family="whole", changed=1, base=0)
+    drive.sync()
+    assert sorted(
+        (arrived.device, arrived.proposal.seq, arrived.before_role, arrived.words_only)
+        for arrived in keeper.inbox()
+    ) == sorted(
+        [
+            (salmah.device, 1, False, True),
+            (zul.device, 1, True, False),  # here before the change: the keeper's to look at
+            (zul.device, 2, False, True),
+        ]
+    )
+    newest = {arrived.device: arrived for arrived in keeper.newest()}
+    assert newest[salmah.device].before_role is False
+    assert newest[salmah.device].words_only is True
+
+    # Kept as it is across a restart, not worked out again from what proposals say.
+    again = Keeper.load(keeper.folder, keeper.data)
+    assert sorted(
+        (arrived.device, arrived.proposal.seq, arrived.before_role) for arrived in again.inbox()
+    ) == sorted([(salmah.device, 1, False), (zul.device, 1, True), (zul.device, 2, False)])
+
+    # A trusted computer saying it sent before it was trusted only keeps its own back.
+    keeper.change_role(salmah.device, "trusted")
+    drive.sync()
+    keeper.went_up()
+    salmah.receive()
+    salmah.send([person("Aminah binti Hassan")], base=0)
+    drive.sync()
+    assert "Aminah binti Hassan" not in keeper.state["people"]
+    keeper.approve_trusted()
+    assert "Aminah binti Hassan" in keeper.state["people"]  # made as trusted: in by itself
+    assert "Salmah binti Hassan" not in keeper.state["people"]  # made as a viewer: looked at
+
+
+def test_proposals_here_as_a_keeper_kept_by_0_7_0_starts_are_taken_as_they_say_once(
+    drive: Drive, keeper: Keeper
+) -> None:
+    """A keeper's computer kept by a version before 0.8.0 has no list of what was made before a
+    role changed: those here as it starts are taken as they say, once; after, by what it sees."""
+    zul = join(drive, keeper, "zul")
+    zul.send([person("Zulkifli bin Hassan")])  # made as a contributor, on its way
+    keeper.change_role(zul.device, "viewer")
+    drive.sync()
+    zul.receive()
+    keeper.went_up()  # as 0.7.0 had it: nothing kept
+    keeper.before.clear()
+    saved = keeper._saved()
+    del saved["before"], saved["going_up"]
+    write_secret(keeper.data / "computer.bin", json.dumps(saved).encode())
+
+    again = Keeper.load(keeper.folder, keeper.data)
+    zul.send([person("Zulkifli bin Hassan")], base=0)  # said to be from before, but after
+    drive.sync()
+    assert [(arrived.proposal.seq, arrived.before_role) for arrived in again.inbox()] == [
+        (1, True),
+        (2, False),
+    ]

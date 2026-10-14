@@ -59,6 +59,7 @@ async def test_health_graph_and_kinds_are_served(driver: AsyncDriver, settings: 
         },
         "is_living": False,
         "birth_text": None,
+        "has_story": False,  # no life story written
     }
     # The rings: Tok Ismail's couple at the centre, generations by lineage.
     main = graph["layout"]["units"][0]

@@ -28,19 +28,23 @@ from ancestree.domain.imports import (
     ImportSecondLook,
     ImportSummary,
     ImportTakenBack,
+    Placed,
 )
 from ancestree.exchange.spreadsheet import ENCODING, guard
+from ancestree.importing.cells import CellError, read_place
 from ancestree.importing.matching import Ref, SheetPlan, Tree, plan_sheet
 from ancestree.importing.sheet import Sheet, read_sheet
+from ancestree.places.gazetteer import gazetteer
 from ancestree.repo import history as history_repo
 from ancestree.repo import imports as imports_repo
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import people as people_repo
-from ancestree.repo.mapping import editable_props, person_from_props
+from ancestree.repo.mapping import editable_props, person_from_props, place_from
 from ancestree.services import exports, returns
 from ancestree.services import people as people_service
 from ancestree.services.context import Context, NotFoundError, RuleError, read, write
 from ancestree.services.history import History
+from ancestree.services.placing import located
 from ancestree.services.relationships import add_parent, add_spouse
 from ancestree.services.rules import Facts, life_notices
 from ancestree.services.snapshots import refresh_snapshots
@@ -83,6 +87,10 @@ class _Done:
     refused: list[ImportLeftOut] = field(default_factory=list)  # links the rules refused
     refused_ids: set[str] = field(default_factory=set)
     notices: list[ImportSecondLook] = field(default_factory=list)
+    # Where they live put on the map from its address: how many at each level, and for
+    # people already in the tree, their locations before and after, for Take back.
+    placed: Placed = field(default_factory=Placed)
+    placing: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def left_out(self) -> list[ImportLeftOut]:
@@ -112,7 +120,13 @@ class _Done:
             differences=plan.differences,
             columns_not_read=plan.not_read,
             changes=self.changes,
+            placed=self.placed_any,
         )
+
+    @property
+    def placed_any(self) -> Placed | None:
+        """Where they live put on the map, if anyone was."""
+        return self.placed if any(self.placed.model_dump().values()) else None
 
     def label(self, file_name: str) -> str:
         """The Undo step: "Import 42 people from cousins.csv"."""
@@ -190,6 +204,7 @@ async def _carry_out(
             }
         )
         rows.setdefault(change.person, row_of[change.id])
+    await _place(tx, done, everyone, {*done.created.values(), *rows})
     for pid, row in rows.items():  # an unlikely age, say, once all their details are in
         done.notices += [
             ImportSecondLook(row=row, message=notice.message)
@@ -239,6 +254,54 @@ async def _carry_out(
     return done
 
 
+async def _place(
+    tx: Tx, done: _Done, everyone: dict[str, dict[str, Any]], people: Collection[str]
+) -> None:
+    """Where these people live, put on the map from its address, as the app places it:
+    at the postcode's area, else the town. Their countries are read already (`_read_places`)."""
+    places = gazetteer()
+    for pid in sorted(people):
+        props = everyone[pid]
+        home = place_from("residence", props)
+        if home is None or home.lat is not None or not (home.address or home.postcode):
+            continue
+        found = located(home, places)
+        if found is None or found.lat is None:
+            done.placed.not_found += 1
+            continue
+        where: dict[str, Any] = {
+            "residence_lat": found.lat,
+            "residence_lon": found.lon,
+            "residence_exact": found.exact,
+        }
+        before = {key: props.get(key) for key in where}
+        await people_repo.update_person(tx, pid, where)
+        everyone[pid] = {**props, **where}
+        if found.exact == "postcode":
+            done.placed.postcode += 1
+        else:
+            done.placed.town += 1
+        if pid not in done.created.values():
+            done.placing.append(
+                {"person": pid, "field": "residence", "before": before, "after": where}
+            )
+
+
+def _read_places(sheet: Sheet) -> None:
+    """The gazetteer's places for the countries the file's Lives in names, and Malaysia's, read
+    before the import's transaction, so placing people waits on nothing."""
+    places = gazetteer()
+    written = {"Malaysia"}
+    for row in sheet.rows:
+        try:
+            place = read_place(row["Lives in"]) if row["Lives in"] else None
+        except CellError:
+            continue
+        if place is not None:
+            written.add(place.country)
+    places.load([places.country_code(country) for country in written])
+
+
 class _RollBackError(Exception):
     """Not a failure: it ends a preview's transaction, so everything it did is rolled back."""
 
@@ -252,6 +315,7 @@ async def preview_import(
 ) -> ImportPreview:
     """What Import could do with this file and these answers. Nothing is written."""
     sheet = read_sheet(data)
+    await asyncio.to_thread(_read_places, sheet)
 
     async def rehearse(tx: Tx) -> _Done:
         raise _RollBackError(await _carry_out(tx, sheet, answers, f"{TAG}preview", _rehearsal))
@@ -338,6 +402,7 @@ async def run_import(
     if not carried:
         raise RuleError("nothing_chosen", "Nothing is ticked, so there's nothing to import.")
     backup = await exports.make_export(ctx, ExportFormat.ARCHIVE)
+    await asyncio.to_thread(_read_places, sheet)
     now = datetime.now().astimezone()
     import_id, folder = await asyncio.to_thread(storage.new_import_folder, ctx.data_dir, now)
     tag = f"{TAG}{import_id}"
@@ -366,7 +431,7 @@ async def run_import(
         "people": list(done.created.values()),
         "links": done.links,
         "link_ids": done.link_ids,
-        "changed": done.changed,
+        "changed": [*done.changed, *done.placing],  # Take back puts their locations back too
         "removed": done.removing,
         "left_out": [item.model_dump(mode="json") for item in left_out],
         "second_look": [item.model_dump(mode="json") for item in done.second_look],
@@ -383,6 +448,7 @@ async def run_import(
         removed=len(done.removing),
         left_out=len(left_out),
         backup=backup.name,
+        placed=done.placed_any,
     )
 
 

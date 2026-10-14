@@ -17,7 +17,14 @@ export type Spot = {
   state: string | null;
   country: string;
   rough: boolean; // only its state or country is known: it sits at the middle of that
+  // Its own location, finer than its town: the house, the street, the postcode's area,
+  // or by hand. None: its town's.
+  exact?: "spot" | "street" | "postcode" | "town" | "hand" | null;
 };
+
+/** Whether a spot is where they are, not about there: a house, a street, or by hand. */
+export const pinned = (spot: Pick<Spot, "exact">) =>
+  spot.exact === "spot" || spot.exact === "street" || spot.exact === "hand";
 
 export type Level = "countries" | "states" | "towns";
 
@@ -38,6 +45,9 @@ export type Group = {
   members: string[];
   rough: boolean; // at the middle of a state or country whose town isn't known
   towns: number; // how many towns are in it: 0 above the towns, more than 1 when merged
+  // Its people are about there, at their postcode's area or their town, not to the house:
+  // a soft ring says so.
+  about?: boolean;
 };
 
 const mean = (points: Point[]): Point => ({
@@ -57,7 +67,7 @@ export function gather(
 ): Group[] {
   const gathered = new Map<
     string,
-    { label: string; members: Spot[]; rough: boolean; anchor: Point | null }
+    { label: string; members: Spot[]; rough: boolean; anchor: Point | null; about: boolean }
   >();
   for (const spot of spots) {
     let key: string;
@@ -77,19 +87,22 @@ export function gather(
       anchor = { x: spot.x, y: spot.y };
     }
     const group = gathered.get(key);
+    const about = !pinned(spot);
     if (group) {
       group.members.push(spot);
       group.rough &&= spot.rough;
-    } else gathered.set(key, { label, members: [spot], rough: spot.rough, anchor });
+      group.about &&= about;
+    } else gathered.set(key, { label, members: [spot], rough: spot.rough, anchor, about });
   }
   return [...gathered]
-    .map(([key, { label, members, rough, anchor }]) => ({
+    .map(([key, { label, members, rough, anchor, about }]) => ({
       key,
       label,
       at: anchor ? toScreen(anchor) : mean(members.map(toScreen)),
       members: members.map((spot) => spot.id),
       rough,
       towns: level === "towns" ? 1 : 0,
+      about: level === "towns" && about,
     }))
     .sort((a, b) => b.members.length - a.members.length || a.label.localeCompare(b.label));
 }

@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
+from ancestree.config import Settings
 from ancestree.familyfolder.computers import Member
 from ancestree.familyfolder.google import Client
 from ancestree.familyfolder.invitations import Invitation
@@ -189,6 +190,61 @@ async def test_a_relatives_computer_that_sends_changes_makes_them_here(
     member.role = "viewer"  # a viewer's computer changes nothing
     viewer = await client.post("/api/persons", json={"full_name": "Someone new"})
     assert viewer.status_code == 409
+
+
+async def test_a_viewers_computer_writes_its_own_words_and_nothing_else(
+    client: httpx.AsyncClient, settings: Settings, tmp_path: Path
+) -> None:
+    """A viewer writes what it says about someone, as you chose it may, signed
+    with its computer's name while it has no Me, for the keeper to review. Anyone else's words
+    it can't change or take out, and the story itself stays the keeper's. A computer let go
+    writes nothing."""
+    hassan = await create_person(client, "Hassan bin Ismail")
+    folder = app_folder(client)
+    folder.setup = Setup("member", "folder-id", "Keluarga Contoh", "Mak Long's laptop", "x@x.com")
+    member = Member(tmp_path / "folder", tmp_path / "computer")
+    member.role = "viewer"
+    folder.computer = member
+
+    said = await client.post(f"/api/persons/{hassan['id']}/said", json={"text": "A kind man."})
+    assert said.status_code == 201, said.text
+    [words] = said.json()["said"]
+    assert (words["writer"], words["device"], words["yours"]) == (
+        "Mak Long's laptop",
+        member.device,
+        True,
+    )
+    changed = await client.put(
+        f"/api/persons/{hassan['id']}/said/{words['id']}", json={"text": "The kindest man."}
+    )
+    assert changed.status_code == 200, changed.text
+
+    # The keeper's words, as they arrived here: not this computer's to change or take out.
+    path = settings.data_dir / "people" / hassan["id"] / "biography.md"
+    keepers = "> He built the surau.\n\n— Zulkifli bin Hassan <!-- said 0a0b0c0d -->\n"
+    text = path.read_text(encoding="utf-8").rstrip("\n")
+    path.write_text(text + "\n\n" + keepers, encoding="utf-8")
+    attempts = [
+        await client.put(f"/api/persons/{hassan['id']}/said/0a0b0c0d", json={"text": "Not so."}),
+        await client.delete(f"/api/persons/{hassan['id']}/said/0a0b0c0d"),
+    ]
+    assert [r.status_code for r in attempts] == [409, 409]
+    assert {r.json()["detail"]["code"] for r in attempts} == {"not_yours"}
+    assert "He built the surau." in path.read_text(encoding="utf-8")
+    refused = [
+        await client.put(
+            f"/api/persons/{hassan['id']}/biography",
+            json={"story": "Rewritten.", "sources": [], "base_version": "none"},
+        ),
+        await client.post(f"/api/persons/{hassan['id']}/media"),
+    ]
+    assert [r.status_code for r in refused] == [409, 409]
+    assert {r.json()["detail"]["code"] for r in refused} == {"kept_by_the_keeper"}
+
+    member.role = "removed"
+    gone = await client.post(f"/api/persons/{hassan['id']}/said", json={"text": "Still here?"})
+    assert gone.status_code == 409
+    assert gone.json()["detail"]["code"] == "kept_by_the_keeper"
 
 
 async def test_who_changed_someone_is_in_their_journal(client: httpx.AsyncClient) -> None:

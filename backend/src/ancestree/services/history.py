@@ -3,7 +3,9 @@
 Each change to the tree is kept as a step: the people and links it touched, as they were
 before and after. Undo writes the before back, and redo the after, in one transaction.
 Moving someone to the Trash and bringing them back are steps too, done through the Trash,
-so their photos and stories go and come with them.
+so their photos and stories go and come with them. A change that also writes someone's own
+files, as a merge copies a photo and a story, keeps those files as they were before and
+after too.
 
 Only the latest step can be undone, and only while what it touched is still as it left it.
 Anything else is refused and the history is cleared: a change made some other way is never
@@ -28,9 +30,16 @@ from ancestree.domain.map import MapPins
 from ancestree.domain.views import HistoryStep, HistoryView
 from ancestree.repo import history as repo
 from ancestree.services import people as people_service
-from ancestree.services.context import Context, NotFoundError, RuleError, read, write
+from ancestree.services.context import (
+    Context,
+    NotFoundError,
+    RuleError,
+    folder_lock,
+    read,
+    write,
+)
 from ancestree.services.snapshots import refresh_snapshots
-from ancestree.storage.files import remove_bare_folders
+from ancestree.storage.files import atomic_write, person_dir, remove_bare_folders
 from ancestree.storage.settings import (
     read_pins,
     read_tree_settings,
@@ -42,6 +51,8 @@ Props = dict[str, Any]
 LIMIT = 100
 _BOOKKEEPING = {"updated_at"}  # stamped afresh by every change; never undone
 _ENDS = ("type", "source", "target")
+# A person's own files that aren't theirs to undo: who they are, and who changed them.
+_NOT_OWN = {"person.json", "journal.json"}
 
 
 @dataclass
@@ -100,6 +111,18 @@ class LinkImage:
 
 
 @dataclass
+class FileImage:
+    """One of a person's own files, such as a photo or their story, as the step found it and
+    left it: None where there was none."""
+
+    before: bytes | None
+    after: bytes | None
+
+    def get(self, forward: bool) -> tuple[bytes | None, bytes | None]:
+        return (self.before, self.after) if forward else (self.after, self.before)
+
+
+@dataclass
 class Step:
     label: str = ""
     id: str = field(default_factory=lambda: uuid4().hex)
@@ -115,6 +138,9 @@ class Step:
     arranging: bool = False  # only where people sit on the tree changed
     # The relative's computer that sent the changes: {computer, email, sent}.
     sent_by: dict[str, str] | None = None
+    # People's own files it wrote, by their place under the data folder, such as the photo
+    # and story a merge copies: taken back by Undo, written again by Redo.
+    files: dict[str, FileImage] = field(default_factory=dict)
 
     def whom(self) -> set[str]:
         """Everyone the step changed: people, both ends of each link, and who went to the
@@ -134,7 +160,13 @@ class Step:
 
     def changes_anything(self) -> bool:
         return bool(
-            self.people or self.links or self.settings or self.trash or self.pins or self.removed
+            self.people
+            or self.links
+            or self.settings
+            or self.trash
+            or self.pins
+            or self.removed
+            or self.files
         )
 
     def view(self) -> HistoryStep:
@@ -156,8 +188,11 @@ class Recorder:
         *,
         everyone: bool = False,
         only: Iterable[str] | None = None,
+        files_of: Iterable[object] = (),
     ) -> None:
         self.people = {str(p) for p in people}
+        # People whose own files, such as a photo or story, the change may write.
+        self.files_of = {str(p) for p in files_of}
         self.links = {str(link) for link in links}
         self.everyone = everyone  # with `only`: it can change those properties of anyone
         # The only properties it can change (their names too, for its label); None: any.
@@ -222,11 +257,17 @@ class History:
             self.journal(step, how)
 
     def change(
-        self, ctx: Context, people: Iterable[object] = (), links: Iterable[object] = ()
+        self,
+        ctx: Context,
+        people: Iterable[object] = (),
+        links: Iterable[object] = (),
+        *,
+        files_of: Iterable[object] = (),
     ) -> AbstractAsyncContextManager[Recorder]:
-        """Record a change to people and links. The body makes the change, adds anyone it
-        created to `recorder.people`, and sets `recorder.label`."""
-        return self._record(ctx, Recorder(people, links))
+        """Record a change to people and links, and to the own files of `files_of`, such as a
+        photo or story. The body makes the change, adds anyone it created to
+        `recorder.people`, and sets `recorder.label`."""
+        return self._record(ctx, Recorder(people, links, files_of=files_of))
 
     def moves(
         self, ctx: Context, people: Iterable[object] = (), *, everyone: bool = False
@@ -246,6 +287,7 @@ class History:
                 return started, people_before, links_before
 
             started, people_before, links_before = await read(ctx, before)
+            files_before = await asyncio.to_thread(_own_files, ctx, recorder.files_of)
             recorder.names = {
                 pid: str(p.get("full_name") or "") for pid, p in people_before.items()
             }
@@ -258,6 +300,12 @@ class History:
             step = await read(
                 ctx, lambda tx: _compare(tx, recorder, started, people_before, links_before)
             )
+            files_after = await asyncio.to_thread(_own_files, ctx, recorder.files_of)
+            step.files = {
+                path: FileImage(files_before.get(path), files_after.get(path))
+                for path in files_before.keys() | files_after.keys()
+                if files_before.get(path) != files_after.get(path)
+            }
             try:
                 # Through the Trash, with their photos and stories: undone by bringing them back.
                 for pid in recorder.removing:
@@ -376,14 +424,72 @@ async def _apply(ctx: Context, step: Step, *, forward: bool) -> None:
     elif step.pins is not None:
         await _apply_pins(ctx, *step.pins, forward=forward)
     elif not forward:
+        await _check_files(ctx, step, forward=False)  # before anything is done
         # Those it moved to the Trash come back first, so the rest finds everyone it knew.
         for pid in reversed(step.removed):
             await _apply_trash(ctx, "out", pid, forward=False)
         await _apply_graph(ctx, step, forward=False)
+        await _apply_files(ctx, step, forward=False)
     else:
+        await _check_files(ctx, step, forward=True)
         await _apply_graph(ctx, step, forward=True)
         for pid in step.removed:
             await _apply_trash(ctx, "out", pid, forward=True)
+        await _apply_files(ctx, step, forward=True)
+
+
+def _own_files(ctx: Context, people: Iterable[str]) -> dict[str, bytes]:
+    """Each person's own files, such as their photo and story, by their place under the data
+    folder; not who they are or who changed them, and nothing half-written."""
+    found: dict[str, bytes] = {}
+    for pid in people:
+        folder = person_dir(ctx.data_dir, pid)
+        if not folder.is_dir():
+            continue
+        for path in folder.rglob("*"):
+            if path.is_file() and path.name not in _NOT_OWN and not path.name.endswith(".tmp"):
+                found[path.relative_to(ctx.data_dir).as_posix()] = path.read_bytes()
+    return found
+
+
+def _files_now(ctx: Context, paths: Iterable[str]) -> dict[str, bytes | None]:
+    files: dict[str, bytes | None] = {}
+    for path in paths:
+        target = ctx.data_dir / path
+        files[path] = target.read_bytes() if target.is_file() else None
+    return files
+
+
+def _owner(path: str) -> str:
+    """Whose file this is: people/<their id>/..."""
+    return path.split("/")[1]
+
+
+async def _check_files(ctx: Context, step: Step, *, forward: bool) -> None:
+    """Every file the step wrote is still as it left it: a photo or story changed since is
+    never overwritten."""
+    now = await asyncio.to_thread(_files_now, ctx, step.files)
+    for path, image in step.files.items():
+        expected, _ = image.get(forward)
+        if now[path] != expected:
+            whose = step.people.get(_owner(path))
+            name = whose.name if whose else "someone"
+            raise CantUndoError(f"{name}'s photo or story has changed since")
+
+
+async def _apply_files(ctx: Context, step: Step, *, forward: bool) -> None:
+    def put(paths: list[str]) -> None:
+        for path in paths:
+            _, wanted = step.files[path].get(forward)
+            target = ctx.data_dir / path
+            if wanted is None:
+                target.unlink(missing_ok=True)
+            else:
+                atomic_write(target, wanted)
+
+    for owner in sorted({_owner(path) for path in step.files}):
+        async with folder_lock(owner):
+            await asyncio.to_thread(put, [path for path in step.files if _owner(path) == owner])
 
 
 async def _apply_trash(ctx: Context, direction: str, person_id: str, *, forward: bool) -> None:

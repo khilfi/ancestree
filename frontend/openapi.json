@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.7.0"
+    "version": "0.8.0"
   },
   "paths": {
     "/api/health": {
@@ -33,7 +33,7 @@
           "tree"
         ],
         "summary": "Get Graph",
-        "description": "Everyone, every link, and where each person sits on the lineage rings.",
+        "description": "Everyone, every link, and where each person sits on the lineage rings; and who has a\nlife story, for its book mark on their photo.",
         "operationId": "get_graph",
         "responses": {
           "200": {
@@ -336,6 +336,7 @@
           "people"
         ],
         "summary": "Create Person",
+        "description": "Someone new, placed where they live from its address, with anyone already there.",
         "operationId": "create_person",
         "requestBody": {
           "required": true,
@@ -418,7 +419,7 @@
           "people"
         ],
         "summary": "Update Person",
-        "description": "Replace everything the person form edits.",
+        "description": "Replace everything the person form edits. Where they live is shared by everyone at its\naddress, one Undo step with them.",
         "operationId": "update_person",
         "parameters": [
           {
@@ -1188,7 +1189,7 @@
           "people"
         ],
         "summary": "Get Biography",
-        "description": "The life story (Markdown) and its Sources, from biography.md in the person's folder.",
+        "description": "The life story (Markdown), its parts, what people say about them, and its Sources, from\nbiography.md in the person's folder.",
         "operationId": "get_biography",
         "parameters": [
           {
@@ -1230,7 +1231,7 @@
           "people"
         ],
         "summary": "Save Biography",
-        "description": "Save the story. Refused (409, \"changed_outside\") if the file changed since\n`base_version`, e.g. in Obsidian; the answer carries the file as it is now.",
+        "description": "Save the story. Refused (409, \"changed_outside\") if the file changed since\n`base_version`, e.g. in Obsidian; the answer carries the file as it is now. What people say\nabout them stays as the file has it.",
         "operationId": "save_biography",
         "parameters": [
           {
@@ -1254,6 +1255,176 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Biography"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/said": {
+      "post": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Add Said",
+        "description": "Your words about them, signed with your Me's name, or your computer's, and\ntoday's date. On a viewer's computer too: the keeper's computer takes only these from it.",
+        "operationId": "add_said",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaidWords"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Biography"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/persons/{person_id}/said/{said_id}": {
+      "put": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Change Said",
+        "description": "Change your own words: refused (409, \"not_yours\") on any other computer.",
+        "operationId": "change_said",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "said_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}$",
+              "title": "Said Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaidWords"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Biography"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "people"
+        ],
+        "summary": "Take Out Said",
+        "description": "Take back your own words, or, on the keeper's computer, take out anyone's: refused (409,\n\"not_yours\") otherwise.",
+        "operationId": "take_out_said",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Person Id"
+            }
+          },
+          {
+            "name": "said_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}$",
+              "title": "Said Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2910,7 +3081,7 @@
           "family folder"
         ],
         "summary": "Invite To Family Folder",
-        "description": "Share the family folder with a relative's Google account (the keeper's).",
+        "description": "Share the family folder with a relative's Google account (the keeper's, or another of\nthe keeper's own computers allowed to).",
         "operationId": "invite_to_family_folder",
         "requestBody": {
           "content": {
@@ -2952,7 +3123,7 @@
           "family folder"
         ],
         "summary": "Admit To Family Folder",
-        "description": "Let a computer in, with a role, once its code matches (the keeper's).",
+        "description": "Let a computer in, with a role, once its code matches (the keeper's); or, on another of\nthe keeper's own computers allowed to, ask the keeper's computer to.",
         "operationId": "admit_to_family_folder",
         "requestBody": {
           "content": {
@@ -3085,6 +3256,48 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ChangeRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyFolderStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family-folder/helper": {
+      "post": {
+        "tags": [
+          "family folder"
+        ],
+        "summary": "Allow Family Folder Helper",
+        "description": "Let another of the keeper's own computers invite and let in for it, or no longer: the\nkeeper's.",
+        "operationId": "allow_family_folder_helper",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Helper"
               }
             }
           },
@@ -3708,6 +3921,179 @@
         }
       }
     },
+    "/api/places/suggest": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Suggest Place",
+        "description": "What an address line, as it's typed, may be, in a country: its postcodes and\ntowns, from the country's places, each with its district, state and where it is; and\nwhether those places are on this computer, so their download can be offered.",
+        "operationId": "suggest_place",
+        "parameters": [
+          {
+            "name": "line",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 300,
+              "title": "Line"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSuggestions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/near": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Place Near",
+        "description": "What's nearest a point put on the map before its address: the town within 30 km,\nwith its district and state, and the nearest postcode, to fill the address in. None where\nnothing is that near, or the country isn't known.",
+        "operationId": "place_near",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Lat"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Lon"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlaceSuggestion"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Place Near"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/places/lookup": {
+      "post": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Look Up Place",
+        "description": "Look one address up online, once: the engine asks Photon (komoot), sending the\nline as typed, with its country, so the pages reach nothing outside this computer. Refused\nwhere this computer looks nothing up online. What it finds is to check, never an answer.",
+        "operationId": "look_up_place",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupAsked"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSuggestions"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Photon couldn't be reached, or answered otherwise"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sample/map": {
       "get": {
         "tags": [
@@ -3876,7 +4262,7 @@
           "map"
         ],
         "summary": "Get Map Packs",
-        "description": "Each of the map's packs, and how it stands on this computer.",
+        "description": "Each of the map's packs, and how it stands on this computer; the countries; and the\nplaces that come with them.",
         "operationId": "get_map_packs",
         "responses": {
           "200": {
@@ -3885,6 +4271,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/countries/family": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Family Countries",
+        "description": "The countries anyone in the family lives or was born in: Settings \u2192 Map lists them\nfirst.",
+        "operationId": "get_family_countries",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyCountries"
                 }
               }
             }
@@ -3905,6 +4313,48 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OnlineMap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/lookup": {
+      "put": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Choose Lookup",
+        "description": "Whether an address may be looked up online on this computer: asked each time,\nwithout asking, or never.",
+        "operationId": "choose_lookup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnlineLookup"
               }
             }
           },
@@ -4015,12 +4465,9 @@
             "in": "path",
             "required": true,
             "schema": {
-              "enum": [
-                "world",
-                "malaysia",
-                "indonesia"
-              ],
               "type": "string",
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)?$",
               "title": "Key"
             }
           }
@@ -4061,12 +4508,9 @@
             "in": "path",
             "required": true,
             "schema": {
-              "enum": [
-                "world",
-                "malaysia",
-                "indonesia"
-              ],
               "type": "string",
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)?$",
               "title": "Key"
             }
           }
@@ -4095,27 +4539,112 @@
         }
       }
     },
-    "/api/map/tiles/{key}/{z}/{x}/{y}": {
-      "get": {
+    "/api/map/countries/{key}": {
+      "post": {
         "tags": [
           "map"
         ],
-        "summary": "Get Map Tile",
-        "description": "A tile of a pack, as Protomaps cut it from OpenStreetMap: vector data, gzipped. No\ncontent where the pack has none.",
-        "operationId": "get_map_tile",
+        "summary": "Fetch Map Country",
+        "description": "Fetch every pack of a country, its own or each of its states', but those here\nalready or on their way.",
+        "operationId": "fetch_map_country",
         "parameters": [
           {
             "name": "key",
             "in": "path",
             "required": true,
             "schema": {
-              "enum": [
-                "world",
-                "malaysia",
-                "indonesia"
-              ],
               "type": "string",
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)?$",
               "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Remove Map Country",
+        "description": "Take every pack of a country off this computer, stopping any on its way.",
+        "operationId": "remove_map_country",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 24,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)?$",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapPacks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/map/depth/{depth}/{z}/{x}/{y}": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Get Map Tile",
+        "description": "A tile from whichever pack on this computer cut to `depth` has it: the world's to\n6, or the countries' and states', to 13 or 14. As Protomaps cut it from OpenStreetMap:\nvector data, gzipped. No content where no pack here has it.",
+        "operationId": "get_map_tile",
+        "parameters": [
+          {
+            "name": "depth",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 15,
+              "minimum": 0,
+              "title": "Depth"
             }
           },
           {
@@ -4249,6 +4778,40 @@
         ],
         "title": "Anniversary",
         "description": "A birthday this month, or the anniversary of a death."
+      },
+      "AtParents": {
+        "properties": {
+          "place": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "whose": {
+            "type": "string",
+            "enum": [
+              "mother",
+              "father",
+              "parents"
+            ],
+            "title": "Whose"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          }
+        },
+        "type": "object",
+        "required": [
+          "place",
+          "whose"
+        ],
+        "title": "AtParents",
+        "description": "Where someone with no place of their own lives: their parents' place, and\nwhose, the app's alone, never written in. Their mother's when the parents live apart,\nunless their father's is chosen."
       },
       "Backup": {
         "properties": {
@@ -4447,6 +5010,35 @@
             "type": "string",
             "title": "Story"
           },
+          "parts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "accomplishments",
+                "early",
+                "middle",
+                "later",
+                "character",
+                "sayings",
+                "message",
+                "values",
+                "hobbies",
+                "talents",
+                "notes"
+              ]
+            },
+            "type": "object",
+            "title": "Parts"
+          },
+          "said": {
+            "items": {
+              "$ref": "#/components/schemas/Said"
+            },
+            "type": "array",
+            "title": "Said"
+          },
           "sources": {
             "items": {
               "type": "string"
@@ -4473,6 +5065,29 @@
             "type": "string",
             "maxLength": 2000000,
             "title": "Story"
+          },
+          "parts": {
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 200000
+            },
+            "propertyNames": {
+              "enum": [
+                "accomplishments",
+                "early",
+                "middle",
+                "later",
+                "character",
+                "sayings",
+                "message",
+                "values",
+                "hobbies",
+                "talents",
+                "notes"
+              ]
+            },
+            "type": "object",
+            "title": "Parts"
           },
           "sources": {
             "items": {
@@ -4693,7 +5308,8 @@
           "fill_in",
           "order",
           "story",
-          "photo"
+          "photo",
+          "said"
         ]
       },
       "ChangeRole": {
@@ -5333,6 +5949,11 @@
             "type": "boolean",
             "title": "Archive",
             "default": true
+          },
+          "addresses": {
+            "type": "boolean",
+            "title": "Addresses",
+            "default": false
           }
         },
         "type": "object",
@@ -5359,6 +5980,23 @@
           "name"
         ],
         "title": "FactPerson"
+      },
+      "FamilyCountries": {
+        "properties": {
+          "countries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Countries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "countries"
+        ],
+        "title": "FamilyCountries",
+        "description": "The countries anyone in the family lives or was born in, by key (\"my\"): Settings \u2192 Map\nlists them first."
       },
       "FamilyFacts": {
         "properties": {
@@ -5831,6 +6469,23 @@
                 "type": "null"
               }
             ]
+          },
+          "helping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HelpingView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "helped": {
+            "items": {
+              "$ref": "#/components/schemas/Helped"
+            },
+            "type": "array",
+            "title": "Helped"
           }
         },
         "type": "object",
@@ -6004,6 +6659,11 @@
             "type": "integer",
             "title": "Changed",
             "default": 0
+          },
+          "words_only": {
+            "type": "boolean",
+            "title": "Words Only",
+            "default": false
           }
         },
         "type": "object",
@@ -6046,6 +6706,16 @@
           "you": {
             "type": "boolean",
             "title": "You"
+          },
+          "own": {
+            "type": "boolean",
+            "title": "Own",
+            "default": false
+          },
+          "helps": {
+            "type": "boolean",
+            "title": "Helps",
+            "default": false
           }
         },
         "type": "object",
@@ -6417,6 +7087,11 @@
               }
             ],
             "title": "Birth Text"
+          },
+          "has_story": {
+            "type": "boolean",
+            "title": "Has Story",
+            "default": false
           }
         },
         "type": "object",
@@ -6535,6 +7210,117 @@
           "backup_folder"
         ],
         "title": "Health"
+      },
+      "Helped": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "default": ""
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why",
+            "default": ""
+          },
+          "by": {
+            "type": "string",
+            "title": "By",
+            "default": ""
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "done"
+        ],
+        "title": "Helped",
+        "description": "What the keeper's computer did with one of its own other computers' instructions."
+      },
+      "Helper": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device"
+          },
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "allowed"
+        ],
+        "title": "Helper",
+        "description": "Another of the keeper's own computers allowed to invite and let in for it, or not."
+      },
+      "HelpingView": {
+        "properties": {
+          "keeper": {
+            "type": "string",
+            "title": "Keeper"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "looked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Looked"
+          },
+          "waiting": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
+          "done": {
+            "items": {
+              "$ref": "#/components/schemas/Helped"
+            },
+            "type": "array",
+            "title": "Done"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keeper",
+          "running",
+          "looked"
+        ],
+        "title": "HelpingView",
+        "description": "On another of the keeper's own computers, allowed to invite and let in for it."
       },
       "HistoryMove": {
         "properties": {
@@ -6714,6 +7500,11 @@
             ],
             "title": "Picture"
           },
+          "by": {
+            "type": "string",
+            "title": "By",
+            "default": ""
+          },
           "needs": {
             "items": {
               "type": "string"
@@ -6829,6 +7620,16 @@
           "backup": {
             "type": "string",
             "title": "Backup"
+          },
+          "placed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Placed"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -7036,6 +7837,16 @@
             },
             "type": "array",
             "title": "Changes"
+          },
+          "placed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Placed"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8228,6 +9039,24 @@
               }
             ],
             "title": "District"
+          },
+          "exact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "spot",
+                  "street",
+                  "postcode",
+                  "town",
+                  "hand"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact"
           }
         },
         "type": "object",
@@ -8238,20 +9067,76 @@
         "title": "Located",
         "description": "A place as written, and where it goes on the map: `found` says how. None there means it\nwasn't found: a country the gazetteer doesn't know."
       },
-      "MapPack": {
+      "LookupAsked": {
+        "properties": {
+          "line": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 2,
+            "title": "Line"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": "Malaysia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "line"
+        ],
+        "title": "LookupAsked",
+        "description": "An address to look up online, once: the line as typed, in its country."
+      },
+      "MapCountry": {
         "properties": {
           "key": {
             "type": "string",
-            "enum": [
-              "world",
-              "malaysia",
-              "indonesia"
-            ],
             "title": "Key"
           },
           "title": {
             "type": "string",
             "title": "Title"
+          },
+          "continent": {
+            "type": "string",
+            "title": "Continent"
+          },
+          "packs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Packs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "continent",
+          "packs"
+        ],
+        "title": "MapCountry",
+        "description": "A country in Settings \u2192 Map, and its packs: its own, or each of its states'."
+      },
+      "MapPack": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 24,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)?$",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "default": ""
           },
           "size": {
             "type": "integer",
@@ -8306,7 +9191,7 @@
           "done"
         ],
         "title": "MapPack",
-        "description": "One of the map's packs of OpenStreetMap's tiles, and how it stands on this\ncomputer: the world, fetched on first opening the map, or a region, when chosen."
+        "description": "One of the map's packs of OpenStreetMap's tiles, and how it stands on this\ncomputer: the world, fetched on first opening the map, or a country or a state of one,\nwhen chosen."
       },
       "MapPacks": {
         "properties": {
@@ -8321,10 +9206,41 @@
             "type": "array",
             "title": "Packs"
           },
+          "countries": {
+            "items": {
+              "$ref": "#/components/schemas/MapCountry"
+            },
+            "type": "array",
+            "title": "Countries"
+          },
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/MapPlaces"
+            },
+            "type": "array",
+            "title": "Places"
+          },
           "online": {
             "type": "boolean",
             "title": "Online",
             "default": false
+          },
+          "lookup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
+            "title": "Lookup",
+            "default": "ask"
+          },
+          "placed": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Placed"
           }
         },
         "type": "object",
@@ -8333,7 +9249,7 @@
           "packs"
         ],
         "title": "MapPacks",
-        "description": "The packs, all cut from one of Protomaps' builds of OpenStreetMap, and whether the map's\nonline extra is on: OpenFreeMap's tiles, where the packs end."
+        "description": "The packs, all cut from one of Protomaps' builds of OpenStreetMap, the countries\nthey're of, and whether the map's online extra is on: OpenFreeMap's tiles, where the\npacks end."
       },
       "MapPerson": {
         "properties": {
@@ -8361,6 +9277,22 @@
                 "type": "null"
               }
             ]
+          },
+          "at_parents": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "mother",
+                  "father",
+                  "parents"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At Parents"
           }
         },
         "type": "object",
@@ -8382,6 +9314,51 @@
         "type": "object",
         "title": "MapPins",
         "description": "Every pin, kept in settings/app.json, so backups carry them."
+      },
+      "MapPlaces": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "installed": {
+            "type": "boolean",
+            "title": "Installed"
+          },
+          "fetching": {
+            "type": "boolean",
+            "title": "Fetching"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "size",
+          "installed",
+          "fetching",
+          "done"
+        ],
+        "title": "MapPlaces",
+        "description": "A country's places, or the world's: fetched with its packs, for finding where\nsomeone lived or was born, and how they stand on this computer."
       },
       "MeSettings": {
         "properties": {
@@ -8615,6 +9592,30 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "other": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other"
           }
         },
         "type": "object",
@@ -8723,6 +9724,25 @@
           "device"
         ],
         "title": "OneComputer"
+      },
+      "OnlineLookup": {
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
+            "title": "Lookup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lookup"
+        ],
+        "title": "OnlineLookup",
+        "description": "Whether an address may be looked up online: asked each time, without asking, or\nnever."
       },
       "OnlineMap": {
         "properties": {
@@ -9010,6 +10030,37 @@
             ],
             "title": "Residence District"
           },
+          "lives_with": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "mother",
+                  "father",
+                  "elsewhere"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lives With"
+          },
+          "residence_at_parents": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtParents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parents_apart": {
+            "type": "boolean",
+            "title": "Parents Apart",
+            "default": false
+          },
           "living": {
             "anyOf": [
               {
@@ -9283,6 +10334,22 @@
                 "type": "null"
               }
             ]
+          },
+          "lives_with": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "mother",
+                  "father",
+                  "elsewhere"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lives With"
           },
           "living": {
             "anyOf": [
@@ -9593,10 +10660,207 @@
             "maxLength": 100,
             "title": "Country",
             "default": "Malaysia"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon"
+          },
+          "exact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "spot",
+                  "street",
+                  "postcode",
+                  "town",
+                  "hand"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact"
           }
         },
         "type": "object",
         "title": "Place"
+      },
+      "PlaceSuggestion": {
+        "properties": {
+          "town": {
+            "type": "string",
+            "title": "Town"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "postcode": {
+            "type": "string",
+            "title": "Postcode"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "exact": {
+            "type": "string",
+            "enum": [
+              "spot",
+              "street",
+              "postcode",
+              "town",
+              "hand"
+            ],
+            "title": "Exact"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "town",
+          "district",
+          "state",
+          "postcode",
+          "country",
+          "lat",
+          "lon",
+          "exact"
+        ],
+        "title": "PlaceSuggestion",
+        "description": "What an address line, as it's typed, may be: the place's parts to fill in, and\nwhere it is, as exactly as the postcode's spot or the town's; what's nearest a point put on\nthe map by hand; or what an online lookup found, to the house where it knows\nit, with the address it found it as."
+      },
+      "PlaceSuggestions": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "downloaded": {
+            "type": "boolean",
+            "title": "Downloaded"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceSuggestion"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "downloaded",
+          "suggestions"
+        ],
+        "title": "PlaceSuggestions",
+        "description": "Suggestions for an address line, in a country; and whether that country's places\nare on this computer, so its download can be offered where they aren't."
+      },
+      "Placed": {
+        "properties": {
+          "postcode": {
+            "type": "integer",
+            "title": "Postcode",
+            "default": 0
+          },
+          "town": {
+            "type": "integer",
+            "title": "Town",
+            "default": 0
+          },
+          "not_found": {
+            "type": "integer",
+            "title": "Not Found",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "Placed",
+        "description": "Where an import put people on the map from their addresses, with no internet: how\nmany at their postcode's area, at their town, and not found, their town and postcode unknown."
       },
       "Position": {
         "properties": {
@@ -10027,6 +11291,97 @@
         ],
         "title": "RoleChanged",
         "description": "The keeper gave this computer another role, until its owner has seen so."
+      },
+      "Said": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "writer": {
+            "type": "string",
+            "title": "Writer"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "written": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Written"
+          },
+          "changed": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed"
+          },
+          "yours": {
+            "type": "boolean",
+            "title": "Yours",
+            "default": false
+          },
+          "computer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Computer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "writer"
+        ],
+        "title": "Said",
+        "description": "What someone says about them: their own words, kept in biography.md under\n\"What people say\", each with who wrote them and when."
+      },
+      "SaidWords": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SaidWords",
+        "description": "Someone's words about them, written or changed."
       },
       "SampleFamily": {
         "properties": {

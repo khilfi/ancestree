@@ -8,8 +8,11 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import os
 import re
 import sys
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -21,6 +24,7 @@ from ancestree.domain.familyfolder import (
     Admit,
     ChangeRole,
     FamilyFolderStatus,
+    Helper,
     Invite,
     JoinFamily,
     OfferFamily,
@@ -31,13 +35,14 @@ from ancestree.domain.familyfolder import (
     TurnDown,
 )
 from ancestree.familyfolder import google
-from ancestree.familyfolder.computers import Keeper, Member
+from ancestree.familyfolder.computers import SMALL, Keeper, Member
 from ancestree.familyfolder.drive import DriveError
 from ancestree.familyfolder.google import Client, SignedOutError, Tokens
 from ancestree.familyfolder.invitations import Invitation
 from ancestree.familyfolder.mirror import Mirror
+from ancestree.familyfolder.models import FamilyFile, Instruction
 from ancestree.familyfolder.protect import read_secret
-from ancestree.familyfolder.seals import Kind, seal
+from ancestree.familyfolder.seals import Kind, seal, seal_for
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import (
     FOLDER_NAME,
@@ -604,7 +609,7 @@ async def test_a_change_put_back_here_is_withdrawn(tmp_path: Path, cloud: Cloud)
     assert (await relative.status()).answers == []
 
 
-async def test_a_viewer_sends_nothing_nor_does_moving_people_on_the_tree(
+async def test_a_viewer_sends_nothing_but_its_words_nor_does_moving_people_on_the_tree(
     tmp_path: Path, cloud: Cloud
 ) -> None:
     keeper, _, relative, theirs, _ = await admitted(tmp_path, cloud, role="viewer")
@@ -1785,6 +1790,11 @@ async def test_what_a_viewer_to_be_sent_is_still_the_keepers_to_look_at(
     await keeper.change_role(ChangeRole(device=device, role="viewer"))
     [waiting] = (await keeper.status()).changes
     assert (waiting.device, waiting.role) == (device, "viewer")  # not dropped unseen
+    assert not waiting.words_only  # all of it, as it was made by a contributor
+    # Gone up with that round: from now, what it sends was made knowing (0.8.0).
+    assert isinstance(keeper.computer, Keeper)
+    assert keeper.computer.going_up == set()
+    assert keeper.computer.before == {device: {waiting.proposal}}
 
 
 # --- Handing over the keeper ------------------------------------------------------------
@@ -2044,3 +2054,420 @@ async def test_an_offer_opens_for_its_computer_alone_and_only_from_the_keeper(
     stranger = Ed25519PrivateKey.generate()  # not the keeper's
     forged.write_bytes(seal(Kind.OFFER, f"offer/{device_of(relative)}", b"{}", stranger, None))
     assert relative.computer.read_offer() is None
+
+
+# --- Your own computers invite and let in for you ----------------------------------------
+
+
+async def keepers_laptop(
+    tmp_path: Path, cloud: Cloud, keeper: FamilyFolder, *, allowed: bool = True
+) -> tuple[FamilyFolder, Family]:
+    """Another of the keeper's own computers, with the keeper's Google account, let in as
+    Trusted; and allowed at the keeper's computer to invite and let in for it, or not."""
+    family = Family(tmp_path / "keepers-laptop")
+    laptop = fresh(cloud, family)
+    await laptop.take_invitation(keeper.invitation().text())
+    signed_in(laptop, KEEPER)
+    await laptop.join(JoinFamily(computer="Pak Hassan's laptop"))
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role="trusted"))
+    await laptop.sync()
+    if allowed:
+        await keeper.allow_helper(Helper(device=asking.device, allowed=True))
+        await keeper.sync()  # it leaves the laptop the invitation, and who's asking
+        await laptop.sync()
+    return laptop, family
+
+
+async def asks_to_join(
+    tmp_path: Path, cloud: Cloud, invitation: str
+) -> tuple[FamilyFolder, Family, str]:
+    """A relative's computer, its Google account invited, asking to join; and its code."""
+    family = Family(tmp_path / "relative-data")
+    relative = fresh(cloud, family)
+    await relative.take_invitation(invitation)
+    signed_in(relative, RELATIVE)
+    await relative.join(JoinFamily(computer="Mak Long's laptop"))
+    code = (await relative.status()).code
+    assert code is not None
+    return relative, family, code
+
+
+def instruction_file(laptop: FamilyFolder, blob: bytes, number: int) -> None:
+    """A file put where the laptop's instructions go, as a forger with its folder could."""
+    assert laptop.computer is not None
+    device = laptop.computer.device
+    path = laptop.local / "instructions" / device / f"{number:08d}.ins"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(blob)
+
+
+async def test_your_own_computer_invites_and_lets_in_for_you(tmp_path: Path, cloud: Cloud) -> None:
+    """The keeper's laptop, allowed at the keeper's computer, invites a relative's account, shows
+    their computer with the code its screen shows, and lets it in: the keeper's computer does, at
+    its next round, and both say so."""
+    keeper, ours = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    helping = (await laptop.status()).helping
+    assert helping is not None
+    assert (helping.keeper, helping.running) == ("Pak Hassan's PC", True)
+    [laptops] = [m for m in (await keeper.status()).members if m.name == "Pak Hassan's laptop"]
+    assert (laptops.own, laptops.helps) == (True, True)
+
+    await laptop.invite(Invite(email=RELATIVE))
+    assert keeper.setup is not None
+    assert keeper.computer is not None
+    assert RELATIVE in cloud.items[keeper.setup.folder].shared  # the laptop shared it
+    invitation = laptop.invitation()  # the keeper's computer's, signed with its key
+    assert invitation.signed_by(keeper.computer.keeper)
+    relative, theirs, code = await asks_to_join(tmp_path, cloud, invitation.text())
+
+    # The laptop reads the request itself: its code shows before the keeper's computer looks.
+    await laptop.sync()
+    [asking] = (await laptop.status()).asking
+    assert (asking.code, asking.name) == (code, f"A computer on {RELATIVE}")
+    await keeper.sync()  # the keeper's computer looks, and leaves the laptop the name
+    await laptop.sync()
+    [asking] = (await laptop.status()).asking
+    assert asking.name == "Mak Long's laptop"
+
+    await laptop.admit(Admit(device=asking.device, role="contributor"))
+    status = await laptop.status()
+    assert status.asking == []  # it waits for the keeper's computer, not to be let in twice
+    assert status.helping is not None
+    assert status.helping.waiting == ["Mak Long's laptop"]
+    await keeper.sync()  # it checks the instruction, the code, and lets them in
+    let_in = [m for m in (await keeper.status()).members if m.name == "Mak Long's laptop"]
+    assert [m.role for m in let_in] == ["contributor"]
+    helped = (await keeper.status()).helped
+    assert [(h.action, h.name, h.done, h.by) for h in helped] == [
+        ("let_in", "Mak Long's laptop", True, "Pak Hassan's laptop"),
+        ("invited", RELATIVE, True, "Pak Hassan's laptop"),  # its word that it invited them
+    ]
+    await relative.sync()
+    assert [restore["graph"] for restore in theirs.restores] == [ours.graph]
+    await laptop.sync()
+    status = await laptop.status()
+    assert status.asking == []
+    assert status.helping is not None
+    assert status.helping.waiting == []
+    newest = status.helping.done[0]
+    assert (newest.action, newest.name, newest.done) == ("let_in", "Mak Long's laptop", True)
+
+
+async def test_only_your_own_computers_allowed_may_invite_and_let_in(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """A relative's computer can't be allowed; and neither it, nor one of the keeper's own not
+    allowed, can invite or let in: only the keeper can, they're told, as before."""
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    with pytest.raises(RuleError) as refused:
+        await keeper.allow_helper(Helper(device=device_of(relative), allowed=True))
+    assert refused.value.code == "not_your_own"
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper, allowed=False)
+    assert (await laptop.status()).helping is None
+    for computer in (relative, laptop):
+        with pytest.raises(RuleError) as told:
+            await computer.invite(Invite(email=COUSIN))
+        assert told.value.code == "not_the_keeper"
+        with pytest.raises(RuleError) as told:
+            await computer.admit(Admit(device="0123456789abcdef", role="viewer"))
+        assert told.value.code == "not_the_keeper"
+
+
+async def test_an_instruction_forged_replayed_or_with_another_code_lets_no_one_in(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """The attacks on the keeper's computer, through the laptop's folder: another code than the
+    request gives, an instruction signed with another key, one moved to stand for another, one
+    sent again, and one from a computer no longer allowed. Each is turned down, said so, and the
+    computer asking is never let in."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    await laptop.invite(Invite(email=RELATIVE))
+    _, _, code = await asks_to_join(tmp_path, cloud, laptop.invitation().text())
+    await keeper.sync()
+    await laptop.sync()
+    [asking] = (await laptop.status()).asking
+    member, setup = laptop.computer, laptop.setup
+    assert isinstance(member, Member)
+    assert setup is not None
+    family = FamilyFile.model_validate_json((laptop.local / "family.json").read_bytes())
+
+    async def turned_down(why: str) -> None:
+        await laptop.sync()  # up to its own folder
+        await keeper.sync()
+        status = await keeper.status()
+        assert [a.device for a in status.asking] == [asking.device]  # still only asking
+        assert why in status.helped[0].why
+        assert not status.helped[0].done
+
+    # Another code than the request gives.
+    laptop._instruct(member, setup, action="let_in", joining=asking.device, code="AAAA-AAAA")
+    await turned_down("code")
+    first = setup.instruction
+
+    # Signed with another key than the laptop's.
+    setup.instruction += 1
+    number = setup.instruction
+    forged = Instruction(
+        device=member.device,
+        number=number,
+        made=datetime.now(UTC).isoformat(),
+        action="let_in",
+        joining=asking.device,
+        code=code,
+    )
+    context = b"instruction " + f"{member.device}/{number}".encode()
+    locked = seal_for(bytes.fromhex(family.keeper_dh), forged.model_dump_json().encode(), context)
+    instruction_file(
+        laptop,
+        seal(Kind.INSTRUCTION, f"instruction/{member.device}/{number}", locked,
+             Ed25519PrivateKey.generate(), None),
+        number,
+    )  # fmt: skip
+    await turned_down("couldn't be checked")
+
+    # The first one, moved to stand for a later number: its place is signed into it.
+    setup.instruction += 1
+    path = laptop.local / "instructions" / member.device / f"{first:08d}.ins"
+    instruction_file(laptop, path.read_bytes(), setup.instruction)
+    await turned_down("couldn't be checked")
+
+    # Sent again as it was: done with already, so not even looked at.
+    helped = len((await keeper.status()).helped)
+    instruction_file(laptop, path.read_bytes(), first)
+    await laptop.sync()
+    await keeper.sync()
+    assert len((await keeper.status()).helped) == helped
+
+    # The right code, from the laptop once it's no longer allowed: as a changed app could send.
+    await keeper.allow_helper(Helper(device=member.device, allowed=False))
+    await keeper.sync()
+    laptop._instruct(member, setup, action="let_in", joining=asking.device, code=code)
+    await turned_down("isn't allowed")
+
+
+async def test_instructions_out_of_shape_or_from_others_are_never_carried_out(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """The attacks (security review of 0.8.0): the laptop's word naming an invited "account" of
+    any length, one larger than an instruction is, and one named otherwise than the app names
+    them; and a relative's computer's word, signed as its own. None is carried out, and none
+    puts more than a name may be into the keeper's list."""
+    keeper, _, relative, _ = await joined_by_invitation(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    member, setup = laptop.computer, laptop.setup
+    assert isinstance(member, Member)
+    assert setup is not None
+    assert isinstance(keeper.computer, Keeper)
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+
+    def crafted(number: int, email: str) -> Instruction:
+        return Instruction.model_construct(
+            device=member.device, number=number, made=now, action="invited", email=email,
+            joining="", code="", role="contributor",
+        )  # fmt: skip
+
+    # An "account" of any length, signed and locked as the laptop's own.
+    setup.instruction += 1
+    member.instruct(crafted(setup.instruction, "x" * 100_000 + "@example.com"))
+    await laptop.sync()
+    await keeper.sync()
+    [helped] = (await keeper.status()).helped
+    assert (helped.done, helped.name) == (False, "")
+    assert "couldn't be checked" in helped.why
+
+    # Larger than an instruction is: refused unread.
+    setup.instruction += 1
+    instruction_file(laptop, b"x" * (SMALL + 1), setup.instruction)
+    await laptop.sync()
+    await keeper.sync()
+    place = f"instructions/{member.device}/{setup.instruction:08d}.ins"
+    assert keeper.computer.suspect[place] == "larger than an instruction is"
+
+    # Named otherwise than the app names them: never read, so never out of order.
+    setup.instruction += 1
+    member.instruct(crafted(setup.instruction, COUSIN))
+    folder = laptop.local / "instructions" / member.device
+    (folder / f"{setup.instruction:08d}.ins").rename(folder / f"{setup.instruction}.ins")
+    await laptop.sync()
+    await keeper.sync()
+    assert len((await keeper.status()).helped) == 2  # those two, and no more
+
+    # A relative's computer's word, signed with its own key: not one of the keeper's own.
+    other = relative.computer
+    assert isinstance(other, Member)
+    other.instruct(
+        Instruction(device=other.device, number=1, made=now, action="invited", email=COUSIN)
+    )
+    await relative.sync()
+    await keeper.sync()
+    assert [h.by for h in (await keeper.status()).helped] == ["Pak Hassan's laptop"] * 2
+    assert keeper.setup is not None
+    assert len(json.dumps(keeper.setup.helped)) < 2_000
+    assert keeper.problem == ""
+
+
+async def test_a_request_to_join_out_of_shape_stops_nothing(tmp_path: Path, cloud: Cloud) -> None:
+    """The attack (security review of 0.8.0): a request to join, signed as its computer's own,
+    whose keys aren't keys, put where the keeper's computer reads requests, by anyone the family
+    folder is shared with. It's refused; the rounds go on, with the keeper's other computer
+    allowed to let in; and the computers asking as they should are still listed."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    await keeper.invite(Invite(email=RELATIVE))
+    _, _, code = await asks_to_join(tmp_path, cloud, keeper.invitation().text())
+    for dh in ("zz", "00", "0" * 64 + "00"):
+        key = Ed25519PrivateKey.generate()
+        device = os.urandom(8).hex()
+        ask = {
+            "device": device,
+            "sign": key.public_key().public_bytes_raw().hex(),
+            "dh": dh,
+            "name": "00",
+        }
+        path = keeper.local / "join" / f"{device}.req"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(seal(Kind.JOIN, f"join/{device}", json.dumps(ask).encode(), key, None))
+    await keeper.sync()
+    status = await keeper.status()
+    assert keeper.problem == ""
+    assert [asking.code for asking in status.asking] == [code]
+    assert isinstance(keeper.computer, Keeper)
+    assert sum(place.startswith("join/") for place in keeper.computer.suspect) == 3  # read
+    await laptop.sync()
+    assert laptop.problem == ""
+    assert [asking.code for asking in (await laptop.status()).asking] == [code]
+
+
+async def test_the_example_family_never_starts_nor_joins_a_family_folder(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Put right in the security review of 0.8.0: in the example family, made up, an
+    invitation taken, a family folder joined, started or kept again would bring a real family
+    into one marked made up, which the bar says is, and which is removed as the example. Each
+    is refused, saying where to go, and nothing is kept."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    await keeper.invite(Invite(email=RELATIVE))
+    looking = fresh(cloud, Family(tmp_path / "example"))
+    looking.made_up = True
+    invitation = keeper.invitation().text()
+    attempts: list[Callable[[], Awaitable[object]]] = [
+        lambda: looking.take_invitation(invitation),
+        lambda: looking.join(JoinFamily(computer="Mak Long's laptop")),
+        lambda: looking.start(StartFamily(family="Keluarga Contoh", computer="Mak Long's laptop")),
+        lambda: looking.recover(Recover(code="AAAA BBBB CCCC DDDD EEEE FFFF GG")),
+    ]
+    for attempt in attempts:
+        with pytest.raises(RuleError) as refused:
+            await attempt()
+        assert refused.value.code == "example_family"
+        assert "a family of your own" in refused.value.message
+    assert looking.setup is None
+    assert not (tmp_path / "example" / "familyfolder").exists()
+
+
+async def test_a_keepers_computer_starting_afresh_carries_out_nothing_asked_before(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Put right in the security review of 0.8.0: a keeper's computer recovered, or the family
+    taken over, starts with no word of what its other computers asked, nor of whom it allowed.
+    The laptop allowed before is told it isn't, and allowed again, what it asked before is
+    never carried out a second time: only what it asks from then on."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    await laptop.invite(Invite(email=RELATIVE))
+    await laptop.sync()
+    await keeper.sync()
+    assert [h.action for h in (await keeper.status()).helped] == ["invited"]
+    setup = keeper.setup
+    assert setup is not None
+    # As a keeper's computer recovered, or taken over, has it: nothing of before.
+    setup.helpers, setup.left, setup.instructed, setup.helped = [], {}, {}, []
+    await keeper.sync()
+    await laptop.sync()
+    assert (await laptop.status()).helping is None  # told it isn't allowed
+    # What it asked before, read again, is turned down: it isn't allowed here yet.
+    assert [(h.action, h.done) for h in (await keeper.status()).helped] == [("invited", False)]
+    setup.helped, setup.instructed = [], {}  # as if allowed again before that was read
+
+    setup.recovering = True
+    with pytest.raises(RuleError) as waiting:
+        await keeper.allow_helper(Helper(device=device_of(laptop), allowed=True))
+    assert waiting.value.code == "still_recovering"
+    setup.recovering = False
+    await keeper.allow_helper(Helper(device=device_of(laptop), allowed=True))
+    await keeper.sync()
+    assert (await keeper.status()).helped == []  # the invitation asked before isn't again
+    await laptop.sync()
+    assert (await laptop.status()).helping is not None
+    await laptop.invite(Invite(email=COUSIN))
+    await laptop.sync()
+    await keeper.sync()
+    assert [(h.action, h.name) for h in (await keeper.status()).helped] == [("invited", COUSIN)]
+
+
+async def test_an_invitation_from_before_a_removal_doesnt_keep_the_folder_shared(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Put right in the security review of 0.8.0: the laptop's word that it invited an account,
+    read after the keeper removed that account's computer, kept the folder shared with it. Only
+    an invitation made after the removal does now."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    setup = keeper.setup
+    assert setup is not None
+    await laptop.invite(Invite(email=COUSIN))  # made now...
+    assert COUSIN in cloud.items[setup.folder].shared
+    later = (datetime.now(UTC) + timedelta(minutes=1)).isoformat(timespec="seconds")
+    setup.unshare, setup.unshare_since = [COUSIN], {COUSIN: later}  # ...removed after
+    await laptop.sync()
+    await keeper.sync()
+    [helped] = (await keeper.status()).helped
+    assert (helped.action, helped.done) == ("invited", True)
+    assert COUSIN not in cloud.items[setup.folder].shared  # the removal stands
+    assert setup.unshare == []
+    assert setup.unshare_since == {}
+
+    earlier = (datetime.now(UTC) - timedelta(minutes=1)).isoformat(timespec="seconds")
+    await laptop.invite(Invite(email=COUSIN))  # invited again, after a removal noted before
+    setup.unshare, setup.unshare_since = [COUSIN], {COUSIN: earlier}
+    await laptop.sync()
+    await keeper.sync()
+    assert COUSIN in cloud.items[setup.folder].shared
+
+
+async def test_removing_your_other_computer_takes_its_permission_away(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """Removed at the keeper's computer, the laptop is told it may help no longer."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    assert (await laptop.status()).helping is not None
+    device = device_of(laptop)
+    await keeper.remove(OneComputer(device=device))
+    assert keeper.setup is not None
+    assert keeper.setup.helpers == []
+    await keeper.sync()
+    await laptop.sync()
+    assert (await laptop.status()).helping is None
+    [gone] = [m for m in (await keeper.status()).members if m.device == device]
+    assert (gone.role, gone.helps) == ("removed", False)
+
+
+async def test_your_other_computer_says_when_the_keepers_isnt_running(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """The keeper's computer says it runs every few minutes: a quarter of an hour without a word,
+    and the laptop says it isn't running, so what it asked waits."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    helping = laptop.helping
+    assert helping is not None
+    long_ago = datetime.now(UTC) - timedelta(minutes=16)
+    laptop.helping = helping.model_copy(update={"looked": long_ago.isoformat()})
+    status = (await laptop.status()).helping
+    assert status is not None
+    assert not status.running

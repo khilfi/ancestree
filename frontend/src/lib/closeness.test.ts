@@ -13,6 +13,7 @@ function person(id: string): GraphPerson {
     birth_order: null,
     placeholder: false,
     photo_version: null,
+    has_story: false,
   };
 }
 

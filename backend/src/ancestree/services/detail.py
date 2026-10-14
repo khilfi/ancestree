@@ -9,9 +9,16 @@ from uuid import UUID
 from neo4j import AsyncManagedTransaction
 
 from ancestree.domain.dates import describe_partial_date, format_partial_date
-from ancestree.domain.person import Gender, PartialDate, Person
+from ancestree.domain.person import Gender, PartialDate, Person, Place
 from ancestree.domain.relationship import BIOLOGICAL, SpouseStatus
-from ancestree.domain.views import ChildGroup, DateView, PersonDetail, PersonSummary, Relative
+from ancestree.domain.views import (
+    ChildGroup,
+    DateView,
+    PersonDetail,
+    PersonSummary,
+    Relative,
+    at_parents,
+)
 from ancestree.kinship.blood import Seniority
 from ancestree.kinship.kin import Blood, Kin, KindSibling, KindStep, Side, Spouse
 from ancestree.kinship.terms import TermBook
@@ -22,9 +29,10 @@ from ancestree.lineage.birth_order import (
     order_siblings,
     position_label,
 )
+from ancestree.places.gazetteer import district_of
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import people as people_repo
-from ancestree.repo.mapping import date_from_props, person_from_props
+from ancestree.repo.mapping import date_from_props, person_from_props, place_from
 from ancestree.services.context import NotFoundError
 from ancestree.services.families import Kinds, blood_parents, family_key, is_blood, makes_family
 
@@ -120,6 +128,16 @@ def build_detail(
         ),
     )
     birth_parents = [row for row in parents if is_blood(kinds, _kind(row["link"]))]
+    living = is_living(person, this_year=this_year)
+    # With no place of their own, their parents', birth parents first.
+    homes = [
+        (
+            Gender(row["person"].get("gender") or Gender.UNKNOWN),
+            place_from("residence", row["person"]),
+        )
+        for row in parents
+        if not row["person"].get("placeholder")
+    ]
 
     return PersonDetail(
         id=person.id,
@@ -134,8 +152,11 @@ def build_detail(
         death_place=person.death_place,
         burial_place=person.burial_place,
         residence=person.residence,
+        lives_with=person.lives_with,
+        residence_at_parents=at_parents(person.residence, person.lives_with, living, homes),
+        parents_apart=len({place for _, place in homes if place is not None}) > 1,
         living=person.living,
-        is_living=is_living(person, this_year=this_year),
+        is_living=living,
         occupation=person.occupation,
         notes=person.notes,
         placeholder=person.placeholder,
@@ -384,3 +405,22 @@ def _child_groups(
         return 1, definition.sort_order if definition else 0, eldest
 
     return sorted(groups, key=order)
+
+
+def district_named(place: Place | None) -> str | None:
+    """A place's district: as written in it, else as the gazetteer has its town."""
+    if place is not None and place.district:
+        return place.district
+    return district_of(place)
+
+
+def districted(detail: PersonDetail) -> PersonDetail:
+    """Where someone lives, said to the district, and so their parents' place where they live
+    there: reads the gazetteer, so off the event loop."""
+    update: dict[str, Any] = {}
+    if district := district_named(detail.residence):
+        update["residence_district"] = district
+    at = detail.residence_at_parents
+    if at is not None and (district := district_named(at.place)):
+        update["residence_at_parents"] = at.model_copy(update={"district": district})
+    return detail.model_copy(update=update) if update else detail

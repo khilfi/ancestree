@@ -53,6 +53,7 @@ export interface DesktopFamily {
   role: "keeper" | "member" | "";
   in_step: string | null;
   added: string;
+  example?: boolean; // the example family: made up, to look around in
 }
 
 export interface DesktopFamilies {
@@ -115,6 +116,11 @@ export const useAddFamily = () =>
   useFamiliesChange((name: string) =>
     families("/api/desktop/families", "POST", JSON.stringify({ name })),
   );
+
+/** The example family: a family of its own, filled as it first opens; the one here
+ *  already, if there is one. */
+export const useAddExample = () =>
+  useFamiliesChange((_: undefined) => families("/api/desktop/families/example", "POST"));
 
 /** A family from a backup: it opens with the backup restored. One locked with a password, as
  *  copies kept elsewhere can be, is opened with `password`. */

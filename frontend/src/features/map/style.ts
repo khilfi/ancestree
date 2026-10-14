@@ -2,9 +2,11 @@
  * The map drawn by MapLibre: Protomaps' light style over the
  * map's packs, which the engine serves, with the fonts and icons that come with the app, so the
  * map asks nothing of the internet. The world's pack draws every zoom, its tiles enlarged past
- * zoom 6; a region's, fetched in Settings → Map, draws over it from zoom 7. With the online extra
- * on, OpenFreeMap's tiles, which the engine fetches, draw from zoom 7 where no pack has
- * them, in the same colours. Plain data, tested without a browser.
+ * zoom 6; the countries' and states', fetched in Settings → Map, draw over it from zoom 7, all
+ * those cut to one depth as one source, so twenty draw as fast as one, each source's tiles
+ * enlarged past its depth. With the online extra on, OpenFreeMap's tiles, which the engine
+ * fetches, draw from zoom 7 where no pack has them, in the same colours. Plain data, tested
+ * without a browser.
  */
 
 import { type Flavor, layers, namedFlavor } from "@protomaps/basemaps";
@@ -389,24 +391,34 @@ function onlineLayers(): LayerSpecification[] {
   ];
 }
 
+/** The depths the countries' and states' packs on this computer are cut to, the shallowest
+ *  first: each one source, drawn in that order, so the deeper lies over the shallower where two
+ *  packs meet. */
+export function depths(regions: readonly Pick<MapPack, "maxzoom">[]): number[] {
+  return [...new Set(regions.map((pack) => pack.maxzoom))].sort((a, b) => a - b);
+}
+
 /**
- * The map's style: the world's pack, then each region's on this computer, over it; tiles, fonts
- * and icons all from `origin`, the engine. With the online extra, OpenFreeMap's tiles from
- * zoom 7 where no pack has them, through the engine too: the world's then stops at zoom 7, and
- * a region's past its deepest zoom where OpenFreeMap goes deeper.
+ * The map's style: the world's pack, then the countries' and states' on this computer over it,
+ * one source for each depth they're cut to; tiles, fonts and icons all from `origin`, the
+ * engine. With the online extra, OpenFreeMap's tiles from zoom 7 where no pack has them,
+ * through the engine too: the world's then stops at zoom 7, and a depth's past its deepest
+ * zoom where OpenFreeMap goes deeper.
  */
 export function mapStyle(
   origin: string,
   regions: readonly MapPack[],
   online = false,
 ): StyleSpecification {
-  const source = (pack: Pick<MapPack, "key" | "minzoom" | "maxzoom">): SourceSpecification => ({
+  const source = (depth: number, minzoom: number): SourceSpecification => ({
     type: "vector",
-    tiles: [`${origin}/api/map/tiles/${pack.key}/{z}/{x}/{y}`],
-    minzoom: pack.minzoom,
-    maxzoom: pack.maxzoom,
+    tiles: [`${origin}/api/map/depth/${depth}/{z}/{x}/{y}`],
+    minzoom,
+    maxzoom: depth,
     attribution: OSM,
   });
+  const shallowest = (depth: number) =>
+    Math.min(...regions.filter((pack) => pack.maxzoom === depth).map((pack) => pack.minzoom));
   const world = packLayers("world").flatMap((layer) => {
     if (!online) return [layer];
     if (layer.type === "background") {
@@ -427,22 +439,20 @@ export function mapStyle(
     glyphs: `${origin}/map/fonts/{fontstack}/{range}.pbf`,
     sprite: `${origin}/map/sprites/light`,
     sources: Object.fromEntries([
-      ["world", source({ key: "world", minzoom: 0, maxzoom: 6 })],
-      ...regions.map((pack) => [pack.key, source(pack)]),
+      ["world", source(6, 0)],
+      ...depths(regions).map((depth) => [`packs${depth}`, source(depth, shallowest(depth))]),
       ...(online ? [["online", openfreemap]] : []),
     ]),
     layers: [
       ...world,
       ...(online ? onlineLayers() : []),
-      // A region's land and water cover the world's enlarged tiles, and OpenFreeMap's, where it
+      // A country's land and water cover the world's enlarged tiles, and OpenFreeMap's, where it
       // has its own; its background would cover everything.
-      ...regions.flatMap((pack) =>
-        packLayers(pack.key)
+      ...depths(regions).flatMap((depth) =>
+        packLayers(`packs${depth}`)
           .filter((layer) => layer.type !== "background")
           .flatMap((layer) =>
-            online && pack.maxzoom < ONLINE.maxzoom
-              ? (until(layer, pack.maxzoom + 1) ?? [])
-              : [layer],
+            online && depth < ONLINE.maxzoom ? (until(layer, depth + 1) ?? []) : [layer],
           ),
       ),
     ],

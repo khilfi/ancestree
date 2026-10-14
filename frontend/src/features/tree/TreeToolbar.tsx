@@ -1,4 +1,4 @@
-import { FoldVerticalIcon, UnfoldVerticalIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, FoldVerticalIcon, UnfoldVerticalIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   TREE_DEFAULTS,
@@ -22,9 +22,13 @@ import { useMeId } from "@/features/me/useMeId";
 import { showError, UNDO_MS } from "@/lib/notify";
 import { FamiliesMenu } from "./FamiliesMenu";
 import { FilterChips, FilterMenu } from "./FilterMenu";
-import type { TreeView } from "./filters";
+import { drawnFrom, type TreeView } from "./filters";
 import { DepthStepper, LayoutMenu } from "./LayoutMenu";
 import { shortName } from "./words";
+
+/** Back and Forward through those an hourglass or fan chart was drawn from: whom each
+ *  leads to, or null at the end. */
+export type Steps = { back: string | null; forward: string | null; onStep: (by: -1 | 1) => void };
 
 /**
  * The tree's own toolbar: the Layout menu (with Tidy up, which was Rearrange),
@@ -38,6 +42,7 @@ export function TreeToolbar({
   view,
   onView,
   focus,
+  steps,
   shown,
   onRearranged,
   families,
@@ -50,6 +55,7 @@ export function TreeToolbar({
   view: TreeView;
   onView?: (view: TreeView) => void;
   focus: string | null; // whom an hourglass or fan chart is around
+  steps?: Steps; // Back and Forward, in an hourglass or fan chart
   shown: Set<string> | null; // who the filter keeps; null: everyone
   onRearranged: () => void;
   families: { all: number; folded: number; big: boolean };
@@ -74,6 +80,10 @@ export function TreeToolbar({
   const current: TreeSettings = settings.data ?? TREE_DEFAULTS;
   const focused = focus ? byId.get(focus) : undefined;
   const focusName = focused ? shortName(focused) : "someone";
+  const nameOf = (id: string | null) => {
+    const person = id ? byId.get(id) : undefined;
+    return person ? shortName(person) : "";
+  };
   const shownReal = shown ? [...shown].filter((id) => !byId.get(id)?.placeholder).length : null;
 
   function tidyUp() {
@@ -118,6 +128,30 @@ export function TreeToolbar({
               }
             />
             <DepthStepper view={view} onView={onView} />
+            {steps && drawnFrom(view.layout) && (
+              <span className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={!steps.back}
+                  onClick={() => steps.onStep(-1)}
+                  title={steps.back ? `Back to ${nameOf(steps.back)}` : undefined}
+                >
+                  <ArrowLeftIcon />
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={!steps.forward}
+                  onClick={() => steps.onStep(1)}
+                  title={steps.forward ? `Forward to ${nameOf(steps.forward)}` : undefined}
+                >
+                  Forward
+                  <ArrowRightIcon />
+                </Button>
+              </span>
+            )}
             <FilterMenu
               graph={graph}
               filter={view.filter}

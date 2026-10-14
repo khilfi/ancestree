@@ -18,6 +18,7 @@ export const GUIDE_AT = {
   leave: "leaving-the-family",
   invite: "invite-a-relative",
   ownComputers: "your-own-other-computers",
+  helpers: "invite-and-let-in-from-another-of-your-computers",
   moveFolder: "move-the-family-folder",
   rebuild: "when-the-family-folder-is-lost-rebuild-it",
   backups: "20-backups",

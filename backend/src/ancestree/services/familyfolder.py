@@ -80,6 +80,9 @@ from ancestree.domain.familyfolder import (
     FolderChanges,
     FolderMember,
     HandedOver,
+    Helped,
+    Helper,
+    HelpingView,
     Invite,
     JoinFamily,
     OfferFamily,
@@ -107,7 +110,15 @@ from ancestree.familyfolder.changes import (
     records,
     unpack,
 )
-from ancestree.familyfolder.computers import HANDOVER, MAY_SEND, Arrived, Keeper, Member
+from ancestree.familyfolder.computers import (
+    HANDOVER,
+    MAY_SEND,
+    SENDS,
+    Arrived,
+    Keeper,
+    Member,
+    requested,
+)
 from ancestree.familyfolder.drive import Drive, DriveError, DriveLike, RemoteFile
 from ancestree.familyfolder.entries import Entries, build_archive, changes_between, family_entries
 from ancestree.familyfolder.google import (
@@ -123,13 +134,24 @@ from ancestree.familyfolder.google import (
 )
 from ancestree.familyfolder.invitations import Invitation, InvitationError
 from ancestree.familyfolder.mirror import Mirror
-from ancestree.familyfolder.models import FamilyFile, Joined, Newcomer, Source, TookOver
+from ancestree.familyfolder.models import (
+    FamilyFile,
+    Helping,
+    Instruction,
+    Joined,
+    Newcomer,
+    Outcome,
+    Source,
+    TookOver,
+    Waiting,
+)
 from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.familyfolder.seals import RefusedError, join_code
 from ancestree.importing.returned import Base
 from ancestree.repo.export import export_graph
 from ancestree.services import returns
-from ancestree.services.biography import biography_from
+from ancestree.services.biography import ON_THIS_COMPUTER
+from ancestree.services.biography import told as told_story
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.history import History
 from ancestree.storage.biography import BIOGRAPHY
@@ -149,8 +171,15 @@ CLIENT = "google-client.bin"
 JOINING = "joining.json"
 # What relatives' computers write, in their own folders. In each computer's copy, it sits
 # beside the family folder's files, as computers.py reads it. Since 0.5.0, what a
-# computer says of itself, and a new keeper's word that it took the family.
-RELATIVES = ("join/", "inbox/", "about/", "took/")
+# computer says of itself, and a new keeper's word that it took the family. Since 0.8.0,
+# another of the keeper's own computers' word to let a computer in.
+RELATIVES = ("join/", "inbox/", "about/", "took/", "instructions/")
+# Another of the keeper's own computers inviting and letting in for it: how often the
+# keeper's computer says it runs, in seconds; how long after, the other says it doesn't; and
+# how many of the keeper's computer's answers each keeps.
+LOOKS_EVERY = 300
+RUNNING_WITHIN = 900
+HELPED_KEPT = 10
 # The keeper's: the identity it offered to come back in under, after a handover, until
 # the family is taken or the offer withdrawn; locked as the keys are.
 NEWCOMER = "newcomer.bin"
@@ -217,8 +246,10 @@ class Setup:
     restored: str = ""  # a relative's: a fingerprint of the family last restored here
     received: str = ""  # and when it was restored, as ISO 8601
     refused: list[str] = field(default_factory=list)  # the keeper's: computers turned away
-    # The keeper's: accounts the folder is to stop being shared with, until Drive has done it.
+    # The keeper's: accounts the folder is to stop being shared with, until Drive has done it;
+    # and when each was noted, so no word of its being invited from before stops it (0.8.0).
     unshare: list[str] = field(default_factory=list)
+    unshare_since: dict[str, str] = field(default_factory=dict)
     # The keeper's: the Google account of each relative's computer, whose own folder it is.
     accounts: dict[str, str] = field(default_factory=dict)
     own_folder: str = ""  # a relative's: its own folder's id, in its own Drive
@@ -262,6 +293,29 @@ class Setup:
     # The old keeper's, as a relative after a handover: to whom, and as what, until its
     # owner has seen so.
     handed: dict[str, str] = field(default_factory=dict)
+    # The keeper's: its own other computers allowed to invite and let in for it; the
+    # number of each one's last instruction, carried out or turned down; what it did lately,
+    # for its owner to see; and what it last left each, as a fingerprint and when, so it
+    # writes again only when that changes, or to say it still runs.
+    helpers: list[str] = field(default_factory=list)
+    instructed: dict[str, int] = field(default_factory=dict)
+    helped: list[dict[str, Any]] = field(default_factory=list)
+    left: dict[str, list[str]] = field(default_factory=dict)
+    # Another of the keeper's own computers, helping it: its last instruction's number,
+    # and those to let a computer in that the keeper's computer hasn't answered yet.
+    instruction: int = 0
+    asked: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _before(noted: str, made: str) -> bool:
+    """Whether something noted at `noted` came before `made`, both as ISO 8601: nothing noted
+    did; and what can't be read as a time didn't, to be safe."""
+    if not noted:
+        return True
+    try:
+        return datetime.fromisoformat(noted) <= datetime.fromisoformat(made)
+    except ValueError, TypeError:  # TypeError: one with its zone, one without
+        return False
 
 
 def _fingerprint(entries: Entries) -> str:
@@ -286,9 +340,12 @@ def _family_files(path: str) -> bool:
 
 def _relatives_files(device: str) -> Callable[[str], bool]:
     """One relative's computer's files, in a computer's copy: its join request, what it sends
-    the keeper, and since 0.5.0 what it says of itself, and its word as the new keeper."""
+    the keeper, and since 0.5.0 what it says of itself, and its word as the new keeper;
+    since 0.8.0, a computer of the keeper's own's instructions."""
     own = (f"join/{device}.req", f"about/{device}.bin", f"took/{device}.bin")
-    return lambda path: path in own or path.startswith(f"inbox/{device}/")
+    return lambda path: (
+        path in own or path.startswith((f"inbox/{device}/", f"instructions/{device}/"))
+    )
 
 
 class FamilyFolder:
@@ -303,10 +360,14 @@ class FamilyFolder:
         restore: Callable[[Path, bool], Awaitable[object]] | None = None,
         history: History | None = None,
         on_round: Callable[[FamilyFolder], None] | None = None,
+        made_up: bool = False,
     ) -> None:
         self.ctx = ctx
         self.dir = ctx.data_dir / "familyfolder"
         self.problem = ""
+        # The example family: never kept in step through a family folder, so no real
+        # family ever comes into one marked made up (0.8.0).
+        self.made_up = made_up
         self.client = client if client is not None else self._kept_client()
         self._make_drive: Callable[[Session], DriveLike] = drive or (
             lambda session: Drive(session.access_token)
@@ -354,6 +415,10 @@ class FamilyFolder:
         self.recovery_code: str | None = None
         self.pending = 0  # a relative's: the people and links it changed, as last counted
         self.waiting: list[FolderChanges] = []  # the keeper's: changes to review, as last read
+        # Another of the keeper's own computers: what the keeper's computer left it, as
+        # last read; and the computers asking to join, each (device, code, Google account).
+        self.helping: Helping | None = None
+        self.requests: list[tuple[str, str, str]] = []
         self.broken = ""  # why this computer's part can't be opened here, if it can't
         self._load()
 
@@ -616,6 +681,7 @@ class FamilyFolder:
         only one signed with the family's keeper key, and once `confirm`ed, the project shown
         first (0.4.2)."""
         async with self.lock:
+            self._of_your_own()
             if self.broken:
                 raise RuleError("cant_be_opened", self.broken)
             try:
@@ -667,8 +733,23 @@ class FamilyFolder:
                 )
 
     def invitation(self) -> Invitation:
-        """The family's invitation, for its keeper to send to the relatives they invite."""
+        """The family's invitation, for its keeper to send to the relatives they invite; or, on
+        another of the keeper's own computers allowed to, as the keeper's computer signed
+        and left it there."""
         computer, setup = self.computer, self.setup
+        helping = self.helping
+        if isinstance(computer, Member) and helping is not None and helping.allowed:
+            try:
+                left = Invitation.read(helping.invitation)
+            except InvitationError:
+                left = None
+            if left is None or not left.signed_by(computer.keeper):
+                raise RuleError(
+                    "no_invitation_yet",
+                    "The keeper's computer hasn't left the invitation here yet: it does at its "
+                    "next round, while it runs.",
+                )
+            return left
         if not isinstance(computer, Keeper) or setup is None:
             raise RuleError("not_the_keeper", "Only the family's keeper can invite.")
         if setup.replaced:
@@ -684,6 +765,15 @@ class FamilyFolder:
         if self.session is not None:
             return self.session.email
         return self.setup.account if self.setup else ""
+
+    def _of_your_own(self) -> None:
+        """Refused in the example family, made up: a family folder is for one's own."""
+        if self.made_up:
+            raise RuleError(
+                "example_family",
+                "This is the example family, made up to look around in. Go back to a family of "
+                "your own to start or join a family folder.",
+            )
 
     def _ready(self, *, set_up: bool) -> tuple[DriveLike, Session]:
         """Drive and the sign-in, when this computer is signed in and does (or doesn't
@@ -712,6 +802,46 @@ class FamilyFolder:
         if self.setup.offer and not offering:
             raise RuleError("offered", self.offered_words())
         return self.computer, drive, self.setup
+
+    def _helper(self) -> tuple[Member, DriveLike, Setup]:
+        """Another of the keeper's own computers, allowed to invite and let in for it.
+        Any other computer but the keeper's is told, as before, that only the keeper can."""
+        drive, _ = self._ready(set_up=True)
+        member, setup, helping = self.computer, self.setup, self.helping
+        if (
+            not isinstance(member, Member)
+            or setup is None
+            or helping is None
+            or not helping.allowed
+            or member.role in ("waiting", "removed")
+        ):
+            raise RuleError("not_the_keeper", "Only the family's keeper can do that.")
+        return member, drive, setup
+
+    def _instruct(self, member: Member, setup: Setup, **what: Any) -> Instruction:
+        """Its word to the keeper's computer, numbered after the last."""
+        setup.instruction += 1
+        instruction = Instruction(
+            device=member.device,
+            number=setup.instruction,
+            made=datetime.now(UTC).isoformat(timespec="seconds"),
+            **what,
+        )
+        member.instruct(instruction)
+        self._save_setup()
+        return instruction
+
+    def _own_computers(self, keeper: Keeper, setup: Setup) -> set[str]:
+        """The keeper's own other computers in the family, of any kind: those on the keeper's
+        Google account, whose own folders are in its Drive."""
+        own = self._own_account().casefold()
+        return {
+            device
+            for device, known in keeper.known.items()
+            if device != keeper.device
+            and known.role != "removed"
+            and setup.accounts.get(device, "").casefold() == own
+        }
 
     def offered_words(self) -> str:
         """What a keeper's computer says while its offer of the family stands."""
@@ -790,6 +920,28 @@ class FamilyFolder:
         The family's own settings stay the keeper's."""
         return isinstance(self.computer, Member) and self.computer.role in MAY_SEND
 
+    @property
+    def sending(self) -> bool:
+        """Whether this is a relative's computer that sends anything to the keeper: its
+        changes, or a viewer's, only its words about people, which the keeper's computer
+        takes alone from it."""
+        return isinstance(self.computer, Member) and self.computer.role in SENDS
+
+    def here(self) -> tuple[str | None, str]:
+        """This computer, for the words written on it: as the family knows it, and its
+        name there. With no family folder, none, and a plain name: never the computer's own,
+        which may name its owner (0.8.0, your answer of 14 Oct 2026)."""
+        if self.setup is None or self.computer is None:
+            return None, ON_THIS_COMPUTER
+        return self.computer.device, self.setup.computer
+
+    def computers(self) -> dict[str, str]:
+        """The family's computers, each by its name there (0.8.0): for words written on one."""
+        if self.computer is None:
+            return {}
+        members: dict[str, Any] = self.computer.state["members"]
+        return {device: str(member.get("name", "")) for device, member in members.items()}
+
     def _email_of(self, device: str) -> str:
         computer, setup = self.computer, self.setup
         if computer is not None and device == computer.device:
@@ -809,7 +961,10 @@ class FamilyFolder:
         asking: list[FolderAsking] = []
         code = None
         replaced = isinstance(computer, Keeper) and setup is not None and bool(setup.replaced)
+        helping: HelpingView | None = None
+        helped: list[Helped] = []
         if isinstance(computer, Keeper) and setup is not None:
+            own = self._own_computers(computer, setup)
             for device, known in computer.known.items():
                 members.append(
                     FolderMember(
@@ -818,6 +973,20 @@ class FamilyFolder:
                         role=known.role,
                         email=self._email_of(device),
                         you=device == computer.device,
+                        own=device in own,
+                        helps=device in own and device in setup.helpers,
+                    )
+                )
+            for done in reversed(setup.helped[-HELPED_KEPT:]):
+                by = computer.known.get(str(done["by"]))
+                helped.append(
+                    Helped(
+                        action=str(done.get("action", "")),
+                        name=str(done["name"]),
+                        done=bool(done["done"]),
+                        why=str(done["why"]),
+                        by=by.name if by else "",
+                        at=datetime.fromisoformat(str(done["at"])),
                     )
                 )
             refused = frozenset(setup.refused)
@@ -847,6 +1016,39 @@ class FamilyFolder:
                     computer.sign.public_key().public_bytes_raw(),
                     computer.dh.public_key().public_bytes_raw(),
                 )
+            left = self.helping
+            if left is not None and left.allowed and setup is not None:
+                # Another of the keeper's own computers, helping it.
+                # Those it asked to let in already wait for the keeper's computer instead.
+                asked = {str(asked.get("device", "")) for asked in setup.asked}
+                for device, request_code, email in self.requests:
+                    if device in asked:
+                        continue
+                    asking.append(
+                        FolderAsking(
+                            device=device,
+                            name=self._asking_name(device, email),
+                            email=email,
+                            code=request_code,
+                        )
+                    )
+                looked = datetime.fromisoformat(left.looked) if left.looked else None
+                helping = HelpingView(
+                    keeper=left.keeper,
+                    running=looked is not None
+                    and (datetime.now(UTC) - looked).total_seconds() < RUNNING_WITHIN,
+                    looked=looked,
+                    waiting=[str(asked["name"]) for asked in setup.asked],
+                    done=[
+                        Helped(
+                            action=outcome.action,
+                            name=outcome.name,
+                            done=outcome.done,
+                            why=outcome.why,
+                        )
+                        for outcome in reversed(left.done)
+                    ],
+                )
         answers = [
             FolderAnswer(proposal=seq, left_out=note.left_out, note=note.note)
             for seq, note in sorted(computer.answers.items())
@@ -866,7 +1068,7 @@ class FamilyFolder:
             received=datetime.fromisoformat(setup.received) if setup and setup.received else None,
             problem=self.broken or self.problem,
             recovery_code=self.recovery_code,
-            pending=self.pending if self.proposing else 0,
+            pending=self.pending if self.sending else 0,
             sent_at=datetime.fromisoformat(setup.sent_at) if setup and setup.sent_at else None,
             answers=answers,
             changes=list(self.waiting) if isinstance(computer, Keeper) and not replaced else [],
@@ -894,6 +1096,8 @@ class FamilyFolder:
             offer_made=self._offer_made(),
             offer_here=await asyncio.to_thread(self._offered_here),
             handed=HandedOver.model_validate(setup.handed) if setup and setup.handed else None,
+            helping=helping,
+            helped=helped,
         )
 
     def _offer_made(self) -> OfferMade | None:
@@ -946,6 +1150,7 @@ class FamilyFolder:
         families' folders; but one already there is asked about first, as it may be this
         family's, to keep again with the recovery code."""
         async with self.lock:
+            self._of_your_own()
             with self._plainly():
                 drive, session = self._ready(set_up=False)
                 if self.client is not None and self.client.invited:
@@ -1042,6 +1247,7 @@ class FamilyFolder:
         computer's own, in this account's Drive, shared with the keeper's account; a computer
         of the keeper's own, signed in with the keeper's account, keeps it in their Drive."""
         async with self.lock:
+            self._of_your_own()
             with self._plainly():
                 drive, session = self._ready(set_up=False)
                 folder = request.folder or await self._invited_folder(drive, session.email)
@@ -1077,6 +1283,7 @@ class FamilyFolder:
         record at once, so the computer it replaces sees the record move on, and stops keeping
         the family."""
         async with self.lock:
+            self._of_your_own()
             with self._plainly():
                 drive, session = self._ready(set_up=False)
                 folder = request.folder or await self._opened_by(drive, request.code)
@@ -1168,6 +1375,19 @@ class FamilyFolder:
         the folder already: it needs only the invitation."""
         async with self.lock:
             with self._plainly():
+                if isinstance(self.computer, Member):
+                    # Another of the keeper's own computers, allowed to: its account is the
+                    # keeper's, which owns the family folder. The keeper's computer hears of it,
+                    # so it doesn't stop sharing with an account it removed before.
+                    member, drive, setup = self._helper()
+                    if request.email.casefold() == self._own_account().casefold():
+                        return
+                    await self._reach(lambda: drive.share(setup.folder, request.email))
+                    await asyncio.to_thread(
+                        self._instruct, member, setup, action="invited", email=request.email
+                    )
+                    self.nudge()
+                    return
                 _, drive, setup = self._keeper()
                 if request.email.casefold() == self._own_account().casefold():
                     return
@@ -1176,11 +1396,38 @@ class FamilyFolder:
                 # shared.
                 wanted = request.email.casefold()
                 setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
+                setup.unshare_since.pop(wanted, None)
                 self._save_setup()
 
     async def admit(self, request: Admit) -> None:
         """Let a computer in, with a role. One turned away isn't asking any more: it asks
-        again, as a new computer, if it was turned away by mistake."""
+        again, as a new computer, if it was turned away by mistake. On another of the keeper's
+        own computers allowed to, it's asked of the keeper's computer, which lets them in
+        at its next round, once it has checked the code is the one it works out itself."""
+        if isinstance(self.computer, Member):
+            async with self.lock:
+                with self._plainly():
+                    member, _, setup = self._helper()
+                    found = next((r for r in self.requests if r[0] == request.device), None)
+                    if found is None:
+                        raise NotFoundError("That computer isn't asking to join.")
+                    device, code, email = found
+                    instruction = await asyncio.to_thread(
+                        self._instruct,
+                        member,
+                        setup,
+                        action="let_in",
+                        joining=device,
+                        code=code,
+                        role=request.role,
+                    )
+                    name = self._asking_name(device, email)
+                    setup.asked.append(
+                        {"number": instruction.number, "device": device, "name": name}
+                    )
+                    self._save_setup()
+                await self._in_step()  # up to its own folder, for the keeper's computer
+            return
         async with self.lock:
             with self._plainly():
                 keeper, _, setup = self._keeper()
@@ -1221,15 +1468,49 @@ class FamilyFolder:
                 # A computer of the keeper's own: the keeper's account keeps its folder.
                 if email and not others and email.casefold() != self._own_account().casefold():
                     setup.unshare.append(email)  # noted before the removal: never forgotten
+                    noted = datetime.now(UTC).isoformat(timespec="seconds")
+                    setup.unshare_since[email.casefold()] = noted
+                    self._save_setup()
+                if request.device in setup.helpers:
+                    setup.helpers.remove(request.device)  # it hears so at the next round
                     self._save_setup()
                 await asyncio.to_thread(keeper.remove, request.device)
             await self._in_step()
+
+    async def allow_helper(self, request: Helper) -> None:
+        """Let another of the keeper's own computers invite and let in for it, or no
+        longer: one on the keeper's own Google account, of any kind. It hears so at its next
+        round, from what this computer leaves it at this one's. Allowed for the first time
+        here, as on a keeper's computer recovered or taken over, what it asked before is never
+        carried out now: only what it asks from here on (0.8.0)."""
+        async with self.lock:
+            keeper, _, setup = self._keeper()
+            if request.device not in self._own_computers(keeper, setup):
+                raise RuleError(
+                    "not_your_own",
+                    "Only another of your own computers, on your Google account, can invite and "
+                    "let in for you.",
+                )
+            if request.allowed and setup.recovering:
+                raise RuleError(
+                    "still_recovering",
+                    "The family is still coming back to this computer: allow it once it has.",
+                )
+            setup.helpers = [device for device in setup.helpers if device != request.device]
+            if request.allowed:
+                setup.helpers.append(request.device)
+                if request.device not in setup.instructed:
+                    last = await asyncio.to_thread(keeper.last_instruction, request.device)
+                    setup.instructed[request.device] = last
+            self._save_setup()
+        self.nudge()
 
     async def change_role(self, request: ChangeRole) -> None:
         """Another role for a computer let in already: it acts on it at its next round.
         Its changes waiting for review come first, so a contributor's never come in by
         themselves because it became trusted, and a viewer-to-be's are never dropped unseen.
-        What it sent before it knew is taken as it was then (computers.py, `role_since`)."""
+        What it sent before it knew is taken as it was then: what this computer has from it
+        until the change goes up to Drive, at the round now (computers.py, `before`)."""
         async with self.lock:
             with self._plainly():
                 keeper, _, _ = self._keeper()
@@ -1666,7 +1947,9 @@ class FamilyFolder:
         family = entries
         received_path = self.dir / "received.json"
         was = self._read(received_path)
-        if was is not None and self.proposing:
+        # A viewer's words go back on top too; but not what it changed before it became
+        # one, which was backed up, and gives way to the keeper's family (`again`).
+        if was is not None and (self.proposing or (self.sending and not again)):
             mine = await self._entries_here()
             since, arranged_on = was, None
             if answered:
@@ -1711,13 +1994,15 @@ class FamilyFolder:
         sent it. Changed back as it was, it's sent once more, so the keeper's inbox
         doesn't keep what's no longer asked."""
         computer, setup = self.computer, self.setup
-        if not isinstance(computer, Member) or setup is None or not self.proposing:
+        if not isinstance(computer, Member) or setup is None or not self.sending:
             return
         received: Entries | None = self._read(self.dir / "received.json")
         if not received:
             return  # nothing has arrived to change yet
         family = await self._entries_here()
         mine = own_changes(received, family)
+        if not self.proposing:  # a viewer's: only its words about people, in the stories
+            mine = {key: value for key, value in mine.items() if key.endswith(f"/{BIOGRAPHY}")}
         self.pending = _counted(mine)
         sent_dir = self.dir / "sent"
         last = max(
@@ -1822,6 +2107,7 @@ class FamilyFolder:
                     proposal=proposal.seq,
                     sent_at=datetime.fromisoformat(proposal.made),
                     changed=proposal.changed,
+                    words_only=arrived.words_only,
                 )
             )
         self.waiting = waiting
@@ -1863,7 +2149,7 @@ class FamilyFolder:
                     data = keeper.get_file(value["blob"])
                     if data is not None:
                         text = data.decode("utf-8", errors="replace")
-                        stories[parts[2]] = biography_from(text).model_dump(mode="json")
+                        stories[parts[2]] = told_story(text)  # parts and all
         except (UnpackError, ReturnedError, RefusedError, ValueError, RecursionError) as error:
             raise RuleError(
                 "unreadable_changes",
@@ -1881,6 +2167,7 @@ class FamilyFolder:
             email=setup.accounts.get(arrived.device, ""),
             sent_at=sent_at,
             packed=base64.b64decode(proposal.family),
+            words_only=arrived.words_only,
         )
 
     async def _arrived(self, keeper: Keeper, device: str, proposal: int) -> Arrived:
@@ -2140,12 +2427,16 @@ class FamilyFolder:
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._publish()  # the keeper's own, before any relative's comes in
+                await self._carry_out(computer, setup)  # its own computers' instructions
                 await self._gather_changes(computer, setup)
+                await asyncio.to_thread(self._leave_for_helpers, computer, setup)
             await asyncio.to_thread(mirror.push)
+            await asyncio.to_thread(computer.went_up)  # a new role, if any, known from now
             await asyncio.to_thread(self._retire, mirror, computer, setup)
             for email in list(setup.unshare):
                 await asyncio.to_thread(mirror.drive.unshare, setup.folder, email)
                 setup.unshare.remove(email)
+                setup.unshare_since.pop(email.casefold(), None)
                 self._save_setup()
             if setup.moved_from and not note:
                 note = OLD_FOLDER
@@ -2175,6 +2466,7 @@ class FamilyFolder:
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._send()
+            await self._helping(mirror.drive, computer, setup)  # one of the keeper's own
             if not setup.own_folder:
                 await asyncio.to_thread(self._make_own_folder, mirror, computer, setup)
             if setup.about != __version__ and computer.role not in ("waiting", "removed"):
@@ -2185,6 +2477,195 @@ class FamilyFolder:
             own = self._relatives_mirror(mirror.drive, setup.own_folder, computer.device)
             await asyncio.to_thread(own.push)
         self.last_sync, self.problem = datetime.now(UTC), note
+
+    async def _carry_out(self, keeper: Keeper, setup: Setup) -> None:
+        """What the keeper's own other computers asked of this one, each checked before
+        anything is done: signed with that computer's key and locked for this one, its number
+        after the last, from a computer allowed to ask; and, to let a computer in, naming the
+        code this computer works out itself from a request it has. One that doesn't check out
+        is turned down, and said so, and never tried again. Only the keeper's own computers'
+        are read: no relative's computer, nor one removed, has anything to ask (0.8.0)."""
+        own = self._own_computers(keeper, setup)
+        for device in sorted(own):
+            after = setup.instructed.get(device, 0)
+            for number, instruction in await asyncio.to_thread(keeper.instructions, device, after):
+                done, why, name = await self._carried_out(keeper, setup, device, own, instruction)
+                setup.instructed[device] = max(number, setup.instructed.get(device, 0))
+                helped = {
+                    "by": device,
+                    "number": number,
+                    "action": instruction.action if instruction else "",
+                    "name": name,
+                    "done": done,
+                    "why": why,
+                    "at": datetime.now(UTC).isoformat(timespec="seconds"),
+                }
+                setup.helped = [*setup.helped, helped][-HELPED_KEPT * 4 :]
+                self._save_setup()
+                by = keeper.known[device].name
+                if done:
+                    log.info("Carried out what %s asked: %s", by, name)
+                else:
+                    log.warning("Turned down what %s asked (%s): %s", by, name, why)
+
+    async def _carried_out(
+        self,
+        keeper: Keeper,
+        setup: Setup,
+        device: str,
+        own: set[str],
+        instruction: Instruction | None,
+    ) -> tuple[bool, str, str]:
+        """One instruction, checked and carried out: whether it was, why not, and whom
+        it was about: nobody named, for one that couldn't be read."""
+        if instruction is None:
+            return False, "It couldn't be checked as that computer's own.", ""
+        if device not in own or device not in setup.helpers:
+            about = instruction.email if instruction.action == "invited" else "A computer"
+            return False, "That computer isn't allowed to invite and let in for you.", about
+        if instruction.action == "invited":
+            # It shares the family folder now: not to be stopped by a removal queued before;
+            # but one queued after it was invited stands (0.8.0).
+            wanted = instruction.email.casefold()
+            if _before(setup.unshare_since.get(wanted, ""), instruction.made):
+                setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
+                setup.unshare_since.pop(wanted, None)
+            return True, "", instruction.email
+        asks = await asyncio.to_thread(keeper.asking, frozenset(setup.refused))
+        ask = next((ask for ask in asks if ask.device == instruction.joining), None)
+        if ask is None:
+            known = keeper.known.get(instruction.joining)
+            if known is not None:
+                return False, "It's in the family already.", known.name
+            return False, "It isn't asking to join any more.", "A computer"
+        if ask.code != instruction.code:
+            return False, "Its code isn't the one its request gives here.", ask.name
+        await asyncio.to_thread(keeper.admit, ask, instruction.role)
+        return True, "", ask.name
+
+    def _leave_for_helpers(self, keeper: Keeper, setup: Setup) -> None:
+        """What each of the keeper's own other computers allowed to help needs: the
+        invitation, the names of those asking to join, and what became of its instructions,
+        locked for it alone. Written when that changes, and every few minutes besides, so it
+        knows this computer runs. One no longer allowed, or removed, hears so once; so does one
+        allowed by a keeper's computer before this one, recovered or taken over, whose word is
+        still in the folder (0.8.0)."""
+        own = self._own_computers(keeper, setup)
+        now = datetime.now(UTC)
+        keeper_name = keeper.known[keeper.device].name
+        asking: list[Waiting] | None = None
+        invitation = ""
+        earlier = {path.stem for path in (keeper.folder / "helping").glob("*.bin")}
+        for device in sorted(set(setup.helpers) | set(setup.left) | earlier):
+            if device not in keeper.known:
+                continue
+            allowed = device in setup.helpers and device in own
+            if allowed and asking is None:
+                asking = [
+                    Waiting(device=ask.device, name=ask.name, email=self._email_of(ask.device))
+                    for ask in keeper.asking(frozenset(setup.refused))
+                ]
+                invitation = self.invitation().text() if self.client is not None else ""
+            helping = Helping(
+                device=device,
+                allowed=allowed,
+                keeper=keeper_name,
+                looked="",
+                invitation=invitation if allowed else "",
+                asking=asking or [] if allowed else [],
+                refused=sorted(setup.refused) if allowed else [],
+                done=[
+                    Outcome(
+                        number=int(helped["number"]),
+                        action=str(helped.get("action", "")),
+                        name=str(helped["name"]),
+                        done=bool(helped["done"]),
+                        why=str(helped["why"]),
+                    )
+                    for helped in setup.helped
+                    if helped["by"] == device
+                ][-HELPED_KEPT:]
+                if allowed
+                else [],
+            )
+            fingerprint = hashlib.sha256(helping.model_dump_json().encode()).hexdigest()[:16]
+            before = setup.left.get(device)
+            stale = before is not None and (
+                (now - datetime.fromisoformat(before[1])).total_seconds() >= LOOKS_EVERY
+            )
+            if before is not None and before[0] == fingerprint and not (allowed and stale):
+                continue
+            looked = now.isoformat(timespec="seconds")
+            keeper.leave_helping(helping.model_copy(update={"looked": looked}))
+            setup.left[device] = [fingerprint, looked]
+            self._save_setup()
+
+    async def _helping(self, drive: DriveLike, member: Member, setup: Setup) -> None:
+        """On another of the keeper's own computers: what the keeper's computer left it;
+        and, if it may invite and let in, the computers asking to join, each code worked out
+        here from their own requests. What the keeper's computer answered isn't waiting any
+        more."""
+        helping = await asyncio.to_thread(member.read_helping)
+        self.helping = helping
+        if helping is None or not helping.allowed or member.role in ("waiting", "removed"):
+            self.requests = []
+            return
+        answered = max((outcome.number for outcome in helping.done), default=0)
+        if any(int(asked["number"]) <= answered for asked in setup.asked):
+            setup.asked = [asked for asked in setup.asked if int(asked["number"]) > answered]
+            self._save_setup()
+        try:
+            self.requests = await self._requests(drive, member, setup, helping)
+        except DriveError as error:
+            log.warning("The computers asking to join couldn't be read: %s", error)
+
+    async def _requests(
+        self, drive: DriveLike, member: Member, setup: Setup, helping: Helping
+    ) -> list[tuple[str, str, str]]:
+        """The computers asking to join this family, read from their own folders as the
+        keeper's computer reads them, this computer's Google account being the keeper's: each
+        request checked as the asking computer's own, and its code worked out from it. Not
+        those in the family already, nor those turned away."""
+        sharing = {
+            email.casefold() for email in await asyncio.to_thread(drive.shared_with, setup.folder)
+        } | {self._own_account().casefold()}
+        found = [
+            *await asyncio.to_thread(drive.shared_folders, OWN_FOLDER),
+            *await asyncio.to_thread(drive.own_folders, OWN_FOLDER, starting=True),
+        ]
+        passed = set(member.state["members"]) | set(helping.refused) | {member.device}
+        requests: list[tuple[str, str, str]] = []
+        for folder in sorted(found, key=lambda f: f.id):
+            named = OWN_FOLDER_NAMED.fullmatch(folder.name)
+            if named is None or folder.owner.casefold() not in sharing:
+                continue
+            family, device = named.groups()
+            if family != member.family or device in passed:
+                continue
+            wanted = f"join/{device}.req"
+            state = self.dir / "asking-state" / f"{device}-{folder.id}.json"
+            mirror = Mirror(
+                drive, folder.id, self.dir / "asking", state, self._own_account(), wanted.__eq__
+            )
+            try:
+                await asyncio.to_thread(mirror.pull)
+                blob = (self.dir / "asking" / wanted).read_bytes()
+                ask = requested(blob, device)
+                code = join_code(member.keeper, bytes.fromhex(ask.sign), bytes.fromhex(ask.dh))
+            except DriveError, OSError, RefusedError, ValueError:
+                continue  # not readable now, or not a request that checks out
+            requests.append((device, code, folder.owner))
+        return requests
+
+    def _asking_name(self, device: str, email: str) -> str:
+        """A computer asking to join, by the name it gave, which only the keeper's computer can
+        read and leaves here; or, until it has, by its Google account."""
+        helping = self.helping
+        named = next(
+            (waiting.name for waiting in helping.asking if waiting.device == device),
+            None,
+        ) if helping else None  # fmt: skip
+        return named or f"A computer on {email}"
 
     async def _still_offered(self, keeper: Keeper, setup: Setup) -> str:
         """While the keeper's offer of the family stands: the round's note. Turned down

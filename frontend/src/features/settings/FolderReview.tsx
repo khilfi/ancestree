@@ -102,6 +102,8 @@ export function FolderReview({
       <p className="text-sm">
         From <strong>{changes.name}</strong>
         {changes.email ? ` (${changes.email})` : ""}, sent {when(changes.sent_at)}.
+        {changes.words_only &&
+          " A viewer's computer: only what they say about people is taken from it."}
       </p>
       {review.isError ? (
         <>

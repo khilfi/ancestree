@@ -14,12 +14,18 @@ family folder. It writes only files of its own into the family folder, and reads
     files/<name>.bin                   photos and pictures
     recovery/<n>.bin                   the keeper's keys, locked with the recovery code
     offers/<computer>.bin              the family offered to that computer, locked for it
+    helping/<computer>.bin             for another of the keeper's own computers, allowed to
+                                       invite and let in for it, locked for it
 
 and, in a relative's computer's own folder, since 0.5.0:
 
     about/<computer>.bin               what it says of itself: its version, an offer turned down
     took/<computer>.bin                the new keeper's word that it took the family, and where
                                        the family folder is now
+
+and, since 0.8.0, in that of one of the keeper's own allowed to invite and let in:
+
+    instructions/<computer>/<n>.ins    its word to the keeper's to let a computer in, numbered
 """
 
 from __future__ import annotations
@@ -40,6 +46,8 @@ from ancestree.familyfolder.models import (
     About,
     Change,
     FamilyFile,
+    Helping,
+    Instruction,
     Joined,
     JoinRequest,
     KeyRing,
@@ -75,7 +83,13 @@ from ancestree.familyfolder.seals import (
 )
 
 MAY_SEND: set[str] = {"trusted", "contributor"}
+# Those that send anything: a viewer sends its words about people alone, which the
+# keeper's computer takes alone from it.
+SENDS: set[str] = MAY_SEND | {"viewer"}
 HANDOVER = 1  # the way of handing over the keeper this code takes part in, since 0.5.0
+# A request to join, or an instruction, at most: a few hundred bytes as the app writes
+# them. Anything larger is refused unread (0.8.0).
+SMALL = 64 * 1024
 # The family folder's own files, the keeper's: what a new keeper's folder holds after a
 # handover, without the offers or relatives' files.
 FAMILY_FOLDER_FILES = (
@@ -91,6 +105,19 @@ FAMILY_FOLDER_FILES = (
 
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def requested(blob: bytes, device: str) -> JoinRequest:
+    """A computer's request to join, checked as its own: read by the keeper's computer, and
+    since 0.8.0 by another of the keeper's own, which works out its code from it, and
+    can't open the name, locked for the keeper."""
+    if len(blob) > SMALL:
+        raise RefusedError("larger than a request to join is")
+    opened = unseal(blob, f"join/{device}", Kind.JOIN, None, None)
+    ask = JoinRequest.model_validate_json(opened.payload)
+    if ask.device != device or bytes.fromhex(ask.sign) != opened.signer:
+        raise RefusedError("not signed by the computer asking")
+    return ask
 
 
 def _public(key: Ed25519PrivateKey | X25519PrivateKey) -> bytes:
@@ -146,6 +173,8 @@ class Arrived:
     # It, or one not decided yet that it stands for, was made before the computer's role last
     # changed: the keeper's to look at, whatever the computer may do now.
     before_role: bool = False
+    # A viewer's: only its words about people are taken from it.
+    words_only: bool = False
 
 
 class Computer:
@@ -486,7 +515,7 @@ class Member(Computer):
     ) -> int:
         """Send changes to the keeper; they wait here, marked, until answered. Or rather the
         computer's whole `family`, made on the record's change set `base`."""
-        if self.role not in MAY_SEND:
+        if self.role not in SENDS:
             raise PermissionError(f"a {self.role} computer doesn't send changes")
         self.sent += 1
         proposal = Proposal(
@@ -544,6 +573,38 @@ class Member(Computer):
         self._cleared(path)
         return offer
 
+    def read_helping(self) -> Helping | None:
+        """What the keeper's computer left this one, allowed to invite and let in for it:
+        signed with the keeper's key, locked for this computer alone. None if there's none."""
+        path = self.folder / "helping" / f"{self.device}.bin"
+        blob = self._read(path)
+        if blob is None:
+            return None
+        try:
+            opened = unseal(blob, f"helping/{self.device}", Kind.HELPING, {self.keeper}, None)
+            context = b"helping " + self.device.encode()
+            helping = Helping.model_validate_json(open_for(self.dh, opened.payload, context))
+            if helping.device != self.device:
+                raise RefusedError("for another computer")
+        except (RefusedError, ValidationError, ValueError) as error:
+            self._refused(path, error)
+            return None
+        self._cleared(path)
+        return helping
+
+    def instruct(self, instruction: Instruction) -> None:
+        """Its word to the keeper's computer, in its own folder: signed with this
+        computer's key, locked for the keeper's computer alone, its number in its place."""
+        family = FamilyFile.model_validate_json((self.folder / "family.json").read_bytes())
+        number = instruction.number
+        context = b"instruction " + f"{self.device}/{number}".encode()
+        locked = seal_for(
+            bytes.fromhex(family.keeper_dh), instruction.model_dump_json().encode(), context
+        )
+        place = f"instruction/{self.device}/{number}"
+        blob = seal(Kind.INSTRUCTION, place, locked, self.sign, None)
+        self._write(f"instructions/{self.device}/{number:08d}.ins", blob)
+
     def write_about(self, version: str, declined: str = "") -> None:
         """What this computer says of itself, in its own folder: its version, and the way of
         handing over it can take part in, for the keeper to know it may offer it the family;
@@ -562,6 +623,12 @@ class Keeper(Computer):
         self.known: dict[str, Known] = {}
         self.decided: set[str] = set()  # "computer/proposal"
         self.recovery = b""  # the key the recovery code stands for
+        # Each computer's proposals made before its role last changed, by what this
+        # computer saw itself: those here as the role changed, and those come before the change
+        # went up to Drive, when that computer couldn't have known. Never by what a proposal
+        # says of itself, its `base`, which its sender chooses (0.8.0).
+        self.before: dict[str, set[int]] = {}
+        self.going_up: set[str] = set()  # computers whose new role hasn't gone up to Drive yet
 
     def _saved(self) -> dict[str, Any]:
         return {
@@ -569,6 +636,11 @@ class Keeper(Computer):
             "known": {device: asdict(known) for device, known in self.known.items()},
             "decided": sorted(self.decided),
             "recovery": self.recovery.hex(),
+            "before": {
+                device: sorted(seq for seq in seqs if f"{device}/{seq}" not in self.decided)
+                for device, seqs in self.before.items()
+            },
+            "going_up": sorted(self.going_up),
         }
 
     def _restore(self, saved: dict[str, Any]) -> None:
@@ -576,6 +648,18 @@ class Keeper(Computer):
         self.known = {device: Known(**known) for device, known in saved["known"].items()}
         self.decided = set(saved["decided"])
         self.recovery = bytes.fromhex(saved["recovery"])
+        self.going_up = set(saved.get("going_up", []))
+        if "before" in saved:
+            self.before = {device: set(seqs) for device, seqs in saved["before"].items()}
+            return
+        # Kept by a version before 0.8.0, which went by what each proposal said of itself: those
+        # here already are taken as it said, once; every one after, by what this computer sees.
+        for device, known in self.known.items():
+            if known.role not in ("keeper", "removed"):
+                since = self.role_since(device)
+                made = [seq for seq, proposal in self._proposals(device) if proposal.base < since]
+                if made:
+                    self.before[device] = set(made)
 
     def _write(self, relative: str, blob: bytes) -> None:
         """Everything the keeper writes is also kept here, to put back if it goes missing."""
@@ -783,17 +867,14 @@ class Keeper(Computer):
             if blob is None:
                 continue
             try:
-                opened = unseal(blob, f"join/{device}", Kind.JOIN, None, None)
-                ask = JoinRequest.model_validate_json(opened.payload)
-                if ask.device != device or bytes.fromhex(ask.sign) != opened.signer:
-                    raise RefusedError("not signed by the computer asking")
+                ask = requested(blob, device)
                 context = b"join " + device.encode()
                 name = open_for(self.dh, bytes.fromhex(ask.name), context).decode()
+                code = join_code(self.keeper, bytes.fromhex(ask.sign), bytes.fromhex(ask.dh))
             except (RefusedError, ValidationError, ValueError) as error:
                 self._refused(path, error)
                 continue
             self._cleared(path)
-            code = join_code(self.keeper, bytes.fromhex(ask.sign), bytes.fromhex(ask.dh))
             asks.append(Asking(device=device, name=name, code=code, sign=ask.sign, dh=ask.dh))
         return asks
 
@@ -806,15 +887,31 @@ class Keeper(Computer):
     def change_role(self, device: str, role: Role) -> int:
         """Another role for a computer let in already: a new member file, holding the same
         keys, as every role reads the family; and the role in the record, so every computer's
-        list shows it. Computers since 0.4.0 read both already. The change set's number."""
+        list shows it. Computers since 0.4.0 read both already. The change set's number.
+        What it sent that's here now was made before the change; so is what comes until the
+        change has gone up to Drive (`went_up`), as it can't know till then."""
         known = self.known[device]
         known.role = role
+        self.before.setdefault(device, set()).update(seq for seq, _ in self._proposals(device))
+        self.going_up.add(device)
         self._write_member(device)
         return self.publish([Joined(device=device, name=known.name, role=role)])
 
+    def went_up(self) -> None:
+        """What this computer wrote has gone up to Drive, any new role with it: what came here
+        before was made before the role changed; what a computer sends from now, knowing
+        it."""
+        if not self.going_up:
+            return
+        for device in self.going_up & self.known.keys():
+            self.before.setdefault(device, set()).update(seq for seq, _ in self._proposals(device))
+        self.going_up.clear()
+        self.save()
+
     def role_since(self, device: str) -> int:
-        """The change set from which a computer has had its role: a proposal made from
-        an earlier one was made as the computer was before. 0 if the record doesn't say."""
+        """The change set from which a computer has had its role: a proposal saying it was
+        made on an earlier one says it was made as the computer was before, as versions before
+        0.8.0 took it. 0 if the record doesn't say."""
         member: dict[str, Any] = self.state["members"].get(device, {})
         return int(member.get("since", 0))
 
@@ -829,44 +926,62 @@ class Keeper(Computer):
 
     # Proposals
 
+    def _proposals(self, device: str) -> list[tuple[int, Proposal]]:
+        """A computer's proposals here not decided yet, each checked as its own, by number."""
+        known = self.known[device]
+        found: list[tuple[int, Proposal]] = []
+        for path in sorted((self.folder / "inbox" / device).glob("*.prop")):
+            try:
+                seq = int(path.stem)
+            except ValueError:
+                continue
+            if f"{device}/{seq}" in self.decided:
+                self._cleared(path)
+                continue
+            blob = self._read(path)
+            if blob is None:
+                continue
+            try:
+                _, epoch, _ = peek(blob)
+                signer = {bytes.fromhex(known.sign)}
+                place = f"inbox/{device}/{seq}"
+                opened = unseal(blob, place, Kind.PROPOSAL, signer, self._key(epoch))
+                proposal = Proposal.model_validate_json(opened.payload)
+                if proposal.seq != seq:
+                    raise RefusedError("numbered wrongly")
+                try:
+                    datetime.fromisoformat(proposal.made)
+                except ValueError:
+                    raise RefusedError("dated wrongly") from None
+            except (RefusedError, ValidationError) as error:
+                self._refused(path, error)
+                continue
+            self._cleared(path)
+            found.append((seq, proposal))
+        return found
+
     def inbox(self) -> list[Arrived]:
         """Each computer's proposals not decided yet, checked. One that became a viewer is
-        still heard on what it sent before it knew: nothing it sent is dropped unseen."""
+        still heard on what it sent before it knew: nothing it sent is dropped unseen. What a
+        viewer sends as one is for its words about people alone. Which were made before
+        a role changed is this computer's to know (`before`), never the sender's to say."""
         arrived: list[Arrived] = []
         for device, known in self.known.items():
-            since = self.role_since(device)
-            if known.role in ("keeper", "removed") or (known.role not in MAY_SEND and not since):
+            if known.role in ("keeper", "removed"):
                 continue
-            for path in sorted((self.folder / "inbox" / device).glob("*.prop")):
-                try:
-                    seq = int(path.stem)
-                except ValueError:
-                    continue
-                if f"{device}/{seq}" in self.decided:
-                    self._cleared(path)
-                    continue
-                blob = self._read(path)
-                if blob is None:
-                    continue
-                try:
-                    _, epoch, _ = peek(blob)
-                    signer = {bytes.fromhex(known.sign)}
-                    place = f"inbox/{device}/{seq}"
-                    opened = unseal(blob, place, Kind.PROPOSAL, signer, self._key(epoch))
-                    proposal = Proposal.model_validate_json(opened.payload)
-                    if proposal.seq != seq:
-                        raise RefusedError("numbered wrongly")
-                    try:
-                        datetime.fromisoformat(proposal.made)
-                    except ValueError:
-                        raise RefusedError("dated wrongly") from None
-                except (RefusedError, ValidationError) as error:
-                    self._refused(path, error)
-                    continue
-                self._cleared(path)
-                if known.role not in MAY_SEND and proposal.base >= since:
-                    continue  # sent as it is now, which may send nothing
-                arrived.append(Arrived(device=device, name=known.name, proposal=proposal))
+            for seq, proposal in self._proposals(device):
+                if device in self.going_up:  # it can't know its new role yet
+                    self.before.setdefault(device, set()).add(seq)
+                made_before = seq in self.before.get(device, ())
+                arrived.append(
+                    Arrived(
+                        device=device,
+                        name=known.name,
+                        proposal=proposal,
+                        before_role=made_before,
+                        words_only=known.role not in MAY_SEND and not made_before,
+                    )
+                )
         return arrived
 
     def decide(self, arrived: Arrived, taken: list[int], note: str = "") -> int | None:
@@ -924,7 +1039,7 @@ class Keeper(Computer):
         for arrived in self.inbox():
             if not arrived.proposal.family:
                 continue  # the spike's, entry by entry
-            if arrived.proposal.base < self.role_since(arrived.device):
+            if arrived.before_role:
                 earlier.add(arrived.device)
             if arrived.proposal.answered < self.last_decided(arrived.device):
                 continue
@@ -944,9 +1059,7 @@ class Keeper(Computer):
         or it sent them before it was trusted."""
         published: list[int] = []
         for arrived in self.inbox():
-            if self.known[arrived.device].role != "trusted":
-                continue
-            if arrived.proposal.base < self.role_since(arrived.device):
+            if self.known[arrived.device].role != "trusted" or arrived.before_role:
                 continue
             changes = arrived.proposal.changes
             clean = [
@@ -1002,6 +1115,70 @@ class Keeper(Computer):
             self, f"offers/{to}.bin", seal(Kind.OFFER, f"offer/{to}", locked, self.sign, None)
         )
         return offer
+
+    def leave_helping(self, helping: Helping) -> None:
+        """For another of the keeper's own computers, allowed to invite and let in for it, or
+        no longer: signed with the keeper's key and locked for that computer alone, beside
+        the offers, and like them never put back by repair: it's written again soon enough."""
+        device = helping.device
+        context = b"helping " + device.encode()
+        locked = seal_for(
+            bytes.fromhex(self.known[device].dh), helping.model_dump_json().encode(), context
+        )
+        blob = seal(Kind.HELPING, f"helping/{device}", locked, self.sign, None)
+        Computer._write(self, f"helping/{device}.bin", blob)
+
+    def last_instruction(self, device: str) -> int:
+        """The highest number of a computer's instructions here, read or not: 0 for none."""
+        return max(
+            (
+                int(path.stem)
+                for path in (self.folder / "instructions" / device).glob("*.ins")
+                if len(path.stem) == 8 and path.stem.isascii() and path.stem.isdigit()
+            ),
+            default=0,
+        )
+
+    def instructions(self, device: str, after: int) -> list[tuple[int, Instruction | None]]:
+        """A computer's instructions numbered after `after`, from its own folder, in order:
+        each checked as that computer's own, signed with its key and locked for this computer,
+        its number in its place; None for one that doesn't check out. Only those named as the
+        app names them, eight digits, are read: so they're read in order (0.8.0)."""
+        known = self.known.get(device)
+        found: list[tuple[int, Instruction | None]] = []
+        for path in sorted((self.folder / "instructions" / device).glob("*.ins")):
+            stem = path.stem
+            if len(stem) != 8 or not (stem.isascii() and stem.isdigit()) or int(stem) <= after:
+                continue
+            number = int(stem)
+            blob = self._read(path)
+            if blob is None:
+                continue
+            try:
+                if known is None:
+                    raise RefusedError("from a computer the family doesn't know")
+                if len(blob) > SMALL:
+                    raise RefusedError("larger than an instruction is")
+                opened = unseal(
+                    blob,
+                    f"instruction/{device}/{number}",
+                    Kind.INSTRUCTION,
+                    {bytes.fromhex(known.sign)},
+                    None,
+                )
+                context = b"instruction " + f"{device}/{number}".encode()
+                instruction = Instruction.model_validate_json(
+                    open_for(self.dh, opened.payload, context)
+                )
+                if instruction.device != device or instruction.number != number:
+                    raise RefusedError("not the instruction its place says")
+            except (RefusedError, ValidationError, ValueError) as error:
+                self._refused(path, error)
+                found.append((number, None))
+                continue
+            self._cleared(path)
+            found.append((number, instruction))
+        return found
 
     def about(self, device: str) -> About | None:
         """What a relative's computer says of itself, from its own folder: checked, as that

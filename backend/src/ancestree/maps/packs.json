@@ -1,6 +1,2235 @@
 {
-  "build": "20261010",
+  "build": "20261008",
   "release": "https://github.com/khilfi/ancestree/releases/download/maps-{build}/",
+  "outlines": {
+    "from": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/",
+    "admin_0": {
+      "file": "ne_10m_admin_0_countries.geojson",
+      "sha256": "239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255"
+    },
+    "admin_1": {
+      "file": "ne_10m_admin_1_states_provinces.geojson",
+      "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5"
+    }
+  },
+  "places": {
+    "snapshot": "20261014",
+    "sources": {
+      "release": "https://github.com/khilfi/ancestree/releases/download/geonames-{snapshot}/",
+      "files": {
+        "admin1CodesASCII.txt": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+        "admin2Codes.txt": "0dbb9988fa9388021efe026ed16de0b89f56314f2dfd0abb4a51e17b8c55f29f",
+        "allCountries.zip": "7d08b0c569ffc7a61c21ac20ba3f411e728ce3a8a0991538103ae7cd325863ba",
+        "cities500.zip": "f92aa55f4a60db8cda449f67bce1b3b5ceb4dc4f767ab0ee491c18aaabb0cfd4",
+        "countryInfo.txt": "c5997ea659df5bcf42509eb937064d172b2a998bb873608603e8421d714a9974",
+        "postcodes.zip": "983d9f56ad43ee198baa49d86c5e3201e4751cad7f968ecef9ccb5604859104d"
+      }
+    },
+    "files": {
+      "ad": {
+        "size": 2280,
+        "lines": "a064f8b00be6c1531a7bafbe3ac0c60d8ba2e476e7bf0b18f21af4cd5acf88bd"
+      },
+      "ae": {
+        "size": 1603439,
+        "lines": "a05785098cb55403ca12b8e57e6522969935d5b9a5f91d94dad09ba8bc88b39b"
+      },
+      "af": {
+        "size": 717227,
+        "lines": "b25aa365947c690526ffcaec35496ba331339a88f42a536158657c80640cc88b"
+      },
+      "ag": {
+        "size": 3912,
+        "lines": "0eb7416471fe34482b07031e9337a61571c14e8ea986be44d0eb9d915df84679"
+      },
+      "ai": {
+        "size": 1239,
+        "lines": "55a088e691c2832d0b5498186019999979bb10c3d37e02ae5c65f64928755d91"
+      },
+      "al": {
+        "size": 99234,
+        "lines": "feb70d6410bbf6b425ad544b970c252928eb9891977e0ab291f4b682e11cfdf3"
+      },
+      "am": {
+        "size": 38894,
+        "lines": "5ab5ea4306b3e5ff47050606fb2433bdb6c877c4a3358f97d5fb827e281d5118"
+      },
+      "ao": {
+        "size": 238710,
+        "lines": "28f3e9f5ea64ba3aed98d0fd271eb015764faa9d09768233d8fd6975a0f20ac8"
+      },
+      "aq": {
+        "size": 1128,
+        "lines": "9916b51725b85fa47bba3a43edacca03b4b2cc57b3e28eb596d667d35342cb9a"
+      },
+      "ar": {
+        "size": 612052,
+        "lines": "ea27f8fbd10ff45f2d3e043064507766bcc482db473af37b6a2bc83d5c191fea"
+      },
+      "as": {
+        "size": 2617,
+        "lines": "cd5d0f734761af4bea75d35227356cc7964f8c39b8a39bc67f2ee015abdb701d"
+      },
+      "at": {
+        "size": 625455,
+        "lines": "0b25c2bcc43c9da995ddf270a2761b30e79684b0b9908b7ab0599d4b2cd1e3a4"
+      },
+      "au": {
+        "size": 652206,
+        "lines": "14cf138e8f52fed568a28945116d2bf7324eec5f45365e5a7d87a98912a6f520"
+      },
+      "aw": {
+        "size": 2382,
+        "lines": "f290dcfda01865919329c66bfd8534f2dd9d810fe15c33fdb513a77cfef223bf"
+      },
+      "ax": {
+        "size": 8067,
+        "lines": "84cd7634a16af0ecbcc75d44e802c86caa3eeecc7d3fb1306c25d310ad5819be"
+      },
+      "az": {
+        "size": 136643,
+        "lines": "abcd22ce5e4e1be20ee1a6083e0f2254d30646d0ac14823e6087fb74c8440e47"
+      },
+      "ba": {
+        "size": 247572,
+        "lines": "1165b00feaf2a446ed75b2aa3be80b7db886035461e9b77f7b025db4aa93a390"
+      },
+      "bb": {
+        "size": 8951,
+        "lines": "7454de3d6d71bd3d7a257e903dd9dcb420ed177ca796ab9716acdf63fc814ac4"
+      },
+      "bd": {
+        "size": 673792,
+        "lines": "fbf834c8316eaaff8442616ace11b4fa9001426ed49ccdbfe7033617fac61124"
+      },
+      "be": {
+        "size": 251436,
+        "lines": "ad64b1118323cc792502aed4978419de5e0976df6fc93084780d3eed548c01e6"
+      },
+      "bf": {
+        "size": 139127,
+        "lines": "df4ba66fc8c5daa978ed9119feefa90dcba7d0e357ccf192060fe0b3890f18a3"
+      },
+      "bg": {
+        "size": 286743,
+        "lines": "bda89801e248ca4dce69bc48dff3717966784d375ec506934f306c00b554fe89"
+      },
+      "bh": {
+        "size": 3080,
+        "lines": "49fa957661ace602a308eb34e2733c6671bf341315a31fad902e1c70db76c59e"
+      },
+      "bi": {
+        "size": 112099,
+        "lines": "0653f7c5dbe3f49437b6d1b24c4da87b89ae8f5e9aefc0bb999dcf274d92aa7d"
+      },
+      "bj": {
+        "size": 57512,
+        "lines": "ba150697b12ebad49eb2859192ff1e8f39f9ea171d798d8705f88830d621de24"
+      },
+      "bl": {
+        "size": 597,
+        "lines": "5c8336ad6fd46fa20258e9dce58bf5a21de64c85a3ef9d8f5aede6ed5d8251cc"
+      },
+      "bm": {
+        "size": 1510,
+        "lines": "afb84c06729834a817ca32d96052ac8a7e936b8d30d77a98820537bfba089068"
+      },
+      "bn": {
+        "size": 6950,
+        "lines": "ac059ffffe17b87e37f86e3f2e71e75b6aafd262175cf34c30198bdac25f1cb1"
+      },
+      "bo": {
+        "size": 358183,
+        "lines": "c86db4da5910bb3e3d75b5a294c6d61845ea81142d27211bf6decc959268c384"
+      },
+      "bq": {
+        "size": 2275,
+        "lines": "ebf673181391cd8847477c9b52641c85821fec4676850d1de96c490af2ce920a"
+      },
+      "br": {
+        "size": 1709315,
+        "lines": "aab3284190ed03334a068742fa7cbb7a214306c67f19ac4a92115450d1aa8533"
+      },
+      "bs": {
+        "size": 7500,
+        "lines": "61e96103133150daf70759d0053414e2cfa7d0313b2b39685381c392b22488f4"
+      },
+      "bt": {
+        "size": 6391,
+        "lines": "1df3ab709e82729a7497e8129e6cac315dc613046bbcad216205fc2a5483f2be"
+      },
+      "bw": {
+        "size": 26729,
+        "lines": "3c14dc310f88888a9923c2ee2f915b5a4406093fe54171bc6d95136fc7dacc7b"
+      },
+      "by": {
+        "size": 449996,
+        "lines": "05ee199ba806ad2b45b8b4b6d1ec2e44e2d1c9fa9343a06b7706373469a9c12b"
+      },
+      "bz": {
+        "size": 13445,
+        "lines": "ca2ee60779c6555bb0088614b958fa3eb236a7262a82c32d41d0915428349a68"
+      },
+      "ca": {
+        "size": 439398,
+        "lines": "5827bf1192fbdf8c0d21a3c6eb3bc7892f6d78e9b97ac0382a5af949aa58d4f3"
+      },
+      "cc": {
+        "size": 165,
+        "lines": "78dbe921bbf2cbcfe0fe602662e174e5937d2daddd30f754d2e71de174166322"
+      },
+      "cd": {
+        "size": 469086,
+        "lines": "da83db8889bdd7ee2f8f51572eca5b4c3b12b618c11e21e119d505bfe43b85f4"
+      },
+      "cf": {
+        "size": 75436,
+        "lines": "2d7668e2fdc33be68f05c255900ec4100c46cf7ae22a472a1019a2a50e32f2e3"
+      },
+      "cg": {
+        "size": 72299,
+        "lines": "8dd215abd4539d36efb5dce3d780c9fc00a54bc127c552899edb712f94a81113"
+      },
+      "ch": {
+        "size": 355496,
+        "lines": "894e3475215dc6a03b2bfd070eb446f9e577c4fb769422242d547b4127c08c14"
+      },
+      "ci": {
+        "size": 186253,
+        "lines": "c8e0d20a4c1b49dc2406b9b79b0a65279cc853f84dad88608a2bdc4bab335ae0"
+      },
+      "ck": {
+        "size": 1319,
+        "lines": "b810acd7bc6f23d81955f20be74d996404a93f97d8580a3c5593d629f777c844"
+      },
+      "cl": {
+        "size": 157144,
+        "lines": "13ab20d8eb398836eca842b8af2ffc9535b9f2f178be0cd231e0da658bc5ad1e"
+      },
+      "cm": {
+        "size": 168493,
+        "lines": "b4034d78c9f2b05267494f8bc974ca17eda701eb8aea5353218b2b27e8b97b7b"
+      },
+      "cn": {
+        "size": 13482682,
+        "lines": "6060c706cc4d651c19061fe4a8d5f55a2d2bb9df98e94e8819d896868d8fc6f0"
+      },
+      "co": {
+        "size": 657010,
+        "lines": "2791c6c7e1f2358714139fa213918dbb8f628cfcc85eb7a1c97f9d8feba5ef0c"
+      },
+      "cr": {
+        "size": 119163,
+        "lines": "e5ad90985b2ce258c3f259aa6092fadd26e14caad3e9cff13357b13c2d0c9f4c"
+      },
+      "cu": {
+        "size": 251714,
+        "lines": "4136c27556d25901db8245cdadde48c3ab24b01b26ef2a7e57333b44c65386c4"
+      },
+      "cv": {
+        "size": 48513,
+        "lines": "ba1e4c2af2fe59e00e57312c533bcd0a5ebe6bfac2ad32d07c115289bf7e9087"
+      },
+      "cw": {
+        "size": 2459,
+        "lines": "e465b4304d1c96cc98a7129468be2b27badb70192a6987623e96ca6455b8c671"
+      },
+      "cx": {
+        "size": 224,
+        "lines": "c83327a462d5329222f4268ecc331f5a73bb6ddb8fdcb693fa48bc35da2a7316"
+      },
+      "cy": {
+        "size": 42904,
+        "lines": "9abb48366a2a644b815ca510beb81657e716546ff51b52bbeb633e8432184c16"
+      },
+      "cz": {
+        "size": 593720,
+        "lines": "9c8dea6aeaf1a68357da86837931f255e4c572e2f985fa8de5a4f6590ad0322a"
+      },
+      "de": {
+        "size": 1941703,
+        "lines": "55891891f07aa6b467fdb55c2723b1ac53651927b43c7c699a6ec148d35b1371"
+      },
+      "dj": {
+        "size": 1964,
+        "lines": "80c8434c70fc63ed441d05a9de284e7100f5b934c95ef0b8417e53b6285c412f"
+      },
+      "dk": {
+        "size": 183873,
+        "lines": "9bf1e2467d9b298dc05ce332d27d8739b716219fa6dea96154312aeef63c9122"
+      },
+      "dm": {
+        "size": 3368,
+        "lines": "101fabb9fb9361b03a719ff492f0fc98c54fea8817b63ccae12966da9b33b8d2"
+      },
+      "do": {
+        "size": 134742,
+        "lines": "57d4edd283ee4f2020866ea2e6a198122c41a5a2484c50623a08eaf83b557c5e"
+      },
+      "dz": {
+        "size": 357586,
+        "lines": "684e8eaa854a6c3d36e4c7d0cba7646647bf4af0fb4b1d892696fae0ff91747b"
+      },
+      "ec": {
+        "size": 210628,
+        "lines": "a48ade9a700e551b4ea22634ca732a6688216c1f1d94350621fe79437417d8f9"
+      },
+      "ee": {
+        "size": 273818,
+        "lines": "9bab27cf04b0319d50f4cacf31d79f65e18d2b2a74be0d9149ef3164f4bdae9f"
+      },
+      "eg": {
+        "size": 231111,
+        "lines": "87d6dedbb64fbe799133b936d0b6b80bc25b877ac0e05a5593b24cef79634cb4"
+      },
+      "eh": {
+        "size": 1309,
+        "lines": "f31c0f381ef9808df10fe8ddd9633b1edbfcdc299bfeacbd83c03a7961ee547e"
+      },
+      "er": {
+        "size": 24653,
+        "lines": "ca851c469dbc3cb0276318c8dc27d38cde568aa9fdb0260ebb2bc5cc106daa07"
+      },
+      "es": {
+        "size": 1165811,
+        "lines": "e2e6026426b47afd8d4180a0e360f74442f3c9d9e0e6faa42007b25f17201776"
+      },
+      "et": {
+        "size": 144519,
+        "lines": "e5af6d7ba0e4e080d3bec08b32de074e48ab4c0588c0817e764056d0695aaad0"
+      },
+      "fi": {
+        "size": 560737,
+        "lines": "016214fcbf697c6d8a4d02f6a98d0c0e477dcbdb4a2ba9356adb38decd65bfdd"
+      },
+      "fj": {
+        "size": 37293,
+        "lines": "43a66e52af1aab44aebd1d342dd965ed5d0b421c86211d6377b8f764c87a1cf7"
+      },
+      "fk": {
+        "size": 1220,
+        "lines": "030910b54681623919885a2fe72b25f57cd23b57ed9c6f66e47765a6c69051bd"
+      },
+      "fm": {
+        "size": 10169,
+        "lines": "4e6309261dafd8e7df3b6683e68aba42d0ee86b4259e45b832fc57bfd6afd8d3"
+      },
+      "fo": {
+        "size": 6587,
+        "lines": "a3cfc0ffdd26465c664ebed7d018b33dc36c3b641a8123969899675c74c2b4f8"
+      },
+      "fr": {
+        "size": 1988746,
+        "lines": "5d52df7c55e84595b1edb9abfada7b0ba3fa255dc717f1d12e3fbbd7029f7d1c"
+      },
+      "ga": {
+        "size": 44415,
+        "lines": "eb6179775bac6bba27ada1f8926b86c6ca25dddeea18cfd56fc539944083dd6d"
+      },
+      "gb": {
+        "size": 1063511,
+        "lines": "f194da5f4b3e6fd3ff5b9fe4603d8ca08792e862ef2674470e9539064a92f980"
+      },
+      "gd": {
+        "size": 6194,
+        "lines": "629012e8587cb387602e180abe58a4b0e6cd7e89941e2ff08b221e30b6bbd772"
+      },
+      "ge": {
+        "size": 97902,
+        "lines": "e48e29d16dd8452e47f15ca39554c5a936d0b971271f9dff17bd7c3ddc810599"
+      },
+      "gf": {
+        "size": 11001,
+        "lines": "4d34e4e911e4873cba0c807203c76bf257d3d9f513f1efa3d986155646a0324c"
+      },
+      "gg": {
+        "size": 4088,
+        "lines": "58e073f492c1e37246f8489614fd3c61f683b2ee9d0668eb25434de194b116db"
+      },
+      "gh": {
+        "size": 259192,
+        "lines": "cf1f485596ab474295c23e29c194d2609c1ca297e289839770f9571ae19c79e4"
+      },
+      "gi": {
+        "size": 404,
+        "lines": "0494d8b8673a51e58d27cf5e121c1c3e102b7cdb2736c5765962cf336e143a5f"
+      },
+      "gl": {
+        "size": 5894,
+        "lines": "135733eec2f9dd0d57c50cf53b7b1b9c71e7d469c36d2e76fdfdb6dfadf8d81e"
+      },
+      "gm": {
+        "size": 25266,
+        "lines": "4b9543a34858d309459eff8b751516013091585528b1d00c1aab91fc68e9af56"
+      },
+      "gn": {
+        "size": 84495,
+        "lines": "b6ca122dc326c9d3617e40dfda12ada38b14a59e2be43db3cbff2f9fab96bc77"
+      },
+      "gp": {
+        "size": 19686,
+        "lines": "480287da4282f03cf40edad56871358c63309cef372e24b8305a695b5ffc05b1"
+      },
+      "gq": {
+        "size": 30922,
+        "lines": "8b0ab3551127d243efdf1befb6db4eaf6c91d8a0dff67dea8ed54c17e7684013"
+      },
+      "gr": {
+        "size": 312926,
+        "lines": "0273f1c8b4703e6fd59949f098d942cc3755dfad051ddf6e264b7b1d3df3af79"
+      },
+      "gs": {
+        "size": 222,
+        "lines": "d4af751112e3b6e4b23c1b56005d1eeb8de71b45d189a4751969132a7bf97eb7"
+      },
+      "gt": {
+        "size": 365332,
+        "lines": "dccf6a776ae008c5c4b40f00a2ca481588e77202448cd07c6c474d3ef17a45f9"
+      },
+      "gu": {
+        "size": 3245,
+        "lines": "f266af2f2178ce2b9e6b2dacb418cbd0ceb95f946a6807755e7710391799c6b0"
+      },
+      "gw": {
+        "size": 41060,
+        "lines": "38348ba194fa8feb8941c7465db652d239fe3cfa5a7c9792d19fe430673ccb69"
+      },
+      "gy": {
+        "size": 26567,
+        "lines": "d4147d3dbc63b9d539c6831137d89a8efdfa896c960d7913d051d8181a58333e"
+      },
+      "hk": {
+        "size": 27842,
+        "lines": "7416b1cb883797d120eedb12f2c70f06f8168ed4fc03ea7d37a7edab52e6164d"
+      },
+      "hm": {
+        "size": 89,
+        "lines": "01d239c8fff5091fbdf4381639180414ea0354bf83372bc5fed2bbbbcf17f499"
+      },
+      "hn": {
+        "size": 173392,
+        "lines": "99d449a41b3c690091cd1d1c5b3a98116c739ee8c4669c6207933e2789abe311"
+      },
+      "hr": {
+        "size": 280260,
+        "lines": "5069935460974356e97a76a40dc38bc7a830c5e48cbbaeba163552188725143a"
+      },
+      "ht": {
+        "size": 133698,
+        "lines": "fb242b088a2f9a9dc2feacd04f048ca664836155cdff0a27f55b3161f4b42876"
+      },
+      "hu": {
+        "size": 251750,
+        "lines": "8f68aaf94b0e1aaff9ebcd376871789c1a931dc82ad63f26b143813e5e88d127"
+      },
+      "id": {
+        "size": 3990810,
+        "lines": "19bb3731a7fd5ee41325786f7b709c30d692db5f4f2783a80feb9000c1d64487"
+      },
+      "ie": {
+        "size": 202251,
+        "lines": "15b973da10b872e569257cc3c894f3d115b41a0623a78f3fe569b34cad90ec7e"
+      },
+      "il": {
+        "size": 40647,
+        "lines": "e116bf5985d156d0114a4116b71fcb3b4fa9667452a758e9776b414e46f58b7d"
+      },
+      "im": {
+        "size": 2107,
+        "lines": "45a2977435d0b5b0c07af2d95a0df9844b11533e024a1402a2c69dd164c0d50a"
+      },
+      "in": {
+        "size": 8559506,
+        "lines": "773fea635d66e243f760bb37097f7bbe3f4217326559ba0e0f0f11b9cc0c4919"
+      },
+      "io": {
+        "size": 195,
+        "lines": "4caac506ec3f068a17c41d8abd3715398df7d95d7c32b13da490e1075ca28d3c"
+      },
+      "iq": {
+        "size": 450064,
+        "lines": "c0724843a29114e641a35cfbb2aa42b53454cd1ac28cd9e5d26badd20d2e4112"
+      },
+      "ir": {
+        "size": 2043386,
+        "lines": "2b3e45731640124b092a7b9721c8b308c347baa2ec26ef3a75f3a0fb59e02fed"
+      },
+      "is": {
+        "size": 79008,
+        "lines": "d3346e4ccbf0a3bcb45f69e5baf7c6c76fe7ef27563a6f31b4e54b09192dd72d"
+      },
+      "it": {
+        "size": 1417596,
+        "lines": "06111b24442edcc864db9885c8539262e09b353895c7fe364667a76b240553ff"
+      },
+      "je": {
+        "size": 1831,
+        "lines": "c4cad87f15132581944c9d70d8588880ed4799a03251272a09ff60292356a87d"
+      },
+      "jm": {
+        "size": 77096,
+        "lines": "fe95a185ee7c37cd4b387fae6bb9a4d3e7865507cc20891737e14c038c4c253a"
+      },
+      "jo": {
+        "size": 40810,
+        "lines": "188dc9628007f3c0332d016f2997576bdffa8a3e49b66331c38cb90915af0734"
+      },
+      "jp": {
+        "size": 2619419,
+        "lines": "0b2f292c3a04884b4c4fabb0999736ab3edecbbc6093af275d09d959da20863e"
+      },
+      "ke": {
+        "size": 125329,
+        "lines": "534db5769d0b90c6303372c6cf227ad545eed203754999f7db9f424d384bfa8d"
+      },
+      "kg": {
+        "size": 50289,
+        "lines": "b8428737925d1e40f3cf2f4cd201f63f6d6e84015e747efce43b35f9c1ff9955"
+      },
+      "kh": {
+        "size": 239026,
+        "lines": "e28c6d3d301d422cf50ae9ae0442545bab147176aa34d2d2b24a1a6103fb4003"
+      },
+      "ki": {
+        "size": 4837,
+        "lines": "ee86db2fafdfd1af89b1b0c08feaf2a8b850af013b19180b691d90f2424d1e2f"
+      },
+      "km": {
+        "size": 6337,
+        "lines": "ede5d042f0afe5481629ddf0fe9329ffc34053a728ad00181484e7cfe25e60fc"
+      },
+      "kn": {
+        "size": 5859,
+        "lines": "6ae1c66a95e171ea58af22b5c29f4d2b3e45d105833daecf776636af787012e3"
+      },
+      "kp": {
+        "size": 609363,
+        "lines": "5e866c2cdfd22e352ff45f383a598ba4c6822df77278b03c3dd9de1bbfa19609"
+      },
+      "kr": {
+        "size": 1377316,
+        "lines": "36406ee20212000affdcf0180dd12a37bc1847087635103d34dd83bbf3656033"
+      },
+      "kw": {
+        "size": 5106,
+        "lines": "43658495c862755f867f982cf95e0ef28a6cd93ded825bf99df7ee45b8954ca5"
+      },
+      "ky": {
+        "size": 1727,
+        "lines": "609b5ee644b42d0fdc1aaa8db1b3e21c1f3250dc41695fb9825cd8d3732fe845"
+      },
+      "kz": {
+        "size": 400840,
+        "lines": "56b3a220003c1f4c704e8f2d0154421b737d07ed7f285fb1341eb3068c1ed80d"
+      },
+      "la": {
+        "size": 178515,
+        "lines": "25a3b29c3b11f977c89be61fedd67dbf8daca585ea00e507760345be14b8beb7"
+      },
+      "lb": {
+        "size": 74990,
+        "lines": "8ed7083093f5c21ac67d1796f7d5ec7624d20bea6e87cec49e99de7010bd04c2"
+      },
+      "lc": {
+        "size": 13989,
+        "lines": "40be943ecb415ae124c17cb3c6d35ca31ac044e571f95037681a78962db96093"
+      },
+      "li": {
+        "size": 5132,
+        "lines": "969a4abd341ff0c8800df545e3709c7a5b334d059e7ad87c0ca73ede2a9122a5"
+      },
+      "lk": {
+        "size": 355988,
+        "lines": "c00698e5cec51188470bed86cf5d94491a25c6c1a3b3d8a21c43de022f04f200"
+      },
+      "lr": {
+        "size": 102419,
+        "lines": "a4ba335b5b2898ed2bde9e7e47b73ed05d4fe13f8f074d1a8e1632d70b1a2525"
+      },
+      "ls": {
+        "size": 13234,
+        "lines": "c766c533cf50b35fcd6c1f4256fdc1b9d274ce70c26bdb10c118e807fb74898e"
+      },
+      "lt": {
+        "size": 510646,
+        "lines": "b7dc3e860b17598060c26841251aa199889d038704ef4267ccfccb33aebea2b0"
+      },
+      "lu": {
+        "size": 61222,
+        "lines": "6039e6088b1054a13881e503092e52ba2bb0a6509804b4fc168f1ebbd70960cc"
+      },
+      "lv": {
+        "size": 260852,
+        "lines": "d900038d7cf52776c026b98f6fd4fc8c588a8647356d3408ed7b10ab92e26d9d"
+      },
+      "ly": {
+        "size": 22290,
+        "lines": "e99eb5013194776d094573ccede1aa0ba29cf00e33773a72e74562c63d695c9a"
+      },
+      "ma": {
+        "size": 826112,
+        "lines": "3f3e1724257393e2dc0b3b2080e6bf82d1c534f42d0980f5819341ce67e29ac7"
+      },
+      "mc": {
+        "size": 741,
+        "lines": "37337127104b34131e0e54f43d1baff23bf0c9be93cce793a13fc3377334bc33"
+      },
+      "md": {
+        "size": 65840,
+        "lines": "4ba515cfd747a9babb4171ee9c87703d1dbeb844d86a7ad123abe05e5a5fdaeb"
+      },
+      "me": {
+        "size": 54729,
+        "lines": "d4062e446a6620e43efb6512810a6aa3569282a4003eec8043b291fecac8c5c4"
+      },
+      "mf": {
+        "size": 1007,
+        "lines": "81bdfa40e619197bfab7e910a581eba5c361ba347a910e50d58d79008c5c9089"
+      },
+      "mg": {
+        "size": 267012,
+        "lines": "94fa4d510e0e0b7720bd36d99c342bebbfc213503a1c9e5e856216a4bf90b4ac"
+      },
+      "mh": {
+        "size": 2862,
+        "lines": "c15111c533f0b82ac458e702848f0a14f53f7e0f30a1e9a86a03590acdb4cfcb"
+      },
+      "mk": {
+        "size": 52885,
+        "lines": "ccc289b4a363ff0643123d3a763d3e7cf8cd041d326bfa1565934433fcf5faaf"
+      },
+      "ml": {
+        "size": 214232,
+        "lines": "b1091f35c4652a43afffe047b3e60de1ceb2c4a1fabda67cd6f7f3f608925bfd"
+      },
+      "mm": {
+        "size": 732514,
+        "lines": "6e3c94a7e03d435c5e264817e7e3f0aa1d0f2c3d4f9871ad0701dd3598375cdb"
+      },
+      "mn": {
+        "size": 44050,
+        "lines": "5a4a920e95073cb405832775d666b3a4b7b0fff263d50600b76b3625cd00367c"
+      },
+      "mo": {
+        "size": 803,
+        "lines": "f7e7af64ff5ef5853d0dbe7bd84dd431bdc809f573b58809afc86c39c61b487c"
+      },
+      "mp": {
+        "size": 1464,
+        "lines": "2e5c34cbed3fbf040df13ad3acfde22ca054f4c1a3e73d3ab04f4e278becfba9"
+      },
+      "mq": {
+        "size": 20395,
+        "lines": "4a6eb88f95fa1345a41a23ab2120812637679e3e8a9efed3ad176aa8294acaef"
+      },
+      "mr": {
+        "size": 139012,
+        "lines": "4858cad73b1c092e4b13d855b34fc16f24b8a3ca0cc94db9595637eb3837054b"
+      },
+      "ms": {
+        "size": 1673,
+        "lines": "f44bda9609e7f2f067b72443c11dc3d37317d843b1bea5e19012fc076a2f1308"
+      },
+      "mt": {
+        "size": 8991,
+        "lines": "30bb2cc99a6ec1da836a24dfba9cdbeb11ef8f4f0fd690ac7e4f1b65d2eb3edd"
+      },
+      "mu": {
+        "size": 10030,
+        "lines": "f342fcc4eb023f3d5d8f339d4ef9ee45b85faa1d7387f201ca3b1fd64fa8caba"
+      },
+      "mv": {
+        "size": 3026,
+        "lines": "8e56db750fba41e522252efc2a6e1281c416f3172cceb21619c5128f72db030d"
+      },
+      "mw": {
+        "size": 113180,
+        "lines": "536244fa33ef5b6ae6dcbb1bb00dddbcbc45ab6caa787b90dfe9d694e59e39c7"
+      },
+      "mx": {
+        "size": 6748212,
+        "lines": "0cc48b7a25b2eed969082691e0827d30cf8ef59fb346cfadb8654ff152c7fbfe"
+      },
+      "my": {
+        "size": 382687,
+        "lines": "f3a32f7904760f1f7d5b7b8f315d4e0f16a04d824c4ec5acdd1ffe13c0f61ad1"
+      },
+      "mz": {
+        "size": 272401,
+        "lines": "9ee3ee5b5177298cbc80f29a32aa15063dff9584511f89a28b9b6df68490b58b"
+      },
+      "na": {
+        "size": 117370,
+        "lines": "ea490dcf06b170173dfadbdf1b95a4f3d2f39c2abc1220c56846dcd90ee31a4c"
+      },
+      "nc": {
+        "size": 11976,
+        "lines": "558e06a0fb0daaca30d7efd5f1749b159c3f7b4688092eb62031ad145f2cdbc1"
+      },
+      "ne": {
+        "size": 179892,
+        "lines": "ff045449a300cbfa26609f5ca169026fb14893493500fb2a78bc482f6e108dbc"
+      },
+      "nf": {
+        "size": 183,
+        "lines": "9a73277a0a179fcff1ec019c5a29e25f33670e51451a71f3f69a8afb6e551fbc"
+      },
+      "ng": {
+        "size": 840073,
+        "lines": "777b36a4471e6e7ffc73ec8120adf2560edffba7c11ad58dcc6e8fe00d97ce78"
+      },
+      "ni": {
+        "size": 53057,
+        "lines": "bd7a482ccdc38b4a928f00f6173e3628672566689d0924d8e5a3aaf6bfe1fb6a"
+      },
+      "nl": {
+        "size": 212495,
+        "lines": "e490e662555c6d87a646a4ff2f89049a47c56d5671429d0eb8b209afe5537560"
+      },
+      "no": {
+        "size": 1893216,
+        "lines": "7e350166086e5b0f46f34688fbfc108f7fe558e5355604ff363622e90d322d1d"
+      },
+      "np": {
+        "size": 1007023,
+        "lines": "b7cab052d05c3dfa095fd0748a855b395385eb1af628a8592ef6b9c9b99b3bc2"
+      },
+      "nr": {
+        "size": 902,
+        "lines": "97901a039b3da6ef87a1bce2acb135ded3be944d7955317f00e4100214211e36"
+      },
+      "nu": {
+        "size": 773,
+        "lines": "e0430f2ea68338de76022b1a62943808108fbbbe2f04fd6cdc3776d6c5dd835a"
+      },
+      "nz": {
+        "size": 70975,
+        "lines": "d4a3c1f407556a24f69af981fd1935bb45457aa78f16253e22486c7987e8237b"
+      },
+      "om": {
+        "size": 112479,
+        "lines": "ae854e9d3499e8ebe5170b9b77273730169c415917b187621610034c4f68839d"
+      },
+      "pa": {
+        "size": 226071,
+        "lines": "bd47e423b22ebff1c6a593dd7b40736480f9eee2256dd79821d00e0ed80c1e29"
+      },
+      "pe": {
+        "size": 1699195,
+        "lines": "ea68dbefaed5470e068591b15c0583934cbc1a2d132eb7f63b78933a4ed9529d"
+      },
+      "pf": {
+        "size": 10388,
+        "lines": "702a9c9cb9f280a97cbff3123c1f83aedf32d2af3946dc892e9ebf2fa268bfe5"
+      },
+      "pg": {
+        "size": 157808,
+        "lines": "a3f9072906bdfea445642917f5358e0c5a2b275749bca52efe6c3aad65b0ace6"
+      },
+      "ph": {
+        "size": 672710,
+        "lines": "785625768c38914e39bc54287a6b7f4f7409ce0901246c93a10302f1a9109d7b"
+      },
+      "pk": {
+        "size": 2314710,
+        "lines": "d297c14800c3980beeeb41ea0ae9cba1fa4c94c4e575acfbc2e326b2ee0a7370"
+      },
+      "pl": {
+        "size": 1719721,
+        "lines": "6546a2df87fae8e6dd836a929ee30c159f0489ccdda19cd8bd104f6ac6bdbaf6"
+      },
+      "pm": {
+        "size": 473,
+        "lines": "cb67f6ad7d838b5e7130e27a95316867a0f085a47747b62c12cb76a0f0fd8182"
+      },
+      "pn": {
+        "size": 135,
+        "lines": "6e9660611b7fa7a877e9f0f0719c8e67fe52d1f7c43f6988975299fd5d743b26"
+      },
+      "pr": {
+        "size": 60709,
+        "lines": "446715127cc35c3fcfed27e303921e9b96eff0d0d3c05923f2fcc9259fe55e4d"
+      },
+      "ps": {
+        "size": 30639,
+        "lines": "fe0e51ef41357a3a27bcf62dc57f2f05f495209c083d8941a980973d7992d34c"
+      },
+      "pt": {
+        "size": 1266059,
+        "lines": "d639c6d83eb30314b5a0bb34f3ee8d083402f1b5c7d6757adbaa38fbe194fdac"
+      },
+      "pw": {
+        "size": 2704,
+        "lines": "bf94d81ae128a90b1b1af7be0756a15bdcb0f2d2235ba752774d51c226d8c57e"
+      },
+      "py": {
+        "size": 210932,
+        "lines": "206feb128f8b18ff6b1f5cdbaca7adbc8302a20434dce0132ca099d81dd34cce"
+      },
+      "qa": {
+        "size": 11465,
+        "lines": "cfebbe31d0882e52d564c356e9719498fd0f25799afcf428b882d18189954084"
+      },
+      "re": {
+        "size": 12110,
+        "lines": "447aa5281563982f180e4865f3ed6147812b3eef4c1fad78b1c4f1dffa9b1411"
+      },
+      "ro": {
+        "size": 704185,
+        "lines": "6614606d23cc145110ad83907c75a9fa25e94ddc055bd3b12b5dca0e3a3f92a1"
+      },
+      "rs": {
+        "size": 171969,
+        "lines": "3f81577a90338b390dc99c8560d2e894d60d39e021e14aa3b38f860054f7294e"
+      },
+      "ru": {
+        "size": 3827297,
+        "lines": "fee12eb3380f231fcff5df54dfa01b7be4038c15d1fa69167902274de7262871"
+      },
+      "rw": {
+        "size": 125091,
+        "lines": "35e4a3de13ac7cd9974db6c464d6d07093815815d13eb682eae7c64701f4cb8f"
+      },
+      "sa": {
+        "size": 107283,
+        "lines": "cd2cb7b8258059a31500ecd5d0f2262dadad4389998b14ab4308ff7b115d4aef"
+      },
+      "sb": {
+        "size": 42807,
+        "lines": "919920d2909b2d1ebeaf991bc9944942a0c6fe6f06ee5dbf9968214e5dfd8767"
+      },
+      "sc": {
+        "size": 2301,
+        "lines": "a85506e8cd3f6e261a33e77821a8158346d449bbf19ebfaf0cfaf83aff3af8ce"
+      },
+      "sd": {
+        "size": 119295,
+        "lines": "46711227152690c8350eeec327038f1c45fd5766a9a98af62e583dcfbc079722"
+      },
+      "se": {
+        "size": 680662,
+        "lines": "4adf9db096e1dc30a19109edd38e0b8fbf3cb14c9e8e056ae96558ecbeb3f18e"
+      },
+      "sg": {
+        "size": 718722,
+        "lines": "6227e9645e477d0e459ec90eb938cd733bd0053c4d74d848f3e59d2f905108ee"
+      },
+      "sh": {
+        "size": 1418,
+        "lines": "abf5a40e7dcca42560cdb960ee04228aafb6b6e3719b8060067be0f2ea0c52af"
+      },
+      "si": {
+        "size": 144724,
+        "lines": "84f3e3f3f7f4d370fd1cf0346a7cc6cfce1ad3508d46a6ca583a02634f5eedb7"
+      },
+      "sj": {
+        "size": 851,
+        "lines": "7421a6cf262858f71f08bb728c5f5733935ba6c16466dd34354564f9ce128e1c"
+      },
+      "sk": {
+        "size": 210449,
+        "lines": "4930bb207326c06d5d954f5fa34f14b9c5afe5511965f370cee3b44a8bdb52f7"
+      },
+      "sl": {
+        "size": 150284,
+        "lines": "bb78b2a06a513e8fed7f2a5345ff9bc0059e7b1beb49d640e3ab6e28a6544533"
+      },
+      "sm": {
+        "size": 1150,
+        "lines": "d28847a8e2eaec87d81dcee41c2e675e2aab0103d71e33759f62e30feca5e83e"
+      },
+      "sn": {
+        "size": 178638,
+        "lines": "a9ab55ecd501836186b83fb8fb06033a34af3deaf243e2351299514cc1d896f7"
+      },
+      "so": {
+        "size": 70231,
+        "lines": "a90b75168d2381ce6082c665edc779857a1807c4c691d822a2f588d189144171"
+      },
+      "sr": {
+        "size": 12041,
+        "lines": "1b14d4c0eca675bcca8be8567e34231913bfd4d9aa33a39daf658a8e9c4ca8c3"
+      },
+      "ss": {
+        "size": 69035,
+        "lines": "208716f1f71637de73871b65ed0382d6f252d244ef4dfba7df28923af96b0028"
+      },
+      "st": {
+        "size": 8705,
+        "lines": "e2d41a17548629ffc17a270e9fd3f6e249c48863c8ab2c913b850375692e3661"
+      },
+      "sv": {
+        "size": 72476,
+        "lines": "90392f31bd3cc8964360b4968a6774b458c09f122ac1e2c4473c3f579749fa05"
+      },
+      "sx": {
+        "size": 1033,
+        "lines": "e127bd76510d6998c6f394c58be871222a2ff5285b7c1887d1d25f2da70cf664"
+      },
+      "sy": {
+        "size": 253710,
+        "lines": "39b9bafc3b91d31158f56de3a3d3e47176197c15cbe31c3cccbf8ad4a79a5bdb"
+      },
+      "sz": {
+        "size": 10879,
+        "lines": "06018102195676e730c05bb3291712e72459722b4325307b2123d347a6104bee"
+      },
+      "tc": {
+        "size": 834,
+        "lines": "ce2081e8a2e8f9b9a5b1b04c829374d93c74d624ac35e06818a340e8f63620c8"
+      },
+      "td": {
+        "size": 160159,
+        "lines": "bc0043d44ac166436fee18f4ccd05432f06e4708fe3f544dbf4c0d152b3ded2b"
+      },
+      "tf": {
+        "size": 517,
+        "lines": "6c6fa05aa7d8ddb19d8d1bc7fc84e0bf4ed1f8073586a123aa5e8b5dc4f3a4ba"
+      },
+      "tg": {
+        "size": 44051,
+        "lines": "709373f8ab86fd9e7bcc6f2d6a0742c0692062815e480e655f6903512c650e7f"
+      },
+      "th": {
+        "size": 1757757,
+        "lines": "af4d3f9b204363d5dc3da5655a4307377e34e12383e08b521c4b3a880590d46b"
+      },
+      "tj": {
+        "size": 51677,
+        "lines": "6364b364c19339e733589c683b5e2b5ea8481578fe096a8189f293fec139ca4e"
+      },
+      "tk": {
+        "size": 367,
+        "lines": "af7e60e71047238a27bde2fdc8a2a30c82d25b3b6d2e75273a3934b4c81452b6"
+      },
+      "tl": {
+        "size": 48487,
+        "lines": "006b0694260b76e7ca1f19c7f1b087ebf23edecea2f726edcb474d8c876934ae"
+      },
+      "tm": {
+        "size": 30343,
+        "lines": "c53f4987432c8ece4de7c804e190ec3f274c177e68f741c82877a2aa7a8dfb21"
+      },
+      "tn": {
+        "size": 102404,
+        "lines": "6411155fbb4330566b9491bdb5e4f8cec0119755c5e5ed3cfa062e32ebdb65cf"
+      },
+      "to": {
+        "size": 3373,
+        "lines": "801f4876c3a030322c856e87aa24189bf4fb40ce3c6f5a0830983566c96e5e77"
+      },
+      "tr": {
+        "size": 1544264,
+        "lines": "f29b2d2b26181bbd272592fcd01a9fd594709b568de608ba085e96bf18031bc0"
+      },
+      "tt": {
+        "size": 9237,
+        "lines": "1b248acc6d682ce9581a11f226c20bbe346df6741d4455f660de7df3ae740c1d"
+      },
+      "tv": {
+        "size": 1055,
+        "lines": "2c6c745d92c1a82b5939f6f45c17db8ecbe6c7eb2e467c5dfdd6c1ca30ab6712"
+      },
+      "tw": {
+        "size": 306789,
+        "lines": "5161214f9474a0a52f23e486c497f1b0cd9b6e814864a075a64277fed3a631a2"
+      },
+      "tz": {
+        "size": 143560,
+        "lines": "86ac560fa3046bdc77a77992f4d1421e036bbd6224a9dd90c2afcbab49f149b6"
+      },
+      "ua": {
+        "size": 1142850,
+        "lines": "6a6968bcafbf5bf20999940c0493bb21b3952337ea6b4cada4d0a011119c120b"
+      },
+      "ug": {
+        "size": 160466,
+        "lines": "ed4f5a64353ddec266cb71d9671db1933de6b1032fbf22483709518d426c272b"
+      },
+      "um": {
+        "size": 620,
+        "lines": "619dd63d3060474a9495c88764a934b042e9ed292669371fd7a18c5d2e16b384"
+      },
+      "us": {
+        "size": 5184521,
+        "lines": "d1861ce9568606663ff3416d47b593df3a78edf3742c1cf65d00a9036b63f42e"
+      },
+      "uy": {
+        "size": 45176,
+        "lines": "581a93fe05bf03b7eb69dd64caeedb6b1a74158afb937725c6430a1f65b3b531"
+      },
+      "uz": {
+        "size": 127845,
+        "lines": "b6ad7852a3df073bcee83533351d772ea1c6b6f5bbe7ca8803a314eb6a44b7f1"
+      },
+      "va": {
+        "size": 112,
+        "lines": "9fc1fbc97d32287042cacb451249347fb210a5e082b050ed9ccd04c0f2173da1"
+      },
+      "vc": {
+        "size": 3155,
+        "lines": "7f3d06cd94d70909c942de463e7f00c1143b80dfef4112be4935f8ac309a305f"
+      },
+      "ve": {
+        "size": 497303,
+        "lines": "2a30b6ecf0896bec08bbf0c35bb422f113f556c8ab425cf7108681f01c9878a9"
+      },
+      "vg": {
+        "size": 1930,
+        "lines": "87de347fd4cef2a5102236731fa76711b62753f1aa7b4279fe48fac7dd053df0"
+      },
+      "vi": {
+        "size": 5052,
+        "lines": "44e348f3faf968d65f59d2c49e612dd55cf051108338b892defc2ba2c8dac329"
+      },
+      "vn": {
+        "size": 724876,
+        "lines": "958b39e8446fa735b88bb137fd4321318ae206124e49fc0b380b6627ba769444"
+      },
+      "vu": {
+        "size": 22980,
+        "lines": "c12c227623d0b82ad4f66745bdbae52ae210aa674f8f87bbfea623b90dce79bd"
+      },
+      "wf": {
+        "size": 2055,
+        "lines": "d9fa305d679597c8b6a2eadbdf124bf38e6b406c5e1e1d4b953fdf83147dba41"
+      },
+      "ws": {
+        "size": 6579,
+        "lines": "487dc4d30bb2ad7e6ec5c55043b252b7b935cd5d6f7215af9e8c5aa6963b9d62"
+      },
+      "xk": {
+        "size": 49169,
+        "lines": "2efcc8c290466957543ec111aba5453e453651e2d984e1c815aba89329186881"
+      },
+      "ye": {
+        "size": 1277932,
+        "lines": "201641fc30837031603bf354166286915c06a78e874481fa319679f6764aa306"
+      },
+      "yt": {
+        "size": 3232,
+        "lines": "61e317d74681affacc5b584805556f3e4439d93f4bc97fff5691ddfbecb33a17"
+      },
+      "za": {
+        "size": 903824,
+        "lines": "244afeeb7049e592827e9c9ca300f2d3b989faeb122fdec063221137db68b1a9"
+      },
+      "zm": {
+        "size": 144082,
+        "lines": "e19fc6f368caf5360b924ddc80abc98c93bfef3eee1bd8215869d3cd8f4f025b"
+      },
+      "zw": {
+        "size": 129561,
+        "lines": "673f783e0631be1376ba2bb6815118d23d67cf27bc20c275f0c96fcece1d16b6"
+      },
+      "world": {
+        "size": 21924946,
+        "lines": "0515a33c35ea179bfbe72585f7125c514c5fa20948696a75dbb42e70a755d174"
+      }
+    }
+  },
+  "countries": [
+    {
+      "key": "ad",
+      "title": "Andorra",
+      "continent": "Europe"
+    },
+    {
+      "key": "ae",
+      "title": "United Arab Emirates",
+      "continent": "Asia"
+    },
+    {
+      "key": "af",
+      "title": "Afghanistan",
+      "continent": "Asia"
+    },
+    {
+      "key": "ag",
+      "title": "Antigua and Barbuda",
+      "continent": "North America"
+    },
+    {
+      "key": "ai",
+      "title": "Anguilla",
+      "continent": "North America"
+    },
+    {
+      "key": "al",
+      "title": "Albania",
+      "continent": "Europe"
+    },
+    {
+      "key": "am",
+      "title": "Armenia",
+      "continent": "Asia"
+    },
+    {
+      "key": "ao",
+      "title": "Angola",
+      "continent": "Africa"
+    },
+    {
+      "key": "aq",
+      "title": "Antarctica",
+      "continent": "Antarctica"
+    },
+    {
+      "key": "ar",
+      "title": "Argentina",
+      "continent": "South America"
+    },
+    {
+      "key": "as",
+      "title": "American Samoa",
+      "continent": "Oceania"
+    },
+    {
+      "key": "at",
+      "title": "Austria",
+      "continent": "Europe"
+    },
+    {
+      "key": "au",
+      "title": "Australia",
+      "continent": "Oceania"
+    },
+    {
+      "key": "aw",
+      "title": "Aruba",
+      "continent": "North America"
+    },
+    {
+      "key": "ax",
+      "title": "Aland Islands",
+      "continent": "Europe"
+    },
+    {
+      "key": "az",
+      "title": "Azerbaijan",
+      "continent": "Asia"
+    },
+    {
+      "key": "ba",
+      "title": "Bosnia and Herzegovina",
+      "continent": "Europe"
+    },
+    {
+      "key": "bb",
+      "title": "Barbados",
+      "continent": "North America"
+    },
+    {
+      "key": "bd",
+      "title": "Bangladesh",
+      "continent": "Asia"
+    },
+    {
+      "key": "be",
+      "title": "Belgium",
+      "continent": "Europe"
+    },
+    {
+      "key": "bf",
+      "title": "Burkina Faso",
+      "continent": "Africa"
+    },
+    {
+      "key": "bg",
+      "title": "Bulgaria",
+      "continent": "Europe"
+    },
+    {
+      "key": "bh",
+      "title": "Bahrain",
+      "continent": "Asia"
+    },
+    {
+      "key": "bi",
+      "title": "Burundi",
+      "continent": "Africa"
+    },
+    {
+      "key": "bj",
+      "title": "Benin",
+      "continent": "Africa"
+    },
+    {
+      "key": "bl",
+      "title": "Saint Barthelemy",
+      "continent": "North America"
+    },
+    {
+      "key": "bm",
+      "title": "Bermuda",
+      "continent": "North America"
+    },
+    {
+      "key": "bn",
+      "title": "Brunei",
+      "continent": "Asia"
+    },
+    {
+      "key": "bo",
+      "title": "Bolivia",
+      "continent": "South America"
+    },
+    {
+      "key": "br",
+      "title": "Brazil",
+      "continent": "South America"
+    },
+    {
+      "key": "bs",
+      "title": "Bahamas",
+      "continent": "North America"
+    },
+    {
+      "key": "bt",
+      "title": "Bhutan",
+      "continent": "Asia"
+    },
+    {
+      "key": "bw",
+      "title": "Botswana",
+      "continent": "Africa"
+    },
+    {
+      "key": "by",
+      "title": "Belarus",
+      "continent": "Europe"
+    },
+    {
+      "key": "bz",
+      "title": "Belize",
+      "continent": "North America"
+    },
+    {
+      "key": "ca",
+      "title": "Canada",
+      "continent": "North America"
+    },
+    {
+      "key": "cd",
+      "title": "Democratic Republic of the Congo",
+      "continent": "Africa"
+    },
+    {
+      "key": "cf",
+      "title": "Central African Republic",
+      "continent": "Africa"
+    },
+    {
+      "key": "cg",
+      "title": "Republic of the Congo",
+      "continent": "Africa"
+    },
+    {
+      "key": "ch",
+      "title": "Switzerland",
+      "continent": "Europe"
+    },
+    {
+      "key": "ci",
+      "title": "Ivory Coast",
+      "continent": "Africa"
+    },
+    {
+      "key": "ck",
+      "title": "Cook Islands",
+      "continent": "Oceania"
+    },
+    {
+      "key": "cl",
+      "title": "Chile",
+      "continent": "South America"
+    },
+    {
+      "key": "cm",
+      "title": "Cameroon",
+      "continent": "Africa"
+    },
+    {
+      "key": "cn",
+      "title": "China",
+      "continent": "Asia"
+    },
+    {
+      "key": "cnm",
+      "title": "Cyprus U.N. Buffer Zone",
+      "continent": "Asia"
+    },
+    {
+      "key": "co",
+      "title": "Colombia",
+      "continent": "South America"
+    },
+    {
+      "key": "cr",
+      "title": "Costa Rica",
+      "continent": "North America"
+    },
+    {
+      "key": "cu",
+      "title": "Cuba",
+      "continent": "North America"
+    },
+    {
+      "key": "cv",
+      "title": "Cabo Verde",
+      "continent": "Africa"
+    },
+    {
+      "key": "cw",
+      "title": "Curacao",
+      "continent": "North America"
+    },
+    {
+      "key": "cy",
+      "title": "Cyprus",
+      "continent": "Asia"
+    },
+    {
+      "key": "cyn",
+      "title": "Northern Cyprus",
+      "continent": "Asia"
+    },
+    {
+      "key": "cz",
+      "title": "Czechia",
+      "continent": "Europe"
+    },
+    {
+      "key": "de",
+      "title": "Germany",
+      "continent": "Europe"
+    },
+    {
+      "key": "dj",
+      "title": "Djibouti",
+      "continent": "Africa"
+    },
+    {
+      "key": "dk",
+      "title": "Denmark",
+      "continent": "Europe"
+    },
+    {
+      "key": "dm",
+      "title": "Dominica",
+      "continent": "North America"
+    },
+    {
+      "key": "do",
+      "title": "Dominican Republic",
+      "continent": "North America"
+    },
+    {
+      "key": "dz",
+      "title": "Algeria",
+      "continent": "Africa"
+    },
+    {
+      "key": "ec",
+      "title": "Ecuador",
+      "continent": "South America"
+    },
+    {
+      "key": "ee",
+      "title": "Estonia",
+      "continent": "Europe"
+    },
+    {
+      "key": "eg",
+      "title": "Egypt",
+      "continent": "Africa"
+    },
+    {
+      "key": "eh",
+      "title": "Western Sahara",
+      "continent": "Africa"
+    },
+    {
+      "key": "er",
+      "title": "Eritrea",
+      "continent": "Africa"
+    },
+    {
+      "key": "es",
+      "title": "Spain",
+      "continent": "Europe"
+    },
+    {
+      "key": "esb",
+      "title": "Dhekelia",
+      "continent": "Asia"
+    },
+    {
+      "key": "et",
+      "title": "Ethiopia",
+      "continent": "Africa"
+    },
+    {
+      "key": "fi",
+      "title": "Finland",
+      "continent": "Europe"
+    },
+    {
+      "key": "fj",
+      "title": "Fiji",
+      "continent": "Oceania"
+    },
+    {
+      "key": "fk",
+      "title": "Falkland Islands",
+      "continent": "South America"
+    },
+    {
+      "key": "fm",
+      "title": "Micronesia",
+      "continent": "Oceania"
+    },
+    {
+      "key": "fo",
+      "title": "Faroe Islands",
+      "continent": "Europe"
+    },
+    {
+      "key": "fr",
+      "title": "France",
+      "continent": "Europe"
+    },
+    {
+      "key": "ga",
+      "title": "Gabon",
+      "continent": "Africa"
+    },
+    {
+      "key": "gb",
+      "title": "United Kingdom",
+      "continent": "Europe"
+    },
+    {
+      "key": "gd",
+      "title": "Grenada",
+      "continent": "North America"
+    },
+    {
+      "key": "ge",
+      "title": "Georgia",
+      "continent": "Asia"
+    },
+    {
+      "key": "gg",
+      "title": "Guernsey",
+      "continent": "Europe"
+    },
+    {
+      "key": "gh",
+      "title": "Ghana",
+      "continent": "Africa"
+    },
+    {
+      "key": "gi",
+      "title": "Gibraltar",
+      "continent": "Europe"
+    },
+    {
+      "key": "gl",
+      "title": "Greenland",
+      "continent": "North America"
+    },
+    {
+      "key": "gm",
+      "title": "Gambia",
+      "continent": "Africa"
+    },
+    {
+      "key": "gn",
+      "title": "Guinea",
+      "continent": "Africa"
+    },
+    {
+      "key": "gq",
+      "title": "Equatorial Guinea",
+      "continent": "Africa"
+    },
+    {
+      "key": "gr",
+      "title": "Greece",
+      "continent": "Europe"
+    },
+    {
+      "key": "gt",
+      "title": "Guatemala",
+      "continent": "North America"
+    },
+    {
+      "key": "gu",
+      "title": "Guam",
+      "continent": "Oceania"
+    },
+    {
+      "key": "gw",
+      "title": "Guinea-Bissau",
+      "continent": "Africa"
+    },
+    {
+      "key": "gy",
+      "title": "Guyana",
+      "continent": "South America"
+    },
+    {
+      "key": "hk",
+      "title": "Hong Kong",
+      "continent": "Asia"
+    },
+    {
+      "key": "hn",
+      "title": "Honduras",
+      "continent": "North America"
+    },
+    {
+      "key": "hr",
+      "title": "Croatia",
+      "continent": "Europe"
+    },
+    {
+      "key": "ht",
+      "title": "Haiti",
+      "continent": "North America"
+    },
+    {
+      "key": "hu",
+      "title": "Hungary",
+      "continent": "Europe"
+    },
+    {
+      "key": "id",
+      "title": "Indonesia",
+      "continent": "Asia"
+    },
+    {
+      "key": "ie",
+      "title": "Ireland",
+      "continent": "Europe"
+    },
+    {
+      "key": "il",
+      "title": "Israel",
+      "continent": "Asia"
+    },
+    {
+      "key": "im",
+      "title": "Isle of Man",
+      "continent": "Europe"
+    },
+    {
+      "key": "in",
+      "title": "India",
+      "continent": "Asia"
+    },
+    {
+      "key": "io",
+      "title": "British Indian Ocean Territory",
+      "continent": "Seven seas (open ocean)"
+    },
+    {
+      "key": "iq",
+      "title": "Iraq",
+      "continent": "Asia"
+    },
+    {
+      "key": "ir",
+      "title": "Iran",
+      "continent": "Asia"
+    },
+    {
+      "key": "is",
+      "title": "Iceland",
+      "continent": "Europe"
+    },
+    {
+      "key": "it",
+      "title": "Italy",
+      "continent": "Europe"
+    },
+    {
+      "key": "je",
+      "title": "Jersey",
+      "continent": "Europe"
+    },
+    {
+      "key": "jm",
+      "title": "Jamaica",
+      "continent": "North America"
+    },
+    {
+      "key": "jo",
+      "title": "Jordan",
+      "continent": "Asia"
+    },
+    {
+      "key": "jp",
+      "title": "Japan",
+      "continent": "Asia"
+    },
+    {
+      "key": "kas",
+      "title": "Siachen Glacier",
+      "continent": "Asia"
+    },
+    {
+      "key": "ke",
+      "title": "Kenya",
+      "continent": "Africa"
+    },
+    {
+      "key": "kg",
+      "title": "Kyrgyzstan",
+      "continent": "Asia"
+    },
+    {
+      "key": "kh",
+      "title": "Cambodia",
+      "continent": "Asia"
+    },
+    {
+      "key": "ki",
+      "title": "Kiribati",
+      "continent": "Oceania"
+    },
+    {
+      "key": "km",
+      "title": "Comoros",
+      "continent": "Africa"
+    },
+    {
+      "key": "kn",
+      "title": "Saint Kitts and Nevis",
+      "continent": "North America"
+    },
+    {
+      "key": "kp",
+      "title": "North Korea",
+      "continent": "Asia"
+    },
+    {
+      "key": "kr",
+      "title": "South Korea",
+      "continent": "Asia"
+    },
+    {
+      "key": "kw",
+      "title": "Kuwait",
+      "continent": "Asia"
+    },
+    {
+      "key": "ky",
+      "title": "Cayman Islands",
+      "continent": "North America"
+    },
+    {
+      "key": "kz",
+      "title": "Kazakhstan",
+      "continent": "Asia"
+    },
+    {
+      "key": "la",
+      "title": "Laos",
+      "continent": "Asia"
+    },
+    {
+      "key": "lb",
+      "title": "Lebanon",
+      "continent": "Asia"
+    },
+    {
+      "key": "lc",
+      "title": "Saint Lucia",
+      "continent": "North America"
+    },
+    {
+      "key": "li",
+      "title": "Liechtenstein",
+      "continent": "Europe"
+    },
+    {
+      "key": "lk",
+      "title": "Sri Lanka",
+      "continent": "Asia"
+    },
+    {
+      "key": "lr",
+      "title": "Liberia",
+      "continent": "Africa"
+    },
+    {
+      "key": "ls",
+      "title": "Lesotho",
+      "continent": "Africa"
+    },
+    {
+      "key": "lt",
+      "title": "Lithuania",
+      "continent": "Europe"
+    },
+    {
+      "key": "lu",
+      "title": "Luxembourg",
+      "continent": "Europe"
+    },
+    {
+      "key": "lv",
+      "title": "Latvia",
+      "continent": "Europe"
+    },
+    {
+      "key": "ly",
+      "title": "Libya",
+      "continent": "Africa"
+    },
+    {
+      "key": "ma",
+      "title": "Morocco",
+      "continent": "Africa"
+    },
+    {
+      "key": "mc",
+      "title": "Monaco",
+      "continent": "Europe"
+    },
+    {
+      "key": "md",
+      "title": "Moldova",
+      "continent": "Europe"
+    },
+    {
+      "key": "me",
+      "title": "Montenegro",
+      "continent": "Europe"
+    },
+    {
+      "key": "mf",
+      "title": "Saint Martin",
+      "continent": "North America"
+    },
+    {
+      "key": "mg",
+      "title": "Madagascar",
+      "continent": "Africa"
+    },
+    {
+      "key": "mh",
+      "title": "Marshall Islands",
+      "continent": "Oceania"
+    },
+    {
+      "key": "mk",
+      "title": "North Macedonia",
+      "continent": "Europe"
+    },
+    {
+      "key": "ml",
+      "title": "Mali",
+      "continent": "Africa"
+    },
+    {
+      "key": "mm",
+      "title": "Myanmar",
+      "continent": "Asia"
+    },
+    {
+      "key": "mn",
+      "title": "Mongolia",
+      "continent": "Asia"
+    },
+    {
+      "key": "mo",
+      "title": "Macao",
+      "continent": "Asia"
+    },
+    {
+      "key": "mp",
+      "title": "Northern Mariana Islands",
+      "continent": "Oceania"
+    },
+    {
+      "key": "mr",
+      "title": "Mauritania",
+      "continent": "Africa"
+    },
+    {
+      "key": "ms",
+      "title": "Montserrat",
+      "continent": "North America"
+    },
+    {
+      "key": "mt",
+      "title": "Malta",
+      "continent": "Europe"
+    },
+    {
+      "key": "mu",
+      "title": "Mauritius",
+      "continent": "Seven seas (open ocean)"
+    },
+    {
+      "key": "mv",
+      "title": "Maldives",
+      "continent": "Seven seas (open ocean)"
+    },
+    {
+      "key": "mw",
+      "title": "Malawi",
+      "continent": "Africa"
+    },
+    {
+      "key": "mx",
+      "title": "Mexico",
+      "continent": "North America"
+    },
+    {
+      "key": "my",
+      "title": "Malaysia",
+      "continent": "Asia"
+    },
+    {
+      "key": "mz",
+      "title": "Mozambique",
+      "continent": "Africa"
+    },
+    {
+      "key": "na",
+      "title": "Namibia",
+      "continent": "Africa"
+    },
+    {
+      "key": "nc",
+      "title": "New Caledonia",
+      "continent": "Oceania"
+    },
+    {
+      "key": "ne",
+      "title": "Niger",
+      "continent": "Africa"
+    },
+    {
+      "key": "nf",
+      "title": "Norfolk Island",
+      "continent": "Oceania"
+    },
+    {
+      "key": "ng",
+      "title": "Nigeria",
+      "continent": "Africa"
+    },
+    {
+      "key": "ni",
+      "title": "Nicaragua",
+      "continent": "North America"
+    },
+    {
+      "key": "nl",
+      "title": "The Netherlands",
+      "continent": "Europe"
+    },
+    {
+      "key": "no",
+      "title": "Norway",
+      "continent": "Europe"
+    },
+    {
+      "key": "np",
+      "title": "Nepal",
+      "continent": "Asia"
+    },
+    {
+      "key": "nr",
+      "title": "Nauru",
+      "continent": "Oceania"
+    },
+    {
+      "key": "nu",
+      "title": "Niue",
+      "continent": "Oceania"
+    },
+    {
+      "key": "nz",
+      "title": "New Zealand",
+      "continent": "Oceania"
+    },
+    {
+      "key": "om",
+      "title": "Oman",
+      "continent": "Asia"
+    },
+    {
+      "key": "pa",
+      "title": "Panama",
+      "continent": "North America"
+    },
+    {
+      "key": "pe",
+      "title": "Peru",
+      "continent": "South America"
+    },
+    {
+      "key": "pf",
+      "title": "French Polynesia",
+      "continent": "Oceania"
+    },
+    {
+      "key": "pg",
+      "title": "Papua New Guinea",
+      "continent": "Oceania"
+    },
+    {
+      "key": "ph",
+      "title": "Philippines",
+      "continent": "Asia"
+    },
+    {
+      "key": "pk",
+      "title": "Pakistan",
+      "continent": "Asia"
+    },
+    {
+      "key": "pl",
+      "title": "Poland",
+      "continent": "Europe"
+    },
+    {
+      "key": "pm",
+      "title": "Saint Pierre and Miquelon",
+      "continent": "North America"
+    },
+    {
+      "key": "pr",
+      "title": "Puerto Rico",
+      "continent": "North America"
+    },
+    {
+      "key": "ps",
+      "title": "Palestinian Territory",
+      "continent": "Asia"
+    },
+    {
+      "key": "pt",
+      "title": "Portugal",
+      "continent": "Europe"
+    },
+    {
+      "key": "pw",
+      "title": "Palau",
+      "continent": "Oceania"
+    },
+    {
+      "key": "py",
+      "title": "Paraguay",
+      "continent": "South America"
+    },
+    {
+      "key": "qa",
+      "title": "Qatar",
+      "continent": "Asia"
+    },
+    {
+      "key": "ro",
+      "title": "Romania",
+      "continent": "Europe"
+    },
+    {
+      "key": "rs",
+      "title": "Serbia",
+      "continent": "Europe"
+    },
+    {
+      "key": "ru",
+      "title": "Russia",
+      "continent": "Europe"
+    },
+    {
+      "key": "rw",
+      "title": "Rwanda",
+      "continent": "Africa"
+    },
+    {
+      "key": "sa",
+      "title": "Saudi Arabia",
+      "continent": "Asia"
+    },
+    {
+      "key": "sb",
+      "title": "Solomon Islands",
+      "continent": "Oceania"
+    },
+    {
+      "key": "sc",
+      "title": "Seychelles",
+      "continent": "Seven seas (open ocean)"
+    },
+    {
+      "key": "sd",
+      "title": "Sudan",
+      "continent": "Africa"
+    },
+    {
+      "key": "se",
+      "title": "Sweden",
+      "continent": "Europe"
+    },
+    {
+      "key": "sg",
+      "title": "Singapore",
+      "continent": "Asia"
+    },
+    {
+      "key": "sh",
+      "title": "Saint Helena",
+      "continent": "Seven seas (open ocean)"
+    },
+    {
+      "key": "si",
+      "title": "Slovenia",
+      "continent": "Europe"
+    },
+    {
+      "key": "sk",
+      "title": "Slovakia",
+      "continent": "Europe"
+    },
+    {
+      "key": "sl",
+      "title": "Sierra Leone",
+      "continent": "Africa"
+    },
+    {
+      "key": "sm",
+      "title": "San Marino",
+      "continent": "Europe"
+    },
+    {
+      "key": "sn",
+      "title": "Senegal",
+      "continent": "Africa"
+    },
+    {
+      "key": "so",
+      "title": "Somalia",
+      "continent": "Africa"
+    },
+    {
+      "key": "sol",
+      "title": "Somaliland",
+      "continent": "Africa"
+    },
+    {
+      "key": "sr",
+      "title": "Suriname",
+      "continent": "South America"
+    },
+    {
+      "key": "ss",
+      "title": "South Sudan",
+      "continent": "Africa"
+    },
+    {
+      "key": "st",
+      "title": "Sao Tome and Principe",
+      "continent": "Africa"
+    },
+    {
+      "key": "sv",
+      "title": "El Salvador",
+      "continent": "North America"
+    },
+    {
+      "key": "sx",
+      "title": "Sint Maarten",
+      "continent": "North America"
+    },
+    {
+      "key": "sy",
+      "title": "Syria",
+      "continent": "Asia"
+    },
+    {
+      "key": "sz",
+      "title": "Eswatini",
+      "continent": "Africa"
+    },
+    {
+      "key": "tc",
+      "title": "Turks and Caicos Islands",
+      "continent": "North America"
+    },
+    {
+      "key": "td",
+      "title": "Chad",
+      "continent": "Africa"
+    },
+    {
+      "key": "tg",
+      "title": "Togo",
+      "continent": "Africa"
+    },
+    {
+      "key": "th",
+      "title": "Thailand",
+      "continent": "Asia"
+    },
+    {
+      "key": "tj",
+      "title": "Tajikistan",
+      "continent": "Asia"
+    },
+    {
+      "key": "tl",
+      "title": "Timor Leste",
+      "continent": "Asia"
+    },
+    {
+      "key": "tm",
+      "title": "Turkmenistan",
+      "continent": "Asia"
+    },
+    {
+      "key": "tn",
+      "title": "Tunisia",
+      "continent": "Africa"
+    },
+    {
+      "key": "to",
+      "title": "Tonga",
+      "continent": "Oceania"
+    },
+    {
+      "key": "tr",
+      "title": "Turkey",
+      "continent": "Asia"
+    },
+    {
+      "key": "tt",
+      "title": "Trinidad and Tobago",
+      "continent": "North America"
+    },
+    {
+      "key": "tv",
+      "title": "Tuvalu",
+      "continent": "Oceania"
+    },
+    {
+      "key": "tw",
+      "title": "Taiwan",
+      "continent": "Asia"
+    },
+    {
+      "key": "tz",
+      "title": "Tanzania",
+      "continent": "Africa"
+    },
+    {
+      "key": "ua",
+      "title": "Ukraine",
+      "continent": "Europe"
+    },
+    {
+      "key": "ug",
+      "title": "Uganda",
+      "continent": "Africa"
+    },
+    {
+      "key": "us",
+      "title": "United States",
+      "continent": "North America"
+    },
+    {
+      "key": "usg",
+      "title": "US Naval Base Guantanamo Bay",
+      "continent": "North America"
+    },
+    {
+      "key": "uy",
+      "title": "Uruguay",
+      "continent": "South America"
+    },
+    {
+      "key": "uz",
+      "title": "Uzbekistan",
+      "continent": "Asia"
+    },
+    {
+      "key": "vc",
+      "title": "Saint Vincent and the Grenadines",
+      "continent": "North America"
+    },
+    {
+      "key": "ve",
+      "title": "Venezuela",
+      "continent": "South America"
+    },
+    {
+      "key": "vg",
+      "title": "British Virgin Islands",
+      "continent": "North America"
+    },
+    {
+      "key": "vi",
+      "title": "U.S. Virgin Islands",
+      "continent": "North America"
+    },
+    {
+      "key": "vn",
+      "title": "Vietnam",
+      "continent": "Asia"
+    },
+    {
+      "key": "vu",
+      "title": "Vanuatu",
+      "continent": "Oceania"
+    },
+    {
+      "key": "wf",
+      "title": "Wallis and Futuna",
+      "continent": "Oceania"
+    },
+    {
+      "key": "ws",
+      "title": "Samoa",
+      "continent": "Oceania"
+    },
+    {
+      "key": "wsb",
+      "title": "Akrotiri",
+      "continent": "Asia"
+    },
+    {
+      "key": "xk",
+      "title": "Kosovo",
+      "continent": "Europe"
+    },
+    {
+      "key": "ye",
+      "title": "Yemen",
+      "continent": "Asia"
+    },
+    {
+      "key": "za",
+      "title": "South Africa",
+      "continent": "Africa"
+    },
+    {
+      "key": "zm",
+      "title": "Zambia",
+      "continent": "Africa"
+    },
+    {
+      "key": "zw",
+      "title": "Zimbabwe",
+      "continent": "Africa"
+    }
+  ],
   "packs": [
     {
       "key": "world",
@@ -9,28 +2238,4606 @@
       "maxzoom": 6,
       "region": null,
       "first": true,
-      "size": 45058792,
-      "sha256": "7ca3b21ebfb531090713fd9a76a7525ac262d2246bbf05c4bc1d179dde6afe03"
+      "size": 45050622,
+      "sha256": "6b4461f2d6a6e3d05f4b10619a7dd3564930e4896dd7cd56842513c408389613"
     },
     {
-      "key": "malaysia",
-      "title": "Malaysia, Singapore and Brunei",
+      "key": "ad",
+      "title": "Andorra",
+      "country": "ad",
       "minzoom": 7,
       "maxzoom": 14,
-      "region": "malaysia.geojson",
+      "region": "ad.geojson",
       "first": false,
-      "size": 168037092,
-      "sha256": "39b719d4c5948a7625d8bc9edf248995fa31e5e87ce0bc9df2a6bff885edfc19"
+      "size": 3433046,
+      "sha256": "fa940e014d764c0177dcd444c264fc857eba0b453806811a78501f67432ac2de"
     },
     {
-      "key": "indonesia",
-      "title": "Indonesia",
+      "key": "ae",
+      "title": "United Arab Emirates",
+      "country": "ae",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ae.geojson",
+      "first": false,
+      "size": 38621044,
+      "sha256": "686035fe61c05dc4f7eca8170811b90faa5f6185af79eb0c4d87d1fe3625a666"
+    },
+    {
+      "key": "af",
+      "title": "Afghanistan",
+      "country": "af",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "af.geojson",
+      "first": false,
+      "size": 121075200,
+      "sha256": "96bdcdcd9ff9878ce0038f76acbaa50b7a58f8fbbdc9de9a4b3f613c643589af"
+    },
+    {
+      "key": "ag",
+      "title": "Antigua and Barbuda",
+      "country": "ag",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ag.geojson",
+      "first": false,
+      "size": 1249588,
+      "sha256": "2b30113d3faca074b0ba75bfdc9c8d040313416ca3ed6e93e64c2497e0591e13"
+    },
+    {
+      "key": "ai",
+      "title": "Anguilla",
+      "country": "ai",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ai.geojson",
+      "first": false,
+      "size": 510735,
+      "sha256": "29df0f5eb0b1505161a1fba90a07485fafc66506f5f0b55a0ee697c4d1c33b30"
+    },
+    {
+      "key": "al",
+      "title": "Albania",
+      "country": "al",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "al.geojson",
+      "first": false,
+      "size": 49141142,
+      "sha256": "8f9e6db9e5764df2c19135af62d32e2ce9e4847b86abcf3f29f4a186cf4d73b3"
+    },
+    {
+      "key": "am",
+      "title": "Armenia",
+      "country": "am",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "am.geojson",
+      "first": false,
+      "size": 46204633,
+      "sha256": "8dc9942dfffa162a3b396b591aa228bb75312df852b2954d6ac3b933a1c7c402"
+    },
+    {
+      "key": "ao",
+      "title": "Angola",
+      "country": "ao",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ao.geojson",
+      "first": false,
+      "size": 118696948,
+      "sha256": "3fc88bbadd79649d1b4caf31f701e901bc2a66e71883997012f790516ddd3b41"
+    },
+    {
+      "key": "aq",
+      "title": "Antarctica",
+      "country": "aq",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "aq.geojson",
+      "first": false,
+      "size": 182576020,
+      "sha256": "573312f7439d37afd8234297b41fc4f3acd55453803542d297b097a8f5135bfa"
+    },
+    {
+      "key": "ar",
+      "title": "Argentina",
+      "country": "ar",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ar.geojson",
+      "first": false,
+      "size": 605161246,
+      "sha256": "898330175c5c7e7d086025516112d8b96b414063affadb94e83eacdea684c548"
+    },
+    {
+      "key": "as",
+      "title": "American Samoa",
+      "country": "as",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "as.geojson",
+      "first": false,
+      "size": 683670,
+      "sha256": "56f69f0713412a9669de4d0de80fac1c5c65816693c875ce1367cc19fe585a40"
+    },
+    {
+      "key": "at",
+      "title": "Austria",
+      "country": "at",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "at.geojson",
+      "first": false,
+      "size": 552122426,
+      "sha256": "16f17349521b8f38ea815f7807d581c6a6e18bf64511ece35ca5e4a03e42ea12"
+    },
+    {
+      "key": "au",
+      "title": "Australia",
+      "country": "au",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "au.geojson",
+      "first": false,
+      "size": 1006165242,
+      "sha256": "1fe5bdeede3b89931929913f042117eec29571206ea53fbf1100b2a1b7e6b707"
+    },
+    {
+      "key": "aw",
+      "title": "Aruba",
+      "country": "aw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "aw.geojson",
+      "first": false,
+      "size": 1368319,
+      "sha256": "1db8a38ac46a7f46e5fda2c9197b6768094c58e7864c6cd982dfb4ac9adc4bbd"
+    },
+    {
+      "key": "ax",
+      "title": "Aland Islands",
+      "country": "ax",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ax.geojson",
+      "first": false,
+      "size": 8874122,
+      "sha256": "12ace5d396645fa11f2bb9b8c6f8788fe8d54c3e9df1112a179c01ad465ac06d"
+    },
+    {
+      "key": "az",
+      "title": "Azerbaijan",
+      "country": "az",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "az.geojson",
+      "first": false,
+      "size": 61988461,
+      "sha256": "9b20e9f702ad2b42276e79a9c5d3e22e2d81482b9eeefac4dd79ccb243fc758b"
+    },
+    {
+      "key": "ba",
+      "title": "Bosnia and Herzegovina",
+      "country": "ba",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ba.geojson",
+      "first": false,
+      "size": 189162291,
+      "sha256": "c791f7dc5aaab338f818997379887fdb6acf6e43c900c228f09577d677c01b7b"
+    },
+    {
+      "key": "bb",
+      "title": "Barbados",
+      "country": "bb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bb.geojson",
+      "first": false,
+      "size": 2427202,
+      "sha256": "e7766ad902bc99776d1a96a9f6902aafa10be6235699ee8997fca3716fd5d4a5"
+    },
+    {
+      "key": "bd",
+      "title": "Bangladesh",
+      "country": "bd",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bd.geojson",
+      "first": false,
+      "size": 122691144,
+      "sha256": "6f36dcb9d92665a1ba9638837593e67bf512460d48cfb3e2ebe2c7d65c32a876"
+    },
+    {
+      "key": "be",
+      "title": "Belgium",
+      "country": "be",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "be.geojson",
+      "first": false,
+      "size": 338982165,
+      "sha256": "18ba924acae6c888fad6638ce91b4bed66791a0cb8da7683c322f8efda99104c"
+    },
+    {
+      "key": "bf",
+      "title": "Burkina Faso",
+      "country": "bf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bf.geojson",
+      "first": false,
+      "size": 78468775,
+      "sha256": "0156ae45d5865730e8e68f194ee38a05c96e532e16d03b6eb5a484c1d1947678"
+    },
+    {
+      "key": "bg",
+      "title": "Bulgaria",
+      "country": "bg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bg.geojson",
+      "first": false,
+      "size": 200639374,
+      "sha256": "5aa11fdadd321eb5ec0167f1cafcf29ae6f46382f98fb9991ee341ffdc7c30db"
+    },
+    {
+      "key": "bh",
+      "title": "Bahrain",
+      "country": "bh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bh.geojson",
+      "first": false,
+      "size": 3340154,
+      "sha256": "b4effd96af559b590e6232f39dfe3328931d9bea1d3f0f9b470e2d4b7c6145ba"
+    },
+    {
+      "key": "bi",
+      "title": "Burundi",
+      "country": "bi",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bi.geojson",
+      "first": false,
+      "size": 28087243,
+      "sha256": "d0238a842656d7b6bbf50e5900b09efcb6bcda483f3a845de75dd0eb0e7fb1b1"
+    },
+    {
+      "key": "bj",
+      "title": "Benin",
+      "country": "bj",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bj.geojson",
+      "first": false,
+      "size": 29516346,
+      "sha256": "c41f5b08acb884a0a72ef4356316fae00991cc2890b15ad24dd010c38f637673"
+    },
+    {
+      "key": "bl",
+      "title": "Saint Barthelemy",
+      "country": "bl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bl.geojson",
+      "first": false,
+      "size": 433302,
+      "sha256": "45a1ad05181f89873cd754db731cc7bb14ad988835eefa1790f4cdd04769ca62"
+    },
+    {
+      "key": "bm",
+      "title": "Bermuda",
+      "country": "bm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bm.geojson",
+      "first": false,
+      "size": 1034456,
+      "sha256": "30b8f4dca5c18fd009e7ff1545d956933d2bcffff57fb74422c4c3e54942bd6e"
+    },
+    {
+      "key": "bn",
+      "title": "Brunei",
+      "country": "bn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bn.geojson",
+      "first": false,
+      "size": 4255562,
+      "sha256": "975f55af0a6550c73f85c05164149eb0241c5da9460143173a60bfe8fe0e4366"
+    },
+    {
+      "key": "bo",
+      "title": "Bolivia",
+      "country": "bo",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bo.geojson",
+      "first": false,
+      "size": 213906582,
+      "sha256": "ed6966d6588225163a5e52d63b7b3070cde07a17f2d08960760329dd578a1441"
+    },
+    {
+      "key": "br",
+      "title": "Brazil",
+      "country": "br",
       "minzoom": 7,
       "maxzoom": 13,
-      "region": "indonesia.geojson",
+      "region": "br.geojson",
       "first": false,
-      "size": 337704723,
-      "sha256": "44e83e878b63ec17da45a073f06822ed3308b6d90b0d7446c45ef2e8534d5150"
+      "size": 1116524727,
+      "sha256": "2d3a394b97557d399aa1c4fc2944b4b80a22c9e22e494433914b9918417b8c99"
+    },
+    {
+      "key": "bs",
+      "title": "Bahamas",
+      "country": "bs",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bs.geojson",
+      "first": false,
+      "size": 10937853,
+      "sha256": "201a0744d26cbbb10adb594185a4641b4493270f44056009e17aa5b2f8fb94be"
+    },
+    {
+      "key": "bt",
+      "title": "Bhutan",
+      "country": "bt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bt.geojson",
+      "first": false,
+      "size": 31168040,
+      "sha256": "875bbb0dd9eed5f9cd1bc8cd417b1bd96c8328d3fa7d0c5c663f498d36c72246"
+    },
+    {
+      "key": "bw",
+      "title": "Botswana",
+      "country": "bw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bw.geojson",
+      "first": false,
+      "size": 56669736,
+      "sha256": "287c950a2dea3a13f297f098a35059ba938e2ebd4a1589a9df0fd7269aae08da"
+    },
+    {
+      "key": "by",
+      "title": "Belarus",
+      "country": "by",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "by.geojson",
+      "first": false,
+      "size": 423312945,
+      "sha256": "498ae113a177b241542204c64c11e57ce49cfe77bd345595726cbe53a5829271"
+    },
+    {
+      "key": "bz",
+      "title": "Belize",
+      "country": "bz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "bz.geojson",
+      "first": false,
+      "size": 28669159,
+      "sha256": "b6e50bf3cbb3daa54b36532e9220c9f231f0a5d8c7104918407a1407536d36fa"
+    },
+    {
+      "key": "ca-ab",
+      "title": "Alberta",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-ab.geojson",
+      "first": false,
+      "size": 463524416,
+      "sha256": "43f197d4f3865a912e820c22aae4fb2a93768742f36af1ff54897d8cf8df18e3"
+    },
+    {
+      "key": "ca-bc",
+      "title": "British Columbia",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-bc.geojson",
+      "first": false,
+      "size": 918618633,
+      "sha256": "60410f2be8c08cf49ce74c342c25e75ffb558007a26f877c1a2629e1f3cb9f62"
+    },
+    {
+      "key": "ca-mb",
+      "title": "Manitoba",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-mb.geojson",
+      "first": false,
+      "size": 354540849,
+      "sha256": "05ce68114a90679a12339908050a5b33070d5e7c0b4016c081cd601078b31138"
+    },
+    {
+      "key": "ca-nb",
+      "title": "New Brunswick",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-nb.geojson",
+      "first": false,
+      "size": 80630979,
+      "sha256": "2ed12d7c496b29b0deaf65100b9dbba24d5ff9fb76c552f2d71dfc1214b6c67d"
+    },
+    {
+      "key": "ca-nl",
+      "title": "Newfoundland and Labrador",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-nl.geojson",
+      "first": false,
+      "size": 359549487,
+      "sha256": "01f375efd02a9ead8349e25aa0539cb91708056b60d687b9da3de55777bef20e"
+    },
+    {
+      "key": "ca-ns",
+      "title": "Nova Scotia",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-ns.geojson",
+      "first": false,
+      "size": 92552756,
+      "sha256": "969bfd16a41a2d1773f2ba03c844bc160c456b6a5abc6a22e081449a02cdd683"
+    },
+    {
+      "key": "ca-nt",
+      "title": "Northwest Territories",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-nt.geojson",
+      "first": false,
+      "size": 856895760,
+      "sha256": "3b772df509e124345d04ce90b7665e33980fee0e87e9a0cf461a9798861d1439"
+    },
+    {
+      "key": "ca-nu",
+      "title": "Nunavut",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "ca-nu.geojson",
+      "first": false,
+      "size": 1344042774,
+      "sha256": "64289a044ea79dec287d95a645fc155c4896986b9aa9c1f3c5c22a95f45353e6"
+    },
+    {
+      "key": "ca-on",
+      "title": "Ontario",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-on.geojson",
+      "first": false,
+      "size": 1080461404,
+      "sha256": "da0b1c598a45b801e5790bdc42e5c86a92cd1a5df1084b42db1ff342f9e837f2"
+    },
+    {
+      "key": "ca-pe",
+      "title": "Prince Edward Island",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-pe.geojson",
+      "first": false,
+      "size": 12080672,
+      "sha256": "cb14871e6e4af749c8f058505d7359e1214918b1c30fb77e2f8d3cd0798ec751"
+    },
+    {
+      "key": "ca-qc",
+      "title": "Quebec",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-qc.geojson",
+      "first": false,
+      "size": 1385994743,
+      "sha256": "3960a1c10664a7f1432dacd9fc7e307d5c81cc414e143be03b296ed95777f937"
+    },
+    {
+      "key": "ca-sk",
+      "title": "Saskatchewan",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-sk.geojson",
+      "first": false,
+      "size": 229810283,
+      "sha256": "9a27eff2e8810fac9970ca1eeb7a098f77fcc6a89c6e27fbfb8ddf2433c75b55"
+    },
+    {
+      "key": "ca-yt",
+      "title": "Yukon",
+      "country": "ca",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ca-yt.geojson",
+      "first": false,
+      "size": 164579954,
+      "sha256": "d1cbf63ae32ab9b74b7b98f268f39674206ce0d0480469ac981b3d399533cdb6"
+    },
+    {
+      "key": "cd",
+      "title": "Democratic Republic of the Congo",
+      "country": "cd",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cd.geojson",
+      "first": false,
+      "size": 403710251,
+      "sha256": "37e48a92a3cb31fa95345bc05198efec2850fe9284deb6fd3fdca8fcfebb378a"
+    },
+    {
+      "key": "cf",
+      "title": "Central African Republic",
+      "country": "cf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cf.geojson",
+      "first": false,
+      "size": 207855454,
+      "sha256": "2c53d5bed80d5aff15f0e91a481c47199508a240fb7e3fecc1771cff83a21358"
+    },
+    {
+      "key": "cg",
+      "title": "Republic of the Congo",
+      "country": "cg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cg.geojson",
+      "first": false,
+      "size": 46289963,
+      "sha256": "c79897fa90b83130657cd79fcd28bdd67877de75ee91f6dacc02b2e879c02cb7"
+    },
+    {
+      "key": "ch",
+      "title": "Switzerland",
+      "country": "ch",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ch.geojson",
+      "first": false,
+      "size": 292955826,
+      "sha256": "01a781a36f1990379dffe5510d5347906771ee9f7b89f6cf8e891f3d1e9fd9ae"
+    },
+    {
+      "key": "ci",
+      "title": "Ivory Coast",
+      "country": "ci",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ci.geojson",
+      "first": false,
+      "size": 75759136,
+      "sha256": "5ee446363c0b97f0ab43e961b4a5546ea30b4d0946d15b73741c870019c2726a"
+    },
+    {
+      "key": "ck",
+      "title": "Cook Islands",
+      "country": "ck",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ck.geojson",
+      "first": false,
+      "size": 616999,
+      "sha256": "3e437539eacae1059f387a53617562180ac0ecf0a8afaaa3d311403582feef81"
+    },
+    {
+      "key": "cl",
+      "title": "Chile",
+      "country": "cl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cl.geojson",
+      "first": false,
+      "size": 325315010,
+      "sha256": "24ef6f9521ea11521c7aed70cd1583ee9df86dfc4286430e8d8701a431548f8c"
+    },
+    {
+      "key": "cm",
+      "title": "Cameroon",
+      "country": "cm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cm.geojson",
+      "first": false,
+      "size": 276026365,
+      "sha256": "1ec396bb699a2ce295f0d189a71d066b2c8680050814ac37ff30f232254cd5e2"
+    },
+    {
+      "key": "cn-ah",
+      "title": "Anhui",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-ah.geojson",
+      "first": false,
+      "size": 88349733,
+      "sha256": "d552766db1bb397d12b8f3f98a6186be1aa37f6fe2ef890250ce906fc999925c"
+    },
+    {
+      "key": "cn-bj",
+      "title": "Beijing",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-bj.geojson",
+      "first": false,
+      "size": 41881147,
+      "sha256": "60f787d3a8ce6a5ae1a48cea17765131c4a83ac02d68edb847ea23ab00d77bf2"
+    },
+    {
+      "key": "cn-cq",
+      "title": "Chongqing",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-cq.geojson",
+      "first": false,
+      "size": 54567509,
+      "sha256": "d0d08d8498a6ced4f8bcb5b2c601181477a37530dc79cdcb8f3349d7905cd3b9"
+    },
+    {
+      "key": "cn-fj",
+      "title": "Fujian",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-fj.geojson",
+      "first": false,
+      "size": 71814039,
+      "sha256": "0ff0943fa4392ca0af1e5f4e8ebc8232acc9b66f7f9cf01334e5d4d43cb88fe4"
+    },
+    {
+      "key": "cn-gd",
+      "title": "Guangdong",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-gd.geojson",
+      "first": false,
+      "size": 166528982,
+      "sha256": "bea306a4c20d8085d9479dda0c29e23b036e8da03575fd9478792e0b988c102f"
+    },
+    {
+      "key": "cn-gs",
+      "title": "Gansu",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-gs.geojson",
+      "first": false,
+      "size": 122611906,
+      "sha256": "e472c658ee5118feabf8d38c74b246de6f858cb86615189c52839b586edc5130"
+    },
+    {
+      "key": "cn-gx",
+      "title": "Guangxi",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-gx.geojson",
+      "first": false,
+      "size": 97606123,
+      "sha256": "0d0d15f535f0973a386936a6b62abe093959ca726bc8a83d672b6ee59e2be5c8"
+    },
+    {
+      "key": "cn-gz",
+      "title": "Guizhou",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-gz.geojson",
+      "first": false,
+      "size": 63782470,
+      "sha256": "c03e1a8b9a2f06ef9cf74444058c2ca5cee5428272972a05b33c3dfe98762d99"
+    },
+    {
+      "key": "cn-ha",
+      "title": "Henan",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-ha.geojson",
+      "first": false,
+      "size": 96434025,
+      "sha256": "25b27c263bc7fdd699771e2d0d7d9a8a51898972c12cc2113c30b3e4d06f4dee"
+    },
+    {
+      "key": "cn-hb",
+      "title": "Hubei",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-hb.geojson",
+      "first": false,
+      "size": 94785729,
+      "sha256": "9af3d2aea976ab5710f5173de3c9cf4c06bac787d14ec8fc084ae1d17cd6f505"
+    },
+    {
+      "key": "cn-he",
+      "title": "Hebei",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-he.geojson",
+      "first": false,
+      "size": 133919406,
+      "sha256": "032c6db6af3f3351bd5bbfa02bc718318e5601b32b4e0a5a2ec17041acebcd8c"
+    },
+    {
+      "key": "cn-hi",
+      "title": "Hainan",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-hi.geojson",
+      "first": false,
+      "size": 16326716,
+      "sha256": "3fe0c0bdad8fc6cbe9b018f2ad954b88c49d4380a2a1d91c1ad9d3ce36df62bf"
+    },
+    {
+      "key": "cn-hl",
+      "title": "Heilongjiang",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-hl.geojson",
+      "first": false,
+      "size": 116054554,
+      "sha256": "a0b178183c4873e85bed396d0afd873b428fd2d228ff55aaf2ce9016e61f8f8a"
+    },
+    {
+      "key": "cn-hn",
+      "title": "Hunan",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-hn.geojson",
+      "first": false,
+      "size": 91961998,
+      "sha256": "ad07bb208c0c941446e3c3365cc3c91d9e1ac2a505fb74f437daad35dacc37b7"
+    },
+    {
+      "key": "cn-jl",
+      "title": "Jilin",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-jl.geojson",
+      "first": false,
+      "size": 72418695,
+      "sha256": "2315a9745ee2f0556d9da2e2dda0e71cf1e8f41290567545c08f736c6052a187"
+    },
+    {
+      "key": "cn-js",
+      "title": "Jiangsu",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-js.geojson",
+      "first": false,
+      "size": 104577127,
+      "sha256": "5ed6f7017d1746b26e6663cb86e3af6f85cc1b7c9fda51f89cc3cc5e2aaaf3f6"
+    },
+    {
+      "key": "cn-jx",
+      "title": "Jiangxi",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-jx.geojson",
+      "first": false,
+      "size": 97062069,
+      "sha256": "35a88c26af561def97a1596bf5b0cba0cd8b8646e9a2a8b933f06737ec47cb03"
+    },
+    {
+      "key": "cn-ln",
+      "title": "Liaoning",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-ln.geojson",
+      "first": false,
+      "size": 64841076,
+      "sha256": "5331e50eb0f2ddd04397b65be0714ef033aa93687847eccbe5ca6ac5810201fa"
+    },
+    {
+      "key": "cn-nm",
+      "title": "Inner Mongolia",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-nm.geojson",
+      "first": false,
+      "size": 151091147,
+      "sha256": "b7a8ac9992eb77310c822a7e595cba14bd56438f7f716e24206fb4482d1bb43a"
+    },
+    {
+      "key": "cn-nx",
+      "title": "Ningxia",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-nx.geojson",
+      "first": false,
+      "size": 18699047,
+      "sha256": "9d1782775451ffb1db137e5da69cd148b394081fc509f07a881629f4d0d27c44"
+    },
+    {
+      "key": "cn-pfa00",
+      "title": "Paracel Islands",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-pfa00.geojson",
+      "first": false,
+      "size": 110902,
+      "sha256": "9a96075db911531f6c6099c2d6f76ade8a6be4ff53982fce92b80c17259dce29"
+    },
+    {
+      "key": "cn-qh",
+      "title": "Qinghai",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-qh.geojson",
+      "first": false,
+      "size": 66030377,
+      "sha256": "fc7e982d58a7818f6a73fcfea306c4b3a8225ad66b361fdca3e2d69329a49b9d"
+    },
+    {
+      "key": "cn-sc",
+      "title": "Sichuan",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-sc.geojson",
+      "first": false,
+      "size": 194459829,
+      "sha256": "9d8cbcc614f623b28ea154fe0112f8b46de3b23e6f632977c8591cdd96b3af3c"
+    },
+    {
+      "key": "cn-sd",
+      "title": "Shandong",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-sd.geojson",
+      "first": false,
+      "size": 121965098,
+      "sha256": "6bd9c23cb26fec5bf9a8ff3310aec6162fc40521e4a8c9d08fab8341566f7a03"
+    },
+    {
+      "key": "cn-sh",
+      "title": "Shanghai",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-sh.geojson",
+      "first": false,
+      "size": 23321190,
+      "sha256": "a1e9d7eafbd7d7989a278c26d776545cda12daee77a62c9edded8b63bad904a9"
+    },
+    {
+      "key": "cn-sn",
+      "title": "Shaanxi",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-sn.geojson",
+      "first": false,
+      "size": 164117430,
+      "sha256": "268cbbf4b64e43a883b449858e0ddbea06a281565ae3f04ad95416bb684970f8"
+    },
+    {
+      "key": "cn-sx",
+      "title": "Shanxi",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-sx.geojson",
+      "first": false,
+      "size": 71105165,
+      "sha256": "9fc4089423f128c58355b2f39ad6af3cdad95a3e9b558ee7c2f46029f8ae325d"
+    },
+    {
+      "key": "cn-tj",
+      "title": "Tianjin",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-tj.geojson",
+      "first": false,
+      "size": 19933042,
+      "sha256": "c5f3bf22636503397cda3eff4667b56454126a98aadfeb4f9ef8f7878b5625f3"
+    },
+    {
+      "key": "cn-xj",
+      "title": "Xinjiang",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-xj.geojson",
+      "first": false,
+      "size": 141227620,
+      "sha256": "800fd1e8bd8ebfeed9be91e2765bcc08c3edb9849a1d2a728ce81d0a17c3329d"
+    },
+    {
+      "key": "cn-xz",
+      "title": "Tibet",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-xz.geojson",
+      "first": false,
+      "size": 130123327,
+      "sha256": "75b393747a286a1e0c1f08bfb6fc41f326266925e604e8e505543d01743b51ba"
+    },
+    {
+      "key": "cn-yn",
+      "title": "Yunnan",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-yn.geojson",
+      "first": false,
+      "size": 144322639,
+      "sha256": "d4b8c82b2f926128ab515c2e7bfb0796ed254290a7ee132dfa196d2fb777b1fa"
+    },
+    {
+      "key": "cn-zj",
+      "title": "Zhejiang",
+      "country": "cn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cn-zj.geojson",
+      "first": false,
+      "size": 130483512,
+      "sha256": "b0bfc7bd19af74f9e638d6e95c7ca47f4b834bea0256f5e9f0c37041e780088a"
+    },
+    {
+      "key": "cnm",
+      "title": "Cyprus U.N. Buffer Zone",
+      "country": "cnm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cnm.geojson",
+      "first": false,
+      "size": 5938315,
+      "sha256": "b25309e69f5f8fe9a0db0ee3f2482cc03c25f9fdcded28917978fb2c25ec84db"
+    },
+    {
+      "key": "co",
+      "title": "Colombia",
+      "country": "co",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "co.geojson",
+      "first": false,
+      "size": 285090510,
+      "sha256": "9776d13e3bf2eb3442c4738f0a40af6570a0cb1ad394c934b37729e6cfd4e77b"
+    },
+    {
+      "key": "cr",
+      "title": "Costa Rica",
+      "country": "cr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cr.geojson",
+      "first": false,
+      "size": 42138742,
+      "sha256": "82a60a744e66855b0747f8d27b70c6dd57bc5978c51c35679c0c1635ec590996"
+    },
+    {
+      "key": "cu",
+      "title": "Cuba",
+      "country": "cu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cu.geojson",
+      "first": false,
+      "size": 65723206,
+      "sha256": "627cbfac74cdaee1f669377af4090ae7fdafbcca6f5b099dd41cead6e9e78cbf"
+    },
+    {
+      "key": "cv",
+      "title": "Cabo Verde",
+      "country": "cv",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cv.geojson",
+      "first": false,
+      "size": 8064113,
+      "sha256": "82e7c6f271108173b3b941e3fd6e10a3af04cfbb69c93f0cfc4032f7589c1b67"
+    },
+    {
+      "key": "cw",
+      "title": "Curacao",
+      "country": "cw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cw.geojson",
+      "first": false,
+      "size": 2273932,
+      "sha256": "d2c32a9a2a32f42f96d903771114f37fc2505845d82ac7f67f8b5a0f7b9cad3c"
+    },
+    {
+      "key": "cy",
+      "title": "Cyprus",
+      "country": "cy",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cy.geojson",
+      "first": false,
+      "size": 20224275,
+      "sha256": "4707e995832d92e74248aea5a62f1b28872e06f7f0d7366d63db1398316a3a9e"
+    },
+    {
+      "key": "cyn",
+      "title": "Northern Cyprus",
+      "country": "cyn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cyn.geojson",
+      "first": false,
+      "size": 11411536,
+      "sha256": "fd807231608556ea7522990ee41fea9df556114807b7a7653cf3921bb51a38dd"
+    },
+    {
+      "key": "cz",
+      "title": "Czechia",
+      "country": "cz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "cz.geojson",
+      "first": false,
+      "size": 551212283,
+      "sha256": "709ae16afef47f75d7b75ade9937a40d1800b3e1f1e12d0a2096ab9779ef21dd"
+    },
+    {
+      "key": "de",
+      "title": "Germany",
+      "country": "de",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "de.geojson",
+      "first": false,
+      "size": 1302100618,
+      "sha256": "669b3190ff6f1cf8555887b2e49013eba55b44e445ac90a571ac59f591de7ac6"
+    },
+    {
+      "key": "dj",
+      "title": "Djibouti",
+      "country": "dj",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "dj.geojson",
+      "first": false,
+      "size": 4953753,
+      "sha256": "16d2c5c86278ddab380639def58a3d90def18e6777732b04695aede59b2e57f9"
+    },
+    {
+      "key": "dk",
+      "title": "Denmark",
+      "country": "dk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "dk.geojson",
+      "first": false,
+      "size": 283952798,
+      "sha256": "e38bcc46b87a280ef9edb6b80c16f9816acf4ce579d7ba17701660bae7e2e9ba"
+    },
+    {
+      "key": "dm",
+      "title": "Dominica",
+      "country": "dm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "dm.geojson",
+      "first": false,
+      "size": 1536897,
+      "sha256": "375d8ae6f103c40f737bd2900ad835f2c388e4dfed2d93815bfbfc63fe7800ef"
+    },
+    {
+      "key": "do",
+      "title": "Dominican Republic",
+      "country": "do",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "do.geojson",
+      "first": false,
+      "size": 26025569,
+      "sha256": "b48c97bb01d555de892ea64b2eaba92df4458fa8b798d037be310419176bf0d6"
+    },
+    {
+      "key": "dz",
+      "title": "Algeria",
+      "country": "dz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "dz.geojson",
+      "first": false,
+      "size": 220532338,
+      "sha256": "12a2bbd0151cead4d4f80c2af87d061d264e1f9ba52eacf8964bed5dd8c1c1df"
+    },
+    {
+      "key": "ec",
+      "title": "Ecuador",
+      "country": "ec",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ec.geojson",
+      "first": false,
+      "size": 101274548,
+      "sha256": "8bd5c87c3d4e0df927437238d652c0e546b919d88bc22ffbcf8c35d3a73e8b00"
+    },
+    {
+      "key": "ee",
+      "title": "Estonia",
+      "country": "ee",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ee.geojson",
+      "first": false,
+      "size": 118111181,
+      "sha256": "18f26ab11962822f89d753948310aacdee26d5b67c9d06e6fe3ccb19a7eb76e9"
+    },
+    {
+      "key": "eg",
+      "title": "Egypt",
+      "country": "eg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "eg.geojson",
+      "first": false,
+      "size": 125792189,
+      "sha256": "17dcfb9bd3c7fe4eef7d3005cb6cad0f4c179a67d8a68ed16b56be8936938075"
+    },
+    {
+      "key": "eh",
+      "title": "Western Sahara",
+      "country": "eh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "eh.geojson",
+      "first": false,
+      "size": 4395635,
+      "sha256": "5db8f356c31cdf65d2b23792808885c47dbe906f60f14a99f2a9225b7a1cf54b"
+    },
+    {
+      "key": "er",
+      "title": "Eritrea",
+      "country": "er",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "er.geojson",
+      "first": false,
+      "size": 20894730,
+      "sha256": "f57d0f191ab769dbbdee82e421add43a8374e00837d6d017ab2b10b5ddf77243"
+    },
+    {
+      "key": "es",
+      "title": "Spain",
+      "country": "es",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "es.geojson",
+      "first": false,
+      "size": 1150220151,
+      "sha256": "8188eaa893ecd5a18272c966bec8955b0e17f5292159d5c8eedae7d142db0b02"
+    },
+    {
+      "key": "esb",
+      "title": "Dhekelia",
+      "country": "esb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "esb.geojson",
+      "first": false,
+      "size": 1262140,
+      "sha256": "e450b653d9223e1aca7b39bdfd891d3effd89c88ce9c461a6830a3cf4ceee838"
+    },
+    {
+      "key": "et",
+      "title": "Ethiopia",
+      "country": "et",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "et.geojson",
+      "first": false,
+      "size": 144040514,
+      "sha256": "a065bd9e8439eba49d60645969eedfede26c1909e8f6b1f83cf7089999619649"
+    },
+    {
+      "key": "fi",
+      "title": "Finland",
+      "country": "fi",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "fi.geojson",
+      "first": false,
+      "size": 942431034,
+      "sha256": "f10404a4094c067723b44c6badf31240ed7631ebbd48087525fb453f4862e7e5"
+    },
+    {
+      "key": "fj",
+      "title": "Fiji",
+      "country": "fj",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "fj.geojson",
+      "first": false,
+      "size": 10828118,
+      "sha256": "a0731759791b3ddcb60416920927cc3bd7c29079dbc6d28ddc00b68634ebb2c1"
+    },
+    {
+      "key": "fk",
+      "title": "Falkland Islands",
+      "country": "fk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "fk.geojson",
+      "first": false,
+      "size": 8315197,
+      "sha256": "fc4d9c2c639d840b70d29c3112429116993a6d0fe4e38203ac24c39514bb01d4"
+    },
+    {
+      "key": "fm",
+      "title": "Micronesia",
+      "country": "fm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "fm.geojson",
+      "first": false,
+      "size": 1419434,
+      "sha256": "cf099e4622f404013c3b2aa71b3ff68f95dd2ebfc335bdf2540d7c50b8744aba"
+    },
+    {
+      "key": "fo",
+      "title": "Faroe Islands",
+      "country": "fo",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "fo.geojson",
+      "first": false,
+      "size": 6587744,
+      "sha256": "81bbf1cfd2f4a3c45942db59ce18be5e86ff1d0e9e68974503d093fb6e7b5d6d"
+    },
+    {
+      "key": "fr",
+      "title": "France",
+      "country": "fr",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "fr.geojson",
+      "first": false,
+      "size": 1299450476,
+      "sha256": "340b479b6efde28de02fd3bae8d21abe919e395e7ed8aa347dcc2d653238965d"
+    },
+    {
+      "key": "ga",
+      "title": "Gabon",
+      "country": "ga",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ga.geojson",
+      "first": false,
+      "size": 41060174,
+      "sha256": "a5837a2d5ed9ac040eedf17292078a9dccee16edeedfbdc6233715e9ad2524b8"
+    },
+    {
+      "key": "gb",
+      "title": "United Kingdom",
+      "country": "gb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gb.geojson",
+      "first": false,
+      "size": 1281258008,
+      "sha256": "1730ab0b8fc7817322c96fd88757b96676db38110d4398be151e843863a4a510"
+    },
+    {
+      "key": "gd",
+      "title": "Grenada",
+      "country": "gd",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gd.geojson",
+      "first": false,
+      "size": 1086586,
+      "sha256": "3699b17a2538f57ff2e724fd3df86c45347336660a3d23caba4d8a3c43ede44d"
+    },
+    {
+      "key": "ge",
+      "title": "Georgia",
+      "country": "ge",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ge.geojson",
+      "first": false,
+      "size": 105904394,
+      "sha256": "6e05f17eaf9daff45b4b8afa3519130f35ff3d66f5bca5d3df7b8333b2f4785d"
+    },
+    {
+      "key": "gg",
+      "title": "Guernsey",
+      "country": "gg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gg.geojson",
+      "first": false,
+      "size": 1127913,
+      "sha256": "2f92a2637508e5aec13adf4279f33a38e48a5c1c9c76cd0f8fc1673a3d2ca85d"
+    },
+    {
+      "key": "gh",
+      "title": "Ghana",
+      "country": "gh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gh.geojson",
+      "first": false,
+      "size": 69981396,
+      "sha256": "4fa4e7e725e312e619ab7f8387b7744981bbd99026d7e76f760ecdb20a2de11e"
+    },
+    {
+      "key": "gi",
+      "title": "Gibraltar",
+      "country": "gi",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gi.geojson",
+      "first": false,
+      "size": 395502,
+      "sha256": "11afa1632999da0a82cf4c9476dc736f6dada3e370d70c253a87edc5ed38edf9"
+    },
+    {
+      "key": "gl",
+      "title": "Greenland",
+      "country": "gl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gl.geojson",
+      "first": false,
+      "size": 171169478,
+      "sha256": "9eb6ee163664635df3cd7dac72fcf5acc5b5bff23009ab602d2a66b626a7580d"
+    },
+    {
+      "key": "gm",
+      "title": "Gambia",
+      "country": "gm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gm.geojson",
+      "first": false,
+      "size": 11095237,
+      "sha256": "90f511fbe2f92750975b53b91347c9ed61650b1ecfc6cc8a56a7fdcc518134ab"
+    },
+    {
+      "key": "gn",
+      "title": "Guinea",
+      "country": "gn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gn.geojson",
+      "first": false,
+      "size": 83525134,
+      "sha256": "54679dd3df221980ab9f64d4a2a17e4a1092e013d79e12fec0b1259fd314731b"
+    },
+    {
+      "key": "gq",
+      "title": "Equatorial Guinea",
+      "country": "gq",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gq.geojson",
+      "first": false,
+      "size": 6949419,
+      "sha256": "3f4c5147db081c2f1e42e1b052a4fb932ae581ef5e2c6d9e0be74bb3fb504546"
+    },
+    {
+      "key": "gr",
+      "title": "Greece",
+      "country": "gr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gr.geojson",
+      "first": false,
+      "size": 259991450,
+      "sha256": "6e33d026e5980464195d00fff2ac6d06a5b4ded82178a98391b18f19d6559269"
+    },
+    {
+      "key": "gt",
+      "title": "Guatemala",
+      "country": "gt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gt.geojson",
+      "first": false,
+      "size": 57478604,
+      "sha256": "aa7615d72715c18acc22ca691d1c4809e87bb5bf4b9612fa4f653e3849fa4c85"
+    },
+    {
+      "key": "gu",
+      "title": "Guam",
+      "country": "gu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gu.geojson",
+      "first": false,
+      "size": 1426834,
+      "sha256": "25b334af6e3931840be945bc9e34f51f8465e0d2e12ebbeabca3035a77314dbc"
+    },
+    {
+      "key": "gw",
+      "title": "Guinea-Bissau",
+      "country": "gw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gw.geojson",
+      "first": false,
+      "size": 13969161,
+      "sha256": "0c911ac385ac487ff8d8eb1dcf76cfe3a4b686997d5c4b0d4fc792f75d8686e1"
+    },
+    {
+      "key": "gy",
+      "title": "Guyana",
+      "country": "gy",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "gy.geojson",
+      "first": false,
+      "size": 16118426,
+      "sha256": "e51ba838202c75e8c5217860ce634f96e81ad660dd99b7eefa3d6b7968ebf257"
+    },
+    {
+      "key": "hk",
+      "title": "Hong Kong",
+      "country": "hk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "hk.geojson",
+      "first": false,
+      "size": 14958076,
+      "sha256": "d0fce261f29497483608a36568fbd0378fa2b7c9d5e7be2dab4cf30226927fab"
+    },
+    {
+      "key": "hn",
+      "title": "Honduras",
+      "country": "hn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "hn.geojson",
+      "first": false,
+      "size": 45100291,
+      "sha256": "70959dc3570a01ebf6768e1df6ff0467e30fff53a8c6614391a494d62bf5991d"
+    },
+    {
+      "key": "hr",
+      "title": "Croatia",
+      "country": "hr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "hr.geojson",
+      "first": false,
+      "size": 208467014,
+      "sha256": "bb2888b76297bdd7e084d1c8d7a69c758b36c8080ad61dbd5cf6357c8fd3988c"
+    },
+    {
+      "key": "ht",
+      "title": "Haiti",
+      "country": "ht",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ht.geojson",
+      "first": false,
+      "size": 21413120,
+      "sha256": "a2b082eee7e3277cb135f60e46c903ac8f7859b37473930599b462d24ef8e493"
+    },
+    {
+      "key": "hu",
+      "title": "Hungary",
+      "country": "hu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "hu.geojson",
+      "first": false,
+      "size": 246567414,
+      "sha256": "fc3806d1565062256af212e9e986516d37bbbfd5d5858dd1245dd3da89a934a1"
+    },
+    {
+      "key": "id",
+      "title": "Indonesia",
+      "country": "id",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "id.geojson",
+      "first": false,
+      "size": 705216486,
+      "sha256": "8e42727c8031f58dbae0f29d76614abb3a6f1159f06da4c47e7e25e8a0d0ede9"
+    },
+    {
+      "key": "ie",
+      "title": "Ireland",
+      "country": "ie",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ie.geojson",
+      "first": false,
+      "size": 222412345,
+      "sha256": "d23673c284c75ba0f259256b80416a9f380be6fb19bd992704fb10fc8bec81e6"
+    },
+    {
+      "key": "il",
+      "title": "Israel",
+      "country": "il",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "il.geojson",
+      "first": false,
+      "size": 58919887,
+      "sha256": "9aff9f2eb9dd3a8a4808bda44d129602ee20c69a22066cf5c054d3acaa14059c"
+    },
+    {
+      "key": "im",
+      "title": "Isle of Man",
+      "country": "im",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "im.geojson",
+      "first": false,
+      "size": 5072649,
+      "sha256": "3af0a5e5d4ab28c0671c14bbc9abd52a8857ccd4056820847239490f665ed02b"
+    },
+    {
+      "key": "in",
+      "title": "India",
+      "country": "in",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "in.geojson",
+      "first": false,
+      "size": 859371548,
+      "sha256": "fcaad188307bd63c7448775351c531dabf9b4f807bebbe31e80621ed14674ddb"
+    },
+    {
+      "key": "io",
+      "title": "British Indian Ocean Territory",
+      "country": "io",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "io.geojson",
+      "first": false,
+      "size": 337683,
+      "sha256": "710a2b1720166c6e1b7bb5b71b5017636517f9a2089925f2745f3143c3acd21e"
+    },
+    {
+      "key": "iq",
+      "title": "Iraq",
+      "country": "iq",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "iq.geojson",
+      "first": false,
+      "size": 117866611,
+      "sha256": "1c6780b51d4a634d937f20228ed2fd3d1f1aa24f439931a2cbc9385236ce4389"
+    },
+    {
+      "key": "ir",
+      "title": "Iran",
+      "country": "ir",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ir.geojson",
+      "first": false,
+      "size": 366041126,
+      "sha256": "3d86dd2b094e36db4cbd3af5e1277a3fd4d0bad116271da25769290c2ccf36b1"
+    },
+    {
+      "key": "is",
+      "title": "Iceland",
+      "country": "is",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "is.geojson",
+      "first": false,
+      "size": 148789646,
+      "sha256": "e115222eaabec76fa0ede522bbef0c6401de9f13611070c5b7e66f34663063aa"
+    },
+    {
+      "key": "it",
+      "title": "Italy",
+      "country": "it",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "it.geojson",
+      "first": false,
+      "size": 1316138677,
+      "sha256": "4cfa38d2fd9f5a13ce810691ee54a1277bd6025dfc5c2c151a922325e5f8d960"
+    },
+    {
+      "key": "je",
+      "title": "Jersey",
+      "country": "je",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "je.geojson",
+      "first": false,
+      "size": 1635983,
+      "sha256": "9c382c4d4b21ec6cfde5f45a3f676b5bf99558ae6fd069e259ff94ceaf02b1c8"
+    },
+    {
+      "key": "jm",
+      "title": "Jamaica",
+      "country": "jm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "jm.geojson",
+      "first": false,
+      "size": 12736786,
+      "sha256": "4e2c2247fd142dd1c7ee56a42ef2859e7b3a9ad4db3c2279170dc256769be54b"
+    },
+    {
+      "key": "jo",
+      "title": "Jordan",
+      "country": "jo",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "jo.geojson",
+      "first": false,
+      "size": 26487128,
+      "sha256": "e32022f01b93502e5259abbec12b4b95cdfe7bd3b242b91a140f0958a5d1d707"
+    },
+    {
+      "key": "jp",
+      "title": "Japan",
+      "country": "jp",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "jp.geojson",
+      "first": false,
+      "size": 1157276358,
+      "sha256": "cb48677a5f77583c0d072cd158083331a93d42962d186eda9b2f9624a2c5f36e"
+    },
+    {
+      "key": "kas",
+      "title": "Siachen Glacier",
+      "country": "kas",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kas.geojson",
+      "first": false,
+      "size": 973106,
+      "sha256": "84eecf0344e419a04391b92f916a71211773181bd8cd4d04f4295d3d4b144a14"
+    },
+    {
+      "key": "ke",
+      "title": "Kenya",
+      "country": "ke",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ke.geojson",
+      "first": false,
+      "size": 147420623,
+      "sha256": "507fe6c90e6cd774c3df6ad813fe4cb6a2b46d53a06e15218dcd736f02b4031e"
+    },
+    {
+      "key": "kg",
+      "title": "Kyrgyzstan",
+      "country": "kg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kg.geojson",
+      "first": false,
+      "size": 97198567,
+      "sha256": "db239730c06a056acee7819f25e214854e9d0f882b2fe0c545cf9a1a40952028"
+    },
+    {
+      "key": "kh",
+      "title": "Cambodia",
+      "country": "kh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kh.geojson",
+      "first": false,
+      "size": 42929725,
+      "sha256": "c472edcd8ed52f8df890376b7b74d3b041440575eb6a1f781610a5208ed05850"
+    },
+    {
+      "key": "ki",
+      "title": "Kiribati",
+      "country": "ki",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ki.geojson",
+      "first": false,
+      "size": 1338353,
+      "sha256": "63a2a20dac096fb03628511cddbdb8bbf12e89fd3703648dac70ea3cbd5dcbf6"
+    },
+    {
+      "key": "km",
+      "title": "Comoros",
+      "country": "km",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "km.geojson",
+      "first": false,
+      "size": 1644223,
+      "sha256": "69127e497f33ecf3e94f4403825a5f3e9c7d0a9f5bfca1a575479969d0e8038e"
+    },
+    {
+      "key": "kn",
+      "title": "Saint Kitts and Nevis",
+      "country": "kn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kn.geojson",
+      "first": false,
+      "size": 1033650,
+      "sha256": "65a8ee5eafa7b98bc994cf024ecb933fcb08209f9289e9bfc0c1e65544fd072c"
+    },
+    {
+      "key": "kp",
+      "title": "North Korea",
+      "country": "kp",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kp.geojson",
+      "first": false,
+      "size": 102893964,
+      "sha256": "0a53b5f5e167fa5fd17593df86b7c5000342df601dbfdf1a45c31d66808f16fc"
+    },
+    {
+      "key": "kr",
+      "title": "South Korea",
+      "country": "kr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kr.geojson",
+      "first": false,
+      "size": 259376921,
+      "sha256": "d9da5da2af1b3e5ba45550247f9c82f2718d4da72a1f97881bd59aa2a0f11f6d"
+    },
+    {
+      "key": "kw",
+      "title": "Kuwait",
+      "country": "kw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kw.geojson",
+      "first": false,
+      "size": 9424008,
+      "sha256": "38a3319df0030a0334e1318279d57a30c81ea4b36dcd874e1d1b949c335dbf43"
+    },
+    {
+      "key": "ky",
+      "title": "Cayman Islands",
+      "country": "ky",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ky.geojson",
+      "first": false,
+      "size": 919730,
+      "sha256": "441f984b42b5a68342425910a32272b11a2fe4dcb5689629b276bd31f966d182"
+    },
+    {
+      "key": "kz",
+      "title": "Kazakhstan",
+      "country": "kz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "kz.geojson",
+      "first": false,
+      "size": 347579681,
+      "sha256": "1e244ab557cc6bdb7380dae7b18bdbd8a90276defcde4291ff623e5b49c5d815"
+    },
+    {
+      "key": "la",
+      "title": "Laos",
+      "country": "la",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "la.geojson",
+      "first": false,
+      "size": 68372803,
+      "sha256": "1fc5d793b4bb73d744a829aaf35cfa50154f1c59948e855cf944e6ac32502c6d"
+    },
+    {
+      "key": "lb",
+      "title": "Lebanon",
+      "country": "lb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lb.geojson",
+      "first": false,
+      "size": 28695547,
+      "sha256": "27046bb88ac6d9ffad32e613871722a32228cbde8c1c1155e5f7b97c29628bb6"
+    },
+    {
+      "key": "lc",
+      "title": "Saint Lucia",
+      "country": "lc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lc.geojson",
+      "first": false,
+      "size": 1876572,
+      "sha256": "fd7462ac1bdc9873bb2ccb8fd5aa2939321b436b454692d702bf69903b3a83d4"
+    },
+    {
+      "key": "li",
+      "title": "Liechtenstein",
+      "country": "li",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "li.geojson",
+      "first": false,
+      "size": 3640123,
+      "sha256": "fa9cae5083aec31d61b5ee9b0b89fad227fcb957f75be711ea71c71473c4fb44"
+    },
+    {
+      "key": "lk",
+      "title": "Sri Lanka",
+      "country": "lk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lk.geojson",
+      "first": false,
+      "size": 69136179,
+      "sha256": "fb1797cb350f35fa85b8846ac0c8ddfaf6ac6453552cbd2c3006c31eef96b0dc"
+    },
+    {
+      "key": "lr",
+      "title": "Liberia",
+      "country": "lr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lr.geojson",
+      "first": false,
+      "size": 22785208,
+      "sha256": "12a693cabc9e39ec61dc35e68d34438a0233f58ea764ebdb2c49de37865432c1"
+    },
+    {
+      "key": "ls",
+      "title": "Lesotho",
+      "country": "ls",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ls.geojson",
+      "first": false,
+      "size": 75546795,
+      "sha256": "799e4d2084a9dd7835c4b7ae2e74669dcce1db10898766e254ad6516ac439aed"
+    },
+    {
+      "key": "lt",
+      "title": "Lithuania",
+      "country": "lt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lt.geojson",
+      "first": false,
+      "size": 228617028,
+      "sha256": "ea287d44329adf37e6f08d08581854d0f572716b08241f4b4a1b16b4b1cf258e"
+    },
+    {
+      "key": "lu",
+      "title": "Luxembourg",
+      "country": "lu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lu.geojson",
+      "first": false,
+      "size": 39372238,
+      "sha256": "aeb1a9098384b1341595ddae0c1fa84d6061bcb493ad8a76538e3729ead52159"
+    },
+    {
+      "key": "lv",
+      "title": "Latvia",
+      "country": "lv",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "lv.geojson",
+      "first": false,
+      "size": 150104570,
+      "sha256": "f8bc1c678e76e39e5aac0600ab110ab04c9c8d6b87463a2ce382873bc9315733"
+    },
+    {
+      "key": "ly",
+      "title": "Libya",
+      "country": "ly",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ly.geojson",
+      "first": false,
+      "size": 69745684,
+      "sha256": "28788fe0a968e298dcf91f78221a41ff5e7fb437e46e18979bf75ba2ba423a35"
+    },
+    {
+      "key": "ma",
+      "title": "Morocco",
+      "country": "ma",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ma.geojson",
+      "first": false,
+      "size": 204997147,
+      "sha256": "dac398fec5e3528f3a54ae0db9e9e615ecaadfc88110ab61e3f1d1bf638bac47"
+    },
+    {
+      "key": "mc",
+      "title": "Monaco",
+      "country": "mc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mc.geojson",
+      "first": false,
+      "size": 1200997,
+      "sha256": "f6d5740b968da0f79dbe5a6aa15596d39ad01626447beea17ed8d243ae98339f"
+    },
+    {
+      "key": "md",
+      "title": "Moldova",
+      "country": "md",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "md.geojson",
+      "first": false,
+      "size": 77723955,
+      "sha256": "ee3f0515292c646a3f3c37746a9c4b9394d7b635d2c4065f9f8a5f842ce0635a"
+    },
+    {
+      "key": "me",
+      "title": "Montenegro",
+      "country": "me",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "me.geojson",
+      "first": false,
+      "size": 39969267,
+      "sha256": "9497d5caa3a465ee36ffe13972a2391cddf7a37b36d622edfffa6a1522e9a99c"
+    },
+    {
+      "key": "mf",
+      "title": "Saint Martin",
+      "country": "mf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mf.geojson",
+      "first": false,
+      "size": 817839,
+      "sha256": "9d16f4e3a40e4011305d063c3fbe3ba1837c4e1610f1bdbfe77b94e88b3e59ac"
+    },
+    {
+      "key": "mg",
+      "title": "Madagascar",
+      "country": "mg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mg.geojson",
+      "first": false,
+      "size": 282796264,
+      "sha256": "5c8a39f9a4f8b9e40d1d426398952dcc027584a838ee2784477a6dc0d29eabb0"
+    },
+    {
+      "key": "mh",
+      "title": "Marshall Islands",
+      "country": "mh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mh.geojson",
+      "first": false,
+      "size": 556143,
+      "sha256": "e27e2dc42a2a9067aa627121151d469be48c1450502b8633abbc70e106f66336"
+    },
+    {
+      "key": "mk",
+      "title": "North Macedonia",
+      "country": "mk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mk.geojson",
+      "first": false,
+      "size": 38093570,
+      "sha256": "3601ab44fbc199c5195f56ae2095240b7d67a41550e794200097e98c78fd014a"
+    },
+    {
+      "key": "ml",
+      "title": "Mali",
+      "country": "ml",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ml.geojson",
+      "first": false,
+      "size": 197418487,
+      "sha256": "7f50566d7aca5940870579fad6adc9a3b825762ca86b1fcfcb8b2623e19d3369"
+    },
+    {
+      "key": "mm",
+      "title": "Myanmar",
+      "country": "mm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mm.geojson",
+      "first": false,
+      "size": 239426274,
+      "sha256": "c58128e620bb87758d7dada634203b1e6022266a2a3f7864a8e6a76d1db5a773"
+    },
+    {
+      "key": "mn",
+      "title": "Mongolia",
+      "country": "mn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mn.geojson",
+      "first": false,
+      "size": 106285378,
+      "sha256": "cc33c9eaf958be17c32fb55baddd994779f121690dd41b2d5f13cb00813625e0"
+    },
+    {
+      "key": "mo",
+      "title": "Macao",
+      "country": "mo",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mo.geojson",
+      "first": false,
+      "size": 1965890,
+      "sha256": "aff37205c1e2db6b40c5689b3192c21840deb74451771054ce12dec5ddc71242"
+    },
+    {
+      "key": "mp",
+      "title": "Northern Mariana Islands",
+      "country": "mp",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mp.geojson",
+      "first": false,
+      "size": 966346,
+      "sha256": "506f4fa0f2d4dac4a7d1db51962edaeff873259553dcf5d13a4e14246f5ef8f1"
+    },
+    {
+      "key": "mr",
+      "title": "Mauritania",
+      "country": "mr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mr.geojson",
+      "first": false,
+      "size": 38113932,
+      "sha256": "d7500a4dd37dd6b92e8c98263f4c49f91ca824749c7c45f7a9723bc51578f1cb"
+    },
+    {
+      "key": "ms",
+      "title": "Montserrat",
+      "country": "ms",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ms.geojson",
+      "first": false,
+      "size": 352027,
+      "sha256": "d54688f3e21c82e59ea5ad86bfd092d9519d58282be9c412e3c745aa1730bbb5"
+    },
+    {
+      "key": "mt",
+      "title": "Malta",
+      "country": "mt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mt.geojson",
+      "first": false,
+      "size": 3781403,
+      "sha256": "8e3a9093590b894a2880e314298c16dc8617226719d730e6781d8af40f365088"
+    },
+    {
+      "key": "mu",
+      "title": "Mauritius",
+      "country": "mu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mu.geojson",
+      "first": false,
+      "size": 7715837,
+      "sha256": "cdf3121840620296ccd9f598681da80ceaefc07c005b4a46abe9a3c58b3987b1"
+    },
+    {
+      "key": "mv",
+      "title": "Maldives",
+      "country": "mv",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mv.geojson",
+      "first": false,
+      "size": 1771512,
+      "sha256": "98be8b72c8273306f3c3ef8aba84ff34ed972337943be515aeb0de1e233a01d0"
+    },
+    {
+      "key": "mw",
+      "title": "Malawi",
+      "country": "mw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mw.geojson",
+      "first": false,
+      "size": 58774662,
+      "sha256": "1511b31da363bfd64ea93c342dbf7ec99186ab2d9904013764a6cc7e0e3bf3cb"
+    },
+    {
+      "key": "mx",
+      "title": "Mexico",
+      "country": "mx",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mx.geojson",
+      "first": false,
+      "size": 594667281,
+      "sha256": "5e004830390905cf03ddb2e2cc71bb4ef5019aae2f178ae8c64830bd86406cd1"
+    },
+    {
+      "key": "my",
+      "title": "Malaysia",
+      "country": "my",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "my.geojson",
+      "first": false,
+      "size": 157217364,
+      "sha256": "cd4d1f88a522d17771e253622011349a7fd138133f566fef25b8ad55b337d054"
+    },
+    {
+      "key": "mz",
+      "title": "Mozambique",
+      "country": "mz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "mz.geojson",
+      "first": false,
+      "size": 116818548,
+      "sha256": "ea611c78dc730156fe2359d1026f51802e11a7f31e26905a48a4669f22510f87"
+    },
+    {
+      "key": "na",
+      "title": "Namibia",
+      "country": "na",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "na.geojson",
+      "first": false,
+      "size": 74020486,
+      "sha256": "fb53dbc51cae0c6eb729ecfbc5df8025e2dcd0d1698ae02c3b560a268c3e88e1"
+    },
+    {
+      "key": "nc",
+      "title": "New Caledonia",
+      "country": "nc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nc.geojson",
+      "first": false,
+      "size": 10774223,
+      "sha256": "d9675b0768d4e2ec39ef1355590bc61370c22434c79f6d0fb91d626d43bff553"
+    },
+    {
+      "key": "ne",
+      "title": "Niger",
+      "country": "ne",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ne.geojson",
+      "first": false,
+      "size": 84023635,
+      "sha256": "29af640a49de9bd65567373b4f084e459321e97378f8a8438972e464f7e8ca7d"
+    },
+    {
+      "key": "nf",
+      "title": "Norfolk Island",
+      "country": "nf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nf.geojson",
+      "first": false,
+      "size": 175982,
+      "sha256": "0515135200319fdf9404a5e96299ac2b5585ce03b96d819e058ae813d4f537b6"
+    },
+    {
+      "key": "ng",
+      "title": "Nigeria",
+      "country": "ng",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ng.geojson",
+      "first": false,
+      "size": 308344351,
+      "sha256": "ab33758b2a09bb2938fb973c68fdd90150c550d0cd06d5c38a10953475af7960"
+    },
+    {
+      "key": "ni",
+      "title": "Nicaragua",
+      "country": "ni",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ni.geojson",
+      "first": false,
+      "size": 64056812,
+      "sha256": "666d7fae2e3e663ed1a492296c5977ef866398f71e382c5e0f29fd8d8a068a36"
+    },
+    {
+      "key": "nl",
+      "title": "The Netherlands",
+      "country": "nl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nl.geojson",
+      "first": false,
+      "size": 483354925,
+      "sha256": "827a5ed858a9113228e252a5a00458d370c6eeb6f760033e8f3de127fbea00c0"
+    },
+    {
+      "key": "no",
+      "title": "Norway",
+      "country": "no",
+      "minzoom": 7,
+      "maxzoom": 13,
+      "region": "no.geojson",
+      "first": false,
+      "size": 915718554,
+      "sha256": "f9142a494a41df5d84c707bf7bbdf4317ddd7800e5e75950fc487c71ce84e219"
+    },
+    {
+      "key": "np",
+      "title": "Nepal",
+      "country": "np",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "np.geojson",
+      "first": false,
+      "size": 243442528,
+      "sha256": "9fe0a4b886779f817ca3649cbe8fb4f0240a995f6f4dbe5ac7d0c5bbb5448265"
+    },
+    {
+      "key": "nr",
+      "title": "Nauru",
+      "country": "nr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nr.geojson",
+      "first": false,
+      "size": 176688,
+      "sha256": "e1baf2e5e925bc82221dd0302738e5be868e74174444a24d58a35146eaac46d8"
+    },
+    {
+      "key": "nu",
+      "title": "Niue",
+      "country": "nu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nu.geojson",
+      "first": false,
+      "size": 367963,
+      "sha256": "a87ef7acd20aee5b1f6962b2ed4b7c79d568245292a9787cfac26b0b82292ebd"
+    },
+    {
+      "key": "nz",
+      "title": "New Zealand",
+      "country": "nz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "nz.geojson",
+      "first": false,
+      "size": 309822820,
+      "sha256": "206f87accf40c122b902dfdb0a5eef7c22c6910de76493b7e18abdd09f9d36b7"
+    },
+    {
+      "key": "om",
+      "title": "Oman",
+      "country": "om",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "om.geojson",
+      "first": false,
+      "size": 36000215,
+      "sha256": "f930aba7049b58b213a189f71ee1f9c57729f651a747b17d5d56b91455e71fe1"
+    },
+    {
+      "key": "pa",
+      "title": "Panama",
+      "country": "pa",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pa.geojson",
+      "first": false,
+      "size": 36673395,
+      "sha256": "7fda07b905c040adf3a651fb4931a521470b2a05f2b7629597efb887afde92c9"
+    },
+    {
+      "key": "pe",
+      "title": "Peru",
+      "country": "pe",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pe.geojson",
+      "first": false,
+      "size": 252736732,
+      "sha256": "1a3598df4c414c416b33186747d82fe45a065c68490342db4d3cb39992b41678"
+    },
+    {
+      "key": "pf",
+      "title": "French Polynesia",
+      "country": "pf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pf.geojson",
+      "first": false,
+      "size": 7115546,
+      "sha256": "72076496001d7911cc471b55032b2e585fc43b0465f4fd97ee2351db6ef9acbf"
+    },
+    {
+      "key": "pg",
+      "title": "Papua New Guinea",
+      "country": "pg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pg.geojson",
+      "first": false,
+      "size": 73944298,
+      "sha256": "a075339298276b3668762f7847cc04b922bf464a9117bcaafbfe1d8e176eac44"
+    },
+    {
+      "key": "ph",
+      "title": "Philippines",
+      "country": "ph",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ph.geojson",
+      "first": false,
+      "size": 279562476,
+      "sha256": "370c4fa7e4e6b73ceef14e36bf6a550ecd8dbe63213495cda19b259a49c30771"
+    },
+    {
+      "key": "pk",
+      "title": "Pakistan",
+      "country": "pk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pk.geojson",
+      "first": false,
+      "size": 227075421,
+      "sha256": "1e5e3828e2a3e623ec09365d8ecb2a66f91e7c2046f29781afef6e1f025ebd80"
+    },
+    {
+      "key": "pl",
+      "title": "Poland",
+      "country": "pl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pl.geojson",
+      "first": false,
+      "size": 1417210409,
+      "sha256": "923c271d9d83768985434cd7e75bfb39de275bbd99c3c8ee295e41e680254841"
+    },
+    {
+      "key": "pm",
+      "title": "Saint Pierre and Miquelon",
+      "country": "pm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pm.geojson",
+      "first": false,
+      "size": 1641132,
+      "sha256": "2c13f3b30c54b64dbc387405fdbbc8bc5fcd555987d7ca62fa94e59593a81e33"
+    },
+    {
+      "key": "pr",
+      "title": "Puerto Rico",
+      "country": "pr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pr.geojson",
+      "first": false,
+      "size": 24147365,
+      "sha256": "9c57a990167da13df87fea3d0904acf31fa4f9a7578f09a459be9c939b63c4ff"
+    },
+    {
+      "key": "ps",
+      "title": "Palestinian Territory",
+      "country": "ps",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ps.geojson",
+      "first": false,
+      "size": 20272892,
+      "sha256": "35c91e86edd533789e530768b40fb0b4c8b8cb98e4a24363ef3f930011f6691e"
+    },
+    {
+      "key": "pt",
+      "title": "Portugal",
+      "country": "pt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pt.geojson",
+      "first": false,
+      "size": 296306491,
+      "sha256": "b4781a74e01c450e366b585a5d6a11893fc4a65bff0ee3c61a5ce1754435e59c"
+    },
+    {
+      "key": "pw",
+      "title": "Palau",
+      "country": "pw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "pw.geojson",
+      "first": false,
+      "size": 1129624,
+      "sha256": "dee6deaca107b9bd15e9b914f97c98de71705669a2fdaf453f991c118a0493d0"
+    },
+    {
+      "key": "py",
+      "title": "Paraguay",
+      "country": "py",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "py.geojson",
+      "first": false,
+      "size": 90529391,
+      "sha256": "084cb82e98cfdfbb533087ca8dda36c33311194056ffe37475edbda98b838f60"
+    },
+    {
+      "key": "qa",
+      "title": "Qatar",
+      "country": "qa",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "qa.geojson",
+      "first": false,
+      "size": 12538549,
+      "sha256": "b95190e5815311a7aca9a7a84e55b1eb68143ff49fecc6b1cc30321daec15a11"
+    },
+    {
+      "key": "ro",
+      "title": "Romania",
+      "country": "ro",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ro.geojson",
+      "first": false,
+      "size": 383800656,
+      "sha256": "117b38b8a6e265271750044dbc16e424b76753175c4ad6953bfdeaf23b967509"
+    },
+    {
+      "key": "rs",
+      "title": "Serbia",
+      "country": "rs",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "rs.geojson",
+      "first": false,
+      "size": 174833721,
+      "sha256": "e53804cbf2b8363b578d4961ea0ce44e109ee77f54c72a62f5a6a2a431ddbd8b"
+    },
+    {
+      "key": "ru-ad",
+      "title": "Republic of Adygea",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ad.geojson",
+      "first": false,
+      "size": 16632693,
+      "sha256": "1af26cb3c001244421d07c2798be5d357dce7226320d690a2b1779c293768f46"
+    },
+    {
+      "key": "ru-al",
+      "title": "Altai Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-al.geojson",
+      "first": false,
+      "size": 88207794,
+      "sha256": "7ac59b379adfc568a4ea8a0ffcb11ad806e7ff3eb0a100ced4ca9469dc4f5a66"
+    },
+    {
+      "key": "ru-alt",
+      "title": "Altai Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-alt.geojson",
+      "first": false,
+      "size": 185227595,
+      "sha256": "2b364b78560827339b0b068c4ff7b8be5a0ba32d2c712d5c85f1fd9cb3abf625"
+    },
+    {
+      "key": "ru-amu",
+      "title": "Amur",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-amu.geojson",
+      "first": false,
+      "size": 51203434,
+      "sha256": "59a0b691352d0666bf363209f7817fec6fb5ebdeac2a64d5802245cf6b8994c5"
+    },
+    {
+      "key": "ru-ark",
+      "title": "Arkhangelsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ark.geojson",
+      "first": false,
+      "size": 216078562,
+      "sha256": "8d18bac5033348ace399bc8016d516d4f61b0a63e013f73142f8f65358f37035"
+    },
+    {
+      "key": "ru-ast",
+      "title": "Astrakhan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ast.geojson",
+      "first": false,
+      "size": 25978102,
+      "sha256": "1194b4a2d49edcfeef74a514ed44ca238c6e9eb3e868d70b5c7957c5aa16be84"
+    },
+    {
+      "key": "ru-ba",
+      "title": "Bashkortostan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ba.geojson",
+      "first": false,
+      "size": 155009843,
+      "sha256": "19b592cd5785d8313832c9d70af66fda06ade708afad436fc19d04e82ce6a13b"
+    },
+    {
+      "key": "ru-bel",
+      "title": "Belgorod",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-bel.geojson",
+      "first": false,
+      "size": 49598804,
+      "sha256": "5a27a2edb406b925f7501f95be63bf4d5df8cbb63bc182f06a3e0dccdb66e65a"
+    },
+    {
+      "key": "ru-bry",
+      "title": "Bryansk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-bry.geojson",
+      "first": false,
+      "size": 38575196,
+      "sha256": "e34d486ba7679993b0528412ec83dba3c8420cf11467ded05ea375e5b1ff1c61"
+    },
+    {
+      "key": "ru-bu",
+      "title": "Republic of Buryatia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-bu.geojson",
+      "first": false,
+      "size": 61977910,
+      "sha256": "2cde178a2c979f0395693ca05158c8d2fb7bb7fcff728c5fdc948d7484d62f0c"
+    },
+    {
+      "key": "ru-ce",
+      "title": "Chechen Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ce.geojson",
+      "first": false,
+      "size": 17270911,
+      "sha256": "48175f61d8a0cf4601a6410fde3793129edbf4c92880effe3f7d0a6acd9607c5"
+    },
+    {
+      "key": "ru-che",
+      "title": "Chelyabinsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-che.geojson",
+      "first": false,
+      "size": 98428653,
+      "sha256": "25caf85d0e753838f4581d851167cc12efdafd2c077760c079599e7dc67c6bd3"
+    },
+    {
+      "key": "ru-chu",
+      "title": "Chukotka Autonomous Okrug",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-chu.geojson",
+      "first": false,
+      "size": 140065224,
+      "sha256": "5be864e1c3a2a80e1236ae6b276e17da5091c87216700b1234c5b34b46bfa07a"
+    },
+    {
+      "key": "ru-cu",
+      "title": "Chuvash Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-cu.geojson",
+      "first": false,
+      "size": 30695778,
+      "sha256": "f40b8bd3d6ff7f7f0a3c7a95519537d57fb4bc041a6e4f9d8aac5b45c536b02e"
+    },
+    {
+      "key": "ru-da",
+      "title": "Republic of Dagestan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-da.geojson",
+      "first": false,
+      "size": 38663106,
+      "sha256": "9576d0c580717bf536196ff71584a15343e754a40dd5f2c4ee1b96576a977616"
+    },
+    {
+      "key": "ru-in",
+      "title": "Republic of Ingushetia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-in.geojson",
+      "first": false,
+      "size": 5733694,
+      "sha256": "d3cbff6a1ebf0946b3a2756753ce537dcc458889b8a469dce5c147a3c8261d4a"
+    },
+    {
+      "key": "ru-irk",
+      "title": "Irkutsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-irk.geojson",
+      "first": false,
+      "size": 141827294,
+      "sha256": "65c249989faddae97ae85aec85718c85877ba6f5e8c102945cbdca9eaa22be82"
+    },
+    {
+      "key": "ru-iva",
+      "title": "Ivanovo",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-iva.geojson",
+      "first": false,
+      "size": 37871537,
+      "sha256": "bd255ccf965697cc9ede5a62b35fa7c88710b6d14eedecb838e318c62ba30a30"
+    },
+    {
+      "key": "ru-kam",
+      "title": "Kamchatka Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kam.geojson",
+      "first": false,
+      "size": 81751300,
+      "sha256": "673cbf416260572ab4571460330fcc09d0c66c438144cd6962bc804d4be9dae2"
+    },
+    {
+      "key": "ru-kb",
+      "title": "Kabardino-Balkaria",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kb.geojson",
+      "first": false,
+      "size": 18765019,
+      "sha256": "a3bcfb10ce00ef205975236110bdaed283ef8d35fa4e805e08f30c6af77ec189"
+    },
+    {
+      "key": "ru-kc",
+      "title": "Karachay-Cherkess Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kc.geojson",
+      "first": false,
+      "size": 28596810,
+      "sha256": "4635095096da1dd167fb2fe1ed981dfc44cd6275d0e6f4cfccd86ecba1d199f6"
+    },
+    {
+      "key": "ru-kda",
+      "title": "Krasnodar Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kda.geojson",
+      "first": false,
+      "size": 113794488,
+      "sha256": "765d63e092953cb963ee629f70067b54144fca79a4effafcf647704372cedb32"
+    },
+    {
+      "key": "ru-kem",
+      "title": "Kemerovo",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kem.geojson",
+      "first": false,
+      "size": 52329184,
+      "sha256": "d005bc83468f313e9d03ad23ebd2c591e16ec4a02952431373aedc587f4a1e90"
+    },
+    {
+      "key": "ru-kgd",
+      "title": "Kaliningrad",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kgd.geojson",
+      "first": false,
+      "size": 35066226,
+      "sha256": "6cd09745266efc1d3709a507b0fe8f1836a3136f1ba3d8aa28761cf1f0fa88d3"
+    },
+    {
+      "key": "ru-kgn",
+      "title": "Kurgan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kgn.geojson",
+      "first": false,
+      "size": 56797068,
+      "sha256": "894b3cad0f6a2e579906fbf19d5aea2a9a5c8bd8a8168461f88306096a0a8d34"
+    },
+    {
+      "key": "ru-kha",
+      "title": "Khabarovsk Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kha.geojson",
+      "first": false,
+      "size": 175192671,
+      "sha256": "63abeb5e26efbbbf94f283bbe7f98cd35c4534b0b4f09d6448dc3815efddc10e"
+    },
+    {
+      "key": "ru-khm",
+      "title": "Khanty-Mansi Autonomous Okrug",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-khm.geojson",
+      "first": false,
+      "size": 188576353,
+      "sha256": "7c55e3ebe38da5df7dbf555baf57b147b3f518a5bf5579d08f7e84accaeb66c8"
+    },
+    {
+      "key": "ru-kir",
+      "title": "Kirov",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kir.geojson",
+      "first": false,
+      "size": 195437064,
+      "sha256": "7efaf00e2d3de6745ced89552cf481fd201747531ae2d460509cad265d122ad1"
+    },
+    {
+      "key": "ru-kk",
+      "title": "Republic of Khakassia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kk.geojson",
+      "first": false,
+      "size": 19233232,
+      "sha256": "0fac0f6795f43a9830811df1adba4775e4c64e6c79e4f27bcd00b5267932b271"
+    },
+    {
+      "key": "ru-kl",
+      "title": "Republic of Kalmykia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kl.geojson",
+      "first": false,
+      "size": 18986802,
+      "sha256": "daaf58b71d2eca8e1752073e3123559cc400f9b4623e5591abfef9702920b98e"
+    },
+    {
+      "key": "ru-klu",
+      "title": "Kaluga",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-klu.geojson",
+      "first": false,
+      "size": 51834412,
+      "sha256": "18077a78a40675c7d5eb823a44eca98b0b5f569bc1d0006ce272aad3765dfab1"
+    },
+    {
+      "key": "ru-ko",
+      "title": "Komi Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ko.geojson",
+      "first": false,
+      "size": 161772352,
+      "sha256": "7c172a044119c4dfdae8992ce6e73da0ed67c1d9da7bac1d1aedb0ef40155ac0"
+    },
+    {
+      "key": "ru-kos",
+      "title": "Kostroma",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kos.geojson",
+      "first": false,
+      "size": 48272443,
+      "sha256": "3ae3fd33da20735ece60c08439f09211db0c9d0afdc3fbb0373390d6e80502ad"
+    },
+    {
+      "key": "ru-kr",
+      "title": "Karelia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kr.geojson",
+      "first": false,
+      "size": 273600242,
+      "sha256": "c0b2771757d50a7030fc3f03204fb93231e1aa60d7df0e9f1b512252bc83bcc7"
+    },
+    {
+      "key": "ru-krs",
+      "title": "Kursk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-krs.geojson",
+      "first": false,
+      "size": 68160028,
+      "sha256": "80263c0ab82fed4964c3c4260b23a1fb0f493629352dd4d15ace1eac94560217"
+    },
+    {
+      "key": "ru-kya",
+      "title": "Krasnoyarsk Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-kya.geojson",
+      "first": false,
+      "size": 347046547,
+      "sha256": "2994b0050dc1b9d62c8c01a484c96380831e3aa398bcda3bf525797b5ff8b84a"
+    },
+    {
+      "key": "ru-len",
+      "title": "Leningrad",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-len.geojson",
+      "first": false,
+      "size": 168052653,
+      "sha256": "baeb1ab2a5da40aa03e286d2923211ebbe9269f1bce1d6d533c8e1e80c1db4b8"
+    },
+    {
+      "key": "ru-lip",
+      "title": "Lipetsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-lip.geojson",
+      "first": false,
+      "size": 46539213,
+      "sha256": "743f332350beb0dacfbeac472c435d5cfc906015815dc0fa943b64abb68c149d"
+    },
+    {
+      "key": "ru-mag",
+      "title": "Magadan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-mag.geojson",
+      "first": false,
+      "size": 47437614,
+      "sha256": "846acf7ec741becdf3a023a81c8e9856328de3f650183f13a021f77d115b7ded"
+    },
+    {
+      "key": "ru-me",
+      "title": "Mari El Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-me.geojson",
+      "first": false,
+      "size": 40141337,
+      "sha256": "b506818f7d7da7b623145c345bd323e0e8d2dca2500b1f6ceebb91d22846c45f"
+    },
+    {
+      "key": "ru-mo",
+      "title": "Republic of Mordovia",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-mo.geojson",
+      "first": false,
+      "size": 37474441,
+      "sha256": "aafc3841aeef58f6e529069a527ea674162979c8aeed9530277f5f94cdb6da04"
+    },
+    {
+      "key": "ru-mos",
+      "title": "Moscow",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-mos.geojson",
+      "first": false,
+      "size": 38513627,
+      "sha256": "b1656de968e736c430e111ec483c5810c7ff06ad9b46e47acdb572ce9cbfa071"
+    },
+    {
+      "key": "ru-mow",
+      "title": "Moscow",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-mow.geojson",
+      "first": false,
+      "size": 168395679,
+      "sha256": "a9b977442eba62c57766f51b66c0ea6aac6cdaa54f12b83ba49916cbb648446e"
+    },
+    {
+      "key": "ru-mur",
+      "title": "Murmansk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-mur.geojson",
+      "first": false,
+      "size": 110685535,
+      "sha256": "07d93ade8539c7e7ad3827fe1a49e03420631319f9a4c905b1ca99e6d55775ef"
+    },
+    {
+      "key": "ru-nen",
+      "title": "Nenets Autonomous Okrug",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-nen.geojson",
+      "first": false,
+      "size": 61589387,
+      "sha256": "8da6fead086b64a39b989bfd2741e124300ab7a3b957f345491dc6b055d2195d"
+    },
+    {
+      "key": "ru-ngr",
+      "title": "Novgorod",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ngr.geojson",
+      "first": false,
+      "size": 51651556,
+      "sha256": "a8fa4a4161ae0744211b8b3b61298e2f744ba1ef0a8cb387f187e89037d94757"
+    },
+    {
+      "key": "ru-niz",
+      "title": "Nizhny Novgorod",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-niz.geojson",
+      "first": false,
+      "size": 96099063,
+      "sha256": "416efcb7ccf58bd5bc1b7503be8319a7b7b26da0a85ad479b91b0119260adfc3"
+    },
+    {
+      "key": "ru-nvs",
+      "title": "Novosibirsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-nvs.geojson",
+      "first": false,
+      "size": 107259851,
+      "sha256": "dc18e7afd8001b79168bfa1a5af642998862c740fc7629fea367d2117434503f"
+    },
+    {
+      "key": "ru-oms",
+      "title": "Omsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-oms.geojson",
+      "first": false,
+      "size": 87796382,
+      "sha256": "6f61f0df5c9d74e45393e7c6a53de779fcda038b7e6c58b7a9d96ad067501d29"
+    },
+    {
+      "key": "ru-ore",
+      "title": "Orenburg",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ore.geojson",
+      "first": false,
+      "size": 68797576,
+      "sha256": "36f383aed018a3e2ab4fb8341a4e46b86eccc784ff2d454ddc3299a98ec8ecc6"
+    },
+    {
+      "key": "ru-orl",
+      "title": "Oryol",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-orl.geojson",
+      "first": false,
+      "size": 30918741,
+      "sha256": "32350778c73fb2c1a4cb39721c9d762d322a7091f96922664947e4ec4da24348"
+    },
+    {
+      "key": "ru-per",
+      "title": "Perm Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-per.geojson",
+      "first": false,
+      "size": 151156227,
+      "sha256": "658d0d31412388f31e3c3fdc618f031cda148fb72281b417b03847e4d4c7e92e"
+    },
+    {
+      "key": "ru-pnz",
+      "title": "Penza",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-pnz.geojson",
+      "first": false,
+      "size": 42262100,
+      "sha256": "44707aee134ab41cb6f414edc3d8244ca13afc89251bdd6e1ffdde8b4e2250ed"
+    },
+    {
+      "key": "ru-pri",
+      "title": "Primorsky Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-pri.geojson",
+      "first": false,
+      "size": 54694165,
+      "sha256": "2b9f26ddc5602c764fef012064e06d43a3456215976319eab9eb471ba0b5595e"
+    },
+    {
+      "key": "ru-psk",
+      "title": "Pskov",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-psk.geojson",
+      "first": false,
+      "size": 107274685,
+      "sha256": "2dd7e46065112a487d4a024a423903c6351eb299a471f648ebc9a056695aecec"
+    },
+    {
+      "key": "ru-ros",
+      "title": "Rostov",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ros.geojson",
+      "first": false,
+      "size": 100356414,
+      "sha256": "3b91b884b749c64a869649ab3278f5ffc232549929bba8f74615fbb23476025d"
+    },
+    {
+      "key": "ru-rus283",
+      "title": "Autonomous Republic of Crimea",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-rus283.geojson",
+      "first": false,
+      "size": 34082165,
+      "sha256": "419eefec2e9bae0fa7fd47e6e0d79faa49eb873e835d8c7f5aa4cc5274fe2ff2"
+    },
+    {
+      "key": "ru-rus5482",
+      "title": "Sevastopol",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-rus5482.geojson",
+      "first": false,
+      "size": 4201653,
+      "sha256": "b519ab411d709443195f14e2510f38909af502b996de6398c505e01b18a0e7b2"
+    },
+    {
+      "key": "ru-rus99",
+      "title": "None",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-rus99.geojson",
+      "first": false,
+      "size": 53647,
+      "sha256": "00a700401fba3a116e4abd137c806393260dbc81ec2cc02318b3a6e77f1c9e1c"
+    },
+    {
+      "key": "ru-rya",
+      "title": "Ryazan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-rya.geojson",
+      "first": false,
+      "size": 49781969,
+      "sha256": "78a417bdc8cca5a27f1fa3998cab245244d01e3776fb25ab69807a1b7eba81f7"
+    },
+    {
+      "key": "ru-sa",
+      "title": "Sakha Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sa.geojson",
+      "first": false,
+      "size": 461648770,
+      "sha256": "66bb8dbfa9ed7b73ddb578cf2b12e6d75bd71ed1f71edd51a3c6c8b5fb604797"
+    },
+    {
+      "key": "ru-sak",
+      "title": "Sakhalin",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sak.geojson",
+      "first": false,
+      "size": 66188014,
+      "sha256": "b9deba4b439506220f76d9a1a061ed536520179d807f768869d3c197c7711a44"
+    },
+    {
+      "key": "ru-sam",
+      "title": "Samara",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sam.geojson",
+      "first": false,
+      "size": 60146660,
+      "sha256": "c242ba9b762b4a081fd10442b8a43e3bdb64b72a3aaa01f4658dc85c161ccb3f"
+    },
+    {
+      "key": "ru-sar",
+      "title": "Saratov",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sar.geojson",
+      "first": false,
+      "size": 61850646,
+      "sha256": "61ca40c2a6f815a55f431f4313ea1df11aac3f537ae8ad125108565065814ded"
+    },
+    {
+      "key": "ru-se",
+      "title": "Republic of North Ossetia-Alania",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-se.geojson",
+      "first": false,
+      "size": 10112584,
+      "sha256": "ec9c2dbca0ed7077102ece877d85b4ca23a144e94fa1d567bc545ec379b9051d"
+    },
+    {
+      "key": "ru-smo",
+      "title": "Smolensk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-smo.geojson",
+      "first": false,
+      "size": 72546854,
+      "sha256": "2e7caffba0bbe433725b8b5f14bb190796922f3055c36d49a6df6a38ea4614c2"
+    },
+    {
+      "key": "ru-spe",
+      "title": "Saint Petersburg",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-spe.geojson",
+      "first": false,
+      "size": 31018219,
+      "sha256": "624a57464dff8ef70a9bf7f3e6e0c93ccf952a21f0c26282c7c526a013f97b39"
+    },
+    {
+      "key": "ru-sta",
+      "title": "Stavropol Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sta.geojson",
+      "first": false,
+      "size": 42978723,
+      "sha256": "9ee730148ef7af483ca456a3b74b13fc21addadf8a911775e4d6e08a8b0019a2"
+    },
+    {
+      "key": "ru-sve",
+      "title": "Sverdlovsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-sve.geojson",
+      "first": false,
+      "size": 146478782,
+      "sha256": "655dde8cf34f19754aa7de8501e9e767b179960b671567df25ac67dd993a196c"
+    },
+    {
+      "key": "ru-ta",
+      "title": "Republic of Tatarstan",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ta.geojson",
+      "first": false,
+      "size": 118621883,
+      "sha256": "f1049ba4e12a4d540ede69b2dc45ebe42c41e5d7871a5881f8488e18d0a93651"
+    },
+    {
+      "key": "ru-tam",
+      "title": "Tambov",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-tam.geojson",
+      "first": false,
+      "size": 43541381,
+      "sha256": "8eed7ee54edd2377fbca1667e518c60853a153b407e6825ae703515db4d7d8aa"
+    },
+    {
+      "key": "ru-tom",
+      "title": "Tomsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-tom.geojson",
+      "first": false,
+      "size": 68917566,
+      "sha256": "3bfa4dbf49791669e48fab01b2dc0495cc46da8edefe0b42ec0f0f9025745d71"
+    },
+    {
+      "key": "ru-tul",
+      "title": "Tula",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-tul.geojson",
+      "first": false,
+      "size": 44817111,
+      "sha256": "e481d09df575cecaa4e3757c56acf8a962b8f8b5c1d37560040b8786eaf44b36"
+    },
+    {
+      "key": "ru-tve",
+      "title": "Tver",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-tve.geojson",
+      "first": false,
+      "size": 119269436,
+      "sha256": "563a1c1013e11a62cd0f89640f6e614bcc3fea123f1f2def6bceb61e3b097050"
+    },
+    {
+      "key": "ru-ty",
+      "title": "Tuva Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ty.geojson",
+      "first": false,
+      "size": 22136927,
+      "sha256": "8f3ffee46d0c59eaea42d9df9218d795040e3bf04bc136655d97f839b5a4e853"
+    },
+    {
+      "key": "ru-tyu",
+      "title": "Tyumen",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-tyu.geojson",
+      "first": false,
+      "size": 74895149,
+      "sha256": "551b3dfb7ada7e1a91d2864e3861f32311f44d2abf4f21fe45a4ad9e4442bad1"
+    },
+    {
+      "key": "ru-ud",
+      "title": "Udmurt Republic",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-ud.geojson",
+      "first": false,
+      "size": 75289773,
+      "sha256": "672dcfa2d8622487414a1f5de3be8aa76c77c5d5df91214248958c923ae7c132"
+    },
+    {
+      "key": "ru-uly",
+      "title": "Ulyanovsk",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-uly.geojson",
+      "first": false,
+      "size": 41469355,
+      "sha256": "e2b230087bf0e0139096fe140b5230f4969b11921227b6bc58c7967c4a1c1012"
+    },
+    {
+      "key": "ru-vgg",
+      "title": "Volgograd",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-vgg.geojson",
+      "first": false,
+      "size": 81525853,
+      "sha256": "7814f60bd0320d01263620a5da0d230647698fe1b6167d5dee7fd800a05b7e24"
+    },
+    {
+      "key": "ru-vla",
+      "title": "Vladimir",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-vla.geojson",
+      "first": false,
+      "size": 72423666,
+      "sha256": "e4903c570c866b46d95ceaf9edb3ca87b9b51862c381f011f612e691bc96195f"
+    },
+    {
+      "key": "ru-vlg",
+      "title": "Vologda",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-vlg.geojson",
+      "first": false,
+      "size": 112417674,
+      "sha256": "905c71300a5be3767a2b6a844d6ac58521494bad421e9c416ced31d3fc41a81f"
+    },
+    {
+      "key": "ru-vor",
+      "title": "Voronezh",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-vor.geojson",
+      "first": false,
+      "size": 76733308,
+      "sha256": "b62df930fd3b037ddb2f117516c72fcfde7799300bfe5b23b5fc1a2ec2b12a4c"
+    },
+    {
+      "key": "ru-yan",
+      "title": "Yamalo-Nenets Autonomous Okrug",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-yan.geojson",
+      "first": false,
+      "size": 134443944,
+      "sha256": "b9b52800439a0cb0f820c61fd3e6c848cbfd87ee526a1b6accb2a31201dfa216"
+    },
+    {
+      "key": "ru-yar",
+      "title": "Yaroslavl",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-yar.geojson",
+      "first": false,
+      "size": 58872987,
+      "sha256": "a6c3d7c7a6ca15267c169fcd7e5153500f2cec24b71128b70f11da6a8ed7877e"
+    },
+    {
+      "key": "ru-yev",
+      "title": "Jewish",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-yev.geojson",
+      "first": false,
+      "size": 14895572,
+      "sha256": "15d08b507e922ba198f17bc9b4c1de7c074e26dfd05782214179a0986fe7675c"
+    },
+    {
+      "key": "ru-zab",
+      "title": "Zabaykalsky Krai",
+      "country": "ru",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ru-zab.geojson",
+      "first": false,
+      "size": 65378766,
+      "sha256": "b28b30c670c5c8b5f74d7378c701785788da1c22a9f104cfda8c8f2a33e8b4aa"
+    },
+    {
+      "key": "rw",
+      "title": "Rwanda",
+      "country": "rw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "rw.geojson",
+      "first": false,
+      "size": 36357500,
+      "sha256": "03907799477385756066d4e440d62dcd69b7135a414982402c5cedcdf4eaebd4"
+    },
+    {
+      "key": "sa",
+      "title": "Saudi Arabia",
+      "country": "sa",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sa.geojson",
+      "first": false,
+      "size": 219534954,
+      "sha256": "0130cc404f422969b78a715ac3ea9aad707412e2441ad5d95b2624607c1975dc"
+    },
+    {
+      "key": "sb",
+      "title": "Solomon Islands",
+      "country": "sb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sb.geojson",
+      "first": false,
+      "size": 15473227,
+      "sha256": "414f44dd03e51df8f97d8ea1b127f0d3c2661437f7d306b423e779c3b7887bd3"
+    },
+    {
+      "key": "sc",
+      "title": "Seychelles",
+      "country": "sc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sc.geojson",
+      "first": false,
+      "size": 1124231,
+      "sha256": "c398fa673ef605f4b5d4b94ec789f9c277d11d00ef0ba31d5e9b0e3de5357d6b"
+    },
+    {
+      "key": "sd",
+      "title": "Sudan",
+      "country": "sd",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sd.geojson",
+      "first": false,
+      "size": 166433654,
+      "sha256": "339f0af37a2f8b2553bce5af78acc241524a1a377c3648832557ae01bfda3bdc"
+    },
+    {
+      "key": "se",
+      "title": "Sweden",
+      "country": "se",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "se.geojson",
+      "first": false,
+      "size": 1185507988,
+      "sha256": "3de98f8139426a76aa09245e199020712392889df6452aaec6201bed278a533c"
+    },
+    {
+      "key": "sg",
+      "title": "Singapore",
+      "country": "sg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sg.geojson",
+      "first": false,
+      "size": 9277517,
+      "sha256": "d56ef9b3464a6c71298c6bcdd71c643f70e58c6a87cbd2e844b3069d2c27bb05"
+    },
+    {
+      "key": "sh",
+      "title": "Saint Helena",
+      "country": "sh",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sh.geojson",
+      "first": false,
+      "size": 677802,
+      "sha256": "dae3d14debb7eb5a1960a951a11c41ae14297808c69cec1ad172729bd8177cd9"
+    },
+    {
+      "key": "si",
+      "title": "Slovenia",
+      "country": "si",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "si.geojson",
+      "first": false,
+      "size": 243950652,
+      "sha256": "1be63cf5e18b64145529099e3e41775a18c223f688fb7351a40c2190d560fb01"
+    },
+    {
+      "key": "sk",
+      "title": "Slovakia",
+      "country": "sk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sk.geojson",
+      "first": false,
+      "size": 216813360,
+      "sha256": "0a3c26347cb297714c2eb2dc3721af325459073e3bc39987a8156560205f7731"
+    },
+    {
+      "key": "sl",
+      "title": "Sierra Leone",
+      "country": "sl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sl.geojson",
+      "first": false,
+      "size": 28632560,
+      "sha256": "96e744752280ebc4fe879dce46c86de493a3a2c677409e3b89ba3eb12d679f59"
+    },
+    {
+      "key": "sm",
+      "title": "San Marino",
+      "country": "sm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sm.geojson",
+      "first": false,
+      "size": 1755860,
+      "sha256": "e8314cb603e195069a7da4c42bbee34e0d72f727237be9b5020b1132c30d0d83"
+    },
+    {
+      "key": "sn",
+      "title": "Senegal",
+      "country": "sn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sn.geojson",
+      "first": false,
+      "size": 81142489,
+      "sha256": "7d6649a9b372849623f29b20096e67c5a85309fad3e6479b517fce5fd7737a65"
+    },
+    {
+      "key": "so",
+      "title": "Somalia",
+      "country": "so",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "so.geojson",
+      "first": false,
+      "size": 216400688,
+      "sha256": "18d5e07ac6c77bb744e3068d0b7f888be9898f19b30dcb57ab0306e3fe9021ef"
+    },
+    {
+      "key": "sol",
+      "title": "Somaliland",
+      "country": "sol",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sol.geojson",
+      "first": false,
+      "size": 32753894,
+      "sha256": "60ff590e9eeabba3d9cda687eefe31f84f4d08b72ed000117ff52d5156779da0"
+    },
+    {
+      "key": "sr",
+      "title": "Suriname",
+      "country": "sr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sr.geojson",
+      "first": false,
+      "size": 25031376,
+      "sha256": "f866c9e20a42ef25f7a176bc732d44b91d062cdc021483801a14f1db990e8126"
+    },
+    {
+      "key": "ss",
+      "title": "South Sudan",
+      "country": "ss",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ss.geojson",
+      "first": false,
+      "size": 80057823,
+      "sha256": "957a8cc6a047ad3a7ec6aae90336fda0f5b619db1aa37d734cfa9d61cabdc5ee"
+    },
+    {
+      "key": "st",
+      "title": "Sao Tome and Principe",
+      "country": "st",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "st.geojson",
+      "first": false,
+      "size": 1275109,
+      "sha256": "bb707115e9bd62404a66c957897ada7363cba71a50874aed760cc225677d4276"
+    },
+    {
+      "key": "sv",
+      "title": "El Salvador",
+      "country": "sv",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sv.geojson",
+      "first": false,
+      "size": 21169247,
+      "sha256": "e009f4ac762f40c500f236795b9185367c851e8aeb76a252c058c792119fbb59"
+    },
+    {
+      "key": "sx",
+      "title": "Sint Maarten",
+      "country": "sx",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sx.geojson",
+      "first": false,
+      "size": 517232,
+      "sha256": "054c812f940bdc463de6b15404a06c8408df0ef3784013c526a16bc97a63f02d"
+    },
+    {
+      "key": "sy",
+      "title": "Syria",
+      "country": "sy",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sy.geojson",
+      "first": false,
+      "size": 81864225,
+      "sha256": "95a56f1565007f64266943d13d0f8b15668a87a6b0d794ba4a50b9c5b1c01091"
+    },
+    {
+      "key": "sz",
+      "title": "Eswatini",
+      "country": "sz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "sz.geojson",
+      "first": false,
+      "size": 14345637,
+      "sha256": "9df39ad620474ca05587a79f038c9859b1990c247b89d1fbc693bf4c5d44804e"
+    },
+    {
+      "key": "tc",
+      "title": "Turks and Caicos Islands",
+      "country": "tc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tc.geojson",
+      "first": false,
+      "size": 816049,
+      "sha256": "72df704f11793b80a196fc8f27b53e80ef3e347b2c1e5d63a46d3940cd91234d"
+    },
+    {
+      "key": "td",
+      "title": "Chad",
+      "country": "td",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "td.geojson",
+      "first": false,
+      "size": 106340940,
+      "sha256": "81c277cc886dce9c17d90eab604db636144cb6e911209039e32859d005a50fde"
+    },
+    {
+      "key": "tg",
+      "title": "Togo",
+      "country": "tg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tg.geojson",
+      "first": false,
+      "size": 23115315,
+      "sha256": "06fb8bd6f6efe30dc680f7cba07bd496c7240e54410fba5cf3e44998faab5637"
+    },
+    {
+      "key": "th",
+      "title": "Thailand",
+      "country": "th",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "th.geojson",
+      "first": false,
+      "size": 312925890,
+      "sha256": "188145bdda998b92478581708bc01c1f5551a2f11c47b42e7df048c5700d3255"
+    },
+    {
+      "key": "tj",
+      "title": "Tajikistan",
+      "country": "tj",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tj.geojson",
+      "first": false,
+      "size": 62469901,
+      "sha256": "8af4aeab215f6fd091b589e3cb862a63094b76bf8379dd3c685064ff5b1418b6"
+    },
+    {
+      "key": "tl",
+      "title": "Timor Leste",
+      "country": "tl",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tl.geojson",
+      "first": false,
+      "size": 9710664,
+      "sha256": "462c3c2c0d77d0df5d42906ae031c692cc28a79aa63bb7d093a03c41298f47ee"
+    },
+    {
+      "key": "tm",
+      "title": "Turkmenistan",
+      "country": "tm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tm.geojson",
+      "first": false,
+      "size": 37143851,
+      "sha256": "5ac1d0b7b17aae10788b2249992c36ec8f514803533c4aeed84dd6e3b7210761"
+    },
+    {
+      "key": "tn",
+      "title": "Tunisia",
+      "country": "tn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tn.geojson",
+      "first": false,
+      "size": 65943653,
+      "sha256": "2061b53dc1fbeeb794f98069b8664d0bbcf105867ca8f1e2c8accbea691bdf11"
+    },
+    {
+      "key": "to",
+      "title": "Tonga",
+      "country": "to",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "to.geojson",
+      "first": false,
+      "size": 2452223,
+      "sha256": "18bdd17b8d8ecbe9eb10d81b229d481f51598ad1046de3ad356050118855d5e8"
+    },
+    {
+      "key": "tr",
+      "title": "Turkey",
+      "country": "tr",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tr.geojson",
+      "first": false,
+      "size": 679518941,
+      "sha256": "55ff5bf8aa40f72e18bea9f38da96542a1e026a055e652f0ff49502d9cc5778f"
+    },
+    {
+      "key": "tt",
+      "title": "Trinidad and Tobago",
+      "country": "tt",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tt.geojson",
+      "first": false,
+      "size": 6135341,
+      "sha256": "39dba15e007ddb76103d4153808362944cca3985b466103ef496277b21a6fe58"
+    },
+    {
+      "key": "tv",
+      "title": "Tuvalu",
+      "country": "tv",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tv.geojson",
+      "first": false,
+      "size": 170514,
+      "sha256": "4f7a2a3fb6f74672dfeafcf087871add4306c4e016d596a79adee1989e0cde16"
+    },
+    {
+      "key": "tw",
+      "title": "Taiwan",
+      "country": "tw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tw.geojson",
+      "first": false,
+      "size": 94131896,
+      "sha256": "6efa2a8870f166bab865f3117fb91fe1fac58abf36b2d2ed38b0979697e094c9"
+    },
+    {
+      "key": "tz",
+      "title": "Tanzania",
+      "country": "tz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "tz.geojson",
+      "first": false,
+      "size": 246040696,
+      "sha256": "1a8d50eed1bf76870fa8a2fd343438e6762b2c5892920ceaddce1394fafe8d40"
+    },
+    {
+      "key": "ua",
+      "title": "Ukraine",
+      "country": "ua",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ua.geojson",
+      "first": false,
+      "size": 1016385535,
+      "sha256": "2d686040f5796d3856b6e67d88aba2fbc4f33f3a2040dfa125f3cc484ab50d62"
+    },
+    {
+      "key": "ug",
+      "title": "Uganda",
+      "country": "ug",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ug.geojson",
+      "first": false,
+      "size": 131311854,
+      "sha256": "2b81f9f3c4f069ccec366b81d4d44e38a69dc81f9771eafb558130db40d49ce9"
+    },
+    {
+      "key": "us-ak",
+      "title": "Alaska",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ak.geojson",
+      "first": false,
+      "size": 359853812,
+      "sha256": "127bb813b014f88dac9d9fc1cf5aa98560c952880ef16829ec5cdcc9e364a176"
+    },
+    {
+      "key": "us-al",
+      "title": "Alabama",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-al.geojson",
+      "first": false,
+      "size": 141735909,
+      "sha256": "2f37b7a71b70175906012c4a4180b2e9002bb457bcf7a3008332c16eac68eca5"
+    },
+    {
+      "key": "us-ar",
+      "title": "Arkansas",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ar.geojson",
+      "first": false,
+      "size": 88207955,
+      "sha256": "6f5a1c20eaf880857d42843ce35167b339a03ec70d6d9162106d362036d825e2"
+    },
+    {
+      "key": "us-az",
+      "title": "Arizona",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-az.geojson",
+      "first": false,
+      "size": 210228847,
+      "sha256": "5b393257a927a683d41b9321166cb50a872bcc60ff51dd1f29f9205e87f2aab6"
+    },
+    {
+      "key": "us-ca",
+      "title": "California",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ca.geojson",
+      "first": false,
+      "size": 518883835,
+      "sha256": "1014ebe595390cb3c0ae022468ec9b9d9db2bb38e4dfadcc5d096fb06043443d"
+    },
+    {
+      "key": "us-co",
+      "title": "Colorado",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-co.geojson",
+      "first": false,
+      "size": 246545881,
+      "sha256": "904394071e53c947f1870b6e8480a6407e18c7bbddb3fdb3f2a8d0d5bed5ec66"
+    },
+    {
+      "key": "us-ct",
+      "title": "Connecticut",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ct.geojson",
+      "first": false,
+      "size": 67835459,
+      "sha256": "501c5ea96c4beaa713a7a086924123524e99dab432855de2c5df72e71043e60f"
+    },
+    {
+      "key": "us-dc",
+      "title": "Washington",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-dc.geojson",
+      "first": false,
+      "size": 6341185,
+      "sha256": "fdb0587898d6d1181ffb6028142c4a902c409ef0f81b22b9335255fce941eedf"
+    },
+    {
+      "key": "us-de",
+      "title": "Delaware",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-de.geojson",
+      "first": false,
+      "size": 17793239,
+      "sha256": "14be6daf2bda962449a99cc8d40f7a6a800e2f32ce03f91d78db4dfd6245ec6e"
+    },
+    {
+      "key": "us-fl",
+      "title": "Florida",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-fl.geojson",
+      "first": false,
+      "size": 594566294,
+      "sha256": "5701e20124fc9bbf71f057dd99c199f7654d50c9098bcf79b0c30a175ddd6ffb"
+    },
+    {
+      "key": "us-ga",
+      "title": "Georgia",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ga.geojson",
+      "first": false,
+      "size": 197287957,
+      "sha256": "63a836c8cc4bcf68a8f33cfa4fa2506e30444bb454b749d08ae5a7101f38c98a"
+    },
+    {
+      "key": "us-hi",
+      "title": "Hawaii",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-hi.geojson",
+      "first": false,
+      "size": 14634982,
+      "sha256": "8a78abced80f081376c26029a7462fa71f7d0aa19fe5cd812d63f49abbef0066"
+    },
+    {
+      "key": "us-ia",
+      "title": "Iowa",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ia.geojson",
+      "first": false,
+      "size": 111486080,
+      "sha256": "dcb67a61569d0ef3d1a297a8dbd4477efe277788736f5b4b5205b29b1129d36d"
+    },
+    {
+      "key": "us-id",
+      "title": "Idaho",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-id.geojson",
+      "first": false,
+      "size": 121362011,
+      "sha256": "5e50e59b4e460c6096de04be620764fc1fdb1229c4944227153373f27ebe0e95"
+    },
+    {
+      "key": "us-il",
+      "title": "Illinois",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-il.geojson",
+      "first": false,
+      "size": 218623833,
+      "sha256": "14b596c420460c31eee4d01b1e7578224f4e834f6e36ad1be70745f9e87f92c6"
+    },
+    {
+      "key": "us-in",
+      "title": "Indiana",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-in.geojson",
+      "first": false,
+      "size": 134645536,
+      "sha256": "0ea03e42d45bff61bafd006a586ad40526a940843eb207138c22d6c221d71382"
+    },
+    {
+      "key": "us-ks",
+      "title": "Kansas",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ks.geojson",
+      "first": false,
+      "size": 118744952,
+      "sha256": "498ce160740c8168248dfa78233a135cb32d63610e4d1722f549e292e998e80a"
+    },
+    {
+      "key": "us-ky",
+      "title": "Kentucky",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ky.geojson",
+      "first": false,
+      "size": 103527696,
+      "sha256": "19b1ca6eb4fe1ef4882a2b22be04eafc6b0b966ab2d178313d9839e08ac93c6b"
+    },
+    {
+      "key": "us-la",
+      "title": "Louisiana",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-la.geojson",
+      "first": false,
+      "size": 107083034,
+      "sha256": "274f840e551ed266f48c32c0439039334b62d990963747f37fb3ce4ebef6f510"
+    },
+    {
+      "key": "us-ma",
+      "title": "Massachusetts",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ma.geojson",
+      "first": false,
+      "size": 116506912,
+      "sha256": "f6ecc6f9569dfe47205089ead3163c567cb0dc23094de12f62f878dfcd8c30dc"
+    },
+    {
+      "key": "us-md",
+      "title": "Maryland",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-md.geojson",
+      "first": false,
+      "size": 106463973,
+      "sha256": "6f3f410f23429d208238ed697b6b1ec64f7bdfe6ff7aa544649fffed0e707493"
+    },
+    {
+      "key": "us-me",
+      "title": "Maine",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-me.geojson",
+      "first": false,
+      "size": 90449955,
+      "sha256": "e8324273f7eb2a21404726c159bb5295e557604ac00ff53134e4b8fc0951ab40"
+    },
+    {
+      "key": "us-mi",
+      "title": "Michigan",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-mi.geojson",
+      "first": false,
+      "size": 228933072,
+      "sha256": "31cbd4d88a97e431745010a7d76288bca79651008487c8ab506f995bd094761c"
+    },
+    {
+      "key": "us-mn",
+      "title": "Minnesota",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-mn.geojson",
+      "first": false,
+      "size": 234116764,
+      "sha256": "ce19b5c2f366c9041fed6820a772a01d3c18862e19deed4a057af5f6a9b3007d"
+    },
+    {
+      "key": "us-mo",
+      "title": "Missouri",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-mo.geojson",
+      "first": false,
+      "size": 171127744,
+      "sha256": "fd7556b59c0594dce7ea2b6ca725a2b1b60ddbc59b37c2c0362d945e1ee3d753"
+    },
+    {
+      "key": "us-ms",
+      "title": "Mississippi",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ms.geojson",
+      "first": false,
+      "size": 68440670,
+      "sha256": "e29b80ceea8071d1dcc81442482a11412dbd1b7c3c065e429fcfce525fe0d392"
+    },
+    {
+      "key": "us-mt",
+      "title": "Montana",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-mt.geojson",
+      "first": false,
+      "size": 139312538,
+      "sha256": "65993181756c40ef1a70eb1f581e1ed5265eb5cba5d56898b8ed4d6c31bd8b0e"
+    },
+    {
+      "key": "us-nc",
+      "title": "North Carolina",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nc.geojson",
+      "first": false,
+      "size": 232720880,
+      "sha256": "452ffb29f89d37eefb267eb103ba37e67b5ea7e221616d54f5e4dd9980dc972a"
+    },
+    {
+      "key": "us-nd",
+      "title": "North Dakota",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nd.geojson",
+      "first": false,
+      "size": 92648378,
+      "sha256": "db8d33968833f208c605d6c0317a4078aad73b581bff16b4b1b7fbd85c8aaf22"
+    },
+    {
+      "key": "us-ne",
+      "title": "Nebraska",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ne.geojson",
+      "first": false,
+      "size": 90953291,
+      "sha256": "c49cdbd842cbf69a10d4dc191bc712b41b37fc43b69cf0daac96462eb8d8e917"
+    },
+    {
+      "key": "us-nh",
+      "title": "New Hampshire",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nh.geojson",
+      "first": false,
+      "size": 53574643,
+      "sha256": "ec09a82aff5fcf149998dc4f73d082d7952727bdcef6244550f0c9aa9c9e16f2"
+    },
+    {
+      "key": "us-nj",
+      "title": "New Jersey",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nj.geojson",
+      "first": false,
+      "size": 103927989,
+      "sha256": "917a2b0e867682614b9abaae4b61a1433bd62d5c1a1e6bdd3fa13e528c2d80dc"
+    },
+    {
+      "key": "us-nm",
+      "title": "New Mexico",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nm.geojson",
+      "first": false,
+      "size": 120038976,
+      "sha256": "57db29741bd8d9db4e11b46df132f753c8cb0d39052a2afaf372bb09bb004756"
+    },
+    {
+      "key": "us-nv",
+      "title": "Nevada",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-nv.geojson",
+      "first": false,
+      "size": 102765298,
+      "sha256": "3cd15bce658f2a147780d2b78d44cc88e025784a969dab0cd1d5ebb3a569503f"
+    },
+    {
+      "key": "us-ny",
+      "title": "New York",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ny.geojson",
+      "first": false,
+      "size": 218375894,
+      "sha256": "0779435b1deaac0295968309493fc021e138ad45472247f9d6b153d9a83b2144"
+    },
+    {
+      "key": "us-oh",
+      "title": "Ohio",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-oh.geojson",
+      "first": false,
+      "size": 240837049,
+      "sha256": "3074447b5a3e939c6b9fb0544909d29323648002057e68d2d5383c211ec3aef4"
+    },
+    {
+      "key": "us-ok",
+      "title": "Oklahoma",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ok.geojson",
+      "first": false,
+      "size": 107030834,
+      "sha256": "9205fcf0ddd24ba244229f8703d7c4d670490267f20ab9b88da24a6f7c9004d1"
+    },
+    {
+      "key": "us-or",
+      "title": "Oregon",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-or.geojson",
+      "first": false,
+      "size": 195294561,
+      "sha256": "b9323ff0dc4557a46f8f6121c706be195ff3f4049208b77cc13b7764e5b43285"
+    },
+    {
+      "key": "us-pa",
+      "title": "Pennsylvania",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-pa.geojson",
+      "first": false,
+      "size": 230116629,
+      "sha256": "f4bae573b224b7b8092694ff6c572019544da958702d51959bd00696e45783af"
+    },
+    {
+      "key": "us-ri",
+      "title": "Rhode Island",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ri.geojson",
+      "first": false,
+      "size": 33494807,
+      "sha256": "dcb86266c6b982e46a5cdb9144e4a0cd21482e0447e5f84623f7b7b9a66a8ff0"
+    },
+    {
+      "key": "us-sc",
+      "title": "South Carolina",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-sc.geojson",
+      "first": false,
+      "size": 117732437,
+      "sha256": "21ae386fdf9fba8a6123ff66981d67e44b02e0ecddd4340b1e2becd5a7031c69"
+    },
+    {
+      "key": "us-sd",
+      "title": "South Dakota",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-sd.geojson",
+      "first": false,
+      "size": 64026397,
+      "sha256": "78e42179e84faf24889e1517014e471d09f2f29cd7e877f28f5f5faa43a9be23"
+    },
+    {
+      "key": "us-tn",
+      "title": "Tennessee",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-tn.geojson",
+      "first": false,
+      "size": 128198527,
+      "sha256": "dec92126827cb032b39be567325686b3011dd65dbde29b52be35884b75df027f"
+    },
+    {
+      "key": "us-tx",
+      "title": "Texas",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-tx.geojson",
+      "first": false,
+      "size": 431990253,
+      "sha256": "3d551fa8ab5bfdedc046269118c11b700b578e9c8b659fb640d131a0dcb3d2fe"
+    },
+    {
+      "key": "us-ut",
+      "title": "Utah",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-ut.geojson",
+      "first": false,
+      "size": 130946811,
+      "sha256": "c44646704243a2c0fc2ab0b1ef618f0fd99494de6c81e35bcd7cb7b16a1d2fe7"
+    },
+    {
+      "key": "us-va",
+      "title": "Virginia",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-va.geojson",
+      "first": false,
+      "size": 216691160,
+      "sha256": "90ce802196fa250501ea1b49e2b42ab953beb7802502f9690508e8d71ee0dc2c"
+    },
+    {
+      "key": "us-vt",
+      "title": "Vermont",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-vt.geojson",
+      "first": false,
+      "size": 38761521,
+      "sha256": "09827de3a77844bef0770b064fc9937ff7f52864f7d597bd6a71f6915e7f8cb2"
+    },
+    {
+      "key": "us-wa",
+      "title": "Washington",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-wa.geojson",
+      "first": false,
+      "size": 240290006,
+      "sha256": "90544980617f6f995c53896d6318674c7df5b964f8ead5af3fe442ac80f6bbf6"
+    },
+    {
+      "key": "us-wi",
+      "title": "Wisconsin",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-wi.geojson",
+      "first": false,
+      "size": 222386703,
+      "sha256": "06e00e67c6752f9e7d542638429acd0549332380a9b6f30064dc8f9ee49c6f2d"
+    },
+    {
+      "key": "us-wv",
+      "title": "West Virginia",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-wv.geojson",
+      "first": false,
+      "size": 132347674,
+      "sha256": "27cc4b2463a01e90c5e12b31070c82d65cf27b00ecb1cf8859b3c6b057e42624"
+    },
+    {
+      "key": "us-wy",
+      "title": "Wyoming",
+      "country": "us",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "us-wy.geojson",
+      "first": false,
+      "size": 120340981,
+      "sha256": "d0fa0ff6f979a0aece010348f9630229cbf54edcbc45f3d5d5ecf73ff5c581da"
+    },
+    {
+      "key": "usg",
+      "title": "US Naval Base Guantanamo Bay",
+      "country": "usg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "usg.geojson",
+      "first": false,
+      "size": 344634,
+      "sha256": "62cc0374a4d37adf71a75fde9ce64787fa9b58f9508cc4e14dd7169c6b271a6a"
+    },
+    {
+      "key": "uy",
+      "title": "Uruguay",
+      "country": "uy",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "uy.geojson",
+      "first": false,
+      "size": 50674470,
+      "sha256": "a9e8093f17aaeca4539181ad5c697284f98caa81706c65ad1da4b7efaa6cf5d9"
+    },
+    {
+      "key": "uz",
+      "title": "Uzbekistan",
+      "country": "uz",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "uz.geojson",
+      "first": false,
+      "size": 130322105,
+      "sha256": "58837922c799c12fcc580ed5461a845d04eafd675eb9d3d5f6091e2d9891fecc"
+    },
+    {
+      "key": "vc",
+      "title": "Saint Vincent and the Grenadines",
+      "country": "vc",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "vc.geojson",
+      "first": false,
+      "size": 1033210,
+      "sha256": "0ed53b392d86712289e3e2b58a34401d42e73cff97a8b008ec6c3688e9896829"
+    },
+    {
+      "key": "ve",
+      "title": "Venezuela",
+      "country": "ve",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ve.geojson",
+      "first": false,
+      "size": 156537200,
+      "sha256": "e8ca187c731232368961b18d0ab887b313c1d2a91ae8b82dae559243935ad018"
+    },
+    {
+      "key": "vg",
+      "title": "British Virgin Islands",
+      "country": "vg",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "vg.geojson",
+      "first": false,
+      "size": 721955,
+      "sha256": "e3e4d9ce696ae2086a7d85db8dfff70cd90892ce11000c8e4cd0bba46b7ba102"
+    },
+    {
+      "key": "vi",
+      "title": "U.S. Virgin Islands",
+      "country": "vi",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "vi.geojson",
+      "first": false,
+      "size": 1581418,
+      "sha256": "6adc2ddafe91d5d30f0eb45f83b3078e4b95dc9787c6f6c51cab31e34d851651"
+    },
+    {
+      "key": "vn",
+      "title": "Vietnam",
+      "country": "vn",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "vn.geojson",
+      "first": false,
+      "size": 262115932,
+      "sha256": "2f09997ae4ea880072e62d4c78a825a17baacb0d4d622ec36068d8d05801ef7a"
+    },
+    {
+      "key": "vu",
+      "title": "Vanuatu",
+      "country": "vu",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "vu.geojson",
+      "first": false,
+      "size": 4307202,
+      "sha256": "aaa4cf5c8b27f97a247de4a9fa6cd93dee960225b610e246c20d03a3cbcee233"
+    },
+    {
+      "key": "wf",
+      "title": "Wallis and Futuna",
+      "country": "wf",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "wf.geojson",
+      "first": false,
+      "size": 500322,
+      "sha256": "abf8ba8b1172d87f17672209fe2975be3dcb018dbea604e563e5467d51578767"
+    },
+    {
+      "key": "ws",
+      "title": "Samoa",
+      "country": "ws",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ws.geojson",
+      "first": false,
+      "size": 1649060,
+      "sha256": "3a77732459345689c65330f73bd288c3a9f96f2b4b5cd1a6e1a9afd7b729a672"
+    },
+    {
+      "key": "wsb",
+      "title": "Akrotiri",
+      "country": "wsb",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "wsb.geojson",
+      "first": false,
+      "size": 1147275,
+      "sha256": "751bac1db77246773e4ccdfb41ec0f80e6be415fc0d9cb6b1a7eb39e48f14dc3"
+    },
+    {
+      "key": "xk",
+      "title": "Kosovo",
+      "country": "xk",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "xk.geojson",
+      "first": false,
+      "size": 27648301,
+      "sha256": "46f76a5a9b8acc586848d7f5948ec91bc8bd3d28e40a035df1902c58889c677f"
+    },
+    {
+      "key": "ye",
+      "title": "Yemen",
+      "country": "ye",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "ye.geojson",
+      "first": false,
+      "size": 70909300,
+      "sha256": "c1dbdd0332e986dcbb64424788a6e53d65003d9e239511b82eb468fb80b67fbd"
+    },
+    {
+      "key": "za",
+      "title": "South Africa",
+      "country": "za",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "za.geojson",
+      "first": false,
+      "size": 356090940,
+      "sha256": "f1dcf07d8105a9481ec0ee19ac9ff095a958f08aa8456139f0a82b258a3494ae"
+    },
+    {
+      "key": "zm",
+      "title": "Zambia",
+      "country": "zm",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "zm.geojson",
+      "first": false,
+      "size": 140055178,
+      "sha256": "0c6c42e01f3ac96e19ee9090a3d3ddcd2fb5726771733518215124c01d0c0867"
+    },
+    {
+      "key": "zw",
+      "title": "Zimbabwe",
+      "country": "zw",
+      "minzoom": 7,
+      "maxzoom": 14,
+      "region": "zw.geojson",
+      "first": false,
+      "size": 75740366,
+      "sha256": "eafa9f811ea56bbb35c8198cb174d17b9540d6efd229bde78f1590d5a414bd77"
     }
   ]
 }

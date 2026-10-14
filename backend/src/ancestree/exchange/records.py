@@ -13,8 +13,9 @@ FIELDS = (
     *(f"{event}_{part}" for event in ("birth", "death")
       for part in ("year", "month", "day", "qualifier", "year_to", "original_text")),
     *(f"{place}_{part}" for place in ("birth", "death", "residence")
-      for part in ("town", "state", "country")),
-    "burial_place", "living", "occupation", "notes", "birth_order", "placeholder",
+      for part in ("town", "state", "country", "address", "district", "postcode", "lat", "lon",
+                   "exact")),  # the last six since 0.8.0
+    "burial_place", "living", "lives_with", "occupation", "notes", "birth_order", "placeholder",
     "has_photo", "photo_version", "layout_x", "layout_y", "created_at", "updated_at",
 )  # fmt: skip
 

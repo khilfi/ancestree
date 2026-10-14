@@ -21,7 +21,7 @@ import os
 import re
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from functools import partial
 from pathlib import Path
@@ -34,7 +34,7 @@ from pydantic import BaseModel
 from ancestree import __version__
 from ancestree.domain.dates import describe_partial_date, format_partial_date
 from ancestree.domain.graph import GraphPerson
-from ancestree.domain.person import DateQualifier, PartialDate
+from ancestree.domain.person import DateQualifier, PartialDate, Place
 from ancestree.domain.views import DateView, PersonDetail, PersonSummary
 from ancestree.exchange.backup import create_backup
 from ancestree.exchange.family import FamilyData, Member, load_family
@@ -42,17 +42,16 @@ from ancestree.exchange.gedcom import write_gedcom
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
 from ancestree.importing.template import template_csv
 from ancestree.media.photos import AVATAR_SIZES
-from ancestree.places.gazetteer import district_of
 from ancestree.repo.graph import read_family
 from ancestree.repo.kinds import list_relationship_kinds
 from ancestree.services import kinds as kinds_service
 from ancestree.services import kinship as kinship_service
 from ancestree.services import places as places_service
-from ancestree.services.biography import biography_from
+from ancestree.services.biography import biography_from, on_computers
 from ancestree.services.context import Context, RuleError, read
-from ancestree.services.detail import is_living, load_detail
+from ancestree.services.detail import districted, is_living, load_detail
 from ancestree.services.facts import facts_from_rows
-from ancestree.services.graph import build_graph, centre_layouts
+from ancestree.services.graph import build_graph, centre_layouts, with_story_marks
 from ancestree.storage import biography as stories
 from ancestree.storage.files import photo_file
 from ancestree.storage.settings import read_tree_settings
@@ -69,6 +68,10 @@ class CopyOptions:
     hide_living: bool = False  # for copies beyond close family
     password: str | None = None
     archive: bool = True  # the full archive among the copy's exports
+    # The computer making it, as the family knows it, and the family's computers by their names
+    # there (0.8.0): beside words written on another, as the app shows them on this one.
+    here: str | None = None
+    computers: Mapping[str, str] = field(default_factory=dict)
 
 
 def _json(model: BaseModel) -> Any:
@@ -117,6 +120,13 @@ _HIDDEN = (
     "birth_town",
     "birth_state",
     "birth_country",
+    # Since 0.8.0: the rest of the place, its address and where it is.
+    "birth_address",
+    "birth_district",
+    "birth_postcode",
+    "birth_lat",
+    "birth_lon",
+    "birth_exact",
 )
 
 
@@ -143,8 +153,28 @@ def hidden_detail(detail: PersonDetail) -> PersonDetail:
             "birth_place": None,
             "residence": None,
             "residence_district": None,
+            "residence_at_parents": None,  # their parents' place is where they live
+            "parents_apart": False,  # that their parents live apart, theirs too (0.8.0)
+            "lives_with": None,
             "occupation": None,
             "notes": None,
+        }
+    )
+
+
+def to_the_town(place: Place | None) -> Place | None:
+    return None if place is None else place.to_the_town()
+
+
+def towns_only(detail: PersonDetail) -> PersonDetail:
+    """Someone's places to their town, in a copy hiding living people's details: those who have
+    died too, as someone living may live where they lived still, a widow in her late husband's
+    house (your answer of 14 Oct 2026)."""
+    return detail.model_copy(
+        update={
+            "birth_place": to_the_town(detail.birth_place),
+            "death_place": to_the_town(detail.death_place),
+            "residence": to_the_town(detail.residence),
         }
     )
 
@@ -159,6 +189,7 @@ def hidden_family(data: FamilyData, living: set[str]) -> FamilyData:
                     "birth_date": year_only(member.person.birth_date),
                     "birth_place": None,
                     "residence": None,
+                    "lives_with": None,
                     "occupation": None,
                     "notes": None,
                 }
@@ -185,16 +216,16 @@ async def _details(tx: Tx, ids: Sequence[str], language: str) -> dict[str, Perso
     return {pid: await load_detail(tx, pid, language) for pid in ids}
 
 
-def _districts(details: Mapping[str, PersonDetail]) -> dict[str, str | None]:
+def _districted(details: Mapping[str, PersonDetail]) -> dict[str, PersonDetail]:
     """Where each lives, to the district, as the app says it."""
-    return {pid: district_of(detail.residence) for pid, detail in details.items()}
+    return {pid: districted(detail) for pid, detail in details.items()}
 
 
 def _pictures(
     data_dir: Path, rows: Sequence[Mapping[str, Any]], told: Mapping[str, Any]
 ) -> dict[str, str]:
-    """Photos by the address the app asks for them at, and the pictures the stories show (not
-    ones taken out of a story, which stay on this PC)."""
+    """Photos by the address the app asks for them at, and the pictures the stories show, in
+    the parts of their lives too (not ones taken out of a story, which stay on this PC)."""
     files: dict[str, str] = {}
     for row in rows:
         pid = str(row["id"])
@@ -206,19 +237,22 @@ def _pictures(
                         path.read_bytes()
                     )
     for pid, biography in told.items():
-        for name in stories.pictures_in(biography["story"]):
+        shown = "\n\n".join([biography["story"], *biography["parts"].values()])
+        for name in stories.pictures_in(shown):
             path = stories.picture_file(data_dir, pid, name)
             if path is not None:
                 files[f"/api/persons/{pid}/media/{name}"] = _data_uri(path.read_bytes())
     return files
 
 
-def _stories(data_dir: Path, ids: Sequence[str]) -> dict[str, Any]:
+def _stories(data_dir: Path, ids: Sequence[str], options: CopyOptions) -> dict[str, Any]:
     told: dict[str, Any] = {}
     for pid in ids:
         text = stories.read_story(data_dir, pid)
         if text and text.strip():
-            told[pid] = _json(biography_from(text))
+            life = biography_from(text)
+            on_computers(life.said, options.here, options.computers)
+            told[pid] = _json(life)
     return told
 
 
@@ -247,8 +281,8 @@ async def family_snapshot(
 
     # The map: the points were found here, so a copy needs no gazetteer and no pins.
     # Hidden living people's places stay out, as in their panels, and so do the towns named
-    # around them.
-    family_map = await places_service.family_map(ctx, hidden=living)
+    # around them; everyone else is no closer than their town (0.8.0).
+    family_map = await places_service.family_map(ctx, hidden=living, exact=not options.hide_living)
     family_map = family_map.model_copy(update={"pins": []})
 
     kinds = {kind.key: kind for kind in await list_relationship_kinds(ctx.driver, ctx.database)}
@@ -258,7 +292,8 @@ async def family_snapshot(
     )
 
     shown = set(real) - living
-    told = await asyncio.to_thread(_stories, ctx.data_dir, sorted(shown))
+    told = await asyncio.to_thread(_stories, ctx.data_dir, sorted(shown), options)
+    graph = with_story_marks(graph, told)  # their book marks, for the stories the copy has
     files = await asyncio.to_thread(_pictures, ctx.data_dir, rows, told)
     template = _file("ancestree-import-template.csv", template_csv().encode(ENCODING))
 
@@ -306,13 +341,14 @@ async def family_snapshot(
 
     ids = [str(row["id"]) for row in rows]
     persons: dict[str, dict[str, Any]] = {pid: {} for pid in ids}
-    districts: dict[str, str | None] = {}
     for language in LANGUAGES:
         details = await read(ctx, partial(_details, ids=ids, language=language))
-        districts = districts or await asyncio.to_thread(_districts, details)
-        for pid, detail in details.items():
-            placed = detail.model_copy(update={"residence_district": districts.get(pid)})
-            persons[pid][language] = _json(hidden_detail(placed) if pid in living else placed)
+        for pid, placed in (await asyncio.to_thread(_districted, details)).items():
+            if pid in living:
+                placed = hidden_detail(placed)
+            elif options.hide_living:
+                placed = towns_only(placed)
+            persons[pid][language] = _json(placed)
 
     stamp = f"{made_at:%Y-%m-%dT%H-%M-%S}"
     shared = hidden_family(family, living) if living else family

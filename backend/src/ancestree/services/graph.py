@@ -1,6 +1,6 @@
 """The tree canvas's view: everyone, every link, and each person's seat on the rings."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -233,6 +233,17 @@ def _person(row: Mapping[str, Any], this_year: int | None = None) -> GraphPerson
             "birth_text": row.get("birth_original_text") if born is None else None,
         }
     )
+
+
+def with_story_marks(graph: Graph, told: Collection[str]) -> Graph:
+    """The graph with `has_story` for those of `told`, who have a life story."""
+    if not told:
+        return graph
+    people = [
+        person.model_copy(update={"has_story": True}) if str(person.id) in told else person
+        for person in graph.people
+    ]
+    return graph.model_copy(update={"people": people})
 
 
 def _uuid(value: str | None) -> UUID | None:

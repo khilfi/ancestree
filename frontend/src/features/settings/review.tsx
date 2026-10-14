@@ -181,6 +181,22 @@ function ChangeText({ change }: { change: ImportChange }) {
           )}
         </>
       );
+    case "said":
+      // What someone says about them: whose words, and what they are, or were.
+      return (
+        <>
+          <span className="font-medium">{change.name}</span>
+          <span className="text-stone-500">
+            {" "}
+            · what {change.by || "someone"} says, {change.detail}
+          </span>
+          {(change.after || change.before) && (
+            <span className="mt-0.5 block border-l-2 border-sky-200 pl-2 text-xs text-stone-600">
+              {change.after || change.before}
+            </span>
+          )}
+        </>
+      );
     case "photo":
       return (
         <span className="flex items-center gap-2">
@@ -293,6 +309,7 @@ const GROUPS: {
   { kinds: ["add_link", "fill_in"], title: "Links to add", open: false, tone: "plain" },
   { kinds: ["change_link"], title: "Links changed", open: true, tone: "plain" },
   { kinds: ["story"], title: "Life stories", open: true, tone: "plain" },
+  { kinds: ["said"], title: "What people say", open: true, tone: "plain" },
   { kinds: ["photo"], title: "Photos", open: true, tone: "plain" },
   { kinds: ["remove_person", "remove_link"], title: "To remove", open: true, tone: "danger" },
 ];

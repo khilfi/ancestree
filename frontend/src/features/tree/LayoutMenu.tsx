@@ -46,7 +46,7 @@ function hint(layout: Layout, name: string): string {
     case "hourglass":
       return `${name}'s ancestors above, descendants below`;
     case "fan":
-      return `${name}'s ancestors in a half-circle, father's side on the left`;
+      return `${name}'s ancestors in a half-circle, father's side on the left; children beneath`;
   }
 }
 

@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { ApiError } from "@/api/errors";
 import {
   sendsToTheKeeper,
+  sendsWords,
   useAcceptOffer,
   useAdmit,
+  useAllowHelper,
   useAnswersSeen,
   useChangeRole,
   useDeclineOffer,
@@ -39,6 +41,8 @@ import type {
   FolderChanges,
   FolderMember,
   HandedOver,
+  Helped,
+  HelpingView,
   OfferHere,
   OfferMade,
 } from "@/api/types";
@@ -56,6 +60,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
 import { type GuidePlace, guideAt } from "@/features/guide/places";
@@ -634,7 +639,10 @@ function Invite() {
   );
 }
 
-function Asking({ ask }: { ask: FolderAsking }) {
+/** A computer asking to join, with its code, to let in: on the keeper's computer, or on another
+ *  of the keeper's own allowed to, whose `keeper` is the keeper's computer's name. That
+ *  one asks the keeper's computer to let it in, and doesn't turn anyone away. */
+function Asking({ ask, keeper }: { ask: FolderAsking; keeper?: string }) {
   const admit = useAdmit();
   const refuse = useRefuse();
   const [role, setRole] = useState<keyof typeof ROLES>("contributor");
@@ -654,6 +662,7 @@ function Asking({ ask }: { ask: FolderAsking }) {
       </div>
       <p className="text-xs text-stone-600">
         Let them in only if they read you the same code, by phone or message.
+        {keeper && ` ${keeper} lets them in at its next round.`}
       </p>
       <RadioGroup
         value={role}
@@ -678,14 +687,16 @@ function Asking({ ask }: { ask: FolderAsking }) {
         >
           Let in
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => refuse.mutate(ask.device, { onError: showError })}
-          disabled={refuse.isPending}
-        >
-          Not this one
-        </Button>
+        {!keeper && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refuse.mutate(ask.device, { onError: showError })}
+            disabled={refuse.isPending}
+          >
+            Not this one
+          </Button>
+        )}
       </div>
     </li>
   );
@@ -768,6 +779,7 @@ function Members({
   changes?: FolderChanges[];
 }) {
   const remove = useRemoveComputer();
+  const allow = useAllowHelper();
   const [leaving, setLeaving] = useState<FolderMember | null>(null);
   const [changing, setChanging] = useState<FolderMember | null>(null);
   return (
@@ -781,6 +793,36 @@ function Members({
                 {member.you && <span className="text-stone-500"> · this computer</span>}
               </div>
               <div className="truncate text-xs text-stone-500">{member.email}</div>
+              {keeper && member.own && member.role !== "removed" && (
+                // Another of the keeper's own computers, on its Google account.
+                <div className="mt-1 flex items-center gap-2">
+                  <Switch
+                    id={`helps-${member.device}`}
+                    checked={member.helps}
+                    disabled={allow.isPending}
+                    onCheckedChange={(allowed) =>
+                      allow.mutate(
+                        { device: member.device, allowed },
+                        {
+                          onError: showError,
+                          onSuccess: () =>
+                            toast.success(
+                              allowed
+                                ? `${member.name} may invite and let in for you, within a few minutes.`
+                                : `${member.name} may no longer invite and let in for you.`,
+                            ),
+                        },
+                      )
+                    }
+                  />
+                  <Label
+                    htmlFor={`helps-${member.device}`}
+                    className="text-xs font-normal text-stone-600"
+                  >
+                    May invite and let in for me
+                  </Label>
+                </div>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
               <span className="text-xs text-stone-600">{ROLE_NAMES[member.role]}</span>
@@ -1289,8 +1331,86 @@ function Handed({ handed }: { handed: HandedOver }) {
   );
 }
 
+/** What the keeper's computer did with something one of the keeper's own other computers
+ *  asked: on the keeper's computer, with which one asked and when; on that one, without. */
+function HelpedLine({ helped }: { helped: Helped }) {
+  const from = helped.by || "this computer";
+  const when = helped.at ? ` · ${ago(helped.at)}` : "";
+  if (!helped.action) {
+    return (
+      <li>
+        Something from {from} was turned down. {helped.why}
+        {when}
+      </li>
+    );
+  }
+  const invited = helped.action === "invited";
+  const asked = helped.by ? (invited ? `, from ${helped.by}` : `, as ${helped.by} asked`) : "";
+  return (
+    <li>
+      <span className="font-medium">{helped.name}</span>:{" "}
+      {helped.done
+        ? `${invited ? "invited" : "let in"}${asked}`
+        : `${invited ? "turned down" : "not let in"}${asked}. ${helped.why}`}
+      {when}
+    </li>
+  );
+}
+
+/** On another of the keeper's own computers allowed to invite and let in for it: the
+ *  computers asking to join, with their codes, to let in; those waiting for the keeper's
+ *  computer to do it, and whether it runs; what it did; and the invitation. */
+function Helping({ status, helping }: { status: FamilyFolderStatus; helping: HelpingView }) {
+  const asking = status.asking ?? [];
+  const waiting = helping.waiting ?? [];
+  const done = helping.done ?? [];
+  return (
+    <>
+      {asking.length > 0 && (
+        <Panel title={`Asking to join (${asking.length})`} guide="helpers">
+          <ul className="space-y-3">
+            {asking.map((ask) => (
+              <Asking key={ask.device} ask={ask} keeper={helping.keeper} />
+            ))}
+          </ul>
+        </Panel>
+      )}
+      <Panel title={`Inviting and letting in for ${helping.keeper}`} guide="helpers">
+        <p className="max-w-2xl text-sm text-stone-600" role="status">
+          {helping.running
+            ? `${helping.keeper} lets in the computers you choose here at its next round, within a minute while it runs.`
+            : `${helping.keeper} isn't running${helping.looked ? `: last heard from ${ago(helping.looked)}` : ""}. The computers you let in here wait until it runs again.`}
+        </p>
+        {waiting.length > 0 && (
+          <ul className="space-y-2 text-sm">
+            {waiting.map((name) => (
+              <li key={name}>
+                <div className="font-medium">{name}</div>
+                <div className="text-xs text-amber-700">
+                  Waiting for {helping.keeper} to let them in
+                  {helping.running ? "" : ": it's not running"}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {done.length > 0 && (
+          <ul className="space-y-1 text-sm text-stone-600">
+            {done.map((helped, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: plain lines, and one computer can be named twice
+              <HelpedLine key={index} helped={helped} />
+            ))}
+          </ul>
+        )}
+        <Invite />
+      </Panel>
+    </>
+  );
+}
+
 function Keeper({ status }: { status: FamilyFolderStatus }) {
   const asking = status.asking ?? [];
+  const helped = status.helped ?? [];
   const changes = status.changes ?? [];
   const deleted = useOldFolderDeleted();
   // While its offer of the family stands, this computer keeps nothing: nothing to act on.
@@ -1366,6 +1486,16 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
         <Members members={status.members ?? []} keeper={!offered} changes={changes} />
         {!offered && <Invite />}
       </Panel>
+      {helped.length > 0 && (
+        <Panel title="What your other computers asked" guide="helpers">
+          <ul className="space-y-1 text-sm text-stone-600">
+            {helped.map((done, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: plain lines, and one computer can be named twice
+              <HelpedLine key={index} helped={done} />
+            ))}
+          </ul>
+        </Panel>
+      )}
       {!offered && <NewRecoveryCode />}
       {!status.moving && !offered && <Move status={status} />}
       {!offered && <HandOver status={status} />}
@@ -1452,7 +1582,9 @@ function Sending({ status }: { status: FamilyFolderStatus }) {
     <p className="text-sm text-stone-600" role="status">
       {pending === 0
         ? "Nothing of yours is waiting for the keeper."
-        : `Your changes to ${pending === 1 ? "1 person or link" : `${pending} people and links`} wait for the keeper${status.sent_at ? `: sent ${ago(status.sent_at)}` : ""}.`}
+        : sendsWords(status)
+          ? `Your words about ${pending === 1 ? "1 person" : `${pending} people`} wait for the keeper${status.sent_at ? `: sent ${ago(status.sent_at)}` : ""}.`
+          : `Your changes to ${pending === 1 ? "1 person or link" : `${pending} people and links`} wait for the keeper${status.sent_at ? `: sent ${ago(status.sent_at)}` : ""}.`}
     </p>
   );
 }
@@ -1492,16 +1624,19 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
             {keeper ? `, ${keeper.name}` : ""}, and is kept in step while AncesTree is on.{" "}
             {sendsToTheKeeper(status)
               ? "What you change here goes to the keeper, who looks at it first. Until then, you see it here."
-              : "It can't be changed on this computer."}
+              : sendsWords(status)
+                ? "Only your words about people can be added here: they go to the keeper, who looks at them first."
+                : "It can't be changed on this computer."}
           </>
         )}
       </p>
       {status.offer_here && <OfferedHere offer={status.offer_here} />}
       {status.handed && <Handed handed={status.handed} />}
       <RoleNote status={status} />
-      {sendsToTheKeeper(status) && <Sending status={status} />}
+      {(sendsToTheKeeper(status) || sendsWords(status)) && <Sending status={status} />}
       {(status.answers ?? []).length > 0 && <Answers answers={status.answers ?? []} />}
       <InStep status={status} />
+      {status.helping && <Helping status={status} helping={status.helping} />}
       <Panel title="The family's computers" guide="yourComputer">
         <Members members={members} keeper={false} />
       </Panel>

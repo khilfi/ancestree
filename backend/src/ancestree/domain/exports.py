@@ -22,6 +22,9 @@ class ExportRequest(BaseModel):
     # Kept nowhere. Ten characters at least: a copy can be tried offline, guess after guess.
     password: str | None = Field(default=None, min_length=10, max_length=200)
     archive: bool = True  # the full archive among its exports
+    # For GEDCOM and the spreadsheet: each place's address, postcode and location,
+    # left out unless chosen.
+    addresses: bool = False
 
 
 class ExportFile(BaseModel):

@@ -203,10 +203,11 @@ AncesTree starts, and from then on opens like any other app. Go on to [The first
 
 1. AncesTree starts by itself after installing. The window says how far it has got: it fetches the database, and the Java the database runs on, and checks each before it's used. This happens only once, and takes a minute or two on a good connection.
    <!-- picture: guide/first-start.png (the window while it fetches its database) -->
-2. On a new computer, AncesTree then asks about your family, in a bar at the top: **Welcome to AncesTree**. Has your family's keeper sent you an invitation? Join with it, or start your family's own.
+2. On a new computer, AncesTree then asks about your family, in a bar at the top: **Welcome to AncesTree**. Has your family's keeper sent you an invitation? Join with it, or start your family's own. Or look around a made-up family first.
    - A relative clicks **Join or start**, then follows [Join your family](#join).
    - The keeper clicks **Join or start**, then follows [For the keeper](#19-for-the-keeper-start-and-look-after-the-family-folder).
-   - To keep the family on this computer alone, or to look around first, click **Not now**. AncesTree works without a family folder. You can join or start one later, from **Settings → Family folder**.
+   - To see what AncesTree can do first, click **Look around first**: it opens [the example family](#the-example-family), made up, and a family of its own. Your own is a click away.
+   - To keep the family on this computer alone, click **Not now**. AncesTree works without a family folder. You can join or start one later, from **Settings → Family folder**.
 
 After this, AncesTree opens in a few seconds.
 
@@ -239,7 +240,7 @@ The icon's menu (right-click the icon):
 
 # Part 2: Use AncesTree
 
-The pictures in this part show a made-up family, *Keluarga Contoh*. Your own family appears in their place.
+The pictures in this part show a made-up family, *Keluarga Contoh*: [the example family](#the-example-family), which you can open yourself. Your own family appears in their place.
 
 Everyone can do what this part shows, but where it says *for the keeper*. On a relative's computer, what you change waits for the keeper, who looks at it before it reaches the rest of the family (see [Your changes](#your-changes)). On a computer let in as a **Viewer**, nothing can be changed.
 
@@ -313,9 +314,15 @@ The tree starts with the family's oldest ancestor at the centre. Each ring aroun
 | **Rings** | The whole family, a ring per generation around the oldest ancestor. |
 | **Family tree** | Top to bottom, a row per generation. |
 | **Hourglass** | Someone's ancestors above them, and their descendants below. |
-| **Fan chart** | Someone's ancestors in a half-circle, their father's side on the left. |
+| **Fan chart** | Someone's ancestors in a half-circle, their father's side on the left, and their children in a row beneath. |
 
-For **Hourglass** and **Fan chart**, click someone on the tree to put them in the middle, and use **−** and **+** beside **Generations** to show more or fewer.
+*The hourglass and the fan chart* are drawn from one person, and stay so while you look around:
+
+- Click someone to open their panel. The chart stays as it is.
+- To draw it from them, click **Fan from here** (or **Hourglass from here**) in their panel, or double-click them.
+- To step down a generation in the fan chart, double-click one of the children in the row beneath.
+- **Back** and **Forward**, beside **Generations**, step through the people it was drawn from. Your mouse's own back and forward buttons do the same, over the chart.
+- **−** and **+** beside **Generations** show more or fewer.
 
 On the rings you can drag people to where you'd like them; AncesTree remembers. **Tidy up**, in the same menu, puts everyone back in their place.
 
@@ -368,7 +375,7 @@ The panel has three tabs:
 
 - **Details**: everything recorded about them, such as when and where they were born, where they live, and their occupation. Below it, **Who changed this** lists the latest changes to them, and which computer they came from.
 - **Relatives**: their parents, husband or wife, brothers and sisters, and children.
-- **Biography**: their life story (see [Life stories](#9-life-stories)).
+- **Biography**: the opening of their life story, and **Read** and **Write**, which open it large (see [Life stories](#9-life-stories)).
 
 <img src="guide/app-person-relatives.png" alt="The Relatives tab" width="440">
 
@@ -379,8 +386,8 @@ The buttons at the bottom of **Details**:
 | **Edit** | Change their details. |
 | **Find relationship** | How is someone else related to them? (see [How are two people related?](#10-how-are-two-people-related)) |
 | **Centre the tree here** | Puts them at the middle of the tree. **Undo centre** puts it back. |
-| **Merge…** | For someone entered twice (see [Merge](#someone-entered-twice)). |
 | **Move to Trash** | Takes them out of the tree, for 30 days (see [Removing someone](#removing-someone)). |
+| **More** | What's seldom needed: **Same person as…**, for someone entered twice (see [Someone entered twice](#someone-entered-twice)). |
 
 To close the panel, click **×** at its top right.
 
@@ -417,14 +424,29 @@ They appear on the tree, not yet linked to anyone. To link them, see [Adding a r
 ### The details
 
 - *Name:* their **Full name**, **Nickname** (for example *Pak Mat*), **Title** (for example *Haji* or *Dato'*), **Gender**, and **Name in Jawi**.
-- *Birth:* the **Date**, and the place: town, state and country.
+- *Birth:* the **Date**, and the place: its address, town, district, state, postcode and country.
 - *Death:* **Living or deceased**, the date and place, and where they're **Buried at**. Leave **Living or deceased** on **Work it out from the dates** if you're not sure.
 - *Now:* where they live, and their **Occupation**.
 - *Notes:* a few short notes. Write longer things in their [life story](#9-life-stories).
 
 *Dates:* first choose how sure the date is: **Exact**, **About**, **Before**, **After** or **Between**. Then pick the day, month and year from the lists. A year alone is enough. While a list is open, typing jumps to it: type "19" then "38" for 1938, or "feb" for February. The **×** clears the date.
 
-*Places:* type the town, choose the state, and check the country, which starts as Malaysia. The [map](#13-the-map) uses these.
+*Places:* type the **Address** in one line, as you'd write it on an envelope: *No. 12, Jalan Melati 3, 43000 Kajang*. A postcode alone will do, or just the town. As you type, AncesTree suggests where it is from the places of the country below it, which starts as Malaysia: *Kajang · Hulu Langat · Selangor · 43000 · Malaysia*. For a place in another country, change the country first. Click a suggestion to fill in the **Town**, **District**, **State** and **Postcode**. Everything stays yours to change, and an address with no suggestion is kept as you typed it.
+
+*Where it is on the map:* nobody has to place the pin. AncesTree puts it there from the address, with no internet, as exactly as it knows the place, and says how under **On the map**: **Postcode area** or **Town**. A small map shows where it went, with **Looks right** beside it; nothing more is needed. If it's wrong, drag the pin, or click the right spot, on that small map. It's then **Exact (placed by hand)**, and nothing moves it again by itself. Or paste where it is into the box beneath: numbers such as *3.0006, 101.7869*, or a link from Google Maps, Apple Maps or OpenStreetMap on your phone. To put a pin before you know the address, click **Place on the map**: the town, district, state and postcode are filled in from the nearest place known, for you to keep or change.
+
+People at one address share one pin: put it right for one of them, and it moves for everyone who lives there. If you change the address of a pin you put by hand, AncesTree asks whether to **Keep it there** or **Place it from the address**.
+
+*Not found without the internet:* where AncesTree knows nothing of an address, it offers to **Look it up online once**. It says first exactly what it will send, the address and its country, to Photon, a search of OpenStreetMap, which also sees your computer's internet address. Nothing else about your family goes, and nothing is ever looked up as you type. What it finds is for you to check on the small map. To have it never offered, or to stop being asked each time, see **Online address lookup** in [The map's detail](#the-maps-detail).
+
+Suggestions come from the places on your computer, with no internet: to begin with, every town and kampung in Malaysia, Indonesia, Singapore and Brunei, and the bigger towns elsewhere; the world's postcodes once the map has fetched the world's map; and a country's every village, estate and postcode once it's downloaded. If a country's aren't on your computer yet, the form says so, with a button to download its map and places (see [The map's detail](#the-maps-detail)).
+
+Every box in the form grows as you type, so a long name or address shows whole. **Enter** still saves.
+
+*No place of their own:* someone with no **Lives in** of their own is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
+- if the parents live in different places, it's their mother's. Choose **At their father's** to show them with their father instead;
+- if they don't live with their parents, tick **Lives elsewhere** (or choose it), and they're shown nowhere until their place is known;
+- it's never someone who has died, and never their grandparents' place: only their parents' own.
 
 ### Adding a relative
 
@@ -496,30 +518,67 @@ Only birth links count as blood, for the tree's lineage and the relationship fin
 
 ### Someone entered twice
 
-- *What it's for:* making one person of someone who's in the tree twice.
+- *What it's for:* making one person of someone who's in the tree twice: added by two relatives, added again by an import, or added after AncesTree said **There's already a … in the tree**.
 - *Who does it:* anyone whose computer may change the family.
 
-1. Click the one you want to keep, then **Merge…**.
+1. Click the one you want to keep, then **More**, then **Same person as…**.
 2. Type the other one's name, and choose them.
-3. Check what will happen: the details and links that move across.
-4. Click **Merge … into …** to confirm.
+3. Check what will happen: the details and links that move across, and the photo and life story.
+4. Click **Make them one person**.
 
-The one you kept takes the other's details where they have none, and all of their links. The other goes to the Trash. **Undo** puts them back as two.
+The one you kept takes the other's details, photo and life story where they have none, and all of their links. The other goes to the Trash. **Undo** puts them back as two, photos and stories too.
+
+AncesTree offers it where someone may be in the tree twice, with the two already chosen:
+
+- when you add someone and it says **There's already a … in the tree**, click **Same person as…** on that message;
+- in **Settings → What's missing**, under **Possibly entered twice**: people with the same name, and birth years close together or not known.
+
+*If it doesn't work:* if **Undo** says the photo or story has changed since, it leaves them as they are: someone has changed the one you kept since. Move the copied photo or story by hand, or restore a backup.
 
 ## 9. Life stories
 
-- *What it's for:* someone's life story, with pictures and sources.
-- *Who does it:* anyone whose computer may change the family.
+- *What it's for:* someone's life story: their story itself, the parts of their life, with pictures, sayings and sources, and a page to read it all.
+- *Who does it:* anyone whose computer may change the family writes. Everyone can read, in a view-only copy too.
 
-1. Click the person on the tree, then the **Biography** tab.
-2. Write their story. It saves itself as you type; it says **Saved** when it has.
+1. Click the person on the tree, then **Life story** beside **Edit** in their panel. Or click the small book mark on their photo, on the tree, the timeline or the map: it shows on anyone who has a story.
+2. The life story opens large, in the middle of the screen. Someone with a story opens on **Read**; someone without, on **Write**. Switch between them at the top. **Esc** closes it.
+3. In **Write**, write their story. It saves itself as you type; it says **Saved** when it has.
 
-<img src="guide/app-person-story.png" alt="A life story in the Biography tab" width="440">
+![Writing a life story: sayings, a message and life values among the parts of their life](guide/app-life-story-write.png)
 
-- **Wide view** opens a big page for writing. **Back to the panel** returns.
+*Writing:*
 - The buttons above the story make text bold or italic, add headings, lists and links.
 - **Add a picture** puts a photo inside the story, with a caption. You can also drag a picture into the story.
-- Under the story, **Sources** lists where it came from: "Birth certificate, 1938", or "A talk with Nenek". Click **Add a source** for each.
+- Under the story, **The parts of their life**: notable accomplishments; early life, middle life and later life; character and mannerisms; sayings and quotes; a message to the next generations; life values kept for life; hobbies; hidden talents, the useless ones too; and free notes. Click one to open it. Fill in only those you want: an empty one doesn't show when it's read.
+- A list, such as **Hobbies**, takes one a line: **Enter** starts the next. **Add a saying** takes what they used to say, with when or to whom, if known. Early, middle and later life can each have a picture.
+- Last, **Sources** lists where it came from: "Birth certificate, 1938", or "A talk with Nenek". Click **Add a source** for each.
+
+*Reading:* **Read** lays it all out as a page of its own: their photo, name and dates at the top, with the line of their life beside it (born, married, their children born, died); their story; each part as a card, the sayings as large quotes and the message to the next generations framed; their family, each a click away; and the sources. **Print** prints the page alone, on A4; to keep it as a PDF, choose to save as a PDF in the print window.
+
+![A life story to read: the photo, name and the line of their life, their story, and the parts as cards](guide/app-life-story.png)
+
+The **Biography** tab in their panel shows the story's opening and which parts are written, with **Read** and **Write**.
+
+<img src="guide/app-person-story.png" alt="The Biography tab: the story's opening, the parts written, and Read and Write" width="440">
+
+### What people say
+
+- *What it's for:* your own words about someone: what you remember of them, how they were, what they meant to you.
+- *Who does it:* anyone in the family, on any computer of the family, a viewer's too. Everyone can read them.
+
+1. Open their life story, and click **Add your words** under **What people say about** them, near the bottom of the page.
+2. Write what you remember, and click **Save**.
+
+They're signed with your name under **Me** (see [Me](#11-me-telling-ancestree-who-you-are)), or, if you haven't chosen yourself there, your computer's name in the family folder, or *Written on this computer*, and today's date. Words written on another computer show its name beside the writer's, such as *Nor binti Hassan (Nor's laptop)*, so you can always tell where they came from.
+
+![What people say about Hassan bin Ismail: two people's words, and new words being written](guide/app-life-story-said.png)
+
+- **Change** and **Take back** show beside your own words, on the computer you wrote them on. No one else can change them.
+- The family's keeper can **Take out** anyone's words.
+- On a relative's computer, your words go to the keeper first, as other changes do. A trusted computer's come in by themselves, and so does taking your own words back. From a viewer's computer, your words are all that goes, and they always wait for the keeper.
+- They show in a view-only copy, and on the printed page.
+
+*Where it's kept:* everything is in one file, `biography.md` in the person's folder: the story, then each part under its own heading (such as `## Early life`), then what people say under `## What people say`, each a quote with who wrote it and when, then the sources. Notepad and Obsidian open it as before. A story written before shows as their story, as it was. Only the words after the last `## What people say` are anyone's: one written into the story itself becomes `### What people say` when it's saved.
 
 ## 10. How are two people related?
 
@@ -584,37 +643,46 @@ Click **Map** in the top bar. It shows where the family lives, or where they wer
 
 - **Show** chooses **Where they live** or **Where they were born**.
 - **Moves** draws a line from where each person was born to where they live.
-- Turn the mouse wheel to zoom. Each circle shows how many people are there. Click a circle to zoom in; close up, you see each person's photo in their town.
+- Turn the mouse wheel to zoom. Each circle shows how many people are there. Click a circle to zoom in; close up, you see each person's photo in their town. Someone placed by their postcode's area or their town has a soft ring around them, which says *about here*. Someone placed exactly, to the house or by hand, has their photo on the spot, and a household's photos are fanned out there together.
 - Zoom in for more. Once the map's detail is on your computer (below), the map shows the land as OpenStreetMap draws it: towns, kampungs, roads, rivers and districts, each in its own name, with the English beneath where it differs. Without it, and in a view-only copy, the map draws each district and names the towns around your family's places as you zoom in.
-- The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. Click a name to see them on the map.
+- The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. Someone with no place of their own is with their parents, marked *(at their mother's)* or whoever's it is. Click a name to see them on the map.
 - **Not on the map yet** lists those with no place recorded. Click **Add where they live** to fill it in there and then.
 
-The map's towns and borders come with AncesTree, so it needs no internet for them. It knows every town and kampung in Malaysia, Indonesia, Singapore and Brunei, by its other spellings too, and towns of 1,000 people or more elsewhere. A person's **Lives in** says their district too, where the map knows their town. The map's corner names who made it, OpenStreetMap's contributors first, and **Settings → About** says who made each part, under what licence.
+The map's towns and borders come with AncesTree, so it needs no internet for them. It knows every town and kampung in Malaysia, Indonesia, Singapore and Brunei, by its other spellings too, and towns of 1,000 people or more elsewhere. A country downloaded in **Settings → Map** brings its every town and village too (below). A person's **Lives in** says their district too, where the map knows their town. The map's corner names who made it, OpenStreetMap's contributors first, and **Settings → About** says who made each part, under what licence.
 
 ### A town the map doesn't know
 
 - *What it's for:* putting a town on the map by hand, when the map doesn't know it.
 - *Who does it:* the keeper.
 
-A town the map doesn't know is placed at the middle of its state or country, under **Placed roughly**.
+A town the map doesn't know is placed at the middle of its state or country, under **Placed roughly**. If it's in a country you haven't downloaded, download that country first (see [The map's detail](#the-maps-detail)): the map then knows its every village, estate and postcode.
 
 1. Click **Put it on the map** beside it.
 2. Click the right spot on the map.
 
 ### The map's detail
 
-- *What it's for:* the land close up, as OpenStreetMap draws it, kept on your computer.
+- *What it's for:* any country close up, as OpenStreetMap draws it, and its every town, village and postcode, kept on your computer.
 - *Who does it:* everyone, on their own computer.
-- *Before you start:* the internet. The world's map is 45 MB; Malaysia, Singapore and Brunei 168 MB; Indonesia 338 MB.
+- *Before you start:* the internet. The world's map, with its towns and postcodes, is about 67 MB; a country from under 1 MB to 1.4 GB: Malaysia about 157 MB, Indonesia about 708 MB.
 
-The first time you open the map, AncesTree fetches the world's map from OpenStreetMap by itself, once. For Malaysia, Singapore and Brunei close up, or for Indonesia:
+The first time you open the map, AncesTree fetches the world's map from OpenStreetMap by itself, once, with the world's towns of 500 people or more and its postcodes. For a country close up:
 
-1. Open **Settings → Map**.
-2. Click **Fetch** beside the region.
+1. Open **Settings → Map**. The countries where your family lives or was born come first, under **Where your family lives or was born**; every other below.
+2. Find the country. To find it quickly, type its name in **Find a country or a state**.
+3. Click **Download** beside it.
 
-Each is checked before it's used, and kept on your computer, so the map looks nothing up online as you use it. **Remove** takes a region off again.
+A country brings its map and its places: every town, village and kampung, and the places people say they lived or were born at, such as estates, camps and hospitals, with its postcodes, so each is found on the map.
 
-*Online detail where the packs end:* beyond the packs, such as a town abroad close up, or Indonesia closer than its pack goes, the map is drawn more coarsely. To see those places in detail too, turn on **Online detail where the packs end** in **Settings → Map**. AncesTree then asks OpenFreeMap, a free map service, for those parts of the map as you look at them, so OpenFreeMap learns which parts of the world you look at, from your computer's internet address. It's told nothing about your family, and nothing where a pack has the detail. It's off unless you turn it on; turned off, the map asks nothing of the internet. Without the internet, the map carries on from the packs.
+The biggest countries come in parts, one for each state or province: the United States, Canada, China and Russia. **Download** beside the country brings all of it. To fetch only one state, open the list of its states beneath it, and click **Download** beside that one: the country's places come with it.
+
+Each part is checked before it's used, and kept on your computer, so the map looks nothing up online as you use it. **Remove** takes a country off again, its places with it.
+
+When a country's places come, AncesTree looks again at everyone there whose pin was placed only by their town or postcode area, and moves each to a better spot where it now knows one. Nothing you placed by hand moves. **Settings → Map** says how many moved, and **Undo** takes them all back. On a relative's computer this is left to the keeper's, so it doesn't send them changes to look at: the better pins arrive from the keeper.
+
+*Online address lookup:* where an address isn't found without the internet, a person's form offers to **Look it up online once** (see [The details](#the-details)). In **Settings → Map**, **Online address lookup** says whether it asks you first each time (**Ask each time**), goes ahead **Without asking**, or is **Never** offered. It's for this computer alone.
+
+*Online detail where the packs end:* beyond what you've downloaded, such as a town in another country close up, or Germany closer than its map goes, the map is drawn more coarsely. To see those places in detail too, turn on **Online detail where the packs end** in **Settings → Map**. AncesTree then asks OpenFreeMap, a free map service, for those parts of the map as you look at them, so OpenFreeMap learns which parts of the world you look at, from your computer's internet address. It's told nothing about your family, and nothing where a pack has the detail. It's off unless you turn it on; turned off, the map asks nothing of the internet. Without the internet, the map carries on from the packs.
 
 ## 14. Family facts, and what's missing
 
@@ -622,7 +690,7 @@ Each is checked before it's used, and kept on your computer, so the map looks no
 
 ![Family facts](guide/app-family-facts.png)
 
-**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, and people not linked to anyone. Open **Settings → What's missing**. Every fix can be undone.
+**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address who are on the map only about there (**Not on the map exactly**: click **Put the pin where it is**, and drag it on the small map), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
 
 ![What's missing](guide/app-settings-missing.png)
 
@@ -663,6 +731,8 @@ Click **Export** in the top bar.
 
 Files go to your **Downloads** folder.
 
+Addresses are the family's own, so GEDCOM and the spreadsheet leave them out: a place is its town, state and country. To include each place's house and street, postcode and where it is, tick **Include addresses** first.
+
 ### A copy for phones
 
 - *What it's for:* the whole family in one file, for relatives on phones, tablets or computers without AncesTree.
@@ -670,7 +740,7 @@ Files go to your **Downloads** folder.
 
 1. Click **Export**, then **Make a copy…** beside **View-only copy**.
 2. Give it a **Title**, such as the family's name.
-3. For copies that go beyond close family, choose **Hide their details** under **Living people**. Living people's day and month of birth, places, notes and life stories are then left out.
+3. For copies that go beyond close family, choose **Hide their details** under **Living people**. Living people's day and month of birth, places, notes and life stories are then left out. Everyone else's places show to their town: no one's house address, postcode or exact pin, as someone living may live where a relative who has died lived.
 4. If you like, tick **Lock the copy with a password**, and type one. Tell them the password by phone, not with the file.
 5. Click **Make the copy**.
 
@@ -696,6 +766,8 @@ Send the file by WhatsApp, email or a USB stick. A copy is the family as it is t
 ![Importing from a spreadsheet](guide/app-settings-import.png)
 
 AncesTree makes a backup first. **Undo** takes the whole import back. Later, **Take back…** under **Earlier imports** does the same.
+
+*Addresses:* the template has an **Address** and a **Postcode** column, after **Lives in**. AncesTree puts everyone it brings in with an address on the map, with no internet, as part of the import, and says before you import how many it found at their postcode's area, how many at their town, and how many it couldn't place. For someone already in the tree, an address written differently is shown as a change, unticked, for you to tick if it's right.
 
 ---
 
@@ -816,7 +888,7 @@ Your keeper chooses one of these when letting your computer in, and can change i
 |---|---|
 | **Contributor** | You change the family as you like. Each change waits for your keeper, who looks at it first. |
 | **Trusted** | Your changes come in by themselves, unless they clash with your keeper's or take something out. |
-| **Viewer** | You see the whole family, but can't change it on this computer. |
+| **Viewer** | You see the whole family, but can't change it on this computer. You can add your own words about someone (see [What people say](#what-people-say)), which wait for your keeper. |
 
 What happens to a change, on each kind of computer:
 
@@ -825,7 +897,7 @@ flowchart LR
   C["A change"] --> K["On the keeper's computer: in at once, and on its way to everyone"]
   C --> T["Trusted: comes in by itself, unless it clashes with the keeper's or takes something out"]
   C --> N["Contributor: waits for the keeper, who looks at it first"]
-  C --> V["Viewer: nothing can be changed"]
+  C --> V["Viewer: only your words about someone, which wait for the keeper"]
 ```
 
 Some things are the keeper's alone, whatever your role: the kinds of relationship, the map's hand-placed pins, importing spreadsheets, and restoring a backup.
@@ -983,7 +1055,7 @@ Keep the client's file somewhere safe, as you keep your recovery code: you'll ne
 ### Invite a relative
 
 - *What it's for:* sending a relative what their AncesTree needs to join your family.
-- *Who does it:* the keeper.
+- *Who does it:* the keeper, on the keeper's computer, or on another of yours you've allowed (see [Invite and let in from another of your computers](#invite-and-let-in-from-another-of-your-computers)).
 - *Before you start:* the relative's Google account: the address they sign in to Google with.
 
 1. In **Settings → Family folder**, under **Invite a relative, by their Google account**, type their Google address, and click **Invite**. AncesTree shares the family folder with that account.
@@ -998,7 +1070,7 @@ The invitation holds your family's Google project, not your family: only the Goo
 
 ### Your own other computers
 
-- *What it's for:* the family on another computer of your own, such as a laptop or a Mac, kept in step with your main one.
+- *What it's for:* the family on another computer of your own, of any kind, kept in step with the keeper's computer.
 - *Who does it:* the keeper, on both computers.
 - *Before you start:* AncesTree installed on the other computer.
 
@@ -1007,20 +1079,20 @@ Your other computer joins much as a relative's does, but it isn't a relative's:
 | | A relative's computer | Another computer of your own |
 |---|---|---|
 | Its Google account | Theirs, which you invite with **Invite** | Your own: no need to invite it |
-| The invitation | You send it to them | On your main computer, click **Show the invitation**, and copy it across |
+| The invitation | You send it to them | On the keeper's computer, click **Show the invitation**, and copy it across |
 | What you let it in as | **Contributor** is a good start | **Trusted**: what you change there comes in by itself |
 
-1. On your main computer, in **Settings → Family folder**, click **Show the invitation**, and **Copy**. Send it to yourself, by email or a message you can open on the other computer.
+1. On the keeper's computer, in **Settings → Family folder**, click **Show the invitation**, and **Copy**. Send it to yourself, by email or a message you can open on the other computer.
 2. On the other computer, follow [Join](#join): paste the invitation, sign in with your own Google account, name the computer, and click **Ask to join**.
-3. On your main computer, open **Settings → Family folder**. The request reaches it through the family folder: there's nothing to click until it has, and that can take a minute or two. To fetch it at once, click **Sync now**.
+3. On the keeper's computer, open **Settings → Family folder**. The request reaches it through the family folder: there's nothing to click until it has, and that can take a minute or two. To fetch it at once, click **Sync now**.
 4. Under **Asking to join**, check the code against the other computer's, choose **Trusted**, and click **Let in** (see [Let their computer in](#let-their-computer-in)).
 
-Don't use **Be the keeper again** on your other computer: only one computer keeps the family.
+Don't use **Be the keeper again** on your other computer: only one computer keeps the family. Your other computer can invite and let in for it, once you allow it (see [Invite and let in from another of your computers](#invite-and-let-in-from-another-of-your-computers)).
 
 ### Let their computer in
 
 - *What it's for:* letting a relative's computer into the family, once you know it's theirs.
-- *Who does it:* the keeper.
+- *Who does it:* the keeper, on the keeper's computer, or on another of yours you've allowed (see [Invite and let in from another of your computers](#invite-and-let-in-from-another-of-your-computers)).
 - *Before you start:* the relative has asked to join, and you can call or message them.
 
 When a relative asks to join, **Settings** shows a number, and **Settings → Family folder** shows their computer under **Asking to join**, with a code. Their request reaches your computer through the family folder, within a minute or two of them asking: **Sync now** fetches it at once.
@@ -1035,6 +1107,31 @@ When a relative asks to join, **Settings** shows a number, and **Settings → Fa
 The family reaches their computer within a few minutes, photos and stories too.
 
 *If it doesn't work:* if you turned a computer away by mistake, its owner leaves and asks to join again (see [Join](#join), *If it doesn't work*).
+
+### Invite and let in from another of your computers
+
+- *What it's for:* inviting a relative, and letting their computer in, from another computer of your own, such as the one you travel with, while the keeper's computer stays at home.
+- *Who does it:* the keeper: once on the keeper's computer, then on the other computer whenever you need it.
+- *Before you start:* the other computer in the family, signed in with your own Google account (see [Your own other computers](#your-own-other-computers)). When you let someone in, AncesTree running on the keeper's computer.
+
+Any kind of computer can keep the family, and any other of yours can do this for it: a Windows PC, a Mac or a laptop, either way round.
+
+1. On the keeper's computer, in **Settings → Family folder**, under **The family's computers**, turn on **May invite and let in for me** beside your other computer. Only your own computers, on your Google account, have it. It's off until you turn it on.
+2. On the other computer, open **Settings → Family folder**. Within a few minutes it shows **Invite a relative, by their Google account**, as the keeper's computer does. **Sync now** fetches it at once.
+3. Invite them as on the keeper's computer (see [Invite a relative](#invite-a-relative)). The invitation is the keeper's computer's own, which it leaves for your other computer.
+4. When their computer asks to join, it's under **Asking to join** on your other computer too, with its code. Check the code with them (see [Let their computer in](#let-their-computer-in)), choose what their computer may do, and click **Let in**.
+5. Your other computer says it's waiting for the keeper's computer to let them in. The keeper's computer checks that your other computer asked it, and that the code is the one it works out itself, then lets them in at its next round: within a minute while it runs.
+
+Both computers then say so: the keeper's under **What your other computers asked**.
+
+Everything else stays on the keeper's computer: turning a computer away with **Not this one**, changing what a computer may do, reviewing changes, removing a computer, handing the family over, the recovery code, and moving the family folder.
+
+*If it doesn't work:*
+
+- If your other computer says the keeper's computer **isn't running**, AncesTree is closed there, or that computer is off or asleep. Who you let in waits, and their computer with them: they're let in once the keeper's computer runs again.
+- If the keeper's computer turned something down, both computers say why. For a code that isn't the one its request gives, call them again: let in only a computer whose code you've checked.
+- If your other computer is lost or stolen, click **Remove** beside it on the keeper's computer, which also takes away what it may do. Then change your Google password.
+- After you take the family back with the recovery code, or hand it over, your other computer may no longer invite and let in: turn **May invite and let in for me** on again. What it asked before isn't carried out a second time.
 
 ### Changes waiting
 
@@ -1269,6 +1366,23 @@ AncesTree can keep several families on one computer, such as your mother's side 
 ![Settings → Families](guide/app-settings-families.png)
 
 If you keep a family's family folder, removing it from this computer means nothing you change reaches relatives, and their changes wait. With your recovery code, you can be its keeper again on another computer.
+
+### The example family
+
+- *What it's for:* looking around a ready family, before your own or beside it: about 65 made-up people over six generations, with drawn portraits, life stories, what people say about them, and places from Kelantan to Singapore and Melbourne. Every view has something to show.
+- *Who does it:* everyone.
+
+1. Click the family's name at the top left of the window, then **Add a family…**.
+2. Click **The example family**. AncesTree opens it as a family of its own: nothing of it ever mixes with yours.
+
+On a new computer, **Look around first** in the welcome bar does the same.
+
+![The example family, open: its portraits on the tree, and the bar saying its people are made up](guide/app-example-family.png)
+
+- A bar at the top says it's the example family, with **Back to** your own family.
+- Change anything you like in it: it's there to try things on. Once it's on your computer, **Add a family…** offers **Open the example family** instead.
+- It can't start or join a family folder: that's for your own family. Go **Back to** it first.
+- To take it away, remove it as any other family, in **Settings → Families**. Your own family stays as it was.
 
 ## 22. Updates
 

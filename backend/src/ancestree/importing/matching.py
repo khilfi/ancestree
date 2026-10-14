@@ -35,7 +35,7 @@ from ancestree.domain.imports import (
     ImportQuestion,
     ImportSecondLook,
 )
-from ancestree.domain.person import DateQualifier, Gender, PartialDate
+from ancestree.domain.person import DateQualifier, Gender, PartialDate, Person, Place
 from ancestree.domain.relationship import RelationshipKind, SpouseStatus
 from ancestree.domain.requests import PersonInput
 from ancestree.exchange.spreadsheet import VERSIONED, fingerprint, place_shown, read_version, shown
@@ -328,6 +328,10 @@ _TEXT = {
 }
 _DATES = {"Born": "birth_date", "Died": "death_date"}
 _PLACES = {"Birthplace": "birth_place", "Death place": "death_place", "Lives in": "residence"}
+# Where they live to the house: the columns an export with addresses has, after Lives in,
+# the part of the place each is, and the most of it the app keeps.
+_HOUSE = (("Address", "address"), ("Postcode", "postcode"))
+_HOUSE_LONGEST = {"address": 300, "postcode": 20}
 _LINK_COLUMNS = ("Spouses", "Parents", "Children")
 _MOST_OPTIONS = 8
 _OUT = ImportOption(id="out", label="Leave this link out")
@@ -397,6 +401,18 @@ class _Planner:
         if value is not None:
             fields[name] = value
 
+    @staticmethod
+    def _house_cell(row: SheetRow, column: str, part: str, unread: list[ImportLeftOut]) -> str:
+        """An Address or Postcode cell, as one line; "" if it's empty, or longer than the app
+        keeps, which is left out."""
+        text = " ".join(row[column].split())
+        most = _HOUSE_LONGEST[part]
+        if len(text) > most:
+            why = f"Longer than the {most} characters the app keeps."
+            unread.append(ImportLeftOut(row=row.number, column=column, written=text, why=why))
+            return ""
+        return text
+
     def _read(self, row: SheetRow) -> _Row | None:
         name = " ".join(row["Full name"].split())
         if not name:
@@ -421,6 +437,12 @@ class _Planner:
         cell("Living", read_living, name="living")
         for column, field_name in _PLACES.items():
             cell(column, read_place, name=field_name)
+        # Where they live to the house, with Lives in: someone new takes it as written.
+        house = {part: self._house_cell(row, column, part, unread) for column, part in _HOUSE}
+        if any(house.values()):
+            home = fields.get("residence")
+            home = home if isinstance(home, Place) else Place()
+            fields["residence"] = home.model_copy(update={k: v for k, v in house.items() if v})
         for column, field_name in _DATES.items():
             text = row[column]
             if not text:
@@ -843,7 +865,10 @@ class _Planner:
             if name == "living" and not after and person.living is None:
                 continue  # worked out from the dates already
             change_id = f"set:{pid}:{name}"
-            self.sets.append(PlannedSet(change_id, pid, name, detail_props(row.data, name)))
+            data = row.data
+            if isinstance(value, Place):  # in the same town, its address stays
+                data = data.model_copy(update={name: value.over(getattr(person, name))})
+            self.sets.append(PlannedSet(change_id, pid, name, detail_props(data, name)))
             self._set_changes.append(
                 ImportChange(
                     id=change_id,
@@ -859,6 +884,41 @@ class _Planner:
                     unsure=unsure,
                     # A date kept as written would put words where a date can be used.
                     ticked=not (clash or unsure or problem),
+                )
+            )
+        self._house(row, pid, person)
+
+    def _house(self, row: _Row, pid: str, person: Person) -> None:
+        """Where they live to the house: an Address or Postcode written otherwise than
+        the tree's waits for your tick, as no Version says which side changed it; an empty
+        cell says nothing. A new one places their pin again, unless it was put there by hand."""
+        held = person.residence
+        unread = {item.column for item in row.unread}
+        for column, part in _HOUSE:
+            if column not in self.sheet.columns or column in unread:
+                continue
+            after = " ".join(row.cells[column].split())
+            before = (getattr(held, part) if held is not None else None) or ""
+            if not after or _same_text(after, before):
+                continue
+            props: dict[str, Any] = {f"residence_{part}": after}
+            if held is None or held.exact != "hand":
+                props |= {"residence_lat": None, "residence_lon": None, "residence_exact": None}
+            change_id = f"set:{pid}:residence_{part}"
+            self.sets.append(PlannedSet(change_id, pid, "residence", props))
+            self._set_changes.append(
+                ImportChange(
+                    id=change_id,
+                    kind="set",
+                    row=row.number,
+                    person=UUID(pid),
+                    name=person.full_name,
+                    column=column,
+                    before=before,
+                    after=after,
+                    clash=False,
+                    unsure=True,
+                    ticked=False,
                 )
             )
 

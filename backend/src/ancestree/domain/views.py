@@ -1,12 +1,13 @@
 """What the API returns."""
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 
-from ancestree.domain.person import Gender, PartialDate, Place
+from ancestree.domain.person import Gender, LivesWith, PartialDate, Place
 from ancestree.domain.relationship import RelationshipKind, SpouseStatus
 
 
@@ -15,6 +16,10 @@ class Notice(BaseModel):
 
     code: str
     message: str
+    # For a possible duplicate: the one just saved, and the one already in the tree, so
+    # the notice can offer Same person as...
+    person: UUID | None = None
+    other: UUID | None = None
 
 
 class DateView(BaseModel):
@@ -54,6 +59,46 @@ class ChildGroup(BaseModel):
     children: list[Relative]
 
 
+class AtParents(BaseModel):
+    """Where someone with no place of their own lives: their parents' place, and
+    whose, the app's alone, never written in. Their mother's when the parents live apart,
+    unless their father's is chosen."""
+
+    place: Place
+    whose: Literal["mother", "father", "parents"]
+    district: str | None = None  # as written, or as the gazetteer has it
+
+
+def at_parents(
+    own: Place | None,
+    lives_with: LivesWith | None,
+    living: bool | None,
+    parents: Sequence[tuple[Gender, Place | None]],
+) -> AtParents | None:
+    """Where someone with no place of their own lives: while not known to have
+    died, their parents' own place, never their grandparents'. Both parents' when it's one
+    place; when they live apart, the mother's, unless the father's is chosen. None if they live
+    elsewhere, or no parent has a place. `parents`: their birth parents first."""
+    if own is not None or lives_with == "elsewhere" or living is False:
+        return None
+    placed = [(gender, place) for gender, place in parents if place is not None]
+    if not placed:
+        return None
+    mothers = [place for gender, place in placed if gender == Gender.FEMALE]
+    fathers = [place for gender, place in placed if gender == Gender.MALE]
+    if lives_with == "father" and fathers:
+        return AtParents(place=fathers[0], whose="father")
+    if lives_with == "mother" and mothers:
+        return AtParents(place=mothers[0], whose="mother")
+    if len(placed) > 1 and len({place for _, place in placed}) == 1:
+        return AtParents(place=placed[0][1], whose="parents")
+    if mothers:
+        return AtParents(place=mothers[0], whose="mother")
+    if fathers:
+        return AtParents(place=fathers[0], whose="father")
+    return AtParents(place=placed[0][1], whose="parents")
+
+
 class PersonDetail(BaseModel):
     id: UUID
     full_name: str
@@ -67,9 +112,13 @@ class PersonDetail(BaseModel):
     death_place: Place | None
     burial_place: str | None
     residence: Place | None
-    # Where they live, to the district, as the gazetteer has it: the app's alone, never
-    # in person.json, which explains a folder without the app.
+    # Where they live, to the district: as written, or as the gazetteer has it, the
+    # app's alone, never in person.json, which explains a folder without the app.
     residence_district: str | None = None
+    lives_with: LivesWith | None = None
+    # With no place of their own, while living, their parents': never written in.
+    residence_at_parents: AtParents | None = None
+    parents_apart: bool = False  # their parents live in different places: the form asks whose
     living: bool | None  # as set; None means "work it out"
     is_living: bool | None  # as worked out; None means unknown
     occupation: str | None

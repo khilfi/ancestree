@@ -9,10 +9,14 @@ import { needsPlainText, pictureUrl, STORY_MARKDOWN, storyPlugins } from "./stor
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /**
- * Opens a story in the editor exactly as the Biography tab does, has the editor read it in
- * again (as on reopening) and returns what it would save, plus any story it couldn't read.
+ * Opens a story in the editor exactly as the Biography tab does, or a part of their life as the
+ * life story does, has the editor read it in again (as on reopening) and returns what it
+ * would save, plus any story it couldn't read.
  */
-async function throughTheEditor(story: string): Promise<{ saved: string; errors: string[] }> {
+async function throughTheEditor(
+  story: string,
+  part = false,
+): Promise<{ saved: string; errors: string[] }> {
   const editor = createRef<MDXEditorMethods>();
   const errors: string[] = [];
   const host = document.createElement("div");
@@ -23,7 +27,7 @@ async function throughTheEditor(story: string): Promise<{ saved: string; errors:
       <MDXEditor
         ref={editor}
         markdown={story}
-        plugins={storyPlugins()}
+        plugins={storyPlugins({}, part)}
         suppressHtmlProcessing
         toMarkdownOptions={STORY_MARKDOWN}
         onError={({ error }) => errors.push(error)}
@@ -138,6 +142,11 @@ describe("stories written elsewhere", () => {
     expect(saved).toBe("Before.\n\n![At home](media/2026-09-27-4f3a9c.webp)\n\nAfter.");
     expect((window as { ran?: number }).ran).toBeUndefined();
   });
+});
+
+it("a part of their life keeps its subheadings, the only headings it offers", async () => {
+  const early = "By the river.\n\n### Kampung days\n\nKites on the padi fields.";
+  expect(await throughTheEditor(early, true)).toEqual({ saved: early, errors: [] });
 });
 
 describe("pictures", () => {

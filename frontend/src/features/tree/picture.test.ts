@@ -18,6 +18,7 @@ function person(id: string, fullName: string, more: Partial<GraphPerson> = {}): 
     birth_order: null,
     placeholder: false,
     photo_version: null,
+    has_story: false,
     ...more,
   };
 }

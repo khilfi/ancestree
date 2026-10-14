@@ -10,14 +10,17 @@ import csv
 import io
 from dataclasses import dataclass
 
-from ancestree.exchange.spreadsheet import COLUMNS, unguard
+from ancestree.exchange.spreadsheet import ADDRESS_COLUMNS, COLUMNS, unguard
 
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 20_000
 
-# The columns an import reads: the spreadsheet export's, but for what only an export says.
+# The columns an import reads: the spreadsheet export's, but for what only an export says; and
+# where they live to the house, after Lives in, as an export with addresses has them.
 PASSED_OVER = ("Photo", "Story (words)", "Sources")
-READ = tuple(column for column in COLUMNS if column not in PASSED_OVER)
+_EXPORTED = [column for column in COLUMNS if column not in PASSED_OVER]
+_LIVES_IN = _EXPORTED.index("Lives in") + 1
+READ = (*_EXPORTED[:_LIVES_IN], *ADDRESS_COLUMNS, *_EXPORTED[_LIVES_IN:])
 
 
 class SheetError(Exception):

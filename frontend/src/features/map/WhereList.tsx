@@ -1,7 +1,8 @@
 import { ChevronRightIcon, MapPinIcon, XIcon } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import type { GraphPerson, Pin, Place } from "@/api/types";
+import type { AtParents, GraphPerson, Pin, Place } from "@/api/types";
 import { Button } from "@/components/ui/button";
+import { AT_PARENTS } from "@/features/person/PersonDetails";
 import { shortName } from "@/features/tree/words";
 import { formatPlace } from "@/lib/people";
 import type { Spot } from "./levels";
@@ -51,6 +52,7 @@ export function WhereList({
   rough,
   missing,
   unfound,
+  atParents,
   pins,
   editable,
   onShow,
@@ -64,6 +66,7 @@ export function WhereList({
   rough: Placed[]; // their town wasn't found: at the middle of their state or country
   missing: GraphPerson[];
   unfound: Placed[]; // a country the map doesn't know
+  atParents: Map<string, AtParents["whose"]>; // with no place of their own, at whose
   pins: Pin[];
   editable: boolean; // the app, not a view-only copy
   onShow: (ids: string[]) => void;
@@ -169,6 +172,7 @@ export function WhereList({
                           >
                             {name(id)}
                           </button>
+                          {atParents.has(id) && ` ${AT_PARENTS[atParents.get(id) ?? "parents"]}`}
                         </span>
                       ))}
                     </span>

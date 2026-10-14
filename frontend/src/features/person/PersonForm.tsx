@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type ReactNode, useEffect, useRef } from "react";
-import { Controller, type FieldPath, FormProvider, useForm } from "react-hook-form";
+import { Controller, type FieldPath, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useBlocker } from "react-router";
 import { ApiError } from "@/api/errors";
 import { useCreatePerson, useUpdatePerson } from "@/api/queries";
@@ -16,8 +16,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { GrowingText } from "@/components/ui/growing-text";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -27,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { showError } from "@/lib/notify";
+import { formatPlace } from "@/lib/people";
 import { DatePicker } from "./DatePicker";
 import { PlaceFields } from "./PlaceFields";
 import { formValues, type PersonFormValues, personSchema, toInput } from "./personSchema";
@@ -56,6 +59,74 @@ function Field({
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+const WHOSE = {
+  mother: "their mother's",
+  father: "their father's",
+  parents: "their parents'",
+} as const;
+
+/** Where someone with no place of their own lives: at their parents', as long as
+ *  they're not known to have died, until they're given a place or **Lives elsewhere** is
+ *  ticked. When the parents live apart, their mother's, unless their father's is chosen. */
+function LivesWith({ person }: { person: PersonDetail }) {
+  const { control, watch } = useFormContext<PersonFormValues>();
+  const home = watch("residence");
+  const living = watch("living");
+  const own = [home.address, home.town, home.district, home.state, home.postcode].some(Boolean);
+  const dead = living === "deceased" || (living === "auto" && person.is_living === false);
+  if (own || dead || person.parents.length === 0) return null;
+  const at = person.residence_at_parents;
+  return (
+    <div className="space-y-2 rounded-lg border border-stone-200 p-3 text-sm">
+      <p className="text-stone-600">
+        {at
+          ? `With no place of their own, they're shown at ${WHOSE[at.whose]}: ${formatPlace(at.place, at.district)}.`
+          : "With no place of their own, they're shown at their parents', once a parent has one."}
+      </p>
+      <Controller
+        control={control}
+        name="lives_with"
+        render={({ field }) =>
+          person.parents_apart ? (
+            <RadioGroup
+              value={field.value || "mother"}
+              onValueChange={field.onChange}
+              aria-label="Where they live, with no place of their own"
+              className="gap-1.5"
+            >
+              {(
+                [
+                  ["mother", "At their mother's"],
+                  ["father", "At their father's"],
+                  ["elsewhere", "Lives elsewhere"],
+                ] as const
+              ).map(([value, words]) => (
+                <div key={value} className="flex items-center gap-2">
+                  <RadioGroupItem value={value} id={`lives-with-${value}`} />
+                  <Label htmlFor={`lives-with-${value}`} className="font-normal">
+                    {words}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="lives-elsewhere"
+                checked={field.value === "elsewhere"}
+                onCheckedChange={(on) => field.onChange(on === true ? "elsewhere" : "")}
+              />
+              <Label htmlFor="lives-elsewhere" className="font-normal">
+                Lives elsewhere
+              </Label>
+            </div>
+          )
+        }
+      />
     </div>
   );
 }
@@ -116,7 +187,7 @@ export function PersonForm({
       <form onSubmit={submit} className="space-y-6" noValidate>
         <Section title="Name">
           <Field id="full_name" label="Full name" error={errors.full_name?.message}>
-            <Input
+            <GrowingText
               id="full_name"
               placeholder="e.g. Hassan bin Ismail"
               autoFocus={!person}
@@ -125,10 +196,10 @@ export function PersonForm({
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field id="nickname" label="Nickname">
-              <Input id="nickname" placeholder="e.g. Pak Mat" {...register("nickname")} />
+              <GrowingText id="nickname" placeholder="e.g. Pak Mat" {...register("nickname")} />
             </Field>
             <Field id="title" label="Title">
-              <Input id="title" placeholder="e.g. Haji, Dato'" {...register("title")} />
+              <GrowingText id="title" placeholder="e.g. Haji, Dato'" {...register("title")} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -151,7 +222,7 @@ export function PersonForm({
               />
             </Field>
             <Field id="name_jawi" label="Name in Jawi">
-              <Input id="name_jawi" dir="rtl" lang="ms-Arab" {...register("name_jawi")} />
+              <GrowingText id="name_jawi" dir="rtl" lang="ms-Arab" {...register("name_jawi")} />
             </Field>
           </div>
         </Section>
@@ -211,7 +282,7 @@ export function PersonForm({
           </Field>
           <PlaceFields name="death_place" label="Place of death" />
           <Field id="burial_place" label="Buried at">
-            <Input
+            <GrowingText
               id="burial_place"
               placeholder="e.g. Tanah Perkuburan Islam Kg. Baru"
               {...register("burial_place")}
@@ -221,8 +292,9 @@ export function PersonForm({
 
         <Section title="Now">
           <PlaceFields name="residence" label="Lives in" />
+          {person && <LivesWith person={person} />}
           <Field id="occupation" label="Occupation">
-            <Input id="occupation" {...register("occupation")} />
+            <GrowingText id="occupation" {...register("occupation")} />
           </Field>
         </Section>
 

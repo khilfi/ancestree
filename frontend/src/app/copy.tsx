@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext } from "react";
-import { useKeptByTheKeeper } from "@/api/familyFolder";
+import { useFamilyFolder, useKeptByTheKeeper } from "@/api/familyFolder";
 
 /** What a copy says about itself: shown in its top bar and About. */
 export type CopyAbout = {
@@ -32,6 +32,24 @@ export function useCanEdit(): boolean {
   // A relative's computer keeps the family as its keeper sends it: nothing changes it.
   const keptByTheKeeper = useKeptByTheKeeper(copy === null);
   return copy === null && !keptByTheKeeper;
+}
+
+/**
+ * What people say about someone, here: whether you may write your own words, as
+ * anyone in the family may, on a viewer's computer too; and whether anyone's may be taken out,
+ * as on the keeper's computer, or one with no family folder. Neither in a copy, nor while the
+ * keeper offers the family to another computer.
+ */
+export function useWordsHere(): { write: boolean; takeOut: boolean } {
+  const copy = useContext(CopyContext);
+  const status = useFamilyFolder(copy === null).data;
+  if (copy !== null) return { write: false, takeOut: false };
+  if (status?.setup === "member") {
+    const role = status.role ?? "";
+    return { write: ["contributor", "trusted", "viewer"].includes(role), takeOut: false };
+  }
+  const offered = status?.setup === "keeper" && Boolean(status.offer_made);
+  return { write: !offered, takeOut: !offered };
 }
 
 /**

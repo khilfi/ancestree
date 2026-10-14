@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ancestree import __version__
-from ancestree.domain.person import DateQualifier, Gender, PartialDate
+from ancestree.domain.person import DateQualifier, Gender, PartialDate, Place
 from ancestree.domain.relationship import SpouseStatus
 from ancestree.exchange.family import FamilyData, SpouseRow, place_text
 from ancestree.services.detail import is_living
@@ -108,7 +108,9 @@ class _Family:
     xref: str = ""
 
 
-def write_gedcom(data: FamilyData, *, made_at: datetime, file_name: str) -> str:
+def write_gedcom(
+    data: FamilyData, *, made_at: datetime, file_name: str, addresses: bool = False
+) -> str:
     people = data.people()
     ids = {member.id: f"@I{n}@" for n, member in enumerate(people, start=1)}
     rank = {member.id: n for n, member in enumerate(people)}
@@ -179,17 +181,15 @@ def write_gedcom(data: FamilyData, *, made_at: datetime, file_name: str) -> str:
             out.add(1, "NAME", p.name_jawi.replace("/", " "))
             out.add(2, "TYPE", "aka")
         out.add(1, "SEX", _SEX[p.gender])
-        _event(out, "BIRT", p.birth_date, place_text(p.birth_place))
-        if not _event(out, "DEAT", p.death_date, place_text(p.death_place)) and (
+        _event(out, "BIRT", p.birth_date, p.birth_place, addresses)
+        if not _event(out, "DEAT", p.death_date, p.death_place, addresses) and (
             is_living(p) is False
         ):
             out.add(1, "DEAT", "Y")
         if p.burial_place:
             out.add(1, "BURI")
             out.add(2, "PLAC", p.burial_place)
-        if residence := place_text(p.residence):
-            out.add(1, "RESI")
-            out.add(2, "PLAC", residence)
+        _event(out, "RESI", None, p.residence, addresses)
         if p.occupation:
             out.add(1, "OCCU", p.occupation)
         for f, pedigree in as_child[member.id]:
@@ -247,15 +247,30 @@ def _header(out: Lines, made_at: datetime, file_name: str) -> None:
     out.add(1, "NAME", "AncesTree")
 
 
-def _event(out: Lines, tag: str, date: PartialDate | None, place: str | None) -> bool:
+def _event(
+    out: Lines, tag: str, date: PartialDate | None, place: Place | None, addresses: bool
+) -> bool:
+    """An event, with its date and place; with `addresses`, the place's address, postcode
+    and where it is, as GEDCOM 5.5.1 keeps them. Nothing if it has neither date nor place."""
     when = gedcom_date(date) if date else None
-    if not when and not place:
+    named = place_text(place)
+    home = place if addresses and place is not None else None
+    house = home is not None and bool(home.address or home.postcode)
+    if not when and not named and not house:
         return False
     out.add(1, tag)
     if when:
         out.add(2, "DATE", when)
-    if place:
-        out.add(2, "PLAC", place)
+    if named:
+        out.add(2, "PLAC", named)
+        if home is not None and home.lat is not None and home.lon is not None:
+            out.add(3, "MAP")
+            out.add(4, "LATI", f"{'N' if home.lat >= 0 else 'S'}{abs(home.lat):.6g}")
+            out.add(4, "LONG", f"{'E' if home.lon >= 0 else 'W'}{abs(home.lon):.6g}")
+    if home is not None and house:
+        out.add(2, "ADDR", home.address or "")
+        if home.postcode:
+            out.add(3, "POST", home.postcode)
     return True
 
 

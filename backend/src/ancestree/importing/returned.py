@@ -23,6 +23,7 @@ from uuid import UUID
 
 from pydantic import ValidationError
 
+from ancestree.domain.biography import Said
 from ancestree.domain.imports import (
     ImportChange,
     ImportLeftOut,
@@ -30,7 +31,7 @@ from ancestree.domain.imports import (
     ImportQuestion,
     ImportSecondLook,
 )
-from ancestree.domain.person import Gender, PartialDate
+from ancestree.domain.person import Gender, PartialDate, Place
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind, SpouseStatus
 from ancestree.domain.requests import PersonInput
 from ancestree.exchange.returned import Returned, ReturnedPerson
@@ -38,12 +39,14 @@ from ancestree.exchange.spreadsheet import VERSIONED, shown
 from ancestree.importing.matching import Tree, dates_agree, name_key, skeleton
 from ancestree.media.photos import Crop
 from ancestree.repo.mapping import date_from_props, date_props, place_from, place_props
-from ancestree.services.biography import join_sources, split_sources
+from ancestree.services.biography import join_said, join_sources, split_said, split_sources
 from ancestree.storage.biography import pictures_in
 
 type Props = dict[str, Any]
 
-_DETAILS = {name: label for label, name in VERSIONED}  # "birth_date" -> "Born"
+# "birth_date" -> "Born"; and where someone with no place of their own lives.
+_DETAILS = {name: label for label, name in VERSIONED} | {"lives_with": "Lives with"}
+_SINCE_ADDRESSES = {"lives_with"}  # what a computer before 0.8.0 doesn't say
 _MOST_OPTIONS = 8  # people offered for a look-alike, as for a spreadsheet's rows
 _SKELETON_AT_LEAST = 6
 _SPOUSE_WORDS = {
@@ -53,6 +56,9 @@ _SPOUSE_WORDS = {
 }
 _EXCERPT = 160  # characters of a story shown in the review
 _LAST = 10_000  # where someone with no birth order goes
+# What people say about someone, as much as a sending brings, as the app takes it written
+# here (0.8.0): each piece's words and who wrote them, and the pieces about one person.
+_SAID_WORDS, _SAID_WRITER, _SAID_MOST = 20_000, 200, 500
 
 
 # --- What goes in ------------------------------------------------------------------------------
@@ -161,6 +167,26 @@ class Story:
 
 
 @dataclass(frozen=True)
+class Words:
+    """What someone says about a person, as it'll be: written, changed, or taken back."""
+
+    person: str
+    said_id: str
+    said: Said | None  # None takes them back, or out
+    was: Said | None  # as the tree had them when compared: if they've changed since, they stay
+
+
+@dataclass(frozen=True)
+class Sender:
+    """The computer the changes came from: whose words among what people say are its
+    own, to change or take back; and whether its words are all that's taken, as a viewer's."""
+
+    device: str
+    name: str
+    words_only: bool = False
+
+
+@dataclass(frozen=True)
 class Photo:
     person: str
     display: str | None  # the photo, as a data: address; None takes the photo out
@@ -171,7 +197,7 @@ class Photo:
 
 type Operation = (
     AddPerson | SetDetail | AddLink | Siblings | FillIn | Remove | Unlink | Relink | Order
-    | Story | Photo
+    | Story | Words | Photo
 )  # fmt: skip
 
 
@@ -255,6 +281,26 @@ def _empty(value: object) -> bool:
     return value is None or value == "" or value == Gender.UNKNOWN
 
 
+def _said(value: object) -> str:
+    """A detail as the review shows it, as an import does; a place with its address and
+    postcode first, so a change to them shows."""
+    if not isinstance(value, Place):
+        return shown(value)
+    house = value.address or ""
+    if value.postcode and value.postcode not in house:
+        house = f"{house} {value.postcode}".strip()
+    return ", ".join(part for part in (house, shown(value)) if part)
+
+
+def _as_before(value: object) -> object:
+    """A detail as a computer before 0.8.0 holds it: a place by its town, state and
+    country alone."""
+    if not isinstance(value, Place):
+        return value
+    place = Place(town=value.town, state=value.state, country=value.country)
+    return None if place.is_empty else place
+
+
 def detail_props(name: str, value: Any) -> Props:
     """A detail as the properties that hold it; an empty one clears them."""
     if name in ("birth_date", "death_date"):
@@ -278,6 +324,7 @@ def new_person_props(data: PersonInput) -> Props:
         "gender": data.gender.value,
         "burial_place": data.burial_place,
         "living": data.living,
+        "lives_with": data.lives_with,
         "occupation": data.occupation,
         "notes": data.notes,
         "placeholder": False,
@@ -310,6 +357,20 @@ def _file_text(text: str | None) -> str:
     return join_sources(story, sources)
 
 
+def without_said(text: str) -> tuple[str, list[Said]]:
+    """A story as biography.md holds it, and what people say about them apart: each
+    piece of words is compared on its own, by whose it is."""
+    story, sources = split_sources(text)
+    story, said = split_said(story)
+    return join_sources(story, sources), said
+
+
+def with_said(text: str, said: list[Said]) -> str:
+    """A story without what people say about them, with it put back."""
+    story, sources = split_sources(text)
+    return join_sources(join_said(story, said), sources)
+
+
 def _excerpt(text: str) -> str:
     story, _ = split_sources(text)
     flat = " ".join(story.split())
@@ -337,11 +398,17 @@ def _names(names: list[str]) -> str:
 
 class _Planner:
     def __init__(
-        self, base: Base, returned: Returned, tree: TreeNow, answers: Mapping[str, str]
+        self,
+        base: Base,
+        returned: Returned,
+        tree: TreeNow,
+        answers: Mapping[str, str],
+        sender: Sender | None = None,
     ) -> None:
         self.base = base
         self.returned = returned
         self.tree = tree
+        self.sender = sender
         self.answers = answers
         self.ids = dict(base.ids)
         # Their links, the same shape as the base's: {id, type, source, target, kind, status}
@@ -499,22 +566,32 @@ class _Planner:
         changed: then what they say differently waits for your tick, and blanks say nothing."""
         tid = self.tid(pid)
         values = self.values[pid]
+        older = not self.returned.addresses  # a computer before 0.8.0
         for detail, label in _DETAILS.items():
             if detail not in values:
                 continue  # it couldn't be read: left out
+            if older and detail in _SINCE_ADDRESSES:
+                continue  # it doesn't say
             after = values[detail]
             tree = _detail_or_none(now, detail)
             before = _detail_or_none(then, detail) if then is not None else None
-            if then is not None and after == before:
+            # From a computer before 0.8.0, a place is compared as it holds it: by its town,
+            # state and country. What it doesn't say isn't taken away.
+            sent, held, was = (after, tree, before)
+            if older:
+                sent, held, was = _as_before(after), _as_before(tree), _as_before(before)
+                if isinstance(after, Place) and (tree is None or isinstance(tree, Place)):
+                    after = after.over(tree)
+            if then is not None and sent == was:
                 continue  # unchanged there
-            if then is None and _empty(after):
+            if then is None and _empty(sent):
                 continue  # a blank in someone it didn't start with says nothing
-            if after == tree:
+            if sent == held:
                 continue  # the tree says so already
             if detail == "living" and after is None:
                 continue  # worked out from the dates
             known = then is not None
-            clash = known and tree != before
+            clash = known and held != was
             self.add(
                 ImportChange(
                     id=f"set:{tid}:{detail}",
@@ -523,8 +600,8 @@ class _Planner:
                     person=UUID(tid),
                     name=str(now["full_name"]),
                     column=label,
-                    before=shown(tree),
-                    after=shown(after),
+                    before=_said(tree),
+                    after=_said(after),
                     clash=clash,
                     unsure=not known,
                     ticked=known and not clash,
@@ -960,20 +1037,25 @@ class _Planner:
 
     # --- Stories and photos ---
 
-    def _stories(self) -> None:
+    def _stories(self, *, words_only: bool = False) -> None:
+        """Each story changed, apart from what people say about them, which is compared a
+        piece of words at a time; from a viewer, only that."""
         base, returned = self.base, self.returned
         for pid in sorted(returned.stories.keys() | base.stories.keys()):
             story = returned.stories.get(pid)
-            text = _story_text(story.model_dump() if story is not None else None)
-            then = _story_text(base.stories.get(pid))
-            if text == then or pid not in returned.people:
+            sent = _story_text(story.model_dump() if story is not None else None)
+            before = _story_text(base.stories.get(pid))
+            if sent == before or pid not in returned.people:
                 continue  # unchanged, or goes with the person taken out
             tid = self.tid(pid)
             if pid not in self.new and tid not in self.tree.people:
                 continue  # taken out of the tree since: said so with their details
             was = self.tree.stories.get(tid)
-            tree = _file_text(was)
-            if tree == text:
+            text, said = without_said(sent)
+            then, said_then = without_said(before)
+            tree, said_tree = without_said(_file_text(was))
+            self._said(pid, tid, said_then, said, said_tree)
+            if words_only or text == then or tree == text:
                 continue
             clash = pid not in self.new and tree != then
             pictures = {}
@@ -1007,6 +1089,78 @@ class _Planner:
                     ticked=not clash and bool(text),
                 ),
                 Story(tid, text, was, pictures),
+            )
+
+    def _said(
+        self, pid: str, tid: str, then: list[Said], sent: list[Said], tree: list[Said]
+    ) -> None:
+        """What people say about them, as the computer sent it: each piece of words it
+        wrote, changed or took back, if they're its own, written on it. Anyone else's words
+        it changed are left out: only their own computer, or the keeper, may."""
+        before = {said.id: said for said in then}
+        after = {said.id: said for said in sent}
+        now = {said.id: said for said in tree}
+        sender = self.sender
+        for count, said_id in enumerate(
+            [*after, *(said_id for said_id in before if said_id not in after)]
+        ):
+            old, new = before.get(said_id), after.get(said_id)
+            if old == new:
+                continue
+            words = new or old
+            if words is None:
+                continue
+            if new is not None and (
+                count >= _SAID_MOST or len(new.text) > _SAID_WORDS or len(new.writer) > _SAID_WRITER
+            ):
+                self.left_out.append(
+                    ImportLeftOut(
+                        row=None,
+                        column=self.name(pid),
+                        written=f"What {new.writer[:_EXCERPT] or 'someone'} says about them",
+                        why="Those words are longer than the app takes, or more than it takes "
+                        "about one person.",
+                    )
+                )
+                continue
+            own = (
+                sender is not None
+                and words.device == sender.device
+                and (old is None or new is None or old.device == new.device)
+            )
+            if not own:
+                self.left_out.append(
+                    ImportLeftOut(
+                        row=None,
+                        column=self.name(pid),
+                        written=f"What {words.writer[:_EXCERPT] or 'someone'} says about them",
+                        why="Those words were written on another computer: only it can change "
+                        "them or take them back.",
+                    )
+                )
+                continue
+            current = now.get(said_id)
+            if (old is None and current is not None) or (new is None and current is None):
+                continue  # here already, or gone already
+            clash = old is not None and current != old  # changed or taken out here since
+            what = "written" if old is None else ("taken back" if new is None else "changed")
+            self.add(
+                ImportChange(
+                    id=f"said:{pid}:{said_id}",
+                    kind="said",
+                    row=None,
+                    person=UUID(tid),
+                    name=self.name(pid),
+                    column="What people say",
+                    before=_excerpt(old.text) if old else "",
+                    after=_excerpt(new.text) if new else "",
+                    detail=what,
+                    by=words.writer,
+                    clash=clash,
+                    needs=self.needs_of(pid),
+                    ticked=not clash,
+                ),
+                Words(tid, said_id, new, current),
             )
 
     def _photos(self) -> None:
@@ -1065,11 +1219,31 @@ class _Planner:
                 )
 
     def plan(self) -> ReturnedPlan:
-        self._people()
-        self._links()
-        self._orders()
-        self._stories()
-        self._photos()
+        sender = self.sender
+        if sender is not None and sender.words_only:
+            # A viewer's computer: its words alone are looked at. Anything else it sent
+            # is said to be left out, unlooked at.
+            self._stories(words_only=True)
+            unasked = _Planner(
+                self.base, self.returned, self.tree, {}, Sender(sender.device, sender.name)
+            ).plan()
+            others = [c for c in unasked.changes if c.kind != "said"] + unasked.questions
+            if others:
+                self.left_out.append(
+                    ImportLeftOut(
+                        row=None,
+                        column=sender.name,
+                        written=f"{len(others)} other changes",
+                        why="A viewer's computer sends only its words about people, so the "
+                        "rest isn't taken.",
+                    )
+                )
+        else:
+            self._people()
+            self._links()
+            self._orders()
+            self._stories()
+            self._photos()
         return ReturnedPlan(
             changes=self.changes,
             questions=self.questions,
@@ -1081,6 +1255,10 @@ class _Planner:
 
 
 def plan_returned(
-    base: Base, returned: Returned, tree: TreeNow, answers: Mapping[str, str]
+    base: Base,
+    returned: Returned,
+    tree: TreeNow,
+    answers: Mapping[str, str],
+    sender: Sender | None = None,
 ) -> ReturnedPlan:
-    return _Planner(base, returned, tree, answers).plan()
+    return _Planner(base, returned, tree, answers, sender).plan()

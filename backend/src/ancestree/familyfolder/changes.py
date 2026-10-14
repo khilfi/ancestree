@@ -25,7 +25,7 @@ from typing import Any
 from ancestree.exchange.records import in_link_order, link_record, person_record
 from ancestree.familyfolder.entries import Entries
 from ancestree.media.photos import PhotoError, process_picture
-from ancestree.services.biography import biography_from
+from ancestree.services.biography import told as told_story
 from ancestree.storage import biography as stories
 from ancestree.storage import files
 
@@ -189,7 +189,7 @@ def family_to_send(family: Entries, received: Entries, data_dir: Path) -> dict[s
         story_key = f"file/people/{pid}/{stories.BIOGRAPHY}"
         text = stories.read_story(data_dir, pid) if story_key in family else None
         if text and text.strip():
-            told[pid] = biography_from(text).model_dump(mode="json")
+            told[pid] = told_story(text)  # parts and all, as every version reads it
             if family.get(story_key) != received.get(story_key):
                 for name in stories.pictures_in(text):
                     path = stories.picture_file(data_dir, pid, name)
@@ -219,6 +219,7 @@ def family_to_send(family: Entries, received: Entries, data_dir: Path) -> dict[s
         "stories": told,
         "files": pictures,
         "photos": photos,
+        "addresses": True,  # its places whole: exchange/returned.py's _Sent
     }
 
 

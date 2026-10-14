@@ -1,26 +1,35 @@
 # The map's packs: a tag naming one of Protomaps' builds of OpenStreetMap, such as
-# maps-20261010, cuts from it a pack for the world and one for each region, as
-# backend/src/ancestree/maps/packs.json says, with Protomaps' own pmtiles program, and puts them
-# in the tag's release, with their SHA-256 sums. The app fetches them from there.
+# maps-20261010, cuts from it a pack for the world and one for each country, or each state of a
+# country split, as backend/src/ancestree/maps/packs.json lists them, with Protomaps' own pmtiles
+# program, a group at a time, each to its area from Natural Earth's outlines; and puts them in
+# the tag's release, with their SHA-256 sums. The app fetches them from there.
 #
 # Each pack must be the very one the app pins, byte for byte, or nothing is published: cutting
-# is the same each time from the same build. The cutting fetches from Protomaps, so it can change
-# nothing here; only the last job, which runs nothing but GitHub's own tools, may write to the
-# release, and it has GitHub attest where each pack was made. Every action is pinned to the commit
-# of the version named beside it, and the pmtiles program to its SHA-256.
+# is the same each time from the same build. So must each country's places, made from the
+# day's copy of GeoNames kept in its own release, geonames-<day>, as packs.json pins it; a place
+# file is pinned by its lines, unpacked, as one zlib packs them otherwise than another. For a newer build, a tag pins-<build>, pushed to the
+# private test repository, cuts them all the same way and gives back only their sizes and sums,
+# to merge into packs.json (desktop/maps/cut.py --merge); it publishes nothing.
+#
+# The cutting fetches from Protomaps and Natural Earth, so it can change nothing here; only the
+# jobs after it, which run nothing but GitHub's own tools, may write to the release, and they
+# have GitHub attest where each pack was made. Every action is pinned to the commit of the
+# version named beside it, and the pmtiles program and Natural Earth's files to their SHA-256.
 
 name: Map packs
 
 on:
   push:
-    tags: ["maps-*"]
+    tags: ["maps-*", "pins-*"]
 
 permissions:
   contents: read
 
 jobs:
-  cut:
+  groups:
     runs-on: ubuntu-24.04
+    outputs:
+      groups: ${{ steps.groups.outputs.groups }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -29,7 +38,26 @@ jobs:
       - name: The tag names the build packs.json pins
         run: |
           build=$(python3 -c "import json; print(json.load(open('backend/src/ancestree/maps/packs.json'))['build'])")
-          [ "$GITHUB_REF_NAME" = "maps-$build" ] || { echo "::error::packs.json pins build $build: tag it maps-$build"; exit 1; }
+          case "$GITHUB_REF_NAME" in
+            "maps-$build" | "pins-$build") ;;
+            *) echo "::error::packs.json pins build $build: tag it maps-$build, or pins-$build to pin it"; exit 1 ;;
+          esac
+
+      - name: The packs' groups, each for one machine
+        id: groups
+        run: echo "groups=$(python3 desktop/maps/cut.py --groups)" >> "$GITHUB_OUTPUT"
+
+  cut:
+    needs: groups
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(needs.groups.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Protomaps' pmtiles program, as pinned
         run: |
@@ -38,40 +66,183 @@ jobs:
           echo "3ed7dbf4ec2e6dfe5e25b6f70d1ffc932729f93c86db353bf514dd71010a312f  pmtiles.tar.gz" | sha256sum --check
           tar -xzf pmtiles.tar.gz pmtiles
 
-      - name: The packs, cut and checked against the app's pins
-        run: python3 desktop/maps/cut.py ./pmtiles packs
+      - name: Natural Earth's outlines, as pinned, and each pack's area from them
+        run: |
+          python3 -c "
+          import json
+          o = json.load(open('backend/src/ancestree/maps/packs.json'))['outlines']
+          for part in ('admin_0', 'admin_1'):
+              print(o['from'] + o[part]['file'], o[part]['sha256'], o[part]['file'])
+          " > outlines.txt
+          while read -r url sum file; do
+            curl -sSLf --retry 3 -o "$file" "$url"
+            echo "$sum  $file" | sha256sum --check
+          done < outlines.txt
+          python3 desktop/maps/regions.py ne_10m_admin_0_countries.geojson ne_10m_admin_1_states_provinces.geojson areas
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - name: The group's packs, cut and checked against the app's pins, or pinned
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" == pins-* ]]; then
+            python3 desktop/maps/cut.py ./pmtiles areas packs "$GROUP" --pin "pins-$GROUP.json"
+          else
+            python3 desktop/maps/cut.py ./pmtiles areas packs "$GROUP"
+          fi
+
+      - if: startsWith(github.ref_name, 'pins-')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: packs
+          name: pins-${{ matrix.group }}
+          path: pins-${{ matrix.group }}.json
+          if-no-files-found: error
+
+      - if: startsWith(github.ref_name, 'maps-')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packs-${{ matrix.group }}
           path: packs/*.pmtiles
           if-no-files-found: error
           retention-days: 2
+          compression-level: 0  # packed already
 
-  publish:
-    needs: cut
+  places:
+    if: startsWith(github.ref_name, 'maps-')
+    needs: groups
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: GeoNames' copy, from its own release
+        run: |
+          python3 -c "
+          import json
+          p = json.load(open('backend/src/ancestree/maps/packs.json'))['places']
+          release = p['sources']['release'].format(snapshot=p['snapshot'])
+          for name in p['sources']['files']:
+              print(release + name, name)
+          " > copy.txt
+          mkdir geonames
+          while read -r url name; do
+            curl -sSLf --retry 3 -o "geonames/$name" "$url"
+          done < copy.txt
+
+      - name: Each country's places, made from it, and checked against the app's pins
+        working-directory: backend
+        run: uv run --locked python -m ancestree.places.downloads ../geonames ../places
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: places
+          path: places/*.tsv.gz
+          if-no-files-found: error
+          retention-days: 2
+          compression-level: 0  # packed already
+
+  release:
+    if: startsWith(github.ref_name, 'maps-')
+    needs: [cut, places]
     runs-on: ubuntu-24.04
     permissions:
       contents: write  # to make the release
+    steps:
+      - name: The release, to fill
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "Map packs, from OpenStreetMap (${GITHUB_REF_NAME#maps-})" --verify-tag \
+            --notes "The map's packs of OpenStreetMap's tiles, the world's and each country's, which AncesTree fetches as it needs them, each checked against its SHA-256. Map data © OpenStreetMap contributors, under the Open Database License (ODbL); cut from Protomaps' build ${GITHUB_REF_NAME#maps-}, each country to its outline from Natural Earth."
+
+  publish:
+    if: startsWith(github.ref_name, 'maps-')
+    needs: [groups, release]
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        group: ${{ fromJSON(needs.groups.outputs.groups) }}
+    permissions:
+      contents: write  # to put the packs in the release
       id-token: write  # to attest where the packs were made
       attestations: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: packs
+          name: packs-${{ matrix.group }}
           path: packs
 
       - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-path: packs/*.pmtiles
 
-      - name: The release, with SHA256SUMS.txt
+      - name: The group's packs, in the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GROUP: ${{ matrix.group }}
+        run: |
+          cd packs
+          gh release upload "$GITHUB_REF_NAME" ./*.pmtiles --repo "$GITHUB_REPOSITORY"
+          sha256sum ./*.pmtiles | sed 's#  \./#  #' > "../sums-$GROUP.txt"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sums-${{ matrix.group }}
+          path: sums-${{ matrix.group }}.txt
+          if-no-files-found: error
+
+  publish-places:
+    if: startsWith(github.ref_name, 'maps-')
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # to put the places in the release
+      id-token: write  # to attest where they were made
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: places
+          path: places
+
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: places/*.tsv.gz
+
+      - name: Each country's places, in the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd packs
-          sha256sum *.pmtiles > SHA256SUMS.txt
-          cat SHA256SUMS.txt
-          gh release create "$GITHUB_REF_NAME" ./*.pmtiles SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" \
-            --title "Map packs, from OpenStreetMap (${GITHUB_REF_NAME#maps-})" --verify-tag \
-            --notes "The map's packs of OpenStreetMap's tiles, which AncesTree fetches as it needs them, each checked against its SHA-256. Map data © OpenStreetMap contributors, under the Open Database License (ODbL); cut from Protomaps' build ${GITHUB_REF_NAME#maps-}."
+          cd places
+          gh release upload "$GITHUB_REF_NAME" ./*.tsv.gz --repo "$GITHUB_REPOSITORY"
+          sha256sum ./*.tsv.gz | sed 's#  \./#  #' > ../sums-places.txt
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sums-places
+          path: sums-places.txt
+          if-no-files-found: error
+
+  sums:
+    if: startsWith(github.ref_name, 'maps-')
+    needs: [publish, publish-places]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # to put the sums in the release
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: sums-*
+          path: sums
+          merge-multiple: true
+
+      - name: SHA256SUMS.txt, in the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sort -k 2 sums/*.txt > SHA256SUMS.txt
+          wc -l SHA256SUMS.txt
+          gh release upload "$GITHUB_REF_NAME" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY"

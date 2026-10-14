@@ -13,9 +13,17 @@ from dataclasses import dataclass
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    ValidationError,
+)
 
-from ancestree.domain.person import DateQualifier, Gender
+from ancestree.domain.biography import lines_ended
+from ancestree.domain.person import DateQualifier, Exactness, Gender, LivesWith
 from ancestree.domain.relationship import SpouseStatus
 from ancestree.media.photos import Crop
 
@@ -25,6 +33,10 @@ _WEBP = "data:image/webp;base64,"
 Text = Annotated[str, StringConstraints(max_length=200)]
 Long = Annotated[str, StringConstraints(max_length=5000)]
 Year = Annotated[int, Field(ge=1, le=9999)]
+Address = Annotated[str, StringConstraints(max_length=300)]
+Postcode = Annotated[str, StringConstraints(max_length=20)]
+Latitude = Annotated[float, Field(ge=-90, le=90)]
+Longitude = Annotated[float, Field(ge=-180, le=180)]
 
 
 class ReturnedError(Exception):
@@ -81,6 +93,26 @@ class ReturnedPerson(_Strict):
     residence_town: Text | None = None
     residence_state: Text | None = None
     residence_country: Text | None = None
+    # Since 0.8.0: the rest of each place, and where they live with no place of their own.
+    birth_address: Address | None = None
+    birth_district: Text | None = None
+    birth_postcode: Postcode | None = None
+    birth_lat: Latitude | None = None
+    birth_lon: Longitude | None = None
+    birth_exact: Exactness | None = None
+    death_address: Address | None = None
+    death_district: Text | None = None
+    death_postcode: Postcode | None = None
+    death_lat: Latitude | None = None
+    death_lon: Longitude | None = None
+    death_exact: Exactness | None = None
+    residence_address: Address | None = None
+    residence_district: Text | None = None
+    residence_postcode: Postcode | None = None
+    residence_lat: Latitude | None = None
+    residence_lon: Longitude | None = None
+    residence_exact: Exactness | None = None
+    lives_with: LivesWith | None = None
     burial_place: Text | None = None
     living: bool | None = None
     occupation: Text | None = None
@@ -99,7 +131,9 @@ class ReturnedLink(_Strict):
 
 
 class ReturnedStory(_Strict):
-    story: Annotated[str, StringConstraints(max_length=2_000_000)]
+    # Its lines ended as it will be read once written here (0.8.0): a carriage return alone ends
+    # one, so it's reviewed as it will be kept.
+    story: Annotated[str, StringConstraints(max_length=2_000_000), AfterValidator(lines_ended)]
     sources: list[Annotated[str, StringConstraints(max_length=1000)]] = Field(max_length=500)
 
 
@@ -126,6 +160,10 @@ class _Sent(_Strict):
         Annotated[str, StringConstraints(max_length=MAX_PICTURE)],
     ] = Field(default_factory=dict, max_length=200_000)
     photos: dict[UUID, ReturnedPhoto] = Field(default_factory=dict, max_length=50_000)
+    # Sent by a computer that keeps a place's address, district, postcode and location, and
+    # whom someone lives with, since 0.8.0. Before it, a place is its town, state and country
+    # alone, and the rest isn't said: it isn't taken away.
+    addresses: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,6 +176,7 @@ class Returned:
     stories: dict[str, ReturnedStory]
     files: dict[str, str]  # data: addresses, by the address the app asks for them at
     photos: dict[str, ReturnedPhoto]
+    addresses: bool = True  # False from a computer before 0.8.0 (_Sent.addresses)
 
     def picture(self, address: str) -> bytes | None:
         """A picture it sent, as bytes: only WebP, which is all the app sends."""
@@ -171,4 +210,5 @@ def sent_family(found: object, sender: str) -> Returned:
         stories={str(pid): story for pid, story in sent.stories.items()},
         files=sent.files,
         photos={str(pid): photo for pid, photo in sent.photos.items()},
+        addresses=sent.addresses,
     )

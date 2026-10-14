@@ -26,7 +26,7 @@ import os
 import re
 import secrets
 import shutil
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -64,6 +64,10 @@ class Family:
     # A backup to restore when it next opens, by name in its backups/: a family added from it.
     restore: str = ""
     removed: str = ""  # when it was removed, if it's in removed/
+    # The example family: made up, to look around in; and filled with it when it
+    # next opens, which it is once.
+    example: bool = False
+    fill: bool = False
 
 
 @dataclass(frozen=True)
@@ -105,8 +109,8 @@ class Families:
         families = cls(
             root,
             saved["open"],
-            [Family(**family) for family in saved["families"]],
-            [Family(**family) for family in saved.get("removed", [])],
+            [_family(family) for family in saved["families"]],
+            [_family(family) for family in saved.get("removed", [])],
         )
         if families.find(families.open_id) is None:
             families.open_id = families.families[0].id  # chosen, then removed by hand
@@ -150,11 +154,11 @@ class Families:
 
     # Changing
 
-    def add(self, name: str, family_id: str | None = None) -> Family:
+    def add(self, name: str, family_id: str | None = None, *, example: bool = False) -> Family:
         """A new family, empty, in a folder of its own; `family_id`: the id it had elsewhere,
         when it comes from a backup. An id that isn't one AncesTree makes (16 hex digits) is
         a backup's that was tampered with: the family gets a new one, and never a folder named
-        by it."""
+        by it. The example family is filled when it first opens."""
         if family_id is not None and not ID.fullmatch(family_id):
             family_id = None
         if family_id is not None and (self.find(family_id) or self._removed(family_id)):
@@ -164,6 +168,7 @@ class Families:
             )
         family_id = family_id or secrets.token_hex(8)
         family = Family(family_id, clean_name(name), f"families/{family_id}", _now())
+        family.example = family.fill = example
         for place in (self.places(family).data, self.places(family).backups):
             place.mkdir(parents=True, exist_ok=True)
         self.families.append(family)
@@ -183,7 +188,7 @@ class Families:
         self.save()
         return family
 
-    def note(self, family_id: str, **what: str) -> None:
+    def note(self, family_id: str, **what: str | bool) -> None:
         """What a family says of itself while open: its part, when it was last in step, that
         its backup is restored."""
         family = self.find(family_id)
@@ -288,7 +293,14 @@ def _shown(family: Family, open_id: str) -> dict[str, Any]:
         "role": family.role,
         "in_step": family.in_step or None,
         "added": family.added,
+        "example": family.example,
     }
+
+
+def _family(saved: dict[str, Any]) -> Family:
+    """A family as families.json keeps it, what a later version adds to it left aside."""
+    known = {field.name for field in fields(Family)}
+    return Family(**{key: value for key, value in saved.items() if key in known})
 
 
 def _now() -> str:

@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
 import { exportAddress, importReportAddress, templateAddress } from "./addresses";
 import { api } from "./client";
@@ -6,6 +12,7 @@ import { toApiError, unwrap } from "./errors";
 import type {
   Backup,
   BackupList,
+  Biography,
   BiographyUpdate,
   Crop,
   ExportFormat,
@@ -527,21 +534,45 @@ export function useRemovePhoto(id: string) {
 }
 
 /**
- * A life story and its Sources, as the file on disk is now. Always asked again, on
- * opening and on coming back to the window: the file may have been edited in Notepad.
+ * A life story, its parts and its Sources, as the file on disk is now. Always asked
+ * again, on opening and on coming back to the window: the file may have been edited in Notepad.
+ * Nothing is asked for no one (an unknown parent).
  */
-export function useBiography(id: string) {
+export function useBiography(id: string | null) {
   return useQuery({
-    queryKey: keys.biography(id),
+    queryKey: keys.biography(id ?? ""),
     queryFn: () =>
       unwrap(
-        api.GET("/api/persons/{person_id}/biography", { params: { path: { person_id: id } } }),
+        api.GET("/api/persons/{person_id}/biography", {
+          params: { path: { person_id: id ?? "" } },
+        }),
       ),
     staleTime: 0,
+    enabled: id !== null,
   });
 }
 
 /** Saves a story. Keyed by person, so a save still on its way can be waited for. */
+/** A story as saved, in the app's reading of it and its person's book mark on the tree,
+ *  timeline and map: there once a story is written, gone once it's emptied. A file exists
+ *  exactly while there's something in it. */
+async function storySaved(client: QueryClient, id: string, saved: Biography) {
+  // A reading that started before this save finished must not land after it.
+  await client.cancelQueries({ queryKey: keys.biography(id) });
+  client.setQueryData(keys.biography(id), saved);
+  const told = saved.version !== "none";
+  client.setQueryData<Graph>(keys.graph, (graph) =>
+    graph?.people.some((person) => person.id === id && person.has_story !== told)
+      ? {
+          ...graph,
+          people: graph.people.map((person) =>
+            person.id === id ? { ...person, has_story: told } : person,
+          ),
+        }
+      : graph,
+  );
+}
+
 export function useSaveBiography(id: string) {
   const client = useQueryClient();
   return useMutation({
@@ -553,12 +584,47 @@ export function useSaveBiography(id: string) {
           body,
         }),
       ),
-    onSuccess: async (saved) => {
-      // A reading that started before this save finished must not land after it.
-      await client.cancelQueries({ queryKey: keys.biography(id) });
-      client.setQueryData(keys.biography(id), saved);
-    },
+    onSuccess: (saved) => storySaved(client, id, saved),
   });
+}
+
+/** Your words about someone: written, changed, or taken back; or, on the keeper's
+ *  computer, anyone's taken out. Each answers with the story as it is now. */
+export function useSaid(id: string) {
+  const client = useQueryClient();
+  const person_id = id;
+  const done = { onSuccess: (saved: Biography) => storySaved(client, id, saved) };
+  return {
+    add: useMutation({
+      mutationFn: (text: string) =>
+        unwrap(
+          api.POST("/api/persons/{person_id}/said", {
+            params: { path: { person_id } },
+            body: { text },
+          }),
+        ),
+      ...done,
+    }),
+    change: useMutation({
+      mutationFn: ({ said, text }: { said: string; text: string }) =>
+        unwrap(
+          api.PUT("/api/persons/{person_id}/said/{said_id}", {
+            params: { path: { person_id, said_id: said } },
+            body: { text },
+          }),
+        ),
+      ...done,
+    }),
+    takeOut: useMutation({
+      mutationFn: (said: string) =>
+        unwrap(
+          api.DELETE("/api/persons/{person_id}/said/{said_id}", {
+            params: { path: { person_id, said_id: said } },
+          }),
+        ),
+      ...done,
+    }),
+  };
 }
 
 /** Waits until no save of someone's story is on its way. Closing their panel starts one. */
@@ -605,6 +671,7 @@ export function useMakeExport() {
                   title: "",
                   hide_living: false,
                   archive: true,
+                  addresses: false,
                 }
               : request,
         }),

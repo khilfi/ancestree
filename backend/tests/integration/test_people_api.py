@@ -28,6 +28,8 @@ async def test_create_edit_and_find_a_person(client: httpx.AsyncClient) -> None:
         "town": "Kota Bharu",
         "state": "Kelantan",
         "country": "Malaysia",
+        # Its address and where it is, none of it said.
+        **dict.fromkeys(("address", "district", "postcode", "lat", "lon", "exact")),
     }
     assert person["residence"] is None
 
@@ -79,12 +81,15 @@ async def test_dates_arrive_as_parts_from_the_date_picker(client: httpx.AsyncCli
 
 
 async def test_a_possible_duplicate_is_pointed_out(client: httpx.AsyncClient) -> None:
-    await create_person(client, "Ali bin Rosli", birth_date="1980")
+    first = await create_person(client, "Ali bin Rosli", birth_date="1980")
 
     response = await client.post("/api/persons", json={"full_name": "ali bin rosli"})
 
     assert response.status_code == 201
-    assert [n["code"] for n in response.json()["notices"]] == ["possible_duplicate"]
+    [notice] = response.json()["notices"]
+    assert notice["code"] == "possible_duplicate"
+    # Both named, so the warning can offer Same person as....
+    assert (notice["person"], notice["other"]) == (response.json()["person"]["id"], first["id"])
 
 
 async def test_the_date_reader_explains_itself(client: httpx.AsyncClient) -> None:

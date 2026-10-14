@@ -6,9 +6,10 @@ import {
   ChevronRightIcon,
   ExternalLinkIcon,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { lazy, type ReactNode, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import { useMapPacks } from "@/api/mapPacks";
 import {
   useChildrenOrder,
   useFamilyFacts,
@@ -19,11 +20,14 @@ import {
   usePatchPerson,
   usePerson,
 } from "@/api/queries";
-import type { FactPerson, Graph, GraphPerson } from "@/api/types";
+import type { FactPerson, Graph, GraphPerson, Located, MapPerson } from "@/api/types";
+import { CanEdit } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { GrowingText } from "@/components/ui/growing-text";
+import { pinned } from "@/features/map/levels";
 import { PlaceFix } from "@/features/map/PlaceFix";
+import { drawsWebGL2 } from "@/features/map/webgl";
 import {
   type DateParts,
   DatePicker,
@@ -32,10 +36,13 @@ import {
   NO_DATE,
 } from "@/features/person/DatePicker";
 import { PhotoDialog } from "@/features/person/PhotoDialog";
+import { MARK } from "@/features/person/PlaceLocation";
 import { shortName } from "@/features/tree/words";
 import { describeDate } from "@/lib/dates";
 import { showError } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
+import { askSamePerson } from "@/lib/samePerson";
+import { enteredTwice } from "./twice";
 
 const FIRST = 10; // a long list shows this many, then "Show all"
 
@@ -310,10 +317,10 @@ function UnknownRow({ id, kids }: { id: string; kids: GraphPerson[] }) {
           {kids.map((kid) => shortName(kid)).join(", ") || "no one"}
         </span>
       </span>
-      <Input
+      <GrowingText
         aria-label="Their name"
         placeholder="Their name…"
-        className="h-8 w-48"
+        className="w-48"
         value={name}
         onChange={(event) => setName(event.target.value)}
         onKeyDown={(event) => {
@@ -367,6 +374,97 @@ function PlaceRow({ person, about }: { person: GraphPerson; about: string }) {
   );
 }
 
+// The person form's small map, a chunk of its own; never in a copy.
+const SmallMap =
+  import.meta.env.MODE === "viewer" ? null : lazy(() => import("@/features/person/SmallMap"));
+
+/** Someone with an address on the map only about there, at their postcode's area or
+ *  their town: its quick fix is the small map, where the pin is dragged or clicked to where it is. */
+function ExactRow({
+  person,
+  located,
+  about,
+}: {
+  person: GraphPerson;
+  located: Located;
+  about: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const patch = usePatchPerson();
+  const packs = useMapPacks(open);
+  const webgl2 = useMemo(() => SmallMap !== null && drawsWebGL2(), []);
+  const world = packs.data?.packs.find((pack) => pack.first);
+  const regions = (packs.data?.packs ?? []).filter((pack) => !pack.first && pack.installed);
+  const { place } = located;
+  const where = [place.address, place.postcode].filter(Boolean).join(", ");
+  const put = (point: { lat: number; lon: number }) => {
+    const residence = {
+      ...place,
+      lat: Number(point.lat.toFixed(6)),
+      lon: Number(point.lon.toFixed(6)),
+      exact: "hand" as const,
+    };
+    patch.mutate(
+      { id: person.id, body: { residence } },
+      {
+        onError: showError,
+        onSuccess: () => toast.success(`${shortName(person)}'s pin is where you put it.`),
+      },
+    );
+  };
+  return (
+    <li className="space-y-1.5 py-2">
+      <div className="flex items-center gap-2">
+        <Who person={person} about={[about, where, MARK[located.exact ?? "town"]].join(" · ")} />
+        <Button variant="outline" size="sm" onClick={() => setOpen((now) => !now)}>
+          Put the pin where it is
+        </Button>
+        <Open id={person.id} />
+      </div>
+      {open && located.lat != null && located.lon != null && (
+        <div className="space-y-1 pl-10 text-xs text-stone-500">
+          {webgl2 && world?.installed && SmallMap ? (
+            <Suspense fallback={<div className="h-56 animate-pulse rounded-lg bg-stone-100" />}>
+              <SmallMap
+                pin={{ lat: located.lat, lon: located.lon }}
+                around={{ lat: located.lat, lon: located.lon, zoom: 13 }}
+                exact={located.exact ?? "town"}
+                regions={regions}
+                online={packs.data?.online ?? false}
+                label={shortName(person)}
+                onMove={put}
+              />
+              <p>Drag the pin, or click where they live.</p>
+            </Suspense>
+          ) : (
+            <p>
+              The small map needs the world's map, downloaded in Settings → Map. Or open their
+              panel, and type where it is in their form.
+            </p>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** Who has an address where they live, but is on the map only about there, at their
+ *  postcode's area or their town: at a place of their own, not their parents'. As the
+ *  map answers it, in its order. */
+export function aboutThere(people: MapPerson[]): { id: string; located: Located }[] {
+  return people.flatMap(({ id, lives, at_parents }) => {
+    if (!lives || at_parents || !(lives.place.address || lives.place.postcode)) return [];
+    return pinned({ exact: lives.exact }) ? [] : [{ id, located: lives }];
+  });
+}
+
+/** Eighteen or older, by their year of birth: so a place forgotten, for someone shown at their
+ *  parents', is listed to fill in. Someone of no known age isn't. */
+export function grownUp(person: GraphPerson, thisYear = new Date().getFullYear()): boolean {
+  const year = person.born?.year ?? person.birth_year;
+  return year != null && thisYear - year >= 18;
+}
+
 function share(done: number, all: number): string {
   return `${done} of ${all}`;
 }
@@ -409,6 +507,10 @@ export function MissingSection() {
     if (!data) return null;
     // Where they live: only once the map has answered, so nobody is listed wrongly.
     const placed = lives ? new Set(lives.people.filter((p) => p.lives).map((p) => p.id)) : null;
+    // Shown at their parents', with no place of their own.
+    const atHome = lives
+      ? new Set(lives.people.filter((p) => p.at_parents).map((p) => p.id))
+      : null;
     const byId = new Map(data.people.map((person) => [person.id, person]));
     const real = data.people.filter((person) => !person.placeholder);
     const byName = (a: GraphPerson, b: GraphPerson) => a.full_name.localeCompare(b.full_name);
@@ -426,10 +528,18 @@ export function MissingSection() {
       birth: real.filter((p) => (p.born?.year ?? p.birth_year) == null).sort(byName),
       photo: real.filter((p) => p.photo_version == null).sort(byName),
       place: placed ? real.filter((p) => !placed.has(p.id)).sort(byName) : [],
+      grown: atHome ? real.filter((p) => atHome.has(p.id) && grownUp(p)).sort(byName) : [],
+      exactly: aboutThere(lives?.people ?? [])
+        .flatMap(({ id, located }) => {
+          const person = byId.get(id);
+          return person && !person.placeholder ? [{ person, located }] : [];
+        })
+        .sort((a, b) => byName(a.person, b.person)),
       unknown: data.people
         .filter((p) => p.placeholder)
         .map((p) => ({ id: p.id, kids: kidsOf.get(p.id) ?? [] })),
       unlinked: real.filter((p) => unlinked.has(p.id)).sort(byName),
+      twice: enteredTwice(real),
     };
   }, [data, lives]);
 
@@ -544,6 +654,37 @@ export function MissingSection() {
       </Section>
 
       <Section
+        title="Grown-ups shown at their parents'"
+        count={lists.grown.length}
+        done="No grown-up is shown at their parents' for want of a place of their own."
+      >
+        <Rows
+          items={lists.grown}
+          row={(person) => (
+            <PlaceRow key={person.id} person={person} about={lists.about(person.id)} />
+          )}
+        />
+      </Section>
+
+      <Section
+        title="Not on the map exactly"
+        count={lists.exactly.length}
+        done="Everyone with an address is on the map where they live, not just about there."
+      >
+        <Rows
+          items={lists.exactly}
+          row={({ person, located }) => (
+            <ExactRow
+              key={person.id}
+              person={person}
+              located={located}
+              about={lists.about(person.id)}
+            />
+          )}
+        />
+      </Section>
+
+      <Section
         title="Not linked to anyone"
         count={lists.unlinked.length}
         done="Everyone is linked to someone."
@@ -554,6 +695,35 @@ export function MissingSection() {
             <li key={person.id} className="flex items-center gap-2 py-2">
               <Who person={person} about="" />
               <Open id={person.id} />
+            </li>
+          )}
+        />
+      </Section>
+
+      <Section
+        title="Possibly entered twice"
+        count={lists.twice.length}
+        done="No one seems to be in the tree twice."
+      >
+        <p className="py-1 text-sm text-stone-500">
+          The same name, and birth years close or not known. If two are one person, Same person as…
+          makes them one, and Undo takes it back.
+        </p>
+        <Rows
+          items={lists.twice}
+          row={([keep, other]) => (
+            <li key={`${keep.id}+${other.id}`} className="flex flex-wrap items-center gap-2 py-2">
+              <Who person={keep} about={lists.about(keep.id)} />
+              <Who person={other} about={lists.about(other.id)} />
+              <CanEdit>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => askSamePerson(keep.id, other.id)}
+                >
+                  Same person as…
+                </Button>
+              </CanEdit>
             </li>
           )}
         />

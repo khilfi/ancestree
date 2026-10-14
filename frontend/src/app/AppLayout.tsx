@@ -3,12 +3,14 @@ import { useCallback, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useFamilyFolder, waitingIn } from "@/api/familyFolder";
 import { Button } from "@/components/ui/button";
+import { LifeStoryHost } from "@/features/biography/LifeStory";
 import { ExportButton } from "@/features/export/ExportDialog";
 import { TreePictureProvider } from "@/features/export/treePicture";
 import { FamilyFactsPanel } from "@/features/facts/FamilyFactsPanel";
-import { FamilyMenu } from "@/features/families/FamilyMenu";
+import { ExampleBar, FamilyMenu } from "@/features/families/FamilyMenu";
 import { UndoRedo } from "@/features/history/UndoRedo";
 import { MeButton } from "@/features/me/MeButton";
+import { SamePersonHost } from "@/features/person/SamePerson";
 import { PeopleSearch } from "@/features/search/PeopleSearch";
 import { viewSearch, withView } from "@/features/tree/filters";
 import { cn } from "@/lib/utils";
@@ -171,7 +173,16 @@ export function AppLayout() {
           </div>
         </header>
         {!copy && <UpdateBanner />}
+        {!copy && <ExampleBar />}
         {!copy && <FamilyFolderBar />}
+        {/* Same person as…, asked from a warning or What's missing. */}
+        <CanEdit>
+          <InAppOnly>
+            <SamePersonHost />
+          </InAppOnly>
+        </CanEdit>
+        {/* A life story, opened from a panel or a book mark on a photo; in a copy too. */}
+        <LifeStoryHost />
         <main className="relative min-h-0 flex-1">
           <Outlet />
           {facts && <FamilyFactsPanel onClose={closeFacts} />}

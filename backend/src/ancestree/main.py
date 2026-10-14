@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -38,7 +39,9 @@ from ancestree.importing.sheet import SheetError
 from ancestree.maps.packs import PackStore
 from ancestree.media.photos import PhotoError
 from ancestree.migrations.runner import apply_migrations
-from ancestree.services import journal
+from ancestree.places import gazetteer as gazetteer_module
+from ancestree.seed.example import ExampleRefusedError, write_example
+from ancestree.services import journal, placing
 from ancestree.services.automatic import keep_backing_up
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import FamilyFolder, keep_in_step
@@ -81,6 +84,12 @@ def create_app(
             app.state.map_packs = PackStore(active.maps)  # the map's packs
             if tidied := await asyncio.to_thread(app.state.map_packs.tidy):
                 log.info("Removed map packs of an earlier build: %s", ", ".join(tidied))
+            # The places downloaded with them, read by the gazetteer, afresh when they change.
+            gazetteer_module.places_of = app.state.map_packs.places_path
+            app.state.map_packs.places_changed = lambda country, here: (
+                gazetteer_module.gazetteer.cache_clear()
+            )
+            gazetteer_module.gazetteer.cache_clear()
             context = Context(
                 driver,
                 active.neo4j_database,
@@ -97,6 +106,14 @@ def create_app(
                     log.info("Restored %s, as the family opened", active.restore_first.name)
                 except ArchiveError as error:
                     log.warning("The family's backup couldn't be restored: %s", error)
+            if active.example_first:
+                # The example family, opening for the first time: filled with it, unless
+                # anyone is here already.
+                try:
+                    filled = await write_example(context)
+                    log.info("Filled with the example family: %s people", filled.people)
+                except ExampleRefusedError as error:
+                    log.warning("%s", error)
             backing_up = None
             if active.automatic_backups:
                 backing_up = asyncio.create_task(keep_backing_up(context))
@@ -114,8 +131,47 @@ def create_app(
                     history_now.clear()
                     return restored
 
-            folder = FamilyFolder(context, restore=take_in, history=history_now, on_round=on_round)
+            folder = FamilyFolder(
+                context,
+                restore=take_in,
+                history=history_now,
+                on_round=on_round,
+                made_up=active.example,
+            )
             app.state.family_folder = folder
+            store: PackStore = app.state.map_packs
+            loop = asyncio.get_running_loop()
+            placing_now: set[asyncio.Task[None]] = set()
+
+            async def place_more(country: str) -> None:
+                # Only where the family may be changed with no review: on a relative's computer
+                # it would wait for the keeper, from every relative who downloads the country.
+                if not folder.editing:
+                    return
+                try:
+                    moved = await placing.place_more_exactly(context, history_now, country)
+                except Exception:
+                    log.exception("The addresses in %s couldn't be placed more exactly", country)
+                    return
+                if moved:
+                    store.placed[country] = store.placed.get(country, 0) + moved
+                    log.info(
+                        "%d addresses placed more exactly, as %s's places came", moved, country
+                    )
+
+            def places_changed(country: str, here: bool) -> None:
+                # Told on the thread that fetched them: the rest is done on the event loop.
+                gazetteer_module.gazetteer.cache_clear()
+                if here:
+
+                    def start() -> None:
+                        task = loop.create_task(place_more(country))
+                        placing_now.add(task)
+                        task.add_done_callback(placing_now.discard)
+
+                    loop.call_soon_threadsafe(start)
+
+            store.places_changed = places_changed
 
             def journal_step(step: Step, how: str) -> None:
                 by = folder.journaling()
@@ -232,7 +288,11 @@ def create_app(
                 "kept_by_the_keeper",
                 "That's for the family's keeper to change: it arrives here from the family folder.",
             )
-        if not folder.proposing and _changes_family(request):
+        if (
+            not folder.proposing
+            and _changes_family(request)
+            and not (folder.sending and _says(request))
+        ):
             return _error(
                 status.HTTP_409_CONFLICT,
                 "kept_by_the_keeper",
@@ -242,6 +302,15 @@ def create_app(
         return _nudged(folder, request, await call_next(request))
 
     return app
+
+
+# Someone's own words about someone: a viewer's computer may write these alone, which go
+# to the keeper for review, as they're all the keeper's computer takes from it.
+_SAYS = re.compile(r"^/api/persons/[^/]+/said(?:/[^/]+)?$")
+
+
+def _says(request: Request) -> bool:
+    return bool(_SAYS.match(request.url.path))
 
 
 # What changes the family itself, rather than this computer's own choices ("Me", the kinship

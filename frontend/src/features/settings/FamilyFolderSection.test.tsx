@@ -66,10 +66,62 @@ const KEEPER: FamilyFolderStatus = {
   role: "keeper",
   last_sync: new Date().toISOString(),
   members: [
-    { device: "d1", name: "Home PC", role: "keeper", email: "keeper@example.com", you: true },
-    { device: "d2", name: "Mak Long's laptop", role: "viewer", email: "r@example.com", you: false },
+    {
+      device: "d1",
+      name: "Home PC",
+      role: "keeper",
+      email: "keeper@example.com",
+      you: true,
+      own: false,
+      helps: false,
+    },
+    {
+      device: "d2",
+      name: "Mak Long's laptop",
+      role: "viewer",
+      email: "r@example.com",
+      you: false,
+      own: false,
+      helps: false,
+    },
   ],
   asking: [{ device: "d3", name: "Pak Ngah's PC", email: "p@example.com", code: "ABCD-EFGH" }],
+};
+/** Another of the keeper's own computers, allowed to invite and let in for it. */
+const HELPING: FamilyFolderStatus = {
+  ...SIGNED_IN,
+  setup: "member",
+  family: "Keluarga Contoh",
+  role: "trusted",
+  last_sync: new Date().toISOString(),
+  members: [
+    {
+      device: "d1",
+      name: "Home PC",
+      role: "keeper",
+      email: "keeper@example.com",
+      you: false,
+      own: false,
+      helps: false,
+    },
+    {
+      device: "d4",
+      name: "Travel laptop",
+      role: "trusted",
+      email: "keeper@example.com",
+      you: true,
+      own: false,
+      helps: false,
+    },
+  ],
+  asking: KEEPER.asking,
+  helping: {
+    keeper: "Home PC",
+    running: true,
+    looked: new Date().toISOString(),
+    waiting: [],
+    done: [],
+  },
 };
 
 let root: Root | undefined;
@@ -353,6 +405,123 @@ describe("Settings → Family folder", () => {
     });
   });
 
+  it("lets the keeper allow another of their own computers to invite and let in", async () => {
+    const travel = {
+      device: "d4",
+      name: "Travel laptop",
+      role: "trusted" as const,
+      email: "keeper@example.com",
+      you: false,
+      own: true,
+      helps: false,
+    };
+    answer({ ...KEEPER, asking: [], members: [...(KEEPER.members ?? []), travel] });
+    await show(<FamilyFolderSection />, "Travel laptop");
+    // Only beside the keeper's own other computer: not a relative's, nor this one.
+    const switches = [...document.querySelectorAll<HTMLButtonElement>('[role="switch"]')];
+    expect(switches.map((found) => found.id)).toEqual(["helps-d4"]);
+    expect(document.querySelector('label[for="helps-d4"]')?.textContent).toBe(
+      "May invite and let in for me",
+    );
+    act(() => switches[0]?.click());
+    await askedFor("/api/family-folder/helper");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/helper",
+      body: { device: "d4", allowed: true },
+    });
+  });
+
+  it("tells the keeper what their other computers asked, and what came of it", async () => {
+    const at = new Date().toISOString();
+    answer({
+      ...KEEPER,
+      asking: [],
+      helped: [
+        {
+          action: "let_in",
+          name: "Pak Ngah's PC",
+          done: false,
+          why: "Its code isn't the one its request gives here.",
+          by: "Travel laptop",
+          at,
+        },
+        {
+          action: "let_in",
+          name: "Mak Long's laptop",
+          done: true,
+          why: "",
+          by: "Travel laptop",
+          at,
+        },
+        { action: "invited", name: "r@example.com", done: true, why: "", by: "Travel laptop", at },
+        {
+          action: "",
+          name: "",
+          done: false,
+          why: "It couldn't be checked as that computer's own.",
+          by: "Travel laptop",
+          at,
+        },
+      ],
+    });
+    await show(<FamilyFolderSection />, "What your other computers asked");
+    const text = document.body.textContent;
+    expect(text).toContain(
+      "Pak Ngah's PC: not let in, as Travel laptop asked. Its code isn't the one its request gives here.",
+    );
+    expect(text).toContain("Mak Long's laptop: let in, as Travel laptop asked");
+    expect(text).toContain("r@example.com: invited, from Travel laptop");
+    expect(text).toContain(
+      "Something from Travel laptop was turned down. It couldn't be checked as that computer's own.",
+    );
+  });
+
+  it("lets another of the keeper's own computers invite and let in, through the keeper's", async () => {
+    const helping = HELPING.helping as NonNullable<FamilyFolderStatus["helping"]>;
+    answer(HELPING, [], {
+      ...HELPING,
+      asking: [],
+      helping: { ...helping, waiting: ["Pak Ngah's PC"] },
+    });
+    await show(<FamilyFolderSection />, "Asking to join (1)");
+    const text = document.body.textContent;
+    expect(text).toContain("Inviting and letting in for Home PC");
+    expect(text).toContain("ABCD-EFGH");
+    expect(text).toContain("Home PC lets them in at its next round.");
+    expect(text).toContain("Invite a relative, by their Google account");
+    expect(() => button("Not this one")).toThrow(); // turning a computer away is the keeper's
+    act(() => button("Let in").click());
+    await askedFor("/api/family-folder/admit");
+    expect(asked).toContainEqual({
+      method: "POST",
+      path: "/api/family-folder/admit",
+      body: { device: "d3", role: "contributor" },
+    });
+    await until("Waiting for Home PC to let them in");
+    expect(document.body.textContent).not.toContain("it's not running");
+  });
+
+  it("says when the keeper's computer isn't running, so who's let in waits", async () => {
+    const looked = new Date(Date.now() - 20 * 60_000).toISOString();
+    answer({
+      ...HELPING,
+      asking: [],
+      helping: {
+        keeper: "Home PC",
+        running: false,
+        looked,
+        waiting: ["Pak Ngah's PC"],
+        done: [{ action: "let_in", name: "Mak Long's laptop", done: true, why: "", by: "" }],
+      },
+    });
+    await show(<FamilyFolderSection />, "Inviting and letting in for Home PC");
+    const text = document.body.textContent;
+    expect(text).toContain("Home PC isn't running: last heard from");
+    expect(text).toContain("Waiting for Home PC to let them in: it's not running");
+    expect(text).toContain("Mak Long's laptop: let in");
+  });
+
   it("lets the keeper change what a computer let in may do", async () => {
     answer({ ...KEEPER, asking: [] });
     await show(<FamilyFolderSection />, "Mak Long's laptop");
@@ -376,7 +545,9 @@ describe("Settings → Family folder", () => {
     answer({
       ...KEEPER,
       asking: [],
-      changes: [{ ...waiting, role: "viewer", proposal: 2, sent_at, changed: 3 }],
+      changes: [
+        { ...waiting, role: "viewer", proposal: 2, sent_at, changed: 3, words_only: false },
+      ],
     });
     await show(<FamilyFolderSection />, "Mak Long's laptop");
     act(() => button("Change role…").click());
@@ -520,7 +691,7 @@ describe("Settings → Family folder", () => {
     expect(document.body.textContent).not.toContain("Add person");
   });
 
-  it("keeps a relative's family as the keeper sends it: nothing to change it with", async () => {
+  it("keeps a viewer's family as the keeper sends it: only their words to add", async () => {
     answer({ ...SIGNED_IN, setup: "member", role: "viewer", family: "Keluarga Contoh" });
     await show(
       <>
@@ -532,7 +703,9 @@ describe("Settings → Family folder", () => {
       "Keluarga Contoh",
     );
     await new Promise((done) => setTimeout(done, 20));
-    expect(document.body.textContent).toContain("can't be changed on this computer");
+    expect(document.body.textContent).toContain(
+      "Only your words about people can be added here: they go to the keeper",
+    );
     expect(document.body.textContent).not.toContain("Add person");
   });
 
@@ -550,6 +723,7 @@ describe("Settings → Family folder", () => {
           proposal: 4,
           sent_at: sent,
           changed: 2,
+          words_only: false,
         },
       ],
     };
@@ -600,6 +774,66 @@ describe("Settings → Family folder", () => {
         note: "Which school, please?",
       },
     });
+  });
+
+  it("shows a viewer's words for review, theirs alone", async () => {
+    const waiting: FamilyFolderStatus = {
+      ...KEEPER,
+      asking: [],
+      changes: [
+        {
+          device: "d3",
+          name: "Mak Long's laptop",
+          email: "r@example.com",
+          role: "viewer",
+          proposal: 2,
+          sent_at: new Date().toISOString(),
+          changed: 1,
+          words_only: true,
+        },
+      ],
+    };
+    const preview = {
+      questions: [],
+      changes: [
+        {
+          id: "said:p1:1a2b3c4d",
+          kind: "said" as const,
+          row: null,
+          person: "p1",
+          name: "Hassan bin Ismail",
+          column: "What people say",
+          before: "",
+          after: "He taught me to fish.",
+          detail: "written",
+          by: "Mak Long",
+          clash: false,
+          unsure: false,
+          removes: false,
+          needs: [],
+          blocked_by: [],
+          ticked: true,
+        },
+      ],
+      left_out: [
+        {
+          row: null,
+          column: "Mak Long's laptop",
+          written: "1 other changes",
+          why: "A viewer's computer sends only its words about people, so the rest isn't taken.",
+        },
+      ],
+      second_look: [],
+    };
+    answer(waiting, [], waiting, { "/review": preview });
+    await show(<FamilyFolderSection />, "Changes waiting (1)");
+    act(() => button("Review").click());
+    await until("He taught me to fish.");
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("only what they say about people is taken from it");
+    expect(text).toContain("What people say");
+    expect(text).toContain("Hassan bin Ismail · what Mak Long says, written");
+    expect(text).toContain("sends only its words about people");
   });
 
   it("tells a relative what waits for the keeper, and the keeper's answer", async () => {
@@ -693,6 +927,7 @@ describe("Settings → Family folder", () => {
           proposal: 5,
           sent_at: new Date().toISOString(),
           changed: 1,
+          words_only: false,
         },
       ],
     };

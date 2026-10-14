@@ -8,6 +8,7 @@ import type {
   ChangeRole,
   FamilyFolderStatus,
   FolderChanges,
+  Helper,
   JoinFamily,
   OfferFamily,
   Recover,
@@ -57,6 +58,12 @@ export function useKeptByTheKeeper(enabled = true): boolean {
  *  links, stories and photos change here, and wait for the keeper. */
 export function sendsToTheKeeper(status: FamilyFolderStatus | undefined): boolean {
   return status?.setup === "member" && SENDS.has(status.role ?? "");
+}
+
+/** Whether this is a viewer's computer, which sends its words about people alone, for the
+ *  keeper to look at first. */
+export function sendsWords(status: FamilyFolderStatus | undefined): boolean {
+  return status?.setup === "member" && status.role === "viewer";
 }
 
 function useFolderAction<T>(send: (input: T) => Promise<FamilyFolderStatus>) {
@@ -158,6 +165,10 @@ export const useRemoveComputer = () =>
 /** Another role for a computer let in already: held while its changes wait for review. */
 export const useChangeRole = () =>
   useFolderAction((body: ChangeRole) => unwrap(api.POST("/api/family-folder/role", { body })));
+/** Another of the keeper's own computers allowed to invite and let in for it, or no
+ *  longer: the keeper's, for a computer on its own Google account. */
+export const useAllowHelper = () =>
+  useFolderAction((body: Helper) => unwrap(api.POST("/api/family-folder/helper", { body })));
 /** The note that the keeper changed this computer's role, read: a relative's. */
 export const useRoleSeen = () =>
   useFolderAction(() => unwrap(api.POST("/api/family-folder/role-seen")));

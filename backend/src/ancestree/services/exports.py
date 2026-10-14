@@ -89,9 +89,11 @@ async def make_export(
     export_format: ExportFormat,
     folder: Path | None = None,
     copy: CopyOptions | None = None,
+    addresses: bool = False,
 ) -> ExportFile:
     """Write an export: an archive to the backup folder, anything else to DATA_DIR/exports,
-    unless `folder` is given. A copy follows `copy`'s choices."""
+    unless `folder` is given. A copy follows `copy`'s choices; GEDCOM and the spreadsheet
+    hold addresses only when they're chosen."""
     if export_format is ExportFormat.ARCHIVE:
         try:
             backup = await create_backup(
@@ -110,10 +112,12 @@ async def make_export(
         family = await load_family(ctx)
         if export_format is ExportFormat.GEDCOM:
             path = unused_path(folder / f"ancestree-{now:%Y-%m-%dT%H-%M-%S}.ged")
-            data = write_gedcom(family, made_at=now, file_name=path.name).encode("utf-8")
+            data = write_gedcom(
+                family, made_at=now, file_name=path.name, addresses=addresses
+            ).encode("utf-8")
         else:
             path = unused_path(folder / f"ancestree-people-{now:%Y-%m-%dT%H-%M-%S}.csv")
-            data = write_people_csv(family).encode(ENCODING)
+            data = write_people_csv(family, addresses=addresses).encode(ENCODING)
         await asyncio.to_thread(atomic_write, path, data)
     return ExportFile(
         name=path.name, folder=str(path.parent), format=export_format, size=path.stat().st_size

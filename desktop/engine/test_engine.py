@@ -169,6 +169,25 @@ async def test_families_are_added_renamed_removed_and_put_back(tmp_path: Path) -
         assert missing.status_code == 404
 
 
+async def test_the_example_family_is_added_as_a_family_of_its_own_once(tmp_path: Path) -> None:
+    """The example family: added once, filled as it first opens, and the same one again
+    after that; never with a database of the developer's own."""
+    pages, _ = families_app(tmp_path)
+    async with pages:
+        added = (await pages.post("/api/desktop/families/example")).json()
+        example = added["added"]
+        shown = {family["id"]: family for family in added["families"]}
+        assert (shown[example]["name"], shown[example]["example"]) == ("Keluarga Contoh", True)
+        assert engine.Families.load(tmp_path).get(example).fill is True
+        again = (await pages.post("/api/desktop/families/example")).json()
+        assert again["added"] == example
+        assert len(again["families"]) == 2
+    single, _ = families_app(tmp_path / "single", external=True)
+    async with single:
+        refused = await single.post("/api/desktop/families/example")
+        assert (refused.status_code, refused.json()["detail"]["code"]) == (409, "one_database")
+
+
 async def test_opening_another_family_asks_the_shell_to_start_again_on_it(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -269,7 +288,8 @@ def test_the_icon_by_the_clock_says_how_the_family_stands() -> None:
 
 def test_a_packed_engine_takes_no_development_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     """Another program setting them can't point a release at another database, Neo4j, Google
-    client, or a copy's app of its own for the copies a family sends (0.4.2)."""
+    client, or a copy's app of its own for the copies a family sends (0.4.2); nor at another
+    server to send an address looked up online to."""
     for name in engine.DEVELOPMENT_SETTINGS:
         monkeypatch.setenv(name, "planted")
     monkeypatch.setenv("ANCESTREE_SESSION", "f" * 64)  # the shell's own word to the engine
@@ -280,3 +300,34 @@ def test_a_packed_engine_takes_no_development_setting(monkeypatch: pytest.Monkey
     assert os.environ["ANCESTREE_SESSION"] == "f" * 64
     assert "ANCESTREE_COPY_APP" in engine.DEVELOPMENT_SETTINGS
     assert "ANCESTREE_NEO4J_URI" in engine.DEVELOPMENT_SETTINGS
+    assert "PHOTON_URL" in engine.DEVELOPMENT_SETTINGS  # the Settings field photon_url's
+
+
+def test_a_packed_engine_takes_no_development_setting_in_small_letters_either(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The app's settings read the environment in capitals or not: on the Mac and Linux,
+    `photon_url` is a name of its own, which another program could set (0.8.0)."""
+    import os
+
+    from pydantic import SecretStr
+
+    from ancestree.config import Settings
+
+    monkeypatch.setenv("photon_url", "http://planted.example/api/")
+    monkeypatch.setenv("Ancestree_Neo4j_Uri", "bolt://planted.example:7687")
+    engine.drop_development_settings()
+    assert [name for name in os.environ if name.upper() in engine.DEVELOPMENT_SETTINGS] == []
+    settings = Settings(_env_file=None, neo4j_password=SecretStr("x"), data_dir=tmp_path)
+    assert settings.photon_url == "https://photon.komoot.io/api/"
+
+
+def test_the_engine_may_open_as_many_files_as_the_map_packs_need() -> None:
+    """A Mac starts a program with 256 files open at most, and each map pack read holds one: the
+    engine asks for as many as the system lets it have, up to 10,240 (0.8.0)."""
+    assert engine.more_open_files() >= 256
+    if sys.platform != "win32":
+        import resource
+
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        assert soft == resource.RLIM_INFINITY or soft >= min(10_240, hard)

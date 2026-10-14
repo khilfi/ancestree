@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -54,7 +55,7 @@ async def test_a_five_paragraph_story_with_a_picture_saves_and_reads_back(
     person = await create_person(client, "Hassan bin Ismail")
     folder = settings.data_dir / "people" / person["id"]
     empty = (await client.get(f"/api/persons/{person['id']}/biography")).json()
-    assert empty == {"story": "", "sources": [], "version": "none"}
+    assert empty == {"story": "", "parts": {}, "said": [], "sources": [], "version": "none"}
 
     added = await client.post(
         f"/api/persons/{person['id']}/media", files={"file": ("x.png", png(), "image/png")}
@@ -79,6 +80,122 @@ async def test_a_five_paragraph_story_with_a_picture_saves_and_reads_back(
     picture = await client.get(f"/api/persons/{person['id']}/{src}")
     assert picture.headers["content-type"] == "image/webp"
     assert max(Image.open(BytesIO(picture.content)).size) == 1600
+
+
+async def test_a_story_with_its_parts_is_kept_in_one_file_and_marked_on_the_tree(
+    client: httpx.AsyncClient, settings: Settings
+) -> None:
+    """Each part under its own heading, after the story, its Five Paragraphs' own
+    "## Early life" left the story's; and a book mark for whoever has a story."""
+    hassan = await create_person(client, "Hassan bin Ismail")
+    aminah = await create_person(client, "Aminah binti Hassan")
+    parts = {"talents": "- Whistling like a bulbul", "early": "By the river.", "hobbies": ""}
+    saved = await client.put(
+        f"/api/persons/{hassan['id']}/biography",
+        json={"story": FIVE_PARAGRAPHS, "parts": parts, "sources": [], "base_version": "none"},
+    )
+    assert saved.status_code == 200, saved.text
+    on_disk = (settings.data_dir / "people" / hassan["id"] / "biography.md").read_text(
+        encoding="utf-8"
+    )
+    assert on_disk.endswith(
+        "## Early life\n\nBy the river.\n\n## Hidden talents\n\n- Whistling like a bulbul\n"
+    )
+    again = (await client.get(f"/api/persons/{hassan['id']}/biography")).json()
+    assert again["story"] == FIVE_PARAGRAPHS.strip()
+    assert again["parts"] == {"early": "By the river.", "talents": "- Whistling like a bulbul"}
+    marked = {p["id"]: p["has_story"] for p in (await client.get("/api/graph")).json()["people"]}
+    assert (marked[hassan["id"]], marked[aminah["id"]]) == (True, False)
+    # Written in Notepad, it's marked too.
+    path = settings.data_dir / "people" / aminah["id"] / "biography.md"
+    path.write_text("Aminah taught for forty years.\n", encoding="utf-8")
+    marked = {p["id"]: p["has_story"] for p in (await client.get("/api/graph")).json()["people"]}
+    assert marked[aminah["id"]] is True
+
+
+async def test_what_people_say_is_signed_kept_apart_and_each_writers_own(
+    client: httpx.AsyncClient, settings: Settings
+) -> None:
+    """Words about someone: signed with Me's name and today's date, kept under
+    their own heading, left as they are when the story is saved, and changed only on the
+    computer they were written on. With no family folder, this computer keeps the family, so
+    it may take out anyone's, but change only its own."""
+    hassan = await create_person(client, "Hassan bin Ismail")
+    zul = await create_person(client, "Zulkifli bin Hassan")
+    assert (await client.put("/api/family/me", json={"person": zul["id"]})).status_code == 200
+    story = await client.put(
+        f"/api/persons/{hassan['id']}/biography",
+        json={
+            "story": "Born in Kota Bharu.",
+            "sources": ["A talk with Nor"],
+            "base_version": "none",
+        },
+    )
+    opened = story.json()["version"]  # the story's window, open while someone adds their words
+
+    said = await client.post(
+        f"/api/persons/{hassan['id']}/said",
+        json={"text": "  He taught me to fish.\n\nEvery Sunday. "},
+    )
+    assert said.status_code == 201, said.text
+    [words] = said.json()["said"]
+    assert (words["text"], words["writer"], words["device"], words["yours"]) == (
+        "He taught me to fish.\n\nEvery Sunday.",
+        "Zulkifli bin Hassan",
+        None,
+        True,
+    )
+    assert words["written"] == str(date.today())
+    assert said.json()["version"] == opened  # what people say changes no story's version
+    path = settings.data_dir / "people" / hassan["id"] / "biography.md"
+    on_disk = path.read_text(encoding="utf-8")
+    assert on_disk.startswith(
+        "Born in Kota Bharu.\n\n## What people say\n\n> He taught me to fish.\n>\n> Every Sunday."
+        f"\n\n— Zulkifli bin Hassan, {date.today().day} "
+    )
+    assert on_disk.endswith("\n\n## Sources\n\n- A talk with Nor\n")
+
+    # The story saved from that window keeps them.
+    saved = await client.put(
+        f"/api/persons/{hassan['id']}/biography",
+        json={"story": "Born in Kota Bharu, 1938.", "sources": [], "base_version": opened},
+    )
+    assert saved.status_code == 200, saved.text
+    assert [s["text"] for s in saved.json()["said"]] == ["He taught me to fish.\n\nEvery Sunday."]
+
+    changed = await client.put(
+        f"/api/persons/{hassan['id']}/said/{words['id']}", json={"text": "He taught us all."}
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["said"][0]["text"] == "He taught us all."
+
+    # Words written on another computer, as they'd arrive from the family folder.
+    other = (
+        "> The kindest man at Gemas.\n\n— Nor binti Hassan, 12 October 2026 "
+        "<!-- said 7a8b9c0d by fedcba9876543210 on 2026-10-12 -->\n"
+    )
+    text = path.read_text(encoding="utf-8").replace("\n\n## Sources", "")
+    path.write_text(text.rstrip("\n") + "\n\n" + other, encoding="utf-8")
+    life = (await client.get(f"/api/persons/{hassan['id']}/biography")).json()
+    assert [(s["writer"], s["yours"]) for s in life["said"]] == [
+        ("Zulkifli bin Hassan", True),
+        ("Nor binti Hassan", False),
+    ]
+    refused = await client.put(
+        f"/api/persons/{hassan['id']}/said/7a8b9c0d", json={"text": "Changed by someone else."}
+    )
+    assert refused.status_code == 409
+    assert refused.json()["detail"]["code"] == "not_yours"
+    assert "Changed by someone else" not in path.read_text(encoding="utf-8")
+    taken_out = await client.delete(f"/api/persons/{hassan['id']}/said/7a8b9c0d")
+    assert taken_out.status_code == 200  # the keeper's to take out
+    assert [s["writer"] for s in taken_out.json()["said"]] == ["Zulkifli bin Hassan"]
+    taken_back = await client.delete(f"/api/persons/{hassan['id']}/said/{words['id']}")
+    assert taken_back.json()["said"] == []
+    gone = await client.delete(f"/api/persons/{hassan['id']}/said/{words['id']}")
+    assert gone.status_code == 404
+    empty = await client.post(f"/api/persons/{hassan['id']}/said", json={"text": "   "})
+    assert empty.status_code in (409, 422)
 
 
 async def test_a_file_changed_outside_the_app_is_not_overwritten_unseen(
@@ -178,3 +295,19 @@ async def test_the_story_goes_to_the_trash_and_comes_back(
 
     back = (await client.get(f"/api/persons/{person['id']}/biography")).json()
     assert (back["story"], back["sources"]) == ("His story.", ["A letter"])
+
+
+async def test_with_no_me_and_no_family_folder_words_are_signed_plainly(
+    client: httpx.AsyncClient,
+) -> None:
+    """Your answer of 14 Oct 2026: never the computer's own name, which may name its owner, and
+    goes into copies and GEDCOM with the words."""
+    hassan = await create_person(client, "Hassan bin Ismail")
+    said = await client.post(f"/api/persons/{hassan['id']}/said", json={"text": "A kind man."})
+    assert said.status_code == 201, said.text
+    [words] = said.json()["said"]
+    assert (words["writer"], words["device"], words["computer"]) == (
+        "Written on this computer",
+        None,
+        None,
+    )

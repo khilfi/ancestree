@@ -10,6 +10,7 @@ const change = (id: string, more: Partial<ImportChange> = {}): ImportChange => (
   clash: false,
   unsure: false,
   removes: more.kind === "remove_person",
+  by: "",
   ticked: true,
   ...more,
 });

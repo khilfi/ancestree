@@ -52,6 +52,8 @@ COLUMNS = (
     "Remove",
     "Version",
 )
+# Where they live, to the house: after "Lives in", only when addresses are chosen.
+ADDRESS_COLUMNS = ("Address", "Postcode")
 # The details a row's Version records, by column and field, in this order.
 VERSIONED = (
     ("Full name", "full_name"),
@@ -159,8 +161,9 @@ def _words(story: str) -> int | str:
     return count or ""
 
 
-def write_people_csv(data: FamilyData) -> str:
-    """The spreadsheet's text; save it with ENCODING."""
+def write_people_csv(data: FamilyData, *, addresses: bool = False) -> str:
+    """The spreadsheet's text; save it with ENCODING. With `addresses`, where each lives
+    to the house: the address and postcode, after "Lives in"."""
     parents_of: dict[str, list[tuple[str, str]]] = defaultdict(list)
     children_of: dict[str, list[str]] = defaultdict(list)
     for row in data.parents:
@@ -213,7 +216,11 @@ def write_people_csv(data: FamilyData) -> str:
     # Excel's own dialect: commas, "quotes", \r\n. Every cell quoted, so that an Excel that
     # splits on ";", as it does where commas are decimal points, never splits one.
     writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)
-    writer.writerow(COLUMNS)
+    lives_in = COLUMNS.index("Lives in") + 1
+    header = list(COLUMNS)
+    if addresses:
+        header[lives_in:lives_in] = ADDRESS_COLUMNS
+    writer.writerow(header)
     rows = sorted(data.people(), key=lambda m: (m.person.full_name.casefold(), m.id))
     for member in rows:
         p = member.person
@@ -221,7 +228,7 @@ def write_people_csv(data: FamilyData) -> str:
         version = row_version(
             {name: shown(living if name == "living" else getattr(p, name)) for _, name in VERSIONED}
         )
-        writer.writerow(
+        cells = [
             guard(cell)
             for cell in (
                 member.id,
@@ -248,5 +255,12 @@ def write_people_csv(data: FamilyData) -> str:
                 "",  # Remove: for marking someone to take out, and bringing it back
                 version,
             )
-        )
+        ]
+        if addresses:
+            home = p.residence
+            cells[lives_in:lives_in] = [
+                guard(home.address or "") if home else "",
+                guard(home.postcode or "") if home else "",
+            ]
+        writer.writerow(cells)
     return buffer.getvalue()

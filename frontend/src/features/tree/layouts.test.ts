@@ -26,6 +26,7 @@ function person(
     birth_order: null,
     placeholder,
     photo_version: null,
+    has_story: false,
   };
 }
 
@@ -169,6 +170,26 @@ describe("fanLayout", () => {
       "Parents",
       "Grandparents",
     ]);
+  });
+
+  it("stands the person's children in a row beneath, eldest first", () => {
+    // Siti born before Ali: she stands on the left.
+    const born = (id: string) => ({ siti: 1950, ali: 1955 })[id] ?? null;
+    const dated = { ...graph, people: graph.people.map((p) => ({ ...p, birth_year: born(p.id) })) };
+    const { points, guides } = fanLayout(dated, "tok", 2, null);
+    expect(at(points, "siti")).toEqual({ x: -SPACING / 2, y: ROW });
+    expect(at(points, "ali")).toEqual({ x: SPACING / 2, y: ROW });
+    expect(points.has("cucu")).toBe(false); // grandchildren wait for a step down
+    expect(guides.filter((g) => g.kind === "row").map((g) => g.kind === "row" && g.label)).toEqual([
+      "Children",
+    ]);
+
+    // A step down: from Ali, his son beneath him, and his parents above.
+    const down = fanLayout(graph, "ali", 2, null);
+    expect(at(down.points, "cucu")).toEqual({ x: 0, y: ROW });
+    expect(at(down.points, "tok").y).toBeLessThan(0);
+    // No children, no row.
+    expect(fanLayout(graph, "cucu", 2, null).guides.some((g) => g.kind === "row")).toBe(false);
   });
 
   it("makes each band wide enough for everyone on it", () => {

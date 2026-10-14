@@ -52,6 +52,7 @@ export function CopyDialog({
         hide_living: hideLiving,
         password: locked ? password : null,
         archive: withArchive,
+        addresses: false, // the copy's GEDCOM and spreadsheet: addresses only in its pages
       },
       {
         onSuccess: (file) => {

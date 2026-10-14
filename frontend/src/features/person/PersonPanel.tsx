@@ -1,5 +1,9 @@
 import {
+  BookOpenIcon,
   CameraIcon,
+  EllipsisIcon,
+  FanIcon,
+  HourglassIcon,
   LocateFixedIcon,
   MergeIcon,
   PencilIcon,
@@ -24,11 +28,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BiographyTab } from "@/features/biography/BiographyTab";
 import { YouLine } from "@/features/me/YouLine";
 import { ageOf } from "@/lib/dates";
+import { openLifeStory } from "@/lib/lifeStory";
 import { showNotices } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
 import { MergeDialog } from "./MergeDialog";
@@ -44,10 +55,19 @@ type Props = {
   onClose: () => void;
   onDelete: (person: PersonDetail) => void;
   onFindRelationship?: (id: string) => void; // "how is anyone related to them?"
+  // In an hourglass or fan chart: Fan from here, which draws it from them.
+  fromHere?: { layout: "hourglass" | "fan"; onClick: () => void };
 };
 
 /** The side panel: one person's details and relatives, or the form for someone new. */
-export function PersonPanel({ personId, onSelect, onClose, onDelete, onFindRelationship }: Props) {
+export function PersonPanel({
+  personId,
+  onSelect,
+  onClose,
+  onDelete,
+  onFindRelationship,
+  fromHere,
+}: Props) {
   return (
     <aside aria-label="Person" className="flex h-full flex-col bg-white">
       {personId === null ? (
@@ -59,6 +79,7 @@ export function PersonPanel({ personId, onSelect, onClose, onDelete, onFindRelat
           onClose={onClose}
           onDelete={onDelete}
           onFindRelationship={onFindRelationship}
+          fromHere={fromHere}
         />
       )}
     </aside>
@@ -148,6 +169,7 @@ function ExistingPerson({
   onClose,
   onDelete,
   onFindRelationship,
+  fromHere,
 }: Omit<Props, "personId"> & { personId: string }) {
   const query = usePerson(personId);
   const canEdit = useCanEdit();
@@ -259,7 +281,7 @@ function ExistingPerson({
                 <InAppOnly>
                   <WhoChanged personId={person.id} />
                 </InAppOnly>
-                {(canEdit || onFindRelationship) && (
+                {(canEdit || onFindRelationship || fromHere || !person.placeholder) && (
                   <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-4">
                     <CanEdit>
                       <Button onClick={() => setEditing(true)}>
@@ -267,6 +289,18 @@ function ExistingPerson({
                         Edit
                       </Button>
                     </CanEdit>
+                    {!person.placeholder && (
+                      <Button variant="outline" onClick={() => openLifeStory(person.id)}>
+                        <BookOpenIcon />
+                        Life story
+                      </Button>
+                    )}
+                    {fromHere && !person.placeholder && (
+                      <Button variant="outline" onClick={fromHere.onClick}>
+                        {fromHere.layout === "fan" ? <FanIcon /> : <HourglassIcon />}
+                        {fromHere.layout === "fan" ? "Fan from here" : "Hourglass from here"}
+                      </Button>
+                    )}
                     {onFindRelationship && (
                       <Button variant="outline" onClick={() => onFindRelationship(person.id)}>
                         <WaypointsIcon />
@@ -276,22 +310,33 @@ function ExistingPerson({
                     <CanEdit>
                       <CentreButton person={person} />
                     </CanEdit>
-                    {!person.placeholder && (
-                      <CanEdit>
-                        <InAppOnly>
-                          <Button variant="ghost" onClick={() => setMerging(true)}>
-                            <MergeIcon />
-                            Merge…
-                          </Button>
-                        </InAppOnly>
-                      </CanEdit>
-                    )}
                     <CanEdit>
                       <Button variant="ghost" onClick={() => setConfirmDelete(true)}>
                         <Trash2Icon />
                         Move to Trash
                       </Button>
                     </CanEdit>
+                    {!person.placeholder && (
+                      <CanEdit>
+                        <InAppOnly>
+                          {/* What's seldom needed: someone entered twice, made one. */}
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost">
+                                <EllipsisIcon />
+                                More
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-48">
+                              <DropdownMenuItem onSelect={() => setMerging(true)}>
+                                <MergeIcon />
+                                Same person as…
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </InAppOnly>
+                      </CanEdit>
+                    )}
                   </div>
                 )}
               </div>

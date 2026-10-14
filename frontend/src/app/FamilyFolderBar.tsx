@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useDesktopUpdate } from "@/api/desktop";
 import {
   sendsToTheKeeper,
+  sendsWords,
   useFamilyFolder,
   useFreshWhenReceived,
   useSyncNow,
@@ -10,6 +11,7 @@ import {
 import { useGraph } from "@/api/queries";
 import type { FamilyFolderStatus } from "@/api/types";
 import { Button } from "@/components/ui/button";
+import { Opening, useLookAround } from "@/features/families/FamilyMenu";
 import { showError } from "@/lib/notify";
 
 const NOT_NOW = "ancestree.family-folder.not-now";
@@ -26,10 +28,17 @@ function saidNotNow(): boolean {
 function onARelatives(status: FamilyFolderStatus): string {
   const family = status.family || "This family";
   if (status.role === "waiting") return "Waiting for the family's keeper to let this computer in.";
+  const pending = status.pending ?? 0;
+  if (sendsWords(status)) {
+    if (pending === 0) {
+      return `${family} arrives here from its keeper. Only your words about people can be added here: they go to the keeper first.`;
+    }
+    const whom = pending === 1 ? "1 person" : `${pending} people`;
+    return `${family} arrives here from its keeper. Your words about ${whom} wait for them.`;
+  }
   if (!sendsToTheKeeper(status)) {
     return `${family} arrives here from its keeper, so it can't be changed on this computer.`;
   }
-  const pending = status.pending ?? 0;
   const answered = (status.answers ?? []).length > 0 ? " The keeper has answered." : "";
   if (pending === 0) {
     return `${family} arrives here from its keeper. What you change goes to them first.${answered}`;
@@ -52,6 +61,7 @@ export function FamilyFolderBar() {
   const people = useGraph().data?.people.length;
   const [notNow, setNotNow] = useState(saidNotNow);
   const sync = useSyncNow();
+  const around = useLookAround();
   if (!status) return null;
 
   if (status.setup === "keeper" && status.offer_made) {
@@ -79,7 +89,7 @@ export function FamilyFolderBar() {
         className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 md:px-4"
       >
         <span>{onARelatives(status)}</span>
-        {sendsToTheKeeper(status) && (status.pending ?? 0) > 0 && (
+        {(sendsToTheKeeper(status) || sendsWords(status)) && (status.pending ?? 0) > 0 && (
           <Button
             size="sm"
             variant="outline"
@@ -105,10 +115,13 @@ export function FamilyFolderBar() {
     >
       <span>
         Welcome to AncesTree. Has your family's keeper sent you an invitation? Join with it, or
-        start your family's own.
+        start your family's own. Or look around a made-up family first.
       </span>
       <Button size="sm" className="ml-auto" asChild>
         <Link to="/settings/family-folder">Join or start</Link>
+      </Button>
+      <Button size="sm" variant="outline" disabled={around.busy} onClick={around.look}>
+        Look around first
       </Button>
       <Button
         size="sm"
@@ -124,6 +137,7 @@ export function FamilyFolderBar() {
       >
         Not now
       </Button>
+      {around.opening && <Opening name={around.opening} />}
     </div>
   );
 }

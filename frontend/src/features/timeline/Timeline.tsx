@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StoryMark } from "@/features/biography/StoryMark";
 import { ClosenessKey } from "@/features/me/ClosenessKey";
 import { useMeId } from "@/features/me/useMeId";
 import { FilterChips, FilterMenu } from "@/features/tree/FilterMenu";
@@ -82,7 +83,7 @@ export function Timeline({
   const [sorting, setSorting] = useState<Sorting>("birth");
   const today = useMemo(() => yearNow(), []);
   // The tree's filter narrows the timeline too: the others go, or stay faded.
-  const filterKey = writeView({ layout: "rings", depth: null, filter }).toString();
+  const filterKey = writeView({ layout: "rings", depth: null, filter, from: null }).toString();
   // biome-ignore lint/correctness/useExhaustiveDependencies: filterKey stands for the filter
   const kept = useMemo(() => applyFilter(graph, filter), [graph, filterKey]);
   const faded = filter.others === "faded" ? kept : null;
@@ -549,6 +550,7 @@ function Lane({
           )}
           style={colour && !selected ? { borderColor: colour } : undefined}
         />
+        <StoryMark person={lane.person} inside className="-right-2 -bottom-1.5" />
       </span>
       <span
         className="pointer-events-none absolute top-0.5 text-xs leading-4 whitespace-nowrap"

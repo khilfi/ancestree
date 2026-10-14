@@ -223,7 +223,11 @@ const reads: Record<Routes<"get">, Answering | typeof NOT_IN_COPY> = {
   "/api/sample/map": NOT_IN_COPY,
   // The app's packs of OpenStreetMap's tiles: a copy keeps its own light drawing.
   "/api/map/packs": NOT_IN_COPY,
-  "/api/map/tiles/{key}/{z}/{x}/{y}": NOT_IN_COPY,
+  "/api/map/depth/{depth}/{z}/{x}/{y}": NOT_IN_COPY,
+  "/api/map/countries/family": NOT_IN_COPY,
+  // Suggestions as an address is typed: the copy carries no places to suggest from.
+  "/api/places/suggest": NOT_IN_COPY,
+  "/api/places/near": NOT_IN_COPY,
   // Nor the online extra: a copy asks nothing of the internet.
   "/api/map/online/{z}/{x}/{y}": NOT_IN_COPY,
   // Each computer's own part in the family folder: a copy has none.
@@ -304,6 +308,9 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "PUT /api/persons/{person_id}/photo/crop": REFUSED,
   "PUT /api/persons/{person_id}/biography": REFUSED,
   "POST /api/persons/{person_id}/media": REFUSED,
+  "POST /api/persons/{person_id}/said": REFUSED,
+  "PUT /api/persons/{person_id}/said/{said_id}": REFUSED,
+  "DELETE /api/persons/{person_id}/said/{said_id}": REFUSED,
   "POST /api/relationships": REFUSED,
   "PATCH /api/relationships/{link_id}": REFUSED,
   "DELETE /api/relationships/{link_id}": REFUSED,
@@ -323,7 +330,11 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "DELETE /api/places/pins": REFUSED,
   "POST /api/map/packs/{key}": REFUSED,
   "DELETE /api/map/packs/{key}": REFUSED,
+  "POST /api/map/countries/{key}": REFUSED,
+  "DELETE /api/map/countries/{key}": REFUSED,
   "PUT /api/map/online": REFUSED,
+  "PUT /api/map/lookup": REFUSED,
+  "POST /api/places/lookup": REFUSED,
   "POST /api/family-folder/sign-in": REFUSED,
   "POST /api/family-folder/sign-out": REFUSED,
   "POST /api/family-folder/move-account": REFUSED,
@@ -346,6 +357,7 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
   "POST /api/family-folder/refuse": REFUSED,
   "POST /api/family-folder/remove": REFUSED,
   "POST /api/family-folder/role": REFUSED,
+  "POST /api/family-folder/helper": REFUSED,
   "POST /api/family-folder/sync": REFUSED,
   "POST /api/family-folder/answers-seen": REFUSED,
   "POST /api/family-folder/role-seen": REFUSED,

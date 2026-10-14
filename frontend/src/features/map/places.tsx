@@ -2,6 +2,7 @@ import { MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
 import type { GraphPerson } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
+import { StoryMark } from "@/features/biography/StoryMark";
 import { shortName } from "@/features/tree/words";
 import { lifeYears } from "@/lib/people";
 import { cn } from "@/lib/utils";
@@ -225,8 +226,23 @@ export function Town({
   const shown = cut ? all.slice(0, MOST - 1) : all;
   const spots = sunflower(shown.length + (cut ? 1 : 0), spacing);
   const reach = flowerRadius(spots.length, spacing);
+  // About there, at their postcode's area or their town, a soft ring says so; to the house or
+  // by hand, their photos are the pin.
+  const about = group.about && !group.rough;
+  const where = about ? "about here" : group.about === false ? "exactly here" : "";
   return (
     <div className="absolute" style={{ transform: `translate(${group.at.x}px, ${group.at.y}px)` }}>
+      {about && (
+        <div
+          className="absolute rounded-full border border-sky-500/30 bg-sky-300/15"
+          style={{
+            width: (reach + 10) * 2,
+            height: (reach + 10) * 2,
+            transform: `translate(-${reach + 10}px, -${reach + 10}px)`,
+          }}
+          title={`${group.label}: about here`}
+        />
+      )}
       {shown.map((id, index) => {
         const person = people.get(id);
         const at = spots[index] ?? { x: 0, y: 0 };
@@ -247,8 +263,8 @@ export function Town({
               event.stopPropagation();
               onSelect?.(id);
             }}
-            title={[person.full_name, years, group.label].filter(Boolean).join(" · ")}
-            aria-label={`${person.full_name}, ${group.label}`}
+            title={[person.full_name, years, group.label, where].filter(Boolean).join(" · ")}
+            aria-label={[person.full_name, group.label, where].filter(Boolean).join(", ")}
           >
             <PersonAvatar
               person={person}
@@ -260,6 +276,7 @@ export function Town({
               )}
               style={colour ? { borderColor: colour } : undefined}
             />
+            <StoryMark person={person} inside className="top-[20px] left-[20px]" />
             {withNames && (
               <span className="mt-0.5 w-20 truncate text-center text-[10px] leading-tight text-stone-700">
                 {shortName(person)}

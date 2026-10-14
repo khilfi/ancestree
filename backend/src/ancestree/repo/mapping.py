@@ -10,7 +10,18 @@ from ancestree.domain.person import Gender, PartialDate, Person, Place
 from ancestree.domain.requests import PersonInput
 
 _DATE_FIELDS = ("year", "month", "day", "qualifier", "year_to", "original_text")
-_PLACE_FIELDS = ("town", "state", "country")
+# Each place's properties: the first three since 0.1.0, the rest since 0.8.0.
+_PLACE_FIELDS = (
+    "town",
+    "state",
+    "country",
+    "address",
+    "district",
+    "postcode",
+    "lat",
+    "lon",
+    "exact",
+)
 
 
 def person_to_props(person: Person) -> dict[str, Any]:
@@ -38,6 +49,7 @@ def _details(source: Person | PersonInput) -> dict[str, Any]:
         "gender": source.gender.value,
         "burial_place": source.burial_place,
         "living": source.living,
+        "lives_with": source.lives_with,
         "occupation": source.occupation,
         "notes": source.notes,
     }
@@ -78,6 +90,7 @@ def person_from_props(props: Mapping[str, Any]) -> Person:
         death_place=place_from("death", props),
         burial_place=props.get("burial_place"),
         residence=place_from("residence", props),
+        lives_with=props.get("lives_with"),
         living=props.get("living"),
         occupation=props.get("occupation"),
         notes=props.get("notes"),
@@ -106,11 +119,7 @@ def date_props(prefix: str, date: PartialDate | None) -> dict[str, Any]:
 def place_props(prefix: str, place: Place | None) -> dict[str, Any]:
     if place is None:
         return {f"{prefix}_{field}": None for field in _PLACE_FIELDS}
-    return {
-        f"{prefix}_town": place.town,
-        f"{prefix}_state": place.state,
-        f"{prefix}_country": place.country,
-    }
+    return {f"{prefix}_{field}": getattr(place, field) for field in _PLACE_FIELDS}
 
 
 def date_from_props(prefix: str, props: Mapping[str, Any]) -> PartialDate | None:

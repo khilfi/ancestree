@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { usePatchPerson } from "@/api/queries";
 import type { GraphPerson, Place } from "@/api/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { GrowingText } from "@/components/ui/growing-text";
 import {
   Select,
   SelectContent,
@@ -61,8 +61,8 @@ export function PlaceFix({
         if (ready) save();
       }}
     >
-      <Input
-        className="h-7 w-32 text-xs"
+      <GrowingText
+        className="min-h-7 w-32 py-0.5 text-xs md:text-xs"
         placeholder="Town"
         aria-label={`${label}: town`}
         value={town}
@@ -86,16 +86,16 @@ export function PlaceFix({
           </SelectContent>
         </Select>
       ) : (
-        <Input
-          className="h-7 w-32 text-xs"
+        <GrowingText
+          className="min-h-7 w-32 py-0.5 text-xs md:text-xs"
           placeholder="State or region"
           aria-label={`${label}: state or region`}
           value={state}
           onChange={(event) => setState(event.target.value)}
         />
       )}
-      <Input
-        className="h-7 w-28 text-xs"
+      <GrowingText
+        className="min-h-7 w-28 py-0.5 text-xs md:text-xs"
         placeholder="Country"
         aria-label={`${label}: country`}
         value={country}

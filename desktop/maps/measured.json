@@ -1,0 +1,3823 @@
+{
+ "build": "20261010",
+ "limit": 1500000000,
+ "minzoom": 7,
+ "countries": [
+  {
+   "key": "ad",
+   "title": "Andorra",
+   "continent": "Europe",
+   "sizes": {
+    "14": 3400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ae",
+   "title": "United Arab Emirates",
+   "continent": "Asia",
+   "sizes": {
+    "14": 39000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "af",
+   "title": "Afghanistan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 121000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ag",
+   "title": "Antigua and Barbuda",
+   "continent": "North America",
+   "sizes": {
+    "14": 1200000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ai",
+   "title": "Anguilla",
+   "continent": "North America",
+   "sizes": {
+    "14": 509000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "al",
+   "title": "Albania",
+   "continent": "Europe",
+   "sizes": {
+    "14": 49000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "am",
+   "title": "Armenia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 46000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ao",
+   "title": "Angola",
+   "continent": "Africa",
+   "sizes": {
+    "14": 118000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "aq",
+   "title": "Antarctica",
+   "continent": "Antarctica",
+   "sizes": {
+    "14": 180000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ar",
+   "title": "Argentina",
+   "continent": "South America",
+   "sizes": {
+    "14": 604000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "as",
+   "title": "American Samoa",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 682000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "at",
+   "title": "Austria",
+   "continent": "Europe",
+   "sizes": {
+    "14": 552000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "au",
+   "title": "Australia",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1000000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "aw",
+   "title": "Aruba",
+   "continent": "North America",
+   "sizes": {
+    "14": 1400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ax",
+   "title": "Aland Islands",
+   "continent": "Europe",
+   "sizes": {
+    "14": 8900000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "az",
+   "title": "Azerbaijan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 62000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ba",
+   "title": "Bosnia and Herzegovina",
+   "continent": "Europe",
+   "sizes": {
+    "14": 189000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bb",
+   "title": "Barbados",
+   "continent": "North America",
+   "sizes": {
+    "14": 2400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bd",
+   "title": "Bangladesh",
+   "continent": "Asia",
+   "sizes": {
+    "14": 123000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "be",
+   "title": "Belgium",
+   "continent": "Europe",
+   "sizes": {
+    "14": 339000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bf",
+   "title": "Burkina Faso",
+   "continent": "Africa",
+   "sizes": {
+    "14": 78000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bg",
+   "title": "Bulgaria",
+   "continent": "Europe",
+   "sizes": {
+    "14": 201000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bh",
+   "title": "Bahrain",
+   "continent": "Asia",
+   "sizes": {
+    "14": 3300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bi",
+   "title": "Burundi",
+   "continent": "Africa",
+   "sizes": {
+    "14": 28000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bj",
+   "title": "Benin",
+   "continent": "Africa",
+   "sizes": {
+    "14": 29000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bl",
+   "title": "Saint Barthelemy",
+   "continent": "North America",
+   "sizes": {
+    "14": 432000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bm",
+   "title": "Bermuda",
+   "continent": "North America",
+   "sizes": {
+    "14": 1000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bn",
+   "title": "Brunei",
+   "continent": "Asia",
+   "sizes": {
+    "14": 4300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bo",
+   "title": "Bolivia",
+   "continent": "South America",
+   "sizes": {
+    "14": 214000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "br",
+   "title": "Brazil",
+   "continent": "South America",
+   "sizes": {
+    "14": 2200000000,
+    "13": 1100000000
+   },
+   "zoom": 13
+  },
+  {
+   "key": "bs",
+   "title": "Bahamas",
+   "continent": "North America",
+   "sizes": {
+    "14": 11000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bt",
+   "title": "Bhutan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 31000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bw",
+   "title": "Botswana",
+   "continent": "Africa",
+   "sizes": {
+    "14": 56000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "by",
+   "title": "Belarus",
+   "continent": "Europe",
+   "sizes": {
+    "14": 423000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "bz",
+   "title": "Belize",
+   "continent": "North America",
+   "sizes": {
+    "14": 29000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ca",
+   "title": "Canada",
+   "continent": "North America",
+   "sizes": {
+    "14": 8400000000,
+    "13": 4600000000
+   },
+   "zoom": null,
+   "states": [
+    {
+     "key": "ca-ab",
+     "title": "Alberta, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 463000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-bc",
+     "title": "British Columbia, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 918000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-mb",
+     "title": "Manitoba, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 354000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-nb",
+     "title": "New Brunswick, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 81000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-nl",
+     "title": "Newfoundland and Labrador, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 359000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-ns",
+     "title": "Nova Scotia, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 92000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-nt",
+     "title": "Northwest Territories, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 854000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-nu",
+     "title": "Nunavut, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 2500000000,
+      "13": 1300000000
+     },
+     "zoom": 13
+    },
+    {
+     "key": "ca-on",
+     "title": "Ontario, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 1100000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-pe",
+     "title": "Prince Edward Island, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 12000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-qc",
+     "title": "Quebec, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 1400000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-sk",
+     "title": "Saskatchewan, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 229000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ca-yt",
+     "title": "Yukon, Canada",
+     "continent": "North America",
+     "sizes": {
+      "14": 167000000
+     },
+     "zoom": 14
+    }
+   ]
+  },
+  {
+   "key": "cd",
+   "title": "Democratic Republic of the Congo",
+   "continent": "Africa",
+   "sizes": {
+    "14": 403000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cf",
+   "title": "Central African Republic",
+   "continent": "Africa",
+   "sizes": {
+    "14": 208000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cg",
+   "title": "Republic of the Congo",
+   "continent": "Africa",
+   "sizes": {
+    "14": 46000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ch",
+   "title": "Switzerland",
+   "continent": "Europe",
+   "sizes": {
+    "14": 293000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ci",
+   "title": "Ivory Coast",
+   "continent": "Africa",
+   "sizes": {
+    "14": 76000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ck",
+   "title": "Cook Islands",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 615000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cl",
+   "title": "Chile",
+   "continent": "South America",
+   "sizes": {
+    "14": 325000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cm",
+   "title": "Cameroon",
+   "continent": "Africa",
+   "sizes": {
+    "14": 276000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cn",
+   "title": "China",
+   "continent": "Asia",
+   "sizes": {
+    "14": 2800000000,
+    "13": 1600000000
+   },
+   "zoom": null,
+   "states": [
+    {
+     "key": "cn-ah",
+     "title": "Anhui, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 88000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-bj",
+     "title": "Beijing, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 42000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-cq",
+     "title": "Chongqing, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 54000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-fj",
+     "title": "Fujian, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 72000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-gd",
+     "title": "Guangdong, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 166000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-gs",
+     "title": "Gansu, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 122000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-gx",
+     "title": "Guangxi, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 98000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-gz",
+     "title": "Guizhou, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 64000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-ha",
+     "title": "Henan, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 96000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-hb",
+     "title": "Hubei, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 95000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-he",
+     "title": "Hebei, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 134000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-hi",
+     "title": "Hainan, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 16000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-hl",
+     "title": "Heilongjiang, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 116000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-hn",
+     "title": "Hunan, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 92000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-jl",
+     "title": "Jilin, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 72000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-js",
+     "title": "Jiangsu, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 104000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-jx",
+     "title": "Jiangxi, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 97000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-ln",
+     "title": "Liaoning, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 65000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-nm",
+     "title": "Inner Mongolia, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 150000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-nx",
+     "title": "Ningxia, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 19000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-pfa00",
+     "title": "Paracel Islands, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 109000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-qh",
+     "title": "Qinghai, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 66000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-sc",
+     "title": "Sichuan, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 194000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-sd",
+     "title": "Shandong, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 122000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-sh",
+     "title": "Shanghai, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 23000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-sn",
+     "title": "Shaanxi, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 164000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-sx",
+     "title": "Shanxi, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 71000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-tj",
+     "title": "Tianjin, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 20000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-xj",
+     "title": "Xinjiang, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 140000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-xz",
+     "title": "Tibet, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 130000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-yn",
+     "title": "Yunnan, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 144000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "cn-zj",
+     "title": "Zhejiang, China",
+     "continent": "Asia",
+     "sizes": {
+      "14": 130000000
+     },
+     "zoom": 14
+    }
+   ]
+  },
+  {
+   "key": "cnm",
+   "title": "Cyprus U.N. Buffer Zone",
+   "continent": "Asia",
+   "sizes": {
+    "14": 5900000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "co",
+   "title": "Colombia",
+   "continent": "South America",
+   "sizes": {
+    "14": 285000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cr",
+   "title": "Costa Rica",
+   "continent": "North America",
+   "sizes": {
+    "14": 42000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cu",
+   "title": "Cuba",
+   "continent": "North America",
+   "sizes": {
+    "14": 66000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cv",
+   "title": "Cabo Verde",
+   "continent": "Africa",
+   "sizes": {
+    "14": 8100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cw",
+   "title": "Curacao",
+   "continent": "North America",
+   "sizes": {
+    "14": 2300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cy",
+   "title": "Cyprus",
+   "continent": "Asia",
+   "sizes": {
+    "14": 20000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cyn",
+   "title": "Northern Cyprus",
+   "continent": "Asia",
+   "sizes": {
+    "14": 11000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "cz",
+   "title": "Czechia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 551000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "de",
+   "title": "Germany",
+   "continent": "Europe",
+   "sizes": {
+    "14": 2500000000,
+    "13": 1300000000
+   },
+   "zoom": 13
+  },
+  {
+   "key": "dj",
+   "title": "Djibouti",
+   "continent": "Africa",
+   "sizes": {
+    "14": 4900000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "dk",
+   "title": "Denmark",
+   "continent": "Europe",
+   "sizes": {
+    "14": 284000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "dm",
+   "title": "Dominica",
+   "continent": "North America",
+   "sizes": {
+    "14": 1500000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "do",
+   "title": "Dominican Republic",
+   "continent": "North America",
+   "sizes": {
+    "14": 26000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "dz",
+   "title": "Algeria",
+   "continent": "Africa",
+   "sizes": {
+    "14": 220000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ec",
+   "title": "Ecuador",
+   "continent": "South America",
+   "sizes": {
+    "14": 101000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ee",
+   "title": "Estonia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 118000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "eg",
+   "title": "Egypt",
+   "continent": "Africa",
+   "sizes": {
+    "14": 126000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "eh",
+   "title": "Western Sahara",
+   "continent": "Africa",
+   "sizes": {
+    "14": 4400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "er",
+   "title": "Eritrea",
+   "continent": "Africa",
+   "sizes": {
+    "14": 21000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "es",
+   "title": "Spain",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1200000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "esb",
+   "title": "Dhekelia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 1300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "et",
+   "title": "Ethiopia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 144000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fi",
+   "title": "Finland",
+   "continent": "Europe",
+   "sizes": {
+    "14": 942000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fj",
+   "title": "Fiji",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 11000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fk",
+   "title": "Falkland Islands",
+   "continent": "South America",
+   "sizes": {
+    "14": 8300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fm",
+   "title": "Micronesia",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fo",
+   "title": "Faroe Islands",
+   "continent": "Europe",
+   "sizes": {
+    "14": 6600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "fr",
+   "title": "France",
+   "continent": "Europe",
+   "sizes": {
+    "14": 2500000000,
+    "13": 1300000000
+   },
+   "zoom": 13
+  },
+  {
+   "key": "ga",
+   "title": "Gabon",
+   "continent": "Africa",
+   "sizes": {
+    "14": 41000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gb",
+   "title": "United Kingdom",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1300000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gd",
+   "title": "Grenada",
+   "continent": "North America",
+   "sizes": {
+    "14": 1100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ge",
+   "title": "Georgia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 106000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gg",
+   "title": "Guernsey",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gh",
+   "title": "Ghana",
+   "continent": "Africa",
+   "sizes": {
+    "14": 70000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gi",
+   "title": "Gibraltar",
+   "continent": "Europe",
+   "sizes": {
+    "14": 394000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gl",
+   "title": "Greenland",
+   "continent": "North America",
+   "sizes": {
+    "14": 169000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gm",
+   "title": "Gambia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 11000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gn",
+   "title": "Guinea",
+   "continent": "Africa",
+   "sizes": {
+    "14": 83000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gq",
+   "title": "Equatorial Guinea",
+   "continent": "Africa",
+   "sizes": {
+    "14": 6900000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gr",
+   "title": "Greece",
+   "continent": "Europe",
+   "sizes": {
+    "14": 260000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gt",
+   "title": "Guatemala",
+   "continent": "North America",
+   "sizes": {
+    "14": 57000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gu",
+   "title": "Guam",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gw",
+   "title": "Guinea-Bissau",
+   "continent": "Africa",
+   "sizes": {
+    "14": 14000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "gy",
+   "title": "Guyana",
+   "continent": "South America",
+   "sizes": {
+    "14": 16000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "hk",
+   "title": "Hong Kong",
+   "continent": "Asia",
+   "sizes": {
+    "14": 15000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "hn",
+   "title": "Honduras",
+   "continent": "North America",
+   "sizes": {
+    "14": 45000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "hr",
+   "title": "Croatia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 208000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ht",
+   "title": "Haiti",
+   "continent": "North America",
+   "sizes": {
+    "14": 21000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "hu",
+   "title": "Hungary",
+   "continent": "Europe",
+   "sizes": {
+    "14": 246000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "id",
+   "title": "Indonesia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 704000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ie",
+   "title": "Ireland",
+   "continent": "Europe",
+   "sizes": {
+    "14": 222000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "il",
+   "title": "Israel",
+   "continent": "Asia",
+   "sizes": {
+    "14": 59000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "im",
+   "title": "Isle of Man",
+   "continent": "Europe",
+   "sizes": {
+    "14": 5100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "in",
+   "title": "India",
+   "continent": "Asia",
+   "sizes": {
+    "14": 1600000000,
+    "13": 859000000
+   },
+   "zoom": 13
+  },
+  {
+   "key": "io",
+   "title": "British Indian Ocean Territory",
+   "continent": "Seven seas (open ocean)",
+   "sizes": {
+    "14": 336000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "iq",
+   "title": "Iraq",
+   "continent": "Asia",
+   "sizes": {
+    "14": 118000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ir",
+   "title": "Iran",
+   "continent": "Asia",
+   "sizes": {
+    "14": 365000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "is",
+   "title": "Iceland",
+   "continent": "Europe",
+   "sizes": {
+    "14": 148000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "it",
+   "title": "Italy",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1300000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "je",
+   "title": "Jersey",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "jm",
+   "title": "Jamaica",
+   "continent": "North America",
+   "sizes": {
+    "14": 13000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "jo",
+   "title": "Jordan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 26000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "jp",
+   "title": "Japan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 1200000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kas",
+   "title": "Siachen Glacier",
+   "continent": "Asia",
+   "sizes": {
+    "14": 970000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ke",
+   "title": "Kenya",
+   "continent": "Africa",
+   "sizes": {
+    "14": 147000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kg",
+   "title": "Kyrgyzstan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 97000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kh",
+   "title": "Cambodia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 43000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ki",
+   "title": "Kiribati",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "km",
+   "title": "Comoros",
+   "continent": "Africa",
+   "sizes": {
+    "14": 1600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kn",
+   "title": "Saint Kitts and Nevis",
+   "continent": "North America",
+   "sizes": {
+    "14": 1000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kp",
+   "title": "North Korea",
+   "continent": "Asia",
+   "sizes": {
+    "14": 103000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kr",
+   "title": "South Korea",
+   "continent": "Asia",
+   "sizes": {
+    "14": 259000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kw",
+   "title": "Kuwait",
+   "continent": "Asia",
+   "sizes": {
+    "14": 9400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ky",
+   "title": "Cayman Islands",
+   "continent": "North America",
+   "sizes": {
+    "14": 918000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "kz",
+   "title": "Kazakhstan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 346000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "la",
+   "title": "Laos",
+   "continent": "Asia",
+   "sizes": {
+    "14": 68000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lb",
+   "title": "Lebanon",
+   "continent": "Asia",
+   "sizes": {
+    "14": 29000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lc",
+   "title": "Saint Lucia",
+   "continent": "North America",
+   "sizes": {
+    "14": 1900000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "li",
+   "title": "Liechtenstein",
+   "continent": "Europe",
+   "sizes": {
+    "14": 3600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lk",
+   "title": "Sri Lanka",
+   "continent": "Asia",
+   "sizes": {
+    "14": 69000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lr",
+   "title": "Liberia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 23000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ls",
+   "title": "Lesotho",
+   "continent": "Africa",
+   "sizes": {
+    "14": 76000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lt",
+   "title": "Lithuania",
+   "continent": "Europe",
+   "sizes": {
+    "14": 229000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lu",
+   "title": "Luxembourg",
+   "continent": "Europe",
+   "sizes": {
+    "14": 39000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "lv",
+   "title": "Latvia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 150000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ly",
+   "title": "Libya",
+   "continent": "Africa",
+   "sizes": {
+    "14": 69000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ma",
+   "title": "Morocco",
+   "continent": "Africa",
+   "sizes": {
+    "14": 205000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mc",
+   "title": "Monaco",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1200000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "md",
+   "title": "Moldova",
+   "continent": "Europe",
+   "sizes": {
+    "14": 78000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "me",
+   "title": "Montenegro",
+   "continent": "Europe",
+   "sizes": {
+    "14": 40000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mf",
+   "title": "Saint Martin",
+   "continent": "North America",
+   "sizes": {
+    "14": 816000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mg",
+   "title": "Madagascar",
+   "continent": "Africa",
+   "sizes": {
+    "14": 283000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mh",
+   "title": "Marshall Islands",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 554000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mk",
+   "title": "North Macedonia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 38000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ml",
+   "title": "Mali",
+   "continent": "Africa",
+   "sizes": {
+    "14": 197000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mm",
+   "title": "Myanmar",
+   "continent": "Asia",
+   "sizes": {
+    "14": 239000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mn",
+   "title": "Mongolia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 106000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mo",
+   "title": "Macao",
+   "continent": "Asia",
+   "sizes": {
+    "14": 2000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mp",
+   "title": "Northern Mariana Islands",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 969000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mr",
+   "title": "Mauritania",
+   "continent": "Africa",
+   "sizes": {
+    "14": 38000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ms",
+   "title": "Montserrat",
+   "continent": "North America",
+   "sizes": {
+    "14": 350000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mt",
+   "title": "Malta",
+   "continent": "Europe",
+   "sizes": {
+    "14": 3800000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mu",
+   "title": "Mauritius",
+   "continent": "Seven seas (open ocean)",
+   "sizes": {
+    "14": 7700000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mv",
+   "title": "Maldives",
+   "continent": "Seven seas (open ocean)",
+   "sizes": {
+    "14": 1800000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mw",
+   "title": "Malawi",
+   "continent": "Africa",
+   "sizes": {
+    "14": 59000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mx",
+   "title": "Mexico",
+   "continent": "North America",
+   "sizes": {
+    "14": 594000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "my",
+   "title": "Malaysia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 157000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "mz",
+   "title": "Mozambique",
+   "continent": "Africa",
+   "sizes": {
+    "14": 116000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "na",
+   "title": "Namibia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 74000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nc",
+   "title": "New Caledonia",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 11000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ne",
+   "title": "Niger",
+   "continent": "Africa",
+   "sizes": {
+    "14": 84000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nf",
+   "title": "Norfolk Island",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 174000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ng",
+   "title": "Nigeria",
+   "continent": "Africa",
+   "sizes": {
+    "14": 308000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ni",
+   "title": "Nicaragua",
+   "continent": "North America",
+   "sizes": {
+    "14": 64000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nl",
+   "title": "The Netherlands",
+   "continent": "Europe",
+   "sizes": {
+    "14": 483000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "no",
+   "title": "Norway",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1600000000,
+    "13": 915000000
+   },
+   "zoom": 13
+  },
+  {
+   "key": "np",
+   "title": "Nepal",
+   "continent": "Asia",
+   "sizes": {
+    "14": 243000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nr",
+   "title": "Nauru",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 175000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nu",
+   "title": "Niue",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 366000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "nz",
+   "title": "New Zealand",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 310000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "om",
+   "title": "Oman",
+   "continent": "Asia",
+   "sizes": {
+    "14": 36000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pa",
+   "title": "Panama",
+   "continent": "North America",
+   "sizes": {
+    "14": 37000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pe",
+   "title": "Peru",
+   "continent": "South America",
+   "sizes": {
+    "14": 252000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pf",
+   "title": "French Polynesia",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 7100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pg",
+   "title": "Papua New Guinea",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 74000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ph",
+   "title": "Philippines",
+   "continent": "Asia",
+   "sizes": {
+    "14": 280000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pk",
+   "title": "Pakistan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 227000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pl",
+   "title": "Poland",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1400000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pm",
+   "title": "Saint Pierre and Miquelon",
+   "continent": "North America",
+   "sizes": {
+    "14": 1600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pr",
+   "title": "Puerto Rico",
+   "continent": "North America",
+   "sizes": {
+    "14": 24000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ps",
+   "title": "Palestinian Territory",
+   "continent": "Asia",
+   "sizes": {
+    "14": 20000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pt",
+   "title": "Portugal",
+   "continent": "Europe",
+   "sizes": {
+    "14": 296000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "pw",
+   "title": "Palau",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "py",
+   "title": "Paraguay",
+   "continent": "South America",
+   "sizes": {
+    "14": 90000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "qa",
+   "title": "Qatar",
+   "continent": "Asia",
+   "sizes": {
+    "14": 12000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ro",
+   "title": "Romania",
+   "continent": "Europe",
+   "sizes": {
+    "14": 384000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "rs",
+   "title": "Serbia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 175000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ru",
+   "title": "Russia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 6900000000,
+    "13": 3800000000
+   },
+   "zoom": null,
+   "states": [
+    {
+     "key": "ru-ad",
+     "title": "Republic of Adygea, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 17000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-al",
+     "title": "Altai Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 88000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-alt",
+     "title": "Altai Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 185000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-amu",
+     "title": "Amur, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 51000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ark",
+     "title": "Arkhangelsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 215000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ast",
+     "title": "Astrakhan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 26000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ba",
+     "title": "Bashkortostan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 155000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-bel",
+     "title": "Belgorod, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 50000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-bry",
+     "title": "Bryansk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 38000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-bu",
+     "title": "Republic of Buryatia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 62000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ce",
+     "title": "Chechen Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 17000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-che",
+     "title": "Chelyabinsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 98000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-chu",
+     "title": "Chukotka Autonomous Okrug, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 139000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-cu",
+     "title": "Chuvash Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 31000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-da",
+     "title": "Republic of Dagestan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 39000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-in",
+     "title": "Republic of Ingushetia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 5700000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-irk",
+     "title": "Irkutsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 141000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-iva",
+     "title": "Ivanovo, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 38000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kam",
+     "title": "Kamchatka Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 81000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kb",
+     "title": "Kabardino-Balkaria, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 19000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kc",
+     "title": "Karachay-Cherkess Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 29000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kda",
+     "title": "Krasnodar Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 114000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kem",
+     "title": "Kemerovo, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 52000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kgd",
+     "title": "Kaliningrad, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 35000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kgn",
+     "title": "Kurgan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 57000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kha",
+     "title": "Khabarovsk Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 175000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-khm",
+     "title": "Khanty-Mansi Autonomous Okrug, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 188000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kir",
+     "title": "Kirov, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 195000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kk",
+     "title": "Republic of Khakassia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 19000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kl",
+     "title": "Republic of Kalmykia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 19000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-klu",
+     "title": "Kaluga, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 52000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ko",
+     "title": "Komi Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 161000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kos",
+     "title": "Kostroma, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 48000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kr",
+     "title": "Karelia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 273000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-krs",
+     "title": "Kursk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 68000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-kya",
+     "title": "Krasnoyarsk Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 344000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-len",
+     "title": "Leningrad, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 168000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-lip",
+     "title": "Lipetsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 46000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-mag",
+     "title": "Magadan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 47000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-me",
+     "title": "Mari El Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 40000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-mo",
+     "title": "Republic of Mordovia, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 37000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-mos",
+     "title": "Moscow, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 38000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-mow",
+     "title": "Moscow, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 168000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-mur",
+     "title": "Murmansk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 110000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-nen",
+     "title": "Nenets Autonomous Okrug, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 61000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ngr",
+     "title": "Novgorod, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 52000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-niz",
+     "title": "Nizhny Novgorod, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 96000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-nvs",
+     "title": "Novosibirsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 107000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-oms",
+     "title": "Omsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 88000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ore",
+     "title": "Orenburg, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 69000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-orl",
+     "title": "Oryol, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 31000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-per",
+     "title": "Perm Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 151000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-pnz",
+     "title": "Penza, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 42000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-pri",
+     "title": "Primorsky Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 55000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-psk",
+     "title": "Pskov, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 107000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ros",
+     "title": "Rostov, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 100000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-rus283",
+     "title": "Autonomous Republic of Crimea, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 34000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-rus5482",
+     "title": "Sevastopol, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 4200000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-rus99",
+     "title": "None, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 52000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-rya",
+     "title": "Ryazan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 50000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sa",
+     "title": "Sakha Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 458000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sak",
+     "title": "Sakhalin, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 66000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sam",
+     "title": "Samara, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 60000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sar",
+     "title": "Saratov, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 62000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-se",
+     "title": "Republic of North Ossetia-Alania, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 10000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-smo",
+     "title": "Smolensk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 72000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-spe",
+     "title": "Saint Petersburg, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 31000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sta",
+     "title": "Stavropol Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 43000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-sve",
+     "title": "Sverdlovsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 146000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ta",
+     "title": "Republic of Tatarstan, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 119000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-tam",
+     "title": "Tambov, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 44000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-tom",
+     "title": "Tomsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 69000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-tul",
+     "title": "Tula, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 45000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-tve",
+     "title": "Tver, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 119000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ty",
+     "title": "Tuva Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 22000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-tyu",
+     "title": "Tyumen, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 75000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-ud",
+     "title": "Udmurt Republic, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 75000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-uly",
+     "title": "Ulyanovsk, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 42000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-vgg",
+     "title": "Volgograd, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 82000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-vla",
+     "title": "Vladimir, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 72000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-vlg",
+     "title": "Vologda, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 112000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-vor",
+     "title": "Voronezh, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 77000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-yan",
+     "title": "Yamalo-Nenets Autonomous Okrug, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 133000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-yar",
+     "title": "Yaroslavl, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 59000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-yev",
+     "title": "Jewish, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 15000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "ru-zab",
+     "title": "Zabaykalsky Krai, Russia",
+     "continent": "Europe",
+     "sizes": {
+      "14": 65000000
+     },
+     "zoom": 14
+    }
+   ]
+  },
+  {
+   "key": "rw",
+   "title": "Rwanda",
+   "continent": "Africa",
+   "sizes": {
+    "14": 36000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sa",
+   "title": "Saudi Arabia",
+   "continent": "Asia",
+   "sizes": {
+    "14": 219000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sb",
+   "title": "Solomon Islands",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 16000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sc",
+   "title": "Seychelles",
+   "continent": "Seven seas (open ocean)",
+   "sizes": {
+    "14": 1100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sd",
+   "title": "Sudan",
+   "continent": "Africa",
+   "sizes": {
+    "14": 166000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "se",
+   "title": "Sweden",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1200000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sg",
+   "title": "Singapore",
+   "continent": "Asia",
+   "sizes": {
+    "14": 9300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sh",
+   "title": "Saint Helena",
+   "continent": "Seven seas (open ocean)",
+   "sizes": {
+    "14": 676000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "si",
+   "title": "Slovenia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 244000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sk",
+   "title": "Slovakia",
+   "continent": "Europe",
+   "sizes": {
+    "14": 217000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sl",
+   "title": "Sierra Leone",
+   "continent": "Africa",
+   "sizes": {
+    "14": 29000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sm",
+   "title": "San Marino",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1800000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sn",
+   "title": "Senegal",
+   "continent": "Africa",
+   "sizes": {
+    "14": 81000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "so",
+   "title": "Somalia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 216000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sol",
+   "title": "Somaliland",
+   "continent": "Africa",
+   "sizes": {
+    "14": 33000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sr",
+   "title": "Suriname",
+   "continent": "South America",
+   "sizes": {
+    "14": 25000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ss",
+   "title": "South Sudan",
+   "continent": "Africa",
+   "sizes": {
+    "14": 80000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "st",
+   "title": "Sao Tome and Principe",
+   "continent": "Africa",
+   "sizes": {
+    "14": 1300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sv",
+   "title": "El Salvador",
+   "continent": "North America",
+   "sizes": {
+    "14": 21000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sx",
+   "title": "Sint Maarten",
+   "continent": "North America",
+   "sizes": {
+    "14": 516000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sy",
+   "title": "Syria",
+   "continent": "Asia",
+   "sizes": {
+    "14": 82000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "sz",
+   "title": "Eswatini",
+   "continent": "Africa",
+   "sizes": {
+    "14": 14000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tc",
+   "title": "Turks and Caicos Islands",
+   "continent": "North America",
+   "sizes": {
+    "14": 814000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "td",
+   "title": "Chad",
+   "continent": "Africa",
+   "sizes": {
+    "14": 106000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tg",
+   "title": "Togo",
+   "continent": "Africa",
+   "sizes": {
+    "14": 23000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "th",
+   "title": "Thailand",
+   "continent": "Asia",
+   "sizes": {
+    "14": 313000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tj",
+   "title": "Tajikistan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 62000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tl",
+   "title": "Timor Leste",
+   "continent": "Asia",
+   "sizes": {
+    "14": 9700000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tm",
+   "title": "Turkmenistan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 37000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tn",
+   "title": "Tunisia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 66000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "to",
+   "title": "Tonga",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 2400000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tr",
+   "title": "Turkey",
+   "continent": "Asia",
+   "sizes": {
+    "14": 679000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tt",
+   "title": "Trinidad and Tobago",
+   "continent": "North America",
+   "sizes": {
+    "14": 6100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tv",
+   "title": "Tuvalu",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 169000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tw",
+   "title": "Taiwan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 94000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "tz",
+   "title": "Tanzania",
+   "continent": "Africa",
+   "sizes": {
+    "14": 246000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ua",
+   "title": "Ukraine",
+   "continent": "Europe",
+   "sizes": {
+    "14": 1000000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ug",
+   "title": "Uganda",
+   "continent": "Africa",
+   "sizes": {
+    "14": 131000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "us",
+   "title": "United States",
+   "continent": "North America",
+   "sizes": {
+    "14": 7900000000,
+    "13": 3800000000
+   },
+   "zoom": null,
+   "states": [
+    {
+     "key": "us-ak",
+     "title": "Alaska, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 358000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-al",
+     "title": "Alabama, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 142000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ar",
+     "title": "Arkansas, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 88000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-az",
+     "title": "Arizona, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 210000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ca",
+     "title": "California, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 519000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-co",
+     "title": "Colorado, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 246000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ct",
+     "title": "Connecticut, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 68000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-dc",
+     "title": "Washington, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 6300000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-de",
+     "title": "Delaware, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 18000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-fl",
+     "title": "Florida, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 594000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ga",
+     "title": "Georgia, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 197000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-hi",
+     "title": "Hawaii, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 15000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ia",
+     "title": "Iowa, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 111000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-id",
+     "title": "Idaho, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 121000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-il",
+     "title": "Illinois, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 218000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-in",
+     "title": "Indiana, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 135000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ks",
+     "title": "Kansas, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 119000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ky",
+     "title": "Kentucky, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 104000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-la",
+     "title": "Louisiana, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 107000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ma",
+     "title": "Massachusetts, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 117000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-md",
+     "title": "Maryland, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 106000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-me",
+     "title": "Maine, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 90000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-mi",
+     "title": "Michigan, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 229000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-mn",
+     "title": "Minnesota, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 234000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-mo",
+     "title": "Missouri, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 171000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ms",
+     "title": "Mississippi, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 68000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-mt",
+     "title": "Montana, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 139000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nc",
+     "title": "North Carolina, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 233000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nd",
+     "title": "North Dakota, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 92000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ne",
+     "title": "Nebraska, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 91000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nh",
+     "title": "New Hampshire, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 54000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nj",
+     "title": "New Jersey, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 104000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nm",
+     "title": "New Mexico, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 120000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-nv",
+     "title": "Nevada, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 103000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ny",
+     "title": "New York, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 218000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-oh",
+     "title": "Ohio, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 241000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ok",
+     "title": "Oklahoma, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 107000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-or",
+     "title": "Oregon, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 195000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-pa",
+     "title": "Pennsylvania, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 230000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ri",
+     "title": "Rhode Island, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 34000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-sc",
+     "title": "South Carolina, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 118000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-sd",
+     "title": "South Dakota, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 64000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-tn",
+     "title": "Tennessee, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 128000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-tx",
+     "title": "Texas, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 432000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-ut",
+     "title": "Utah, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 131000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-va",
+     "title": "Virginia, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 217000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-vt",
+     "title": "Vermont, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 39000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-wa",
+     "title": "Washington, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 240000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-wi",
+     "title": "Wisconsin, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 222000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-wv",
+     "title": "West Virginia, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 132000000
+     },
+     "zoom": 14
+    },
+    {
+     "key": "us-wy",
+     "title": "Wyoming, United States",
+     "continent": "North America",
+     "sizes": {
+      "14": 120000000
+     },
+     "zoom": 14
+    }
+   ]
+  },
+  {
+   "key": "usg",
+   "title": "US Naval Base Guantanamo Bay",
+   "continent": "North America",
+   "sizes": {
+    "14": 343000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "uy",
+   "title": "Uruguay",
+   "continent": "South America",
+   "sizes": {
+    "14": 51000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "uz",
+   "title": "Uzbekistan",
+   "continent": "Asia",
+   "sizes": {
+    "14": 130000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "vc",
+   "title": "Saint Vincent and the Grenadines",
+   "continent": "North America",
+   "sizes": {
+    "14": 1000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ve",
+   "title": "Venezuela",
+   "continent": "South America",
+   "sizes": {
+    "14": 156000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "vg",
+   "title": "British Virgin Islands",
+   "continent": "North America",
+   "sizes": {
+    "14": 720000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "vi",
+   "title": "U.S. Virgin Islands",
+   "continent": "North America",
+   "sizes": {
+    "14": 1600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "vn",
+   "title": "Vietnam",
+   "continent": "Asia",
+   "sizes": {
+    "14": 262000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "vu",
+   "title": "Vanuatu",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 4300000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "wf",
+   "title": "Wallis and Futuna",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 499000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ws",
+   "title": "Samoa",
+   "continent": "Oceania",
+   "sizes": {
+    "14": 1600000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "wsb",
+   "title": "Akrotiri",
+   "continent": "Asia",
+   "sizes": {
+    "14": 1100000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "xk",
+   "title": "Kosovo",
+   "continent": "Europe",
+   "sizes": {
+    "14": 28000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "ye",
+   "title": "Yemen",
+   "continent": "Asia",
+   "sizes": {
+    "14": 71000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "za",
+   "title": "South Africa",
+   "continent": "Africa",
+   "sizes": {
+    "14": 356000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "zm",
+   "title": "Zambia",
+   "continent": "Africa",
+   "sizes": {
+    "14": 140000000
+   },
+   "zoom": 14
+  },
+  {
+   "key": "zw",
+   "title": "Zimbabwe",
+   "continent": "Africa",
+   "sizes": {
+    "14": 75000000
+   },
+   "zoom": 14
+  }
+ ]
+}

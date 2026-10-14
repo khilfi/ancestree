@@ -31,6 +31,7 @@ class GraphPerson(BaseModel):
     # A date of birth written but not readable, e.g. "31/2/1950" from a spreadsheet:
     # What's missing shows it beside the date picker.
     birth_text: str | None = None
+    has_story: bool = False  # a life story written: a book mark on their photo opens it
 
 
 class GraphLink(BaseModel):

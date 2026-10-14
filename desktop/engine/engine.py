@@ -50,12 +50,14 @@ from ancestree.exchange.restore import ArchiveError, read_info
 from ancestree.main import create_app
 from ancestree.ownneo4j.runtime import NEO4J_VERSION, FetchError, Runtime
 from ancestree.ownneo4j.server import OwnNeo4j, StoppedError, send_ctrl_c
+from ancestree.seed.example import NAME as EXAMPLE_NAME
 from ancestree.services.familyfolder import FamilyFolder
 
 FROZEN = getattr(sys, "frozen", False)
 # For development and tests alone (0.4.2): a packed engine, as every release is, takes none of
 # these from its environment, so no other program can point it at another database, Neo4j,
-# Google client, or a copy's app of its own making for the copies a family sends.
+# Google client, a copy's app of its own making for the copies a family sends, or another
+# server to send an address looked up online to.
 DEVELOPMENT_SETTINGS = (
     "ANCESTREE_NEO4J_URI",
     "ANCESTREE_NEO4J_PASSWORD",
@@ -64,6 +66,7 @@ DEVELOPMENT_SETTINGS = (
     "ANCESTREE_NEO4J_RUNTIME",
     "ANCESTREE_GOOGLE_CLIENT",
     PREBUILT,
+    "PHOTON_URL",
 )
 
 
@@ -265,6 +268,20 @@ def add_family_routes(app: FastAPI, families: Families, family: Family, external
             return _refused(error.code, error.message)
         return {**families.listed(), "added": added.id}
 
+    @app.post("/api/desktop/families/example", include_in_schema=False, response_model=None)
+    async def add_example() -> dict[str, Any] | JSONResponse:
+        """The example family, a family of its own, filled as it first opens: the
+        one here already, if there is one."""
+        if external:
+            return _refused(
+                "one_database",
+                "This AncesTree uses a database of its own choosing, which holds one family.",
+            )
+        example = next((each for each in families.families if each.example), None)
+        if example is None:
+            example = families.add(EXAMPLE_NAME, example=True)
+        return {**families.listed(), "added": example.id}
+
     @app.post("/api/desktop/families/from-backup", include_in_schema=False, response_model=None)
     async def add_family_from_backup(
         file: Annotated[UploadFile, File()],
@@ -449,9 +466,31 @@ def _announce(server: uvicorn.Server, port: int) -> None:
 
 
 def drop_development_settings() -> None:
-    """Settings for development and tests, gone from the environment: a packed engine's."""
-    for name in DEVELOPMENT_SETTINGS:
-        os.environ.pop(name, None)
+    """Settings for development and tests, gone from the environment: a packed engine's. In
+    capitals or not, as the app's settings read them either way, on the Mac and Linux too,
+    where `photon_url` is another name than `PHOTON_URL` (0.8.0)."""
+    for name in list(os.environ):
+        if name.upper() in DEVELOPMENT_SETTINGS:
+            os.environ.pop(name, None)
+
+
+def more_open_files(most: int = 10_240) -> int:
+    """As many files open at once as the system lets the engine have, up to `most`: a Mac starts
+    a program with 256, and each map pack read holds one (0.8.0). How many it may have now;
+    Windows has no such limit to raise."""
+    if sys.platform == "win32":
+        return most
+    import resource
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    wanted = most if hard == resource.RLIM_INFINITY else min(most, hard)
+    if soft != resource.RLIM_INFINITY and soft < wanted:
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (wanted, hard))
+        except OSError, ValueError:
+            return soft  # kept as it was
+        return wanted
+    return soft
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -469,6 +508,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--data is required")
     if FROZEN:
         drop_development_settings()
+    more_open_files()
 
     root: Path = args.data.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -538,10 +578,13 @@ def main(argv: list[str] | None = None) -> None:
             family_id=family.id,
             family_name=family.name,
             restore_first=places.backups / family.restore if family.restore else None,
+            # Filled only where it's the example family (0.8.0): never a family of one's own.
+            example_first=family.fill and family.example,
+            example=family.example,
             maps_dir=root / "maps",  # every family's, beside Neo4j
         )
         # Tried once, as the family opens: one that can't be restored stays in its backups.
-        families.note(family.id, restore="")
+        families.note(family.id, restore="", fill=False)
         if FROZEN:  # the copy's app came ready built, beside the app's pages
             os.environ.setdefault(
                 PREBUILT, str(Path(getattr(sys, "_MEIPASS", "")) / "viewer" / "viewer.html")

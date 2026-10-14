@@ -22,6 +22,10 @@ class FolderMember(BaseModel):
     role: Role
     email: str  # the Google account it signed in with; empty if not known yet
     you: bool  # this computer
+    # The keeper's view: another of the keeper's own computers, on its Google account;
+    # and allowed to invite and let in for it.
+    own: bool = False
+    helps: bool = False
 
 
 class FolderAsking(BaseModel):
@@ -51,6 +55,7 @@ class FolderChanges(BaseModel):
     proposal: int  # which of its proposals: the newest, standing for those before it
     sent_at: datetime
     changed: int = 0  # the people and links it changed, as it counted them
+    words_only: bool = False  # a viewer's: only its words about people are taken
 
 
 class RoleChanged(BaseModel):
@@ -85,6 +90,27 @@ class HandedOver(BaseModel):
 
     to: str  # the new keeper's computer, as its owner named it
     role: Role  # what this computer is now
+
+
+class Helped(BaseModel):
+    """What the keeper's computer did with one of its own other computers' instructions."""
+
+    action: str = ""  # "let_in" or "invited"; empty for one that couldn't be read
+    name: str  # the computer it was about, or the account invited
+    done: bool
+    why: str = ""  # why not, in plain words
+    by: str = ""  # the computer that asked: on the keeper's computer
+    at: datetime | None = None
+
+
+class HelpingView(BaseModel):
+    """On another of the keeper's own computers, allowed to invite and let in for it."""
+
+    keeper: str  # the keeper's computer's name
+    running: bool  # it said so lately: within a quarter of an hour
+    looked: datetime | None  # when it last did
+    waiting: list[str] = Field(default_factory=list)  # asked to let in, not done yet
+    done: list[Helped] = Field(default_factory=list)
 
 
 class FamilyFolderStatus(BaseModel):
@@ -136,6 +162,8 @@ class FamilyFolderStatus(BaseModel):
     offer_made: OfferMade | None = None  # the keeper's
     offer_here: OfferHere | None = None  # a relative's
     handed: HandedOver | None = None  # the old keeper's, as a relative
+    helping: HelpingView | None = None  # another of the keeper's own, allowed to help
+    helped: list[Helped] = Field(default_factory=list)  # the keeper's, newest first
 
 
 class SignInStarted(BaseModel):
@@ -206,6 +234,13 @@ class OfferFamily(BaseModel):
 
 class OneComputer(BaseModel):
     device: str
+
+
+class Helper(BaseModel):
+    """Another of the keeper's own computers allowed to invite and let in for it, or not."""
+
+    device: str
+    allowed: bool
 
 
 class Invite(BaseModel):

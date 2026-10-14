@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { GrowingText } from "@/components/ui/growing-text";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -213,7 +213,7 @@ function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <Field id="relative_name" label="Full name">
-        <Input id="relative_name" autoFocus {...register("full_name")} />
+        <GrowingText id="relative_name" autoFocus {...register("full_name")} />
         {errors.full_name && <p className="text-xs text-red-600">{errors.full_name.message}</p>}
       </Field>
       <div className="grid grid-cols-2 gap-3">

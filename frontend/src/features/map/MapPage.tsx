@@ -20,7 +20,7 @@ import {
   useSampleMap,
   useTreeSettings,
 } from "@/api/queries";
-import type { GraphPerson, MapTown, Place } from "@/api/types";
+import type { AtParents, GraphPerson, MapTown, Place } from "@/api/types";
 import { useCopy } from "@/app/copy";
 import { StartAdvice } from "@/app/StartAdvice";
 import { Button } from "@/components/ui/button";
@@ -131,10 +131,12 @@ export function MapPage() {
     const rough: { person: GraphPerson; place: Place }[] = [];
     const missing: GraphPerson[] = [];
     const unfound: { person: GraphPerson; place: Place }[] = [];
+    const atParents = new Map<string, AtParents["whose"]>(); // with no place of their own
     for (const entry of map.data?.people ?? []) {
       const person = people.get(entry.id);
       if (!person || (hideOthers && kept && !kept.has(entry.id))) continue;
       const located = field === "residence" ? entry.lives : entry.born;
+      if (field === "residence" && entry.at_parents) atParents.set(entry.id, entry.at_parents);
       if (!located) {
         missing.push(person);
         continue;
@@ -144,7 +146,8 @@ export function MapPage() {
         continue;
       }
       const [x, y] = onPlane(located.lat, located.lon);
-      const isRough = located.found === "state" || located.found === "country";
+      // A location of its own is never rough, whatever its town is found as.
+      const isRough = !located.exact && (located.found === "state" || located.found === "country");
       spots.push({
         id: entry.id,
         x,
@@ -154,6 +157,7 @@ export function MapPage() {
         state: located.state ?? null,
         country: located.country,
         rough: isRough,
+        exact: located.exact ?? null,
       });
       if (isRough) rough.push({ person, place: located.place });
       const { lives, born } = entry;
@@ -166,7 +170,7 @@ export function MapPage() {
       }
     }
     missing.sort((a, b) => a.full_name.localeCompare(b.full_name));
-    return { spots, moves, rough, missing, unfound };
+    return { spots, moves, rough, missing, unfound, atParents };
   }, [map.data, people, field, hideOthers, kept]);
 
   // Brought into view: a state or town chosen in the list, or someone found by search.
@@ -252,6 +256,7 @@ export function MapPage() {
         rough={found.rough}
         missing={found.missing}
         unfound={found.unfound}
+        atParents={found.atParents}
         pins={map.data?.pins ?? []}
         editable={editable && !sample}
         onShow={show}
