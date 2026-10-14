@@ -331,3 +331,63 @@ def test_the_engine_may_open_as_many_files_as_the_map_packs_need() -> None:
 
         soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
         assert soft == resource.RLIM_INFINITY or soft >= min(10_240, hard)
+
+
+def test_an_install_is_tidied_of_what_earlier_updates_left(tmp_path: Path) -> None:
+    """Every Windows update before 0.8.1 left the earlier version's files beside the new ones,
+    so the engine called itself 0.3.1 since 0.4.0. At its start, an install takes away
+    every file not among its own, as listed as it was built, and the folders that leaves empty;
+    never a file of its own, and nothing without the list."""
+    own = [
+        "ancestree-engine.exe",
+        "_internal/ancestree-0.8.1.dist-info/METADATA",
+        "_internal/ancestree/VERSION",
+        "_internal/pages/index.html",
+        "_internal/pages/assets/index-new.js",
+    ]
+    left = [
+        "_internal/ancestree-0.3.1.dist-info/METADATA",
+        "_internal/ancestree-0.8.0.dist-info/METADATA",
+        "_internal/pages/assets/index-old.js",
+    ]
+    for name in [*own, *left]:
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).write_text(name, encoding="utf-8")
+    assert engine.tidy_install(tmp_path) == 0  # no list: as while developing, nothing goes
+    (tmp_path / engine.INSTALLED).write_text("\n".join(own) + "\n", encoding="utf-8")
+
+    assert engine.tidy_install(tmp_path) == 3
+    found = sorted(p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file())
+    assert found == sorted([*own, engine.INSTALLED])
+    assert not (tmp_path / "_internal" / "ancestree-0.3.1.dist-info").exists()
+    assert (tmp_path / "_internal" / "pages" / "assets").is_dir()
+    assert engine.tidy_install(tmp_path) == 0  # tidy already
+
+
+def test_the_shell_and_its_engine_say_when_their_versions_differ() -> None:
+    assert engine.versions_differ("0.8.1", "0.8.0")
+    assert not engine.versions_differ("0.8.1", "0.8.1")
+    assert not engine.versions_differ("", "0.8.1")  # started by hand, with no shell
+
+
+def test_the_engines_version_is_its_builds_own(tmp_path: Path) -> None:
+    """Written beside the package as the engine is built, so no earlier version's record speaks
+    for it; while developing, as installed."""
+    from ancestree import built_version
+
+    (tmp_path / "VERSION").write_text("0.8.1\n", encoding="utf-8")
+    assert built_version(tmp_path) == "0.8.1"
+    from importlib.metadata import version
+
+    assert built_version(tmp_path / "nowhere") == version("ancestree")
+
+
+def test_the_windows_installer_replaces_the_engines_folder_whole() -> None:
+    """Tauri's installer writes the new version's files over the old and leaves the rest: the
+    hook takes the engine's folder away first, but only a folder that's the engine's."""
+    hooks = (Path(__file__).parents[1] / "src-tauri" / "windows" / "hooks.nsh").read_text(
+        encoding="utf-8"
+    )
+    before = hooks.split("!macro NSIS_HOOK_PREINSTALL", 1)[1].split("!macroend", 1)[0]
+    assert r'${FileExists} "$INSTDIR\engine\ancestree-engine.exe"' in before
+    assert r'RMDir /r "$INSTDIR\engine"' in before

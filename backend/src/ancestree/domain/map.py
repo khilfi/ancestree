@@ -54,6 +54,7 @@ class MapPerson(BaseModel):
     id: UUID
     lives: Located | None = None  # None: no "Lives in"
     born: Located | None = None  # None: no birthplace
+    died: Located | None = None  # None: no place of death
     # With no place of their own, their parents': whose, so it's said, and so What's
     # missing can list the grown-ups among them.
     at_parents: Literal["mother", "father", "parents"] | None = None

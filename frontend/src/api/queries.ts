@@ -2,6 +2,7 @@ import {
   keepPreviousData,
   type QueryClient,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -283,6 +284,18 @@ export function usePerson(id: string | null) {
     queryFn: () =>
       unwrap(api.GET("/api/persons/{person_id}", { params: { path: { person_id: id ?? "" } } })),
     enabled: id !== null,
+  });
+}
+
+/** Several people's details at once, as `usePerson` reads each: someone's parents', for
+ *  **Same as their parents'** in their form. */
+export function usePeople(ids: string[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: keys.person(id),
+      queryFn: () =>
+        unwrap(api.GET("/api/persons/{person_id}", { params: { path: { person_id: id } } })),
+    })),
   });
 }
 

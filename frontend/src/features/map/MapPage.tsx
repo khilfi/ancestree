@@ -46,7 +46,12 @@ import { formatPlace } from "@/lib/people";
 import { onPlane } from "./geo";
 import type { Spot } from "./levels";
 import { MapCanvas, type MapTarget, type Move } from "./MapCanvas";
+import type { PlaceField } from "./PlaceFix";
 import { WhereList } from "./WhereList";
+
+// Which places the map shows, as its address says them: where they live by default.
+const BY: Record<PlaceField, string> = { residence: "", birth_place: "born", death_place: "died" };
+
 import { drawnFromPacks, drawsWebGL2 } from "./webgl";
 
 function Message({ children }: { children: ReactNode }) {
@@ -83,11 +88,13 @@ export function MapPage() {
   const map = sample ? madeMap : realMap;
   const selectedId = sample ? null : params.get("person");
   const view = readView(params);
-  const field = params.get("by") === "born" ? "birth_place" : "residence";
+  const by = params.get("by");
+  const field: PlaceField =
+    by === "born" ? "birth_place" : by === "died" ? "death_place" : "residence";
   const showMoves = params.get("moves") === "1";
   const own = useMemo(
     () => ({
-      ...(field === "birth_place" ? { by: "born" } : {}),
+      ...(field !== "residence" ? { by: BY[field] } : {}),
       ...(showMoves ? { moves: "1" } : {}),
       ...(sample ? { sample: String(sample) } : {}),
     }),
@@ -135,7 +142,10 @@ export function MapPage() {
     for (const entry of map.data?.people ?? []) {
       const person = people.get(entry.id);
       if (!person || (hideOthers && kept && !kept.has(entry.id))) continue;
-      const located = field === "residence" ? entry.lives : entry.born;
+      // Where they died: those who have, never the living, missing none.
+      if (field === "death_place" && person.is_living !== false) continue;
+      const located =
+        field === "residence" ? entry.lives : field === "birth_place" ? entry.born : entry.died;
       if (field === "residence" && entry.at_parents) atParents.set(entry.id, entry.at_parents);
       if (!located) {
         missing.push(person);
@@ -290,7 +300,7 @@ export function MapPage() {
               onValueChange={(value) =>
                 go({
                   ...(selectedId ? { person: selectedId } : {}),
-                  by: value === "birth_place" ? "born" : "",
+                  by: BY[value as PlaceField],
                 })
               }
             >
@@ -300,6 +310,7 @@ export function MapPage() {
               <SelectContent>
                 <SelectItem value="residence">Where they live</SelectItem>
                 <SelectItem value="birth_place">Where they were born</SelectItem>
+                <SelectItem value="death_place">Where they died</SelectItem>
               </SelectContent>
             </Select>
           </span>

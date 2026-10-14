@@ -125,8 +125,17 @@ function show(element: React.ReactNode) {
   );
 }
 
+/** A field of the form, its place block opened first, as someone would. */
 function field(label: string): HTMLTextAreaElement {
-  const found = document.querySelector<HTMLTextAreaElement>(`[aria-label="${label}"]`);
+  const named = `[aria-label="${label}"]`;
+  if (!document.querySelector(named)) {
+    const title = label.split(":")[0] ?? label;
+    const block = [...document.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find(
+      (button) => button.textContent?.startsWith(title),
+    );
+    if (block?.getAttribute("aria-expanded") === "false") act(() => block.click());
+  }
+  const found = document.querySelector<HTMLTextAreaElement>(named);
   if (!found) throw new Error(`No field ${label}`);
   return found;
 }
@@ -165,13 +174,15 @@ describe("an address, filled in as it's typed", () => {
         onCancel={() => {}}
       />,
     );
-    type(field("Lives in: address"), "No. 12, Jalan Melati 3, 43000 Kajang");
+    type(field("Where they live now: address"), "No. 12, Jalan Melati 3, 43000 Kajang");
     await until("Kajang · Hulu Langat · Selangor · 43000 · Malaysia");
     act(() => button("Kajang · Hulu Langat · Selangor · 43000 · Malaysia")?.click());
-    expect(field("Lives in: town").value).toBe("Kajang");
-    expect(field("Lives in: district").value).toBe("Hulu Langat");
-    expect(field("Lives in: postcode").value).toBe("43000");
-    expect(field("Lives in: address").value).toBe("No. 12, Jalan Melati 3, 43000 Kajang");
+    expect(field("Where they live now: town").value).toBe("Kajang");
+    expect(field("Where they live now: district").value).toBe("Hulu Langat");
+    expect(field("Where they live now: postcode").value).toBe("43000");
+    expect(field("Where they live now: address").value).toBe(
+      "No. 12, Jalan Melati 3, 43000 Kajang",
+    );
     expect(document.body.textContent).toContain("On the mapPostcode area2.9930, 101.7880");
     act(() => button("Save")?.click());
     const residence = (await saved()).residence;
@@ -185,7 +196,7 @@ describe("an address, filled in as it's typed", () => {
     Element.prototype.scrollIntoView = scrolled;
     try {
       show(<PersonForm person={aina} onSaved={() => {}} onCancel={() => {}} />);
-      type(field("Lives in: address"), "43000");
+      type(field("Where they live now: address"), "43000");
       await until("Kajang · Hulu Langat");
       expect(scrolled).toHaveBeenCalledWith({ block: "nearest" });
     } finally {
@@ -196,7 +207,7 @@ describe("an address, filled in as it's typed", () => {
   it("offers the country's map and places where they aren't on this computer", async () => {
     answer();
     show(<PersonForm person={aina} onSaved={() => {}} onCancel={() => {}} />);
-    type(field("Lives in: address"), "43000");
+    type(field("Where they live now: address"), "43000");
     await until("Malaysia's towns, villages and postcodes aren't on this computer yet.");
     await act(async () => button("Download Malaysia's map and places")?.click());
     await until("Malaysia's map and places are on their way");
@@ -206,10 +217,10 @@ describe("an address, filled in as it's typed", () => {
   it("forgets where a place is once its town is typed by hand", async () => {
     answer();
     show(<PersonForm person={aina} onSaved={() => {}} onCancel={() => {}} />);
-    type(field("Lives in: address"), "43000");
+    type(field("Where they live now: address"), "43000");
     await until("Kajang · Hulu Langat");
     act(() => button("Kajang · Hulu Langat · Selangor · 43000 · Malaysia")?.click());
-    type(field("Lives in: town"), "Semenyih");
+    type(field("Where they live now: town"), "Semenyih");
     expect(document.body.textContent).not.toContain("2.9930, 101.7880");
     expect(document.body.textContent).toContain("On the mapat its town, as the map finds it");
   });
@@ -240,7 +251,7 @@ describe("living at their parents'", () => {
     expect(document.querySelector("#lives-with-father")).toBeNull();
     const elsewhere = document.querySelector<HTMLButtonElement>("#lives-elsewhere");
     expect(elsewhere?.getAttribute("role")).toBe("checkbox");
-    type(field("Lives in: town"), "Kajang");
+    type(field("Where they live now: town"), "Kajang");
     expect(document.querySelector("#lives-elsewhere")).toBeNull();
   });
 

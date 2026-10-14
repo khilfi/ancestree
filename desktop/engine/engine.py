@@ -493,6 +493,40 @@ def more_open_files(most: int = 10_240) -> int:
     return soft
 
 
+INSTALLED = "install-files.txt"  # every file of the engine, as built (engine.spec)
+
+
+def tidy_install(folder: Path) -> int:
+    """What earlier versions' updates left in the engine's folder, taken away (0.8.1, D76): every
+    file not among this build's own, as listed as it was built, and the folders that leaves
+    empty. How many files went; none without the list, as while developing. A file that can't
+    go now is tried again at the next start."""
+    try:
+        own = set((folder / INSTALLED).read_text(encoding="utf-8").splitlines())
+    except OSError:
+        return 0
+    own.add(INSTALLED)
+    kept = {parent.as_posix() for name in own for parent in Path(name).parents}
+    removed = 0
+    for path in sorted(folder.rglob("*"), key=lambda found: len(found.parts), reverse=True):
+        relative = path.relative_to(folder).as_posix()
+        try:
+            if path.is_file() and relative not in own:
+                path.unlink()
+                removed += 1
+            elif path.is_dir() and relative not in kept and not any(path.iterdir()):
+                path.rmdir()
+        except OSError:
+            continue  # in use, or not ours to change: left for the next start
+    return removed
+
+
+def versions_differ(app: str, engine: str) -> bool:
+    """Whether the shell and its engine are of different versions (0.8.1, D76): never meant,
+    and so said wherever it shows."""
+    return bool(app) and app != engine
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="AncesTree's engine for the desktop app")
     parser.add_argument("--data", type=Path, help="the app's data folder")
@@ -509,6 +543,11 @@ def main(argv: list[str] | None = None) -> None:
     if FROZEN:
         drop_development_settings()
     more_open_files()
+    # An install on Windows, tidied of what earlier updates left beside it (0.8.1, D76): the
+    # Mac's and Linux's are replaced whole, and changing them would break their signatures.
+    left_behind = (
+        tidy_install(Path(sys.executable).parent) if FROZEN and sys.platform == "win32" else 0
+    )
 
     root: Path = args.data.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -527,10 +566,29 @@ def main(argv: list[str] | None = None) -> None:
     if gone := families.tidy():
         print(f"Families removed over 30 days ago, deleted: {', '.join(gone)}", file=sys.stderr)
     stop = Stop()
-    updates = Updates(os.environ.get("ANCESTREE_APP_VERSION", __version__))
+    app_version = os.environ.get("ANCESTREE_APP_VERSION", "")
+    updates = Updates(app_version or __version__)
     if args.managed:
         threading.Thread(target=stop.watch, args=(updates,), daemon=True).start()
-    emit(stage="preparing", version=__version__, neo4j=NEO4J_VERSION, family=family.name)
+    # Each start's version and family, in engine.log too (0.8.1): it held only failures before.
+    print(
+        f"{datetime.now().astimezone().isoformat(timespec='seconds')} AncesTree's engine "
+        f"{__version__} starting, for {family.name}"
+        + (f"; {left_behind} files left by earlier versions taken away" if left_behind else ""),
+        file=sys.stderr,
+        flush=True,
+    )
+    emit(
+        stage="preparing",
+        version=__version__,
+        app=updates.current,
+        neo4j=NEO4J_VERSION,
+        family=family.name,
+        tidied=left_behind,
+    )
+    if versions_differ(app_version, __version__):
+        emit(stage="versions-differ", app=app_version, engine=__version__)
+        print(f"The app is {app_version}, but its engine {__version__}", file=sys.stderr)
     own: OwnNeo4j | None = None
     about: dict[str, Any] = {"engine": __version__, "app": updates.current}
     try:

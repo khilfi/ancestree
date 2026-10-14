@@ -423,15 +423,17 @@ They appear on the tree, not yet linked to anyone. To link them, see [Adding a r
 
 ### The details
 
-- *Name:* their **Full name**, **Nickname** (for example *Pak Mat*), **Title** (for example *Haji* or *Dato'*), **Gender**, and **Name in Jawi**.
-- *Birth:* the **Date**, and the place: its address, town, district, state, postcode and country.
-- *Death:* **Living or deceased**, the date and place, and where they're **Buried at**. Leave **Living or deceased** on **Work it out from the dates** if you're not sure.
-- *Now:* where they live, and their **Occupation**.
+- *Name:* their **Full name**, **Nickname** (for example *Pak Mat*), **Title** (for example *Haji* or *Dato'*), **Gender**, **Living or deceased**, and **Name in Jawi**. Leave **Living or deceased** on **Work it out from the dates** if you're not sure.
+- *Now:* **Where they live now**, the place the map shows, and their **Occupation**.
+- *Birth:* the **Date**, and **Where they were born**.
+- *Death:* only for someone who has died. Choose **Deceased** beside their name, and it opens: the **Date**, **Where they died**, and **Where they rest**, such as *Tanah Perkuburan Islam Kg. Baru*. If someone marked living has any of it filled in, it stays, with a note to choose **Deceased** or clear it.
 - *Notes:* a few short notes. Write longer things in their [life story](#9-life-stories).
 
 *Dates:* first choose how sure the date is: **Exact**, **About**, **Before**, **After** or **Between**. Then pick the day, month and year from the lists. A year alone is enough. While a list is open, typing jumps to it: type "19" then "38" for 1938, or "feb" for February. The **×** clears the date.
 
-*Places:* type the **Address** in one line, as you'd write it on an envelope: *No. 12, Jalan Melati 3, 43000 Kajang*. A postcode alone will do, or just the town. As you type, AncesTree suggests where it is from the places of the country below it, which starts as Malaysia: *Kajang · Hulu Langat · Selangor · 43000 · Malaysia*. For a place in another country, change the country first. Click a suggestion to fill in the **Town**, **District**, **State** and **Postcode**. Everything stays yours to change, and an address with no suggestion is kept as you typed it.
+*Places:* each place is one line, with its sign: a house for where they live, a cradle for where they were born, a stone for where they died. The line says what's there, such as *Kajang, Selangor · at its town*. Click it to open it; one opens at a time. To fill a place in from another, click **Same as where they live**, **Same as where they were born**, or **Same as their parents'** (or their mother's or father's, where the parents live apart).
+
+In a place, type the **Address** in one line, as you'd write it on an envelope: *No. 12, Jalan Melati 3, 43000 Kajang*. A postcode alone will do, or just the town. As you type, AncesTree suggests where it is from the places of the country below it, which starts as Malaysia: *Kajang · Hulu Langat · Selangor · 43000 · Malaysia*. For a place in another country, change the country first. Click a suggestion to fill in the **Town**, **District**, **State** and **Postcode**. Everything stays yours to change, and an address with no suggestion is kept as you typed it.
 
 *Where it is on the map:* nobody has to place the pin. AncesTree puts it there from the address, with no internet, as exactly as it knows the place, and says how under **On the map**: **Postcode area** or **Town**. A small map shows where it went, with **Looks right** beside it; nothing more is needed. If it's wrong, drag the pin, or click the right spot, on that small map. It's then **Exact (placed by hand)**, and nothing moves it again by itself. Or paste where it is into the box beneath: numbers such as *3.0006, 101.7869*, or a link from Google Maps, Apple Maps or OpenStreetMap on your phone. To put a pin before you know the address, click **Place on the map**: the town, district, state and postcode are filled in from the nearest place known, for you to keep or change.
 
@@ -443,7 +445,9 @@ Suggestions come from the places on your computer, with no internet: to begin wi
 
 Every box in the form grows as you type, so a long name or address shows whole. **Enter** still saves.
 
-*No place of their own:* someone with no **Lives in** of their own is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
+*Asked before saving:* if someone living has a place of death, or an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, keeps the town where they were born, and clears a living person's place of death. **Save as it is** saves it as you wrote it.
+
+*No place of their own:* someone with nothing under **Where they live now** is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
 - if the parents live in different places, it's their mother's. Choose **At their father's** to show them with their father instead;
 - if they don't live with their parents, tick **Lives elsewhere** (or choose it), and they're shown nowhere until their place is known;
 - it's never someone who has died, and never their grandparents' place: only their parents' own.
@@ -637,11 +641,11 @@ Click **Timeline** in the top bar. Everyone appears along the years, with a bar 
 
 ## 13. The map
 
-Click **Map** in the top bar. It shows where the family lives, or where they were born.
+Click **Map** in the top bar. It shows where the family lives, where they were born, or where they died.
 
 ![The map](guide/app-map.png)
 
-- **Show** chooses **Where they live** or **Where they were born**.
+- **Show** chooses **Where they live**, **Where they were born** or **Where they died**. **Where they died** lists only those who have died.
 - **Moves** draws a line from where each person was born to where they live.
 - Turn the mouse wheel to zoom. Each circle shows how many people are there. Click a circle to zoom in; close up, you see each person's photo in their town. Someone placed by their postcode's area or their town has a soft ring around them, which says *about here*. Someone placed exactly, to the house or by hand, has their photo on the spot, and a household's photos are fanned out there together.
 - Zoom in for more. Once the map's detail is on your computer (below), the map shows the land as OpenStreetMap draws it: towns, kampungs, roads, rivers and districts, each in its own name, with the English beneath where it differs. Without it, and in a view-only copy, the map draws each district and names the towns around your family's places as you zoom in.
@@ -690,7 +694,7 @@ When a country's places come, AncesTree looks again at everyone there whose pin 
 
 ![Family facts](guide/app-family-facts.png)
 
-**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address who are on the map only about there (**Not on the map exactly**: click **Put the pin where it is**, and drag it on the small map), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
+**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people living with a place of death (**Living, with a place of death**: click **Move it to Where they live**), people with an address who are on the map only about there (**Not on the map exactly**: click **Put the pin where it is**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
 
 ![What's missing](guide/app-settings-missing.png)
 
@@ -1386,7 +1390,7 @@ On a new computer, **Look around first** in the welcome bar does the same.
 
 ## 22. Updates
 
-AncesTree updates itself, and installs only updates signed by its maintainer:
+AncesTree updates itself, and installs only updates signed by its maintainer. **Settings → About** gives its version, and its engine's, which are always the same; if they ever aren't, it says what to do:
 
 ```mermaid
 flowchart TD

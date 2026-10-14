@@ -165,8 +165,17 @@ function show(person: PersonDetail) {
   );
 }
 
+/** A field of the form, its place block opened first, as someone would. */
 function field(label: string): HTMLTextAreaElement {
-  const found = document.querySelector<HTMLTextAreaElement>(`[aria-label="${label}"]`);
+  const named = `[aria-label="${label}"]`;
+  if (!document.querySelector(named)) {
+    const title = label.split(":")[0] ?? label;
+    const block = [...document.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find(
+      (button) => button.textContent?.startsWith(title),
+    );
+    if (block?.getAttribute("aria-expanded") === "false") act(() => block.click());
+  }
+  const found = document.querySelector<HTMLTextAreaElement>(named);
   if (!found) throw new Error(`No field ${label}`);
   return found;
 }
@@ -207,14 +216,14 @@ describe("where a place is", () => {
   it("is put there by coordinates pasted, marked as by hand, and fills the address in", async () => {
     answer();
     show(aina);
-    const where = field("Lives in: where it is");
+    const where = field("Where they live now: where it is");
     type(where, "https://www.google.com/maps/@2.993,101.788,17z");
     enter(where); // read there, not saved
     await until("Exact (placed by hand)");
     expect(document.body.textContent).toContain("2.9930, 101.7880");
     await until("Filled in from the nearest place known: Kajang");
-    expect(field("Lives in: town").value).toBe("Kajang");
-    expect(field("Lives in: district").value).toBe("Hulu Langat");
+    expect(field("Where they live now: town").value).toBe("Kajang");
+    expect(field("Where they live now: district").value).toBe("Hulu Langat");
     expect(asked.some((each) => each.path === "/api/persons/aina")).toBe(false);
     act(() => button("Save")?.click());
     const { residence } = await saved();
@@ -224,7 +233,7 @@ describe("where a place is", () => {
   it("says why it can't read what was pasted", () => {
     answer();
     show(aina);
-    const where = field("Lives in: where it is");
+    const where = field("Where they live now: where it is");
     type(where, "https://maps.app.goo.gl/AbCdEf123");
     enter(where);
     expect(document.body.textContent).toContain("A short link only says where once it's opened");
@@ -233,11 +242,11 @@ describe("where a place is", () => {
   it("asks, moving house, whether a pin put by hand stays", async () => {
     answer();
     show(byHand);
-    type(field("Lives in: town"), "Semenyih");
+    type(field("Where they live now: town"), "Semenyih");
     await until("Its pin was put on the map by hand.");
     act(() => button("Keep it there")?.click());
     expect(document.body.textContent).toContain("3.0006, 101.7869");
-    type(field("Lives in: postcode"), "43500");
+    type(field("Where they live now: postcode"), "43500");
     await until("Its pin was put on the map by hand.");
     act(() => button("Place it from the address")?.click());
     expect(document.body.textContent).not.toContain("3.0006, 101.7869");
@@ -247,6 +256,7 @@ describe("where a place is", () => {
   it("says what would help where the small map can't be drawn", async () => {
     answer();
     show(byHand);
+    field("Where they live now: address"); // its block opened, as someone would
     await until("Show on the map");
     act(() => button("Show on the map")?.click());
     await until("The small map needs the world's map, downloaded once.");
@@ -258,7 +268,7 @@ describe("an address looked up online, once", () => {
   it("says first what goes and to whom, and asks", async () => {
     answer();
     show(aina);
-    type(field("Lives in: address"), "No. 3, Jalan Sultan");
+    type(field("Where they live now: address"), "No. 3, Jalan Sultan");
     await until("Not found without the internet.");
     act(() => button("Look it up online once")?.click());
     await until("Look this address up online?");
@@ -276,7 +286,7 @@ describe("an address looked up online, once", () => {
     );
     act(() => button("3 Jalan Sultan · Kota Bharu · Kelantan · 15050 · Malaysia")?.click());
     expect(document.body.textContent).toContain("On the mapExact6.1301, 102.2402");
-    expect(field("Lives in: address").value).toBe("No. 3, Jalan Sultan"); // as typed
+    expect(field("Where they live now: address").value).toBe("No. 3, Jalan Sultan"); // as typed
     // Where it went is shown, to check: here, what would let the small map be drawn.
     await until("The small map needs the world's map, downloaded once.");
   });
@@ -284,8 +294,8 @@ describe("an address looked up online, once", () => {
   it("says Malaysia goes too where no country is written, as it does (0.8.0)", async () => {
     answer();
     show(aina);
-    type(field("Lives in: country"), "");
-    type(field("Lives in: address"), "No. 3, Jalan Sultan");
+    type(field("Where they live now: country"), "");
+    type(field("Where they live now: address"), "No. 3, Jalan Sultan");
     await until("Not found without the internet.");
     act(() => button("Look it up online once")?.click());
     await until("Look this address up online?");
@@ -304,7 +314,7 @@ describe("an address looked up online, once", () => {
   it("goes without asking where chosen so", async () => {
     answer({ lookup: "always" });
     show(aina);
-    type(field("Lives in: address"), "No. 3, Jalan Sultan");
+    type(field("Where they live now: address"), "No. 3, Jalan Sultan");
     await until("Look it up online once");
     await choiceHeard(); // until then, it asks, to be safe
     await act(async () => button("Look it up online once")?.click());
@@ -315,7 +325,7 @@ describe("an address looked up online, once", () => {
   it("isn't offered where this computer looks nothing up online", async () => {
     answer({ lookup: "never" });
     show(aina);
-    type(field("Lives in: address"), "No. 3, Jalan Sultan");
+    type(field("Where they live now: address"), "No. 3, Jalan Sultan");
     await choiceHeard();
     await until("On the map"); // the form is there, and the suggestions asked for
     await act(async () => {

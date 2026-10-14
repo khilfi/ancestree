@@ -112,6 +112,8 @@ async def patch_person(
         props |= place_props("residence", patch.residence)
     if "birth_place" in changes:
         props |= place_props("birth", patch.birth_place)
+    if "death_place" in changes:
+        props |= place_props("death", patch.death_place)
     home = patch.residence if "residence" in changes else None
     return await _save(ctx, person_id, props, mates, home)
 

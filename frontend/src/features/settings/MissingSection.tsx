@@ -20,7 +20,7 @@ import {
   usePatchPerson,
   usePerson,
 } from "@/api/queries";
-import type { FactPerson, Graph, GraphPerson, Located, MapPerson } from "@/api/types";
+import type { FactPerson, Graph, GraphPerson, Located, MapPerson, Place } from "@/api/types";
 import { CanEdit } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
 } from "@/features/person/DatePicker";
 import { PhotoDialog } from "@/features/person/PhotoDialog";
 import { MARK } from "@/features/person/PlaceLocation";
+import { type Mixup, mixup, movedHome, placeLine } from "@/features/person/places";
 import { shortName } from "@/features/tree/words";
 import { describeDate } from "@/lib/dates";
 import { showError } from "@/lib/notify";
@@ -448,6 +449,80 @@ function ExactRow({
   );
 }
 
+/** Someone's places mixed up, as the form once made easy: a living person with a
+ *  place of death, or an address where they were born and none where they live. Its quick fix
+ *  moves it home in one click, one Undo step, as the form's question does. */
+type Mixed = { person: GraphPerson; entry: MapPerson; wrong: Mixup };
+
+const NO_PLACE = { town: null, address: null, postcode: null } as unknown as Place;
+
+function MovedRow({ person, entry, wrong, about }: Mixed & { about: string }) {
+  const patch = usePatchPerson();
+  const places = {
+    residence: (entry.at_parents ? null : entry.lives?.place) ?? NO_PLACE,
+    birth_place: entry.born?.place ?? NO_PLACE,
+    death_place: entry.died?.place ?? NO_PLACE,
+  };
+  const moved = movedHome(places, wrong, NO_PLACE);
+  const what = wrong.death
+    ? `place of death ${placeLine(places.death_place)}`
+    : `address where they were born, ${placeLine(places.birth_place)}`;
+  const move = () =>
+    patch.mutate(
+      {
+        id: person.id,
+        body: {
+          ...(wrong.home ? { residence: moved.residence } : {}),
+          ...(moved.birth_place !== places.birth_place ? { birth_place: moved.birth_place } : {}),
+          ...(wrong.death ? { death_place: null } : {}),
+        },
+      },
+      {
+        onError: showError,
+        onSuccess: () =>
+          toast.success(
+            wrong.home
+              ? `${shortName(person)}'s address is where they live now.`
+              : `${shortName(person)}'s place of death is cleared.`,
+          ),
+      },
+    );
+  return (
+    <li className="py-2">
+      <div className="flex items-center gap-2">
+        <Who person={person} about={[about, what].filter(Boolean).join(" · ")} />
+        <Button variant="outline" size="sm" onClick={move} disabled={patch.isPending}>
+          {wrong.home ? "Move it to Where they live" : "Clear the place of death"}
+        </Button>
+        <Open id={person.id} />
+      </div>
+    </li>
+  );
+}
+
+/** Who's living, with a place of death; and, of the rest living, who has an address where
+ *  they were born and none where they live. As the map answers it. */
+export function mixedUp(
+  people: MapPerson[],
+  byId: Map<string, GraphPerson>,
+): { death: Mixed[]; birth: Mixed[] } {
+  const death: Mixed[] = [];
+  const birth: Mixed[] = [];
+  for (const entry of people) {
+    const person = byId.get(entry.id);
+    if (!person || person.placeholder || person.is_living !== true) continue;
+    const places = {
+      residence: entry.at_parents ? null : (entry.lives?.place ?? null),
+      birth_place: entry.born?.place ?? null,
+      death_place: entry.died?.place ?? null,
+    };
+    const wrong = mixup(places, true);
+    if (!wrong) continue;
+    (wrong.death ? death : birth).push({ person, entry, wrong });
+  }
+  return { death, birth };
+}
+
 /** Who has an address where they live, but is on the map only about there, at their
  *  postcode's area or their town: at a place of their own, not their parents'. As the
  *  map answers it, in its order. */
@@ -535,6 +610,7 @@ export function MissingSection() {
           return person && !person.placeholder ? [{ person, located }] : [];
         })
         .sort((a, b) => byName(a.person, b.person)),
+      mixed: mixedUp(lives?.people ?? [], byId),
       unknown: data.people
         .filter((p) => p.placeholder)
         .map((p) => ({ id: p.id, kids: kidsOf.get(p.id) ?? [] })),
@@ -667,10 +743,29 @@ export function MissingSection() {
       </Section>
 
       <Section
+        title="Living, with a place of death"
+        count={lists.mixed.death.length}
+        done="No one living has a place of death."
+      >
+        <Rows
+          items={lists.mixed.death}
+          row={(mixed) => (
+            <MovedRow key={mixed.person.id} {...mixed} about={lists.about(mixed.person.id)} />
+          )}
+        />
+      </Section>
+
+      <Section
         title="Not on the map exactly"
-        count={lists.exactly.length}
+        count={lists.exactly.length + lists.mixed.birth.length}
         done="Everyone with an address is on the map where they live, not just about there."
       >
+        <Rows
+          items={lists.mixed.birth}
+          row={(mixed) => (
+            <MovedRow key={mixed.person.id} {...mixed} about={lists.about(mixed.person.id)} />
+          )}
+        />
         <Rows
           items={lists.exactly}
           row={({ person, located }) => (

@@ -144,6 +144,19 @@ describe("Settings → About", () => {
     await show(<AboutSection />, "Couldn't check for a new version: no answer");
   });
 
+  it("gives its engine's version too, and says so if it isn't the app's (0.8.1)", async () => {
+    answer(NONE, { ...HEALTH, version: "0.2.0" });
+    await show(<AboutSection />, "its engine 0.2.0");
+    expect(document.body.textContent).toContain("Version 0.2.0 · its engine 0.2.0");
+    expect(document.body.textContent).not.toContain("should be of the same version");
+    act(() => root?.unmount());
+    document.body.replaceChildren();
+
+    answer(NONE, { ...HEALTH, version: "0.1.0" }); // an engine an update left behind
+    await show(<AboutSection />, "its engine 0.1.0");
+    expect(document.body.textContent).toContain("The app and its engine should be of the same");
+  });
+
   it("keeps the browser's own advice and version outside the desktop app", async () => {
     answer(null, { ...HEALTH, database: "down" });
     await show(<AboutSection />, "Version 0.1.0");

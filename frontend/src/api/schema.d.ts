@@ -204,8 +204,8 @@ export interface paths {
         head?: never;
         /**
          * Patch Person
-         * @description Change only what's given: a gender, a date of birth, where they live or where they
-         *     were born, for the quick fixes in What's missing and on the map. One Undo
+         * @description Change only what's given: a gender, a date of birth, where they live, were born or
+         *     died, for the quick fixes in What's missing and on the map. One Undo
          *     step.
          */
         patch: operations["patch_person"];
@@ -3851,6 +3851,7 @@ export interface components {
             id: string;
             lives?: components["schemas"]["Located"] | null;
             born?: components["schemas"]["Located"] | null;
+            died?: components["schemas"]["Located"] | null;
             /** At Parents */
             at_parents?: ("mother" | "father" | "parents") | null;
         };
@@ -4235,6 +4236,7 @@ export interface components {
             birth_date?: components["schemas"]["PartialDate"] | string | null;
             residence?: components["schemas"]["Place"] | null;
             birth_place?: components["schemas"]["Place"] | null;
+            death_place?: components["schemas"]["Place"] | null;
         };
         /** PersonSaved */
         PersonSaved: {

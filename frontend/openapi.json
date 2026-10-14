@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.0"
+    "version": "0.8.1"
   },
   "paths": {
     "/api/health": {
@@ -471,7 +471,7 @@
           "people"
         ],
         "summary": "Patch Person",
-        "description": "Change only what's given: a gender, a date of birth, where they live or where they\nwere born, for the quick fixes in What's missing and on the map. One Undo\nstep.",
+        "description": "Change only what's given: a gender, a date of birth, where they live, were born or\ndied, for the quick fixes in What's missing and on the map. One Undo\nstep.",
         "operationId": "patch_person",
         "parameters": [
           {
@@ -9278,6 +9278,16 @@
               }
             ]
           },
+          "died": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Located"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "at_parents": {
             "anyOf": [
               {
@@ -10430,6 +10440,16 @@
             ]
           },
           "birth_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Place"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "death_place": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Place"

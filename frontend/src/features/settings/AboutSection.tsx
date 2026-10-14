@@ -35,8 +35,9 @@ function Folder({ path, note }: { path: string | undefined; note: string }) {
   );
 }
 
-/** The desktop app's version, and asking for a new one. */
-function Updates({ update }: { update: DesktopUpdate }) {
+/** The desktop app's version, and its engine's (0.8.1, D76), and asking for a new one.
+ *  The two are always the same, unless an update went wrong: then it says so. */
+function Updates({ update, engine }: { update: DesktopUpdate; engine?: string }) {
   const check = useCheckForUpdates();
   const restart = useRestartToUpdate();
   const available = update.available;
@@ -53,6 +54,13 @@ function Updates({ update }: { update: DesktopUpdate }) {
   return (
     <>
       Version {update.current}
+      {engine && <span className="text-stone-500"> · its engine {engine}</span>}
+      {engine && engine !== update.current && (
+        <p className="mt-1 max-w-xl text-xs text-amber-800">
+          The app and its engine should be of the same version. Quit AncesTree from its icon by the
+          clock, and open it again; if it stays, install AncesTree again from its page.
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {available ? (
           <Button size="sm" onClick={() => restart.mutate()} disabled={restarting}>
@@ -126,7 +134,13 @@ export function AboutSection() {
           )}
         </Row>
         <Row label="AncesTree">
-          {desktop ? <Updates update={desktop} /> : about ? `Version ${about.version}` : "…"}
+          {desktop ? (
+            <Updates update={desktop} engine={about?.version} />
+          ) : about ? (
+            `Version ${about.version}`
+          ) : (
+            "…"
+          )}
         </Row>
         <Row label="Data folder">
           <Folder path={about?.data_folder} note="Photos, life stories and settings." />

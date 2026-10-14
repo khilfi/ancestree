@@ -88,13 +88,14 @@ _PATCHED = {
     "birth_date": "date of birth",
     "residence": "place they live",
     "birth_place": "birthplace",
+    "death_place": "place of death",
 }
 
 
 @router.patch("/{person_id}")
 async def patch_person(ctx: Ctx, history: Hist, person_id: UUID, patch: PersonPatch) -> PersonSaved:
-    """Change only what's given: a gender, a date of birth, where they live or where they
-    were born, for the quick fixes in What's missing and on the map. One Undo
+    """Change only what's given: a gender, a date of birth, where they live, were born or
+    died, for the quick fixes in What's missing and on the map. One Undo
     step."""
     changes = patch.changes()
     if not changes:

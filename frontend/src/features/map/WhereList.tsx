@@ -6,7 +6,7 @@ import { AT_PARENTS } from "@/features/person/PersonDetails";
 import { shortName } from "@/features/tree/words";
 import { formatPlace } from "@/lib/people";
 import type { Spot } from "./levels";
-import { type PlaceField, PlaceFix } from "./PlaceFix";
+import { PLACE_WORDS, type PlaceField, PlaceFix } from "./PlaceFix";
 
 type Placed = { person: GraphPerson; place: Place };
 
@@ -113,9 +113,7 @@ export function WhereList({
   return (
     <div className="text-sm">
       <div className="border-b border-stone-200 px-3 py-2">
-        <h2 className="font-semibold">
-          {field === "residence" ? "Where they live" : "Where they were born"}
-        </h2>
+        <h2 className="font-semibold">{PLACE_WORDS[field].all}</h2>
         <p className="text-xs text-stone-500">
           {spots.length} of {everyone} on the map
         </p>
@@ -240,7 +238,7 @@ export function WhereList({
                       size="xs"
                       onClick={() => setFixing((now) => (now === person.id ? null : person.id))}
                     >
-                      {field === "residence" ? "Add where they live" : "Add where they were born"}
+                      {PLACE_WORDS[field].add}
                     </Button>
                   )}
                 </div>

@@ -122,3 +122,47 @@ async def test_gedcom_holds_addresses_only_when_chosen(client: httpx.AsyncClient
     chosen = await gedcom(addresses=True)
     assert "2 ADDR No. 12, Jalan Melati 3" in chosen
     assert "3 POST 43000" in chosen
+
+
+async def test_a_living_persons_address_saved_as_their_birth_and_death_moves_home_in_one_step(
+    client: httpx.AsyncClient,
+) -> None:
+    """The mix-up a form made easy, an address and its pin saved as someone's place of
+    birth and of death while where they live stayed their town. The map shows where they died,
+    and one quick fix moves the address home, keeps the birthplace's town and clears the place
+    of death; Undo puts it back as it was."""
+    town = {"town": "Kajang", "state": "Selangor", "country": "Malaysia"}
+    pinned = {**HOME, "lat": 2.9931, "lon": 101.7888, "exact": "hand"}
+    aina = await create_person(
+        client,
+        "Aina binti Hassan",
+        living=True,
+        residence=town,
+        birth_place=pinned,
+        death_place=pinned,
+    )
+    family = (await client.get("/api/map")).json()
+    [shown] = [p for p in family["people"] if p["id"] == aina["id"]]
+    assert (shown["died"]["lat"], shown["died"]["exact"]) == (2.9931, "hand")
+    assert shown["lives"]["place"]["address"] is None
+
+    moved = await client.patch(
+        f"/api/persons/{aina['id']}",
+        json={"residence": pinned, "birth_place": town, "death_place": None},
+    )
+    assert moved.status_code == 200, moved.text
+    person = await get_person(client, aina["id"])
+    assert person["residence"]["address"] == HOME["address"]
+    assert (person["residence"]["lat"], person["residence"]["exact"]) == (2.9931, "hand")
+    assert person["birth_place"]["town"] == "Kajang"
+    assert person["birth_place"]["address"] is None
+    assert person["death_place"] is None
+    family = (await client.get("/api/map")).json()
+    [shown] = [p for p in family["people"] if p["id"] == aina["id"]]
+    assert shown["died"] is None
+    assert (shown["lives"]["lat"], shown["lives"]["exact"]) == (2.9931, "hand")
+
+    assert (await client.post("/api/history/undo")).status_code == 200
+    person = await get_person(client, aina["id"])
+    assert person["death_place"]["address"] == HOME["address"]
+    assert person["residence"]["address"] is None

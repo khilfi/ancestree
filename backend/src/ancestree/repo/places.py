@@ -20,6 +20,7 @@ class Places:
     born_on: PartialDate | None = None
     died_on: PartialDate | None = None
     parents: tuple[tuple[Gender, Place | None], ...] = field(default=())
+    died: Place | None = None  # where they died
 
 
 async def read_places(tx: Tx) -> list[Places]:
@@ -53,6 +54,7 @@ async def read_places(tx: Tx) -> list[Places]:
                     )
                     for parent in row["parents"]
                 ),
+                died=place_from("death", props),
             )
         )
     return rows

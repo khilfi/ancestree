@@ -140,7 +140,7 @@ async def family_map(
     # The living with no place of their own, at their parents'.
     homes = {row.id: _at_parents(row) for row in shown}
     # The family's countries' places, read in one go and off the event loop.
-    written = {place.country for row in shown for place in (row.lives, row.born) if place}
+    written = {place.country for row in shown for place in (row.lives, row.born, row.died) if place}
     await asyncio.to_thread(places.load, [places.country_code(country) for country in written])
     find = _Finder(places, _pinned(pins), exact)
     people = []
@@ -151,11 +151,19 @@ async def family_map(
         elif at is not None:
             people.append(
                 MapPerson(
-                    id=UUID(row.id), lives=find(at.place), born=find(row.born), at_parents=at.whose
+                    id=UUID(row.id),
+                    lives=find(at.place),
+                    born=find(row.born),
+                    died=find(row.died),
+                    at_parents=at.whose,
                 )
             )
         else:
-            people.append(MapPerson(id=UUID(row.id), lives=find(row.lives), born=find(row.born)))
+            people.append(
+                MapPerson(
+                    id=UUID(row.id), lives=find(row.lives), born=find(row.born), died=find(row.died)
+                )
+            )
     towns = await asyncio.to_thread(towns_around, places, people)
     return FamilyMap(
         people=sorted(people, key=lambda person: str(person.id)), pins=pins.pins, towns=towns

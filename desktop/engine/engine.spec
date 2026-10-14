@@ -7,6 +7,7 @@
 # One folder, not one file: a single file unpacks itself on every start, which is slower
 # and more often mistaken for malware by antivirus.
 
+import tomllib
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
@@ -27,10 +28,17 @@ package = [
     if Path(source).name != "google-client.json"
 ]
 
+# This build's own version, beside the package (0.8.1, D76): `ancestree/__init__.py` reads it,
+# so an earlier version's record, left by an update, never speaks for this one.
+project = tomllib.loads((here.parents[1] / "backend" / "pyproject.toml").read_text("utf-8"))
+built = Path(workpath) / "VERSION"  # noqa: F821 (PyInstaller provides it)
+built.parent.mkdir(parents=True, exist_ok=True)
+built.write_text(project["project"]["version"], encoding="utf-8")
+
 analysis = Analysis(  # noqa: F821
     [str(here / "engine.py")],
     pathex=[str(here)],
-    datas=[*package, (str(pages), "pages"), (str(viewer), "viewer")],
+    datas=[*package, (str(built), "ancestree"), (str(pages), "pages"), (str(viewer), "viewer")],
     hiddenimports=[*collect_submodules("ancestree"), *collect_submodules("uvicorn")],
     excludes=["tkinter", "pytest", "hypothesis", "IPython"],
 )
@@ -44,3 +52,10 @@ program = EXE(  # noqa: F821
     upx=False,
 )
 COLLECT(program, analysis.binaries, analysis.datas, name="ancestree-engine", upx=False)  # noqa: F821
+
+# Every file of the engine, as built (0.8.1, D76): at its start, an install tidies away
+# anything else in its folder, left there by earlier versions' updates (engine.py's
+# `tidy_install`).
+folder = Path(DISTPATH) / "ancestree-engine"  # noqa: F821 (PyInstaller provides it)
+files = sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file())
+(folder / "install-files.txt").write_text("\n".join(files) + "\n", encoding="utf-8")

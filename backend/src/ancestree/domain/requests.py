@@ -67,8 +67,11 @@ class PersonPatch(BaseModel):
     birth_date: TypedDate = None
     residence: Place | None = None  # where they live
     birth_place: Place | None = None
+    # A place of death, given as null to clear it: a living person's, moved to where they
+    # live.
+    death_place: Place | None = None
 
-    @field_validator("birth_place", "residence")
+    @field_validator("birth_place", "death_place", "residence")
     @classmethod
     def drop_empty_place(cls, value: Place | None) -> Place | None:
         return None if value is not None and value.is_empty else value

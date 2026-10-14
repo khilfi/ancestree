@@ -125,6 +125,35 @@ jobs:
           grep -q "starting $FROM" "$DATA/logs/shell.log"
           grep -q "starting $TO" "$DATA/logs/shell.log"
 
+      - name: The new version's engine, with its own files alone
+        run: |
+          # As it starts, the engine says its version: the new one's, built into it, never an
+          # earlier one's an update left beside it (0.8.1, D76).
+          said="\"stage\": \"preparing\", \"version\": \"$TO\""
+          for i in $(seq 1 60); do grep -qF "$said" "$DATA/logs/shell.log" 2>/dev/null && break; sleep 5; done
+          grep -F '"stage": "preparing"' "$DATA/logs/shell.log"
+          grep -qF "$said" "$DATA/logs/shell.log"
+          if grep -qF '"stage": "versions-differ"' "$DATA/logs/shell.log"; then
+            echo "::error::the app and its engine are of different versions"; exit 1
+          fi
+          case "$RUNNER_OS" in
+            Windows) engine="$LOCALAPPDATA/AncesTree/engine" ;;
+            macOS) engine="$HOME/Applications/AncesTree.app/Contents/Resources/engine" ;;
+            Linux)
+              (cd "$RUNNER_TEMP" && "$APP" --appimage-extract > /dev/null)
+              engine="$RUNNER_TEMP/squashfs-root/usr/share/AncesTree/engine" ;;
+          esac
+          # One record of the package, the new version's; and no file but the engine's own.
+          records=$(find "$engine" -maxdepth 3 -type d -name 'ancestree-*.dist-info' | sort)
+          echo "$records"
+          if [ "$(echo "$records" | wc -l)" -ne 1 ] || ! echo "$records" | grep -q "ancestree-$TO.dist-info"; then
+            echo "::error::the engine holds another version's record"; exit 1
+          fi
+          (cd "$engine" && find . -type f | sed 's|^\./||' | sort) > found.txt
+          { tr -d '\r' < "$engine/install-files.txt"; echo install-files.txt; } | sort > own.txt
+          extra=$(comm -23 found.txt own.txt)
+          [ -z "$extra" ] || { echo "::error::left beside the new version: $extra"; exit 1; }
+
       - name: What the app wrote, when something failed
         if: failure()
         run: tail -n 60 "$DATA/logs/shell.log" "$DATA/logs/engine.log" 2>/dev/null || true

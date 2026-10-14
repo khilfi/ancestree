@@ -17,8 +17,33 @@ import { formatPlace, MALAYSIAN_STATES } from "@/lib/people";
 
 const NO_STATE = "__none__"; // Select items can't have an empty value
 
-/** Which place a quick fix gives: where they live, or where they were born. */
-export type PlaceField = "residence" | "birth_place";
+/** Which place a quick fix gives: where they live, were born, or died. */
+export type PlaceField = "residence" | "birth_place" | "death_place";
+
+/** Each place, as words after someone's name, and as a quick fix's label says it. */
+export const PLACE_WORDS: Record<
+  PlaceField,
+  { did: string; label: string; add: string; all: string }
+> = {
+  residence: {
+    did: "lives in",
+    label: "lives in",
+    add: "Add where they live",
+    all: "Where they live",
+  },
+  birth_place: {
+    did: "was born in",
+    label: "born in",
+    add: "Add where they were born",
+    all: "Where they were born",
+  },
+  death_place: {
+    did: "died in",
+    label: "died in",
+    add: "Add where they died",
+    all: "Where they died",
+  },
+};
 
 /**
  * A quick fix: town, state and country, as in the person form, saved at once
@@ -40,7 +65,7 @@ export function PlaceFix({
   const inMalaysia = ["", "malaysia"].includes(country.trim().toLowerCase());
   const place: Place = { town, state, country: country.trim() || "Malaysia" };
   const ready = !!(town.trim() || state.trim() || !inMalaysia);
-  const what = field === "residence" ? "lives in" : "was born in";
+  const what = PLACE_WORDS[field].did;
   const save = () =>
     patch.mutate(
       { id: person.id, body: { [field]: place } },
@@ -52,7 +77,7 @@ export function PlaceFix({
         onError: showError,
       },
     );
-  const label = `${person.full_name}: ${field === "residence" ? "lives in" : "born in"}`;
+  const label = `${person.full_name}: ${PLACE_WORDS[field].label}`;
   return (
     <form
       className="flex flex-wrap items-center gap-1.5"
