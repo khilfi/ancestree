@@ -127,6 +127,16 @@ class Place(BaseModel):
 # or elsewhere, so not at their parents'. None: their parents', the mother's if they live apart.
 LivesWith = Literal["mother", "father", "elsewhere"]
 
+# The place of death: kept in the database, backups and the family folder, but shown
+# on no screen and in no file made for anyone, as it's sensitive. True brings it all back.
+DEATH_PLACES = False
+
+
+def death_places() -> bool:
+    """Whether the place of death is shown and sent, or only kept (DEATH_PLACES): read each
+    time, so a test can turn it on."""
+    return DEATH_PLACES
+
 
 class Person(BaseModel):
     id: UUID

@@ -86,6 +86,7 @@ export function MapCanvas({
   placing,
   onPlace,
   onCancelPlace,
+  generationOf,
 }: {
   spots: Spot[];
   towns: MapTown[]; // around the family's places, the most worth naming first
@@ -99,6 +100,7 @@ export function MapCanvas({
   placing: string | null; // the place being put on the map by hand
   onPlace: (point: { lat: number; lon: number }) => void;
   onCancelPlace: () => void;
+  generationOf: (id: string) => number | undefined; // on the rings, for a bundle's eldest
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -524,6 +526,13 @@ export function MapCanvas({
         selectedId={selectedId}
         onSelect={onSelect}
         onZoomInto={zoomInto}
+        spotOf={(id) => byId.get(id)}
+        screenOf={(id) => {
+          const spot = byId.get(id);
+          return spot && view ? { x: spot.x * view.k + view.x, y: spot.y * view.k + view.y } : null;
+        }}
+        generationOf={generationOf}
+        deepest={(view?.k ?? 0) >= MAX_K * 0.99}
       />
 
       {placing && <PlacingHint placing={placing} />}

@@ -8,6 +8,9 @@ import pytest
 from ancestree.exchange.spreadsheet import COLUMNS, ENCODING, guard, unguard, write_people_csv
 from tests.unit.export_family import NOTES, sample_family
 
+# The spreadsheet with every column, the place of death's too: its switch on.
+pytestmark = pytest.mark.usefixtures("death_places")
+
 
 def rows() -> dict[str, dict[str, str]]:
     family, _ = sample_family()

@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Controller, type FieldPath, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { useBlocker } from "react-router";
 import { ApiError } from "@/api/errors";
-import { useCreatePerson, usePeople, useUpdatePerson } from "@/api/queries";
+import { useCreatePerson, useDeathPlaces, usePeople, useUpdatePerson } from "@/api/queries";
 import type { PersonDetail, PersonSaved } from "@/api/types";
 import {
   AlertDialog,
@@ -198,6 +198,8 @@ export function PersonForm({
   const toggle = (key: PlaceKey) => setOpened((now) => (now === key ? null : key));
   // A mix-up of places, asked about before saving.
   const [asking, setAsking] = useState<{ values: PersonFormValues; wrong: Mixup } | null>(null);
+  // Where they died: kept, but shown nowhere while the backend's switch is off.
+  const deathPlaces = useDeathPlaces();
   const parentDetails = usePeople(person?.parents.map((parent) => parent.id) ?? []);
   const parents = parentDetails.flatMap((query) => (query.data ? [query.data] : []));
 
@@ -388,17 +390,19 @@ export function PersonForm({
                 )}
               />
             </Field>
-            <PlaceBlock
-              name="death_place"
-              title="Where they died"
-              sign={StoneIcon}
-              open={opened === "death_place"}
-              onOpen={() => toggle("death_place")}
-              copies={[
-                ...copy("Same as where they live", residence),
-                ...copy("Same as where they were born", birthPlace),
-              ]}
-            />
+            {deathPlaces && (
+              <PlaceBlock
+                name="death_place"
+                title="Where they died"
+                sign={StoneIcon}
+                open={opened === "death_place"}
+                onOpen={() => toggle("death_place")}
+                copies={[
+                  ...copy("Same as where they live", residence),
+                  ...copy("Same as where they were born", birthPlace),
+                ]}
+              />
+            )}
             <Field id="burial_place" label="Where they rest">
               <GrowingText
                 id="burial_place"

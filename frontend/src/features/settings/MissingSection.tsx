@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useMapPacks } from "@/api/mapPacks";
 import {
   useChildrenOrder,
+  useDeathPlaces,
   useFamilyFacts,
   useFamilyMap,
   useFillIn,
@@ -576,6 +577,7 @@ export function MissingSection() {
   const graph = useGraph();
   const facts = useFamilyFacts(true);
   const map = useFamilyMap();
+  const deathPlaces = useDeathPlaces(); // its section, only while it's shown
   const data = graph.data;
   const lives = map.data;
   const lists = useMemo(() => {
@@ -742,18 +744,20 @@ export function MissingSection() {
         />
       </Section>
 
-      <Section
-        title="Living, with a place of death"
-        count={lists.mixed.death.length}
-        done="No one living has a place of death."
-      >
-        <Rows
-          items={lists.mixed.death}
-          row={(mixed) => (
-            <MovedRow key={mixed.person.id} {...mixed} about={lists.about(mixed.person.id)} />
-          )}
-        />
-      </Section>
+      {deathPlaces && (
+        <Section
+          title="Living, with a place of death"
+          count={lists.mixed.death.length}
+          done="No one living has a place of death."
+        >
+          <Rows
+            items={lists.mixed.death}
+            row={(mixed) => (
+              <MovedRow key={mixed.person.id} {...mixed} about={lists.about(mixed.person.id)} />
+            )}
+          />
+        </Section>
+      )}
 
       <Section
         title="Not on the map exactly"

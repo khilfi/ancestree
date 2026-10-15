@@ -188,6 +188,21 @@ describe("applyFilter", () => {
   });
 });
 
+describe("only these people, from a bundle on the map", () => {
+  it("keeps them in the address, keeps only them, and names them in a chip", () => {
+    const view = readView(new URLSearchParams("who=siti,aminah,anak"));
+    expect([...(view.filter.who ?? [])]).toEqual(["siti", "aminah", "anak"]);
+    expect(readView(writeView(view))).toEqual(view);
+    expect(kept({ who: view.filter.who })).toEqual(["aminah", "anak", "siti"]);
+    const [chip] = chips(view.filter, (id) => id);
+    expect(chip?.label).toBe("Only these 3 people");
+    expect(chip?.without(view.filter).who).toBeNull();
+    expect(
+      chips({ ...NO_FILTER, who: new Set(["siti"]) }, (id) => id.toUpperCase())[0]?.label,
+    ).toBe("Only SITI");
+  });
+});
+
 describe("chips and layouts", () => {
   it("names each active filter, and takes it away", () => {
     const filter: TreeFilter = {

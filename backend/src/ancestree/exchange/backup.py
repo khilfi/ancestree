@@ -15,6 +15,7 @@ from neo4j import AsyncDriver
 from ancestree import __version__
 from ancestree.config import WhichFamily
 from ancestree.repo.export import export_graph
+from ancestree.repo.mapping import place_props
 
 ARCHIVE_FORMAT = 1
 
@@ -60,10 +61,15 @@ async def create_backup(
     data_dir: Path,
     dest_dir: Path,
     family: WhichFamily | None = None,
+    *,
+    unplaced: bool = False,
 ) -> BackupResult:
+    """`unplaced`: with no place of death, for a view-only copy."""
     graph = await export_graph(driver, database)
     # Zipping and hashing files is blocking work: keep it off the event loop.
-    return await asyncio.to_thread(write_archive, graph, data_dir, dest_dir, family=family)
+    return await asyncio.to_thread(
+        write_archive, graph, data_dir, dest_dir, family=family, unplaced=unplaced
+    )
 
 
 def is_automatic(name: str) -> bool:
@@ -79,9 +85,13 @@ def write_archive(
     *,
     automatic: bool = False,
     family: WhichFamily | None = None,
+    unplaced: bool = False,
 ) -> BackupResult:
     """The archive, in `dest_dir`. `family`: which family it is, of several on the computer
-    (0.4.0), so it can't be restored into another."""
+    (0.4.0), so it can't be restored into another. `unplaced`: the place of death left out
+    of everything in it, for a view-only copy's; your own backups keep it."""
+    if unplaced:
+        graph = _unplaced(graph)
     graph_json = json.dumps(graph, ensure_ascii=False, indent=2, default=_json_value).encode()
     created = datetime.now().astimezone()
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -94,6 +104,17 @@ def write_archive(
         archive.writestr("graph.json", graph_json)
         for path in _data_files(data_dir):
             name = path.relative_to(data_dir).as_posix()
+            if unplaced and path.suffix == ".json":
+                # A person.json or a Trash tombstone holds it too. One that can't be read
+                # is left out, rather than sent as it is.
+                try:
+                    held = json.loads(path.read_bytes())
+                except OSError, ValueError:
+                    continue
+                data = (json.dumps(_unplaced(held), ensure_ascii=False, indent=2) + "\n").encode()
+                archive.writestr(name, data)
+                checksums[name] = hashlib.sha256(data).hexdigest()
+                continue
             archive.write(path, name)
             with path.open("rb") as file:
                 checksums[name] = hashlib.file_digest(file, "sha256").hexdigest()
@@ -118,6 +139,19 @@ def write_archive(
         archive.writestr("README.txt", _README)
     partial.replace(final)  # only a complete archive ever gets the .zip name
     return BackupResult(final, **counts)
+
+
+# What holds a place of death: a person.json's, or the database's properties.
+_DEATH_PLACE = {"death_place", *place_props("death", None)}
+
+
+def _unplaced(value: Any) -> Any:
+    """JSON with every place of death in it emptied, however deep."""
+    if isinstance(value, dict):
+        return {k: None if k in _DEATH_PLACE else _unplaced(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_unplaced(item) for item in value]
+    return value
 
 
 def _data_files(data_dir: Path) -> list[Path]:

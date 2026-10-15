@@ -34,7 +34,7 @@ from pydantic import BaseModel
 from ancestree import __version__
 from ancestree.domain.dates import describe_partial_date, format_partial_date
 from ancestree.domain.graph import GraphPerson
-from ancestree.domain.person import DateQualifier, PartialDate, Place
+from ancestree.domain.person import DateQualifier, PartialDate, Place, death_places
 from ancestree.domain.views import DateView, PersonDetail, PersonSummary
 from ancestree.exchange.backup import create_backup
 from ancestree.exchange.family import FamilyData, Member, load_family
@@ -320,6 +320,7 @@ async def family_snapshot(
             "database_version": None,
             "data_folder": "",
             "backup_folder": "",
+            "death_places": death_places(),  # as the app shows them
         },
         "map": _json(family_map),
         "tree_settings": _json(settings),
@@ -365,7 +366,12 @@ async def family_snapshot(
     if options.archive and not living:
         with tempfile.TemporaryDirectory() as folder:
             backup = await create_backup(
-                ctx.driver, ctx.database, ctx.data_dir, Path(folder), ctx.family
+                ctx.driver,
+                ctx.database,
+                ctx.data_dir,
+                Path(folder),
+                ctx.family,
+                unplaced=not death_places(),  # sent to relatives: none in it
             )
             exports["archive"] = _file(backup.path.name, backup.path.read_bytes())
     about["archive"] = exports["archive"] is not None

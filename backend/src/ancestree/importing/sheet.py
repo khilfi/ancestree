@@ -10,6 +10,7 @@ import csv
 import io
 from dataclasses import dataclass
 
+from ancestree.domain.person import death_places
 from ancestree.exchange.spreadsheet import ADDRESS_COLUMNS, COLUMNS, unguard
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -94,6 +95,8 @@ def read_sheet(data: bytes) -> Sheet:
     not_read: list[str] = []
     for position, name in enumerate(records[header_at]):
         column = _KNOWN.get(_key(name))
+        if column == "Death place" and not death_places():
+            column = None  # kept, but not read in while it's unshown
         if column is None or column in positions:
             if name.strip():
                 not_read.append(" ".join(name.split()))

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from ancestree import __version__
 from ancestree.api.deps import AppSettings, Driver
+from ancestree.domain.person import death_places
 
 router = APIRouter(tags=["system"])
 
@@ -20,6 +21,8 @@ class Health(BaseModel):
     database_version: str | None = None
     data_folder: str
     backup_folder: str
+    # Whether the place of death is shown: the app's screens ask here.
+    death_places: bool = False
 
 
 @router.get("/health")
@@ -41,6 +44,7 @@ async def health(driver: Driver, settings: AppSettings) -> Health:
             schema_version=None,
             data_folder=data_folder,
             backup_folder=backup_folder,
+            death_places=death_places(),
         )
     return Health(
         status="ok",
@@ -50,4 +54,5 @@ async def health(driver: Driver, settings: AppSettings) -> Health:
         database_version=summary.server.agent,
         data_folder=data_folder,
         backup_folder=backup_folder,
+        death_places=death_places(),
     )

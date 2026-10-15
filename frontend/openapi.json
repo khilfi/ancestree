@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.1"
+    "version": "0.8.2"
   },
   "paths": {
     "/api/health": {
@@ -7198,6 +7198,11 @@
           "backup_folder": {
             "type": "string",
             "title": "Backup Folder"
+          },
+          "death_places": {
+            "type": "boolean",
+            "title": "Death Places",
+            "default": false
           }
         },
         "type": "object",

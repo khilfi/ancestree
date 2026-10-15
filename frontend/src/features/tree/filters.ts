@@ -23,6 +23,8 @@ export type TreeFilter = {
   place: string | null; // born in: a state, a country abroad, or a town
   genders: ReadonlySet<Gender>; // only these; none: any
   missing: ReadonlySet<Missing>;
+  // Only these people: a map's bundle, shown on the tree. Null: anyone.
+  who: ReadonlySet<string> | null;
   others: "hidden" | "faded";
 };
 
@@ -45,6 +47,7 @@ export const NO_FILTER: TreeFilter = {
   place: null,
   genders: new Set(),
   missing: new Set(),
+  who: null,
   others: "hidden",
 };
 
@@ -68,6 +71,7 @@ export const VIEW_KEYS = [
   "place",
   "gender",
   "missing",
+  "who",
   "others",
 ] as const;
 
@@ -113,6 +117,7 @@ export function readView(params: URLSearchParams): TreeView {
       place: params.get("place") || null,
       genders: list(params.get("gender"), GENDERS),
       missing: list(params.get("missing"), MISSING),
+      who: params.get("who") ? new Set((params.get("who") ?? "").split(",")) : null,
       others: params.get("others") === "faded" ? "faded" : "hidden",
     },
   };
@@ -138,6 +143,7 @@ export function writeView(view: TreeView, into = new URLSearchParams()): URLSear
   set("place", filter.place);
   set("gender", GENDERS.filter((item) => filter.genders.has(item)).join(","));
   set("missing", MISSING.filter((item) => filter.missing.has(item)).join(","));
+  set("who", filter.who && [...filter.who].join(","));
   set("others", filter.others === "faded" && "faded");
   return params;
 }
@@ -168,7 +174,8 @@ export function isFiltered(filter: TreeFilter): boolean {
     filter.born !== null ||
     filter.place !== null ||
     filter.genders.size > 0 ||
-    filter.missing.size > 0
+    filter.missing.size > 0 ||
+    filter.who !== null
   );
 }
 
@@ -278,6 +285,7 @@ export function applyFilter(graph: Graph, filter: TreeFilter): Set<string> | nul
     if (filter.genders.size && !filter.genders.has(person.gender)) continue;
     if (filter.missing.has("year") && year != null) continue;
     if (filter.missing.has("photo") && person.photo_version != null) continue;
+    if (filter.who && !filter.who.has(id)) continue;
     kept.add(id);
   }
   if (!filter.leave.has("unknown")) {
@@ -379,6 +387,14 @@ export function chips(filter: TreeFilter, name: (id: string) => string): Chip[] 
       key: `missing:${item}`,
       label: MISSING_WORDS[item],
       without: (f) => ({ ...f, missing: new Set([...f.missing].filter((m) => m !== item)) }),
+    });
+  }
+  if (filter.who) {
+    const count = filter.who.size;
+    found.push({
+      key: "who",
+      label: count === 1 ? `Only ${name([...filter.who][0] ?? "")}` : `Only these ${count} people`,
+      without: (f) => ({ ...f, who: null }),
     });
   }
   return found;

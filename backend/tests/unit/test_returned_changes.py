@@ -288,6 +288,33 @@ def test_an_address_changed_on_a_computer_with_addresses_shows_in_the_review() -
     )
 
 
+def test_a_place_of_death_from_a_computer_before_0_8_2_is_left_out_unseen() -> None:
+    """Kept, but shown nowhere: one a relative's computer still sends isn't shown
+    in the review, nor brought in unseen (your answer of 15 Oct 2026); the rest comes in."""
+    died_at = {"death_town": "Kota Bharu", "death_state": "Kelantan", "death_country": "Malaysia"}
+    back = came_back(changed(PEOPLE, "Hassan bin Ismail", nickname="Tok Ayah", **died_at))
+
+    plan = plan_returned(base(), back, tree(), {})
+
+    assert [change.column for change in plan.changes] == ["Nickname"]
+    assert "Kota Bharu" not in str([*plan.changes, *plan.left_out])
+
+    siti = person("Siti binti Zulkifli", gender="female", birth_year=1992, **died_at)
+    plan = plan_returned(base(), came_back([*PEOPLE, siti]), tree(), {})
+    [added] = by_kind(plan, "add_person")
+    props = plan.operations[added.id].props  # type: ignore[union-attr]
+    assert props["death_town"] is None
+    assert props["birth_year"] == 1992
+
+
+@pytest.mark.usefixtures("death_places")
+def test_a_place_of_death_sent_is_offered_while_its_switch_is_on() -> None:
+    died_at = {"death_town": "Kota Bharu", "death_state": "Kelantan", "death_country": "Malaysia"}
+    back = came_back(changed(PEOPLE, "Hassan bin Ismail", **died_at))
+    [change] = plan_returned(base(), back, tree(), {}).changes
+    assert (change.column, change.after) == ("Death place", "Kota Bharu, Kelantan")
+
+
 def test_what_a_computer_sends_says_whether_it_keeps_addresses() -> None:
     sent: dict[str, Any] = {"family": {"people": [], "links": []}}
     assert sent_family(sent, SENDER).addresses is False  # before 0.8.0

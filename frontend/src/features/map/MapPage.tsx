@@ -12,6 +12,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router";
 import { megabytes, useFetchPack, useMapPacks } from "@/api/mapPacks";
 import {
+  useDeathPlaces,
   useFamilyMap,
   useGraph,
   usePutPin,
@@ -89,8 +90,10 @@ export function MapPage() {
   const selectedId = sample ? null : params.get("person");
   const view = readView(params);
   const by = params.get("by");
+  // Where they died, only while the place of death is shown.
+  const deathPlaces = useDeathPlaces();
   const field: PlaceField =
-    by === "born" ? "birth_place" : by === "died" ? "death_place" : "residence";
+    by === "born" ? "birth_place" : by === "died" && deathPlaces ? "death_place" : "residence";
   const showMoves = params.get("moves") === "1";
   const own = useMemo(
     () => ({
@@ -130,6 +133,8 @@ export function MapPage() {
     () => new Map((family?.people ?? []).map((person) => [person.id, person])),
     [family],
   );
+  // Each one's generation on the rings: a bundle's eldest, among those with no birth date.
+  const generationOf = useCallback((id: string) => family?.layout.seats[id]?.generation, [family]);
 
   // Everyone the filter shows, where their place is, and those it can't place.
   const found = useMemo(() => {
@@ -168,6 +173,8 @@ export function MapPage() {
         country: located.country,
         rough: isRough,
         exact: located.exact ?? null,
+        // A house's name, and a bundle's card's: only where they live.
+        address: field === "residence" ? (located.place.address ?? null) : null,
       });
       if (isRough) rough.push({ person, place: located.place });
       const { lives, born } = entry;
@@ -288,6 +295,7 @@ export function MapPage() {
       placing: placing ? formatPlace(placing) || placing.country : null,
       onPlace: place,
       onCancelPlace: () => setPlacing(null),
+      generationOf,
     };
     const todaysMap = <MapCanvas {...drawn} towns={map.data?.towns ?? NO_TOWNS} />;
     content = (
@@ -310,7 +318,7 @@ export function MapPage() {
               <SelectContent>
                 <SelectItem value="residence">Where they live</SelectItem>
                 <SelectItem value="birth_place">Where they were born</SelectItem>
-                <SelectItem value="death_place">Where they died</SelectItem>
+                {deathPlaces && <SelectItem value="death_place">Where they died</SelectItem>}
               </SelectContent>
             </Select>
           </span>

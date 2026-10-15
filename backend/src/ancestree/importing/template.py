@@ -8,7 +8,7 @@ import csv
 import io
 
 from ancestree.domain.dates import format_partial_date
-from ancestree.domain.person import Gender
+from ancestree.domain.person import Gender, death_places
 from ancestree.domain.relationship import BIOLOGICAL, SpouseStatus
 from ancestree.exchange.spreadsheet import guard, place_shown
 from ancestree.importing.sheet import READ
@@ -57,7 +57,9 @@ def template_csv(*, example: bool = False) -> str:
     """The template's text; save it as UTF-8 with a byte-order mark, as Excel expects."""
     buffer = io.StringIO(newline="")
     writer = csv.writer(buffer, quoting=csv.QUOTE_ALL)  # no ";" splits a cell in Excel
-    writer.writerow(TEMPLATE)
+    # No place of death while it's unshown: an import wouldn't read it.
+    columns = [c for c in TEMPLATE if c != "Death place" or death_places()]
+    writer.writerow(columns)
     for row in _example_rows(load_seed_family()) if example else []:
-        writer.writerow(guard(row.get(column, "")) for column in TEMPLATE)
+        writer.writerow(guard(row.get(column, "")) for column in columns)
     return buffer.getvalue()

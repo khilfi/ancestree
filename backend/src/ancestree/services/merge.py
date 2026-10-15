@@ -19,7 +19,7 @@ from uuid import UUID
 from neo4j import AsyncManagedTransaction as Tx
 
 from ancestree.domain.merge import MergeDetail, MergeLink, MergePreview
-from ancestree.domain.person import Gender
+from ancestree.domain.person import Gender, death_places
 from ancestree.domain.relationship import BIOLOGICAL, SpouseStatus
 from ancestree.domain.views import PersonSaved
 from ancestree.exchange.spreadsheet import shown
@@ -103,7 +103,10 @@ def _details(keep: Props, other: Props) -> tuple[list[MergeDetail], dict[str, An
         if theirs is None:
             continue
         takes = mine is None
-        details.append(MergeDetail(label=label, keep=shown(mine), other=shown(theirs), taken=takes))
+        if name != "death_place" or death_places():  # kept, but not shown
+            details.append(
+                MergeDetail(label=label, keep=shown(mine), other=shown(theirs), taken=takes)
+            )
         if takes:
             taken |= _as_props(name, theirs)
     return details, taken

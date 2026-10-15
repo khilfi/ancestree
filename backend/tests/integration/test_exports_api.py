@@ -59,6 +59,7 @@ async def test_gedcom_downloads_with_the_family_in_it(client: httpx.AsyncClient)
     assert "1 NAME Yusof bin Hassan\r\n" in text
 
 
+@pytest.mark.usefixtures("death_places")  # every column, its switch on
 async def test_the_spreadsheet_downloads_for_excel(client: httpx.AsyncClient) -> None:
     await small_family(client)
 

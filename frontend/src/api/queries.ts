@@ -71,6 +71,12 @@ export function useHealth() {
   });
 }
 
+/** Whether the place of death is shown: the backend's switch, said in its health
+ *  answer, and a copy's. Off until it says so. */
+export function useDeathPlaces(): boolean {
+  return useHealth().data?.death_places === true;
+}
+
 export function useGraph(enabled = true) {
   return useQuery({ queryKey: keys.graph, queryFn: () => unwrap(api.GET("/api/graph")), enabled });
 }

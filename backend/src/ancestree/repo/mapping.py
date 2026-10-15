@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from ancestree.domain.person import Gender, PartialDate, Person, Place
+from ancestree.domain.person import Gender, PartialDate, Person, Place, death_places
 from ancestree.domain.requests import PersonInput
 
 _DATE_FIELDS = ("year", "month", "day", "qualifier", "year_to", "original_text")
@@ -36,8 +36,13 @@ def person_to_props(person: Person) -> dict[str, Any]:
 
 
 def editable_props(data: PersonInput) -> dict[str, Any]:
-    """Only what the person form edits: never the id, photo, placeholder or birth order."""
-    return _details(data)
+    """Only what the person form edits: never the id, photo, placeholder or birth order; nor
+    the place of death while it's only kept, so a save never clears it."""
+    props = _details(data)
+    if not death_places():
+        for name in place_props("death", None):
+            del props[name]
+    return props
 
 
 def _details(source: Person | PersonInput) -> dict[str, Any]:

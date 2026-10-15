@@ -426,12 +426,12 @@ They appear on the tree, not yet linked to anyone. To link them, see [Adding a r
 - *Name:* their **Full name**, **Nickname** (for example *Pak Mat*), **Title** (for example *Haji* or *Dato'*), **Gender**, **Living or deceased**, and **Name in Jawi**. Leave **Living or deceased** on **Work it out from the dates** if you're not sure.
 - *Now:* **Where they live now**, the place the map shows, and their **Occupation**.
 - *Birth:* the **Date**, and **Where they were born**.
-- *Death:* only for someone who has died. Choose **Deceased** beside their name, and it opens: the **Date**, **Where they died**, and **Where they rest**, such as *Tanah Perkuburan Islam Kg. Baru*. If someone marked living has any of it filled in, it stays, with a note to choose **Deceased** or clear it.
+- *Death:* only for someone who has died. Choose **Deceased** beside their name, and it opens: the **Date**, and **Where they rest**, such as *Tanah Perkuburan Islam Kg. Baru*. Where someone died isn't asked for or shown anywhere: one saved before 0.8.2 is kept, but shown nowhere, and left out of everything you send. If someone marked living has any of it filled in, it stays, with a note to choose **Deceased** or clear it.
 - *Notes:* a few short notes. Write longer things in their [life story](#9-life-stories).
 
 *Dates:* first choose how sure the date is: **Exact**, **About**, **Before**, **After** or **Between**. Then pick the day, month and year from the lists. A year alone is enough. While a list is open, typing jumps to it: type "19" then "38" for 1938, or "feb" for February. The **×** clears the date.
 
-*Places:* each place is one line, with its sign: a house for where they live, a cradle for where they were born, a stone for where they died. The line says what's there, such as *Kajang, Selangor · at its town*. Click it to open it; one opens at a time. To fill a place in from another, click **Same as where they live**, **Same as where they were born**, or **Same as their parents'** (or their mother's or father's, where the parents live apart).
+*Places:* each place is one line, with its sign: a house for where they live, a cradle for where they were born. The line says what's there, such as *Kajang, Selangor · at its town*. Click it to open it; one opens at a time. To fill a place in from another, click **Same as where they live**, **Same as where they were born**, or **Same as their parents'** (or their mother's or father's, where the parents live apart).
 
 In a place, type the **Address** in one line, as you'd write it on an envelope: *No. 12, Jalan Melati 3, 43000 Kajang*. A postcode alone will do, or just the town. As you type, AncesTree suggests where it is from the places of the country below it, which starts as Malaysia: *Kajang · Hulu Langat · Selangor · 43000 · Malaysia*. For a place in another country, change the country first. Click a suggestion to fill in the **Town**, **District**, **State** and **Postcode**. Everything stays yours to change, and an address with no suggestion is kept as you typed it.
 
@@ -445,7 +445,7 @@ Suggestions come from the places on your computer, with no internet: to begin wi
 
 Every box in the form grows as you type, so a long name or address shows whole. **Enter** still saves.
 
-*Asked before saving:* if someone living has a place of death, or an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, keeps the town where they were born, and clears a living person's place of death. **Save as it is** saves it as you wrote it.
+*Asked before saving:* if someone has an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, and keeps the town where they were born. **Save as it is** saves it as you wrote it.
 
 *No place of their own:* someone with nothing under **Where they live now** is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
 - if the parents live in different places, it's their mother's. Choose **At their father's** to show them with their father instead;
@@ -641,13 +641,17 @@ Click **Timeline** in the top bar. Everyone appears along the years, with a bar 
 
 ## 13. The map
 
-Click **Map** in the top bar. It shows where the family lives, where they were born, or where they died.
+Click **Map** in the top bar. It shows where the family lives, or where they were born.
 
 ![The map](guide/app-map.png)
 
-- **Show** chooses **Where they live**, **Where they were born** or **Where they died**. **Where they died** lists only those who have died.
+- **Show** chooses **Where they live** or **Where they were born**.
 - **Moves** draws a line from where each person was born to where they live.
-- Turn the mouse wheel to zoom. Each circle shows how many people are there. Click a circle to zoom in; close up, you see each person's photo in their town. Someone placed by their postcode's area or their town has a soft ring around them, which says *about here*. Someone placed exactly, to the house or by hand, has their photo on the spot, and a household's photos are fanned out there together.
+- Turn the mouse wheel to zoom. A country's or a state's circle shows how many people are there: click it to zoom in. Close up, you see each person's photo in their town. Someone placed by their postcode's area or their town has a soft ring around them, which says *about here*. Someone placed exactly, to the house or by hand, has their photo on the spot. People at one house, their pins within about 15 metres of each other, are one place: their photos together, with the address under them.
+- *Too close together to show apart*, people become one circle, named by the eldest of them: *Fatimah and 2 more*. Point at it to see the first few names and where they are. Where zooming in wouldn't part them, or the map is zoomed in as far as it goes, a click opens it where it is: their photos around the spot, each with a line to where they really are and their name under it. Click a photo to open their panel; press **Esc**, or click anywhere else, to fold it back. Where zooming in would part them, a click zooms in, and **Open here**, under the circle as you point at it, opens it without zooming. More than 12 open as a list, each with their place, and **Show them on the tree** shows just them there (the chip *Only these 40 people* brings everyone back). With the keyboard: **Tab** to a circle, **Enter** to open it, the arrow keys to move between its people. A view-only copy does the same.
+
+![A circle opened where it is: six people around their spot, each with a line to where they live](guide/app-map-bundle.png)
+
 - Zoom in for more. Once the map's detail is on your computer (below), the map shows the land as OpenStreetMap draws it: towns, kampungs, roads, rivers and districts, each in its own name, with the English beneath where it differs. Without it, and in a view-only copy, the map draws each district and names the towns around your family's places as you zoom in.
 - The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. Someone with no place of their own is with their parents, marked *(at their mother's)* or whoever's it is. Click a name to see them on the map.
 - **Not on the map yet** lists those with no place recorded. Click **Add where they live** to fill it in there and then.
@@ -694,7 +698,7 @@ When a country's places come, AncesTree looks again at everyone there whose pin 
 
 ![Family facts](guide/app-family-facts.png)
 
-**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people living with a place of death (**Living, with a place of death**: click **Move it to Where they live**), people with an address who are on the map only about there (**Not on the map exactly**: click **Put the pin where it is**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
+**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address who are on the map only about there (**Not on the map exactly**: click **Put the pin where it is**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
 
 ![What's missing](guide/app-settings-missing.png)
 

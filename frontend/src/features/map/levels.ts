@@ -20,6 +20,7 @@ export type Spot = {
   // Its own location, finer than its town: the house, the street, the postcode's area,
   // or by hand. None: its town's.
   exact?: "spot" | "street" | "postcode" | "town" | "hand" | null;
+  address?: string | null; // where they live, to the house: a house's name on the map
 };
 
 /** Whether a spot is where they are, not about there: a house, a street, or by hand. */
@@ -55,15 +56,71 @@ const mean = (points: Point[]): Point => ({
   y: points.reduce((sum, p) => sum + p.y, 0) / (points.length || 1),
 });
 
+/** People at one house: their pins within about 15 m of each other, in one town. */
+export type House = { key: string; label: string; at: Point };
+
+/**
+ * Each pinned spot's house: pins within `reach` of each other on the plane, in the same town,
+ * are one place, at their middle, named by the address most of them have, else the town. On a
+ * grid, so a big family takes a moment; worked out once for the spots, not at each view.
+ */
+export function houses(spots: readonly Spot[], reach: number): Map<string, House> {
+  const pins = spots.filter((spot) => pinned(spot) && !spot.rough);
+  const head = pins.map((_, index) => index);
+  const find = (index: number): number => {
+    let at = index;
+    while (head[at] !== at) at = head[at] as number;
+    head[index] = at;
+    return at;
+  };
+  const grid = new Map<string, number[]>();
+  const cellOf = (spot: Spot) => [Math.floor(spot.x / reach), Math.floor(spot.y / reach)];
+  pins.forEach((spot, index) => {
+    const [cx, cy] = cellOf(spot) as [number, number];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (const other of grid.get(`${cx + dx}|${cy + dy}`) ?? []) {
+          const near = pins[other] as Spot;
+          const town = near.place === spot.place && near.country === spot.country;
+          if (town && Math.hypot(near.x - spot.x, near.y - spot.y) <= reach) {
+            head[find(index)] = find(other);
+          }
+        }
+      }
+    }
+    const key = `${cx}|${cy}`;
+    grid.set(key, [...(grid.get(key) ?? []), index]);
+  });
+  const together = new Map<number, Spot[]>();
+  pins.forEach((spot, index) => {
+    const root = find(index);
+    together.set(root, [...(together.get(root) ?? []), spot]);
+  });
+  const found = new Map<string, House>();
+  for (const members of together.values()) {
+    if (members.length < 2) continue; // one pin is its own place, as ever
+    const named = new Map<string, number>();
+    for (const { address } of members) {
+      if (address) named.set(address, (named.get(address) ?? 0) + 1);
+    }
+    const [address] = [...named].sort((a, b) => b[1] - a[1])[0] ?? [];
+    const first = members[0] as Spot;
+    const house = { key: `house:${first.id}`, label: address ?? first.place, at: mean(members) };
+    for (const member of members) found.set(member.id, house);
+  }
+  return found;
+}
+
 /**
  * Everyone gathered for a level: by country, by state (at the state's middle, where its
- * shape is known), or by town. Biggest first.
+ * shape is known), or by town, people at one house as one place. Biggest first.
  */
 export function gather(
   spots: readonly Spot[],
   level: Level,
   toScreen: (point: Point) => Point,
   stateMiddle: (state: string) => Point | null,
+  houseOf: (id: string) => House | undefined = () => undefined,
 ): Group[] {
   const gathered = new Map<
     string,
@@ -82,9 +139,10 @@ export function gather(
       label = spot.state ?? spot.country;
       anchor = spot.state ? stateMiddle(spot.state) : null;
     } else {
-      key = `${spot.x.toFixed(2)}|${spot.y.toFixed(2)}|${spot.place}`;
-      label = spot.rough ? `Somewhere in ${spot.place}` : spot.place;
-      anchor = { x: spot.x, y: spot.y };
+      const house = houseOf(spot.id);
+      key = house?.key ?? `${spot.x.toFixed(2)}|${spot.y.toFixed(2)}|${spot.place}`;
+      label = house?.label ?? (spot.rough ? `Somewhere in ${spot.place}` : spot.place);
+      anchor = house?.at ?? { x: spot.x, y: spot.y };
     }
     const group = gathered.get(key);
     const about = !pinned(spot);

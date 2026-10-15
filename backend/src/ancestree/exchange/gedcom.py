@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ancestree import __version__
-from ancestree.domain.person import DateQualifier, Gender, PartialDate, Place
+from ancestree.domain.person import DateQualifier, Gender, PartialDate, Place, death_places
 from ancestree.domain.relationship import SpouseStatus
 from ancestree.exchange.family import FamilyData, SpouseRow, place_text
 from ancestree.services.detail import is_living
@@ -182,9 +182,8 @@ def write_gedcom(
             out.add(2, "TYPE", "aka")
         out.add(1, "SEX", _SEX[p.gender])
         _event(out, "BIRT", p.birth_date, p.birth_place, addresses)
-        if not _event(out, "DEAT", p.death_date, p.death_place, addresses) and (
-            is_living(p) is False
-        ):
+        died_at = p.death_place if death_places() else None  # kept, unsent
+        if not _event(out, "DEAT", p.death_date, died_at, addresses) and (is_living(p) is False):
             out.add(1, "DEAT", "Y")
         if p.burial_place:
             out.add(1, "BURI")

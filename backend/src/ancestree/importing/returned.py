@@ -31,7 +31,7 @@ from ancestree.domain.imports import (
     ImportQuestion,
     ImportSecondLook,
 )
-from ancestree.domain.person import Gender, PartialDate, Place
+from ancestree.domain.person import Gender, PartialDate, Place, death_places
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind, SpouseStatus
 from ancestree.domain.requests import PersonInput
 from ancestree.exchange.returned import Returned, ReturnedPerson
@@ -483,6 +483,10 @@ class _Planner:
         props = person.model_dump(mode="json")
         values: dict[str, object] = {}
         for name, label in _DETAILS.items():
+            if name == "death_place" and not death_places():
+                # Unshown, so not brought in unseen: from a computer before 0.8.2,
+                # left out, as your answer of 15 Oct 2026 has it.
+                continue
             try:
                 values[name] = _detail(props, name)
             except ValueError:

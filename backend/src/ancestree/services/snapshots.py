@@ -12,7 +12,7 @@ from ancestree.storage.files import write_snapshot
 async def refresh_snapshots(ctx: Context, person_ids: Iterable[str]) -> None:
     for person_id in sorted(set(person_ids)):
         try:
-            detail = await read(ctx, partial(load_detail, person_id=person_id))
+            detail = await read(ctx, partial(load_detail, person_id=person_id, kept=True))
         except NotFoundError:
             continue
         if not detail.placeholder:

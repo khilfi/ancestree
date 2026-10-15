@@ -9,7 +9,7 @@ from uuid import UUID
 from neo4j import AsyncManagedTransaction
 
 from ancestree.domain.dates import describe_partial_date, format_partial_date
-from ancestree.domain.person import Gender, PartialDate, Person, Place
+from ancestree.domain.person import Gender, PartialDate, Person, Place, death_places
 from ancestree.domain.relationship import BIOLOGICAL, SpouseStatus
 from ancestree.domain.views import (
     ChildGroup,
@@ -84,10 +84,11 @@ def living_from(
 
 
 async def load_detail(
-    tx: AsyncManagedTransaction, person_id: str, language: str = "en"
+    tx: AsyncManagedTransaction, person_id: str, language: str = "en", *, kept: bool = False
 ) -> PersonDetail:
     """A person with their relatives, labelled in the kinship language. person.json
-    snapshots always ask for English, whatever the setting."""
+    snapshots always ask for English, whatever the setting, and for all that's `kept`: the
+    place of death too, which is otherwise shown nowhere."""
     props = await people_repo.fetch_person(tx, person_id)
     if props is None:
         raise NotFoundError("That person isn't in the tree.")
@@ -99,7 +100,9 @@ async def load_detail(
     co_parent_ids = {parent["id"] for row in children for parent in row["parents"]} - {person_id}
     co_parents = await people_repo.fetch_people(tx, sorted(co_parent_ids))
     book = TermBook.load(language)
-    return build_detail(props, kinds, parents, spouses, children, siblings, co_parents, book)
+    return build_detail(
+        props, kinds, parents, spouses, children, siblings, co_parents, book, kept=kept
+    )
 
 
 def build_detail(
@@ -113,6 +116,7 @@ def build_detail(
     book: TermBook | None = None,
     *,
     this_year: int | None = None,
+    kept: bool = False,
 ) -> PersonDetail:
     words = _Words(book or TermBook.load("en"), kinds)
     person = person_from_props(props)
@@ -149,7 +153,7 @@ def build_detail(
         birth_date=_date_view(person.birth_date),
         birth_place=person.birth_place,
         death_date=_date_view(person.death_date),
-        death_place=person.death_place,
+        death_place=person.death_place if kept or death_places() else None,  # unshown
         burial_place=person.burial_place,
         residence=person.residence,
         lives_with=person.lives_with,

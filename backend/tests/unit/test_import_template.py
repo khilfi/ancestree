@@ -3,11 +3,16 @@
 import csv
 import io
 
+import pytest
+
 from ancestree.exchange.spreadsheet import ENCODING
 from ancestree.importing.matching import Tree, plan_sheet
 from ancestree.importing.sheet import READ, read_sheet
 from ancestree.importing.template import TEMPLATE, template_csv
 from tests.unit.export_family import KINDS
+
+# The template with every column, the place of death's too: its switch on.
+pytestmark = pytest.mark.usefixtures("death_places")
 
 
 def test_the_template_is_the_columns_an_import_reads_but_the_version() -> None:

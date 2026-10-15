@@ -124,6 +124,7 @@ async def test_gedcom_holds_addresses_only_when_chosen(client: httpx.AsyncClient
     assert "3 POST 43000" in chosen
 
 
+@pytest.mark.usefixtures("death_places")  # shown, its switch on
 async def test_a_living_persons_address_saved_as_their_birth_and_death_moves_home_in_one_step(
     client: httpx.AsyncClient,
 ) -> None:

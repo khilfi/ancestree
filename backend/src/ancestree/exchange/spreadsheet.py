@@ -21,7 +21,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 
 from ancestree.domain.dates import format_partial_date
-from ancestree.domain.person import Gender, PartialDate, Place
+from ancestree.domain.person import Gender, PartialDate, Place, death_places
 from ancestree.domain.relationship import SpouseStatus
 from ancestree.exchange.family import FamilyData, Member, place_text
 from ancestree.services.detail import is_living
@@ -220,14 +220,19 @@ def write_people_csv(data: FamilyData, *, addresses: bool = False) -> str:
     header = list(COLUMNS)
     if addresses:
         header[lives_in:lives_in] = ADDRESS_COLUMNS
+    # The place of death kept, but sent to no one: no column, and no trace in a Version.
+    unsent = None if death_places() else COLUMNS.index("Death place")
+    if unsent is not None:
+        del header[unsent]
     writer.writerow(header)
     rows = sorted(data.people(), key=lambda m: (m.person.full_name.casefold(), m.id))
     for member in rows:
         p = member.person
         living = is_living(p)
-        version = row_version(
-            {name: shown(living if name == "living" else getattr(p, name)) for _, name in VERSIONED}
-        )
+        details = {name: living if name == "living" else getattr(p, name) for _, name in VERSIONED}
+        if unsent is not None:
+            details["death_place"] = None
+        version = row_version({name: shown(value) for name, value in details.items()})
         cells = [
             guard(cell)
             for cell in (
@@ -262,5 +267,7 @@ def write_people_csv(data: FamilyData, *, addresses: bool = False) -> str:
                 guard(home.address or "") if home else "",
                 guard(home.postcode or "") if home else "",
             ]
+        if unsent is not None:
+            del cells[unsent]
         writer.writerow(cells)
     return buffer.getvalue()

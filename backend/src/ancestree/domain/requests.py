@@ -6,7 +6,14 @@ from uuid import UUID
 from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 from ancestree.domain.dates import DateParseError, parse_partial_date
-from ancestree.domain.person import Gender, LivesWith, OptionalText, PartialDate, Place
+from ancestree.domain.person import (
+    Gender,
+    LivesWith,
+    OptionalText,
+    PartialDate,
+    Place,
+    death_places,
+)
 from ancestree.domain.relationship import BIOLOGICAL, GenderedLabel, KindWords, SpouseStatus
 
 
@@ -78,10 +85,12 @@ class PersonPatch(BaseModel):
 
     def changes(self) -> set[str]:
         """The fields given: a date or place given as null clears it; a gender as null
-        changes nothing."""
+        changes nothing, nor a place of death while it's only kept."""
         given = set(self.model_fields_set)
         if self.gender is None:
             given.discard("gender")
+        if not death_places():
+            given.discard("death_place")
         return given
 
 

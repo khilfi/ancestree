@@ -3026,6 +3026,11 @@ export interface components {
             data_folder: string;
             /** Backup Folder */
             backup_folder: string;
+            /**
+             * Death Places
+             * @default false
+             */
+            death_places: boolean;
         };
         /**
          * Helped

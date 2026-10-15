@@ -5,7 +5,7 @@ around them named. Nothing is looked up online."""
 import asyncio
 import random
 from collections.abc import Collection, Iterable, Mapping
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from uuid import UUID
 
 from ancestree.domain.map import (
@@ -19,7 +19,7 @@ from ancestree.domain.map import (
     PlaceSuggestions,
     Town,
 )
-from ancestree.domain.person import Place
+from ancestree.domain.person import Place, death_places
 from ancestree.domain.views import AtParents, at_parents
 from ancestree.maps import photon
 from ancestree.places import gazetteer as gazetteer_module
@@ -136,6 +136,8 @@ async def family_map(
     rows = await read(ctx, read_places)
     pins = await asyncio.to_thread(read_pins, ctx.data_dir)
     places = await asyncio.to_thread(gazetteer)
+    # Where they died is kept, but put on no map while it's unshown.
+    rows = rows if death_places() else [replace(row, died=None) for row in rows]
     shown = [row for row in rows if row.id not in hidden]
     # The living with no place of their own, at their parents'.
     homes = {row.id: _at_parents(row) for row in shown}

@@ -1,4 +1,5 @@
 import { MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { GraphPerson } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
@@ -6,12 +7,24 @@ import { StoryMark } from "@/features/biography/StoryMark";
 import { shortName } from "@/features/tree/words";
 import { lifeYears } from "@/lib/people";
 import { cn } from "@/lib/utils";
-import { STATE_MIDDLES } from "./geo";
+import { BundleCard, OpenFan } from "./Bundle";
+import {
+  bundleName,
+  bundlePlace,
+  eldestFirst,
+  FANNED,
+  firstFew,
+  HOUSE_KM,
+  opensHere,
+} from "./bundles";
+import { PLANE_PER_KM, STATE_MIDDLES } from "./geo";
 import {
   bubbleRadius,
   flowerRadius,
   type Group,
   gather,
+  type House,
+  houses,
   type Level,
   MOST,
   mergeTowns,
@@ -25,7 +38,9 @@ import {
 /*
  * The family on the map, as both drawings show it: today's, and
  * MapLibre's from the map packs. A circle for each country or state with how many are
- * there, then each town's people as their photos; and the map's own buttons.
+ * there, then each town's people as their photos, people at one house as one place, and
+ * people too close together to show apart as a bundle, named by its eldest, that opens where
+ * it is; and the map's own buttons.
  */
 
 const MARGIN = 200; // drawn this far outside the screen, so panning shows no gaps
@@ -43,7 +58,8 @@ export function familyGroups(
     const found = STATE_MIDDLES.get(state);
     return found ? { x: found[0], y: found[1] } : null;
   };
-  const gathered = gather(spots, level, toScreen, middle);
+  const atHome = housesOf(spots);
+  const gathered = gather(spots, level, toScreen, middle, (id) => atHome.get(id));
   if (level !== "towns") return separate(gathered, (g) => bubbleRadius(g.members.length));
   const shown = (count: number) => (withNames ? count : Math.min(count, MOST));
   return mergeTowns(gathered, (g) =>
@@ -51,8 +67,22 @@ export function familyGroups(
   );
 }
 
+// People at one house, for each set of spots: worked out once, not at each view.
+const housesFound = new WeakMap<readonly Spot[], Map<string, House>>();
+function housesOf(spots: readonly Spot[]): Map<string, House> {
+  let found = housesFound.get(spots);
+  if (!found) {
+    found = houses(spots, HOUSE_KM * PLANE_PER_KM);
+    housesFound.set(spots, found);
+  }
+  return found;
+}
+
 /** The groups on screen, and a little beyond it: a circle for a country, a state or towns too
- *  close together, else a town's people as their photos. A circle's click zooms in on it. */
+ *  close together, else a town's people as their photos. A country's or a state's circle
+ *  zooms in on a click; a bundle of towns opens where it is when zooming in wouldn't part it,
+ *  its people within about 30 m or the map at its deepest, and else zooms in, with Open here
+ *  beside it. */
 export function FamilyPlaces({
   groups,
   level,
@@ -65,6 +95,10 @@ export function FamilyPlaces({
   selectedId,
   onSelect,
   onZoomInto,
+  spotOf,
+  screenOf,
+  generationOf,
+  deepest,
 }: {
   groups: Group[];
   level: Level;
@@ -77,10 +111,52 @@ export function FamilyPlaces({
   selectedId: string | null;
   onSelect?: (id: string) => void;
   onZoomInto: (group: Group) => void;
+  spotOf: (id: string) => Spot | undefined;
+  screenOf: (id: string) => Point | null; // where each really is, on screen
+  generationOf: (id: string) => number | undefined; // on the rings, for the eldest
+  deepest: boolean; // the map zoomed in as far as it goes
 }) {
   const visible = (at: Point) =>
     at.x > -MARGIN && at.y > -MARGIN && at.x < size.width + MARGIN && at.y < size.height + MARGIN;
   const nameOf = (id: string) => people.get(id)?.full_name ?? "";
+  // The bundle open, by its key: one at a time. Esc, or a click anywhere else, folds it back,
+  // and Esc gives the keys back to its circle.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const opened = useRef<HTMLDivElement>(null);
+  const open = openKey ? groups.find((group) => group.key === openKey) : undefined;
+  useEffect(() => {
+    if (!openKey) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenKey(null);
+      // Once its circle shows again: hidden, it can't take the keys.
+      const circle = `[data-bundle="${CSS.escape(openKey)}"]`;
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLElement>(circle)?.focus({ preventScroll: true }),
+      );
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (!opened.current?.contains(event.target as Node)) setOpenKey(null);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer, true);
+    };
+  }, [openKey]);
+  // A bundle of towns: named by its eldest; pointing at it names the first few and where.
+  const bundled = (group: Group) => level === "towns" && group.towns > 1;
+  const told = (group: Group) => {
+    const eldest = eldestFirst(group.members, people, generationOf);
+    return {
+      eldest,
+      name: bundleName(eldest, people),
+      place: bundlePlace(eldest, spotOf),
+      few: firstFew(eldest, people),
+    };
+  };
+  const shownOpen = open ? told(open) : null;
   return (
     // Drags and pinches pass through to the map beneath; only the circles and photos take clicks.
     <div className="pointer-events-none absolute inset-0 animate-in fade-in duration-300">
@@ -91,8 +167,16 @@ export function FamilyPlaces({
             <Bubble
               key={group.key}
               group={group}
-              onOpen={() => onZoomInto(group)}
+              told={bundled(group) ? told(group) : undefined}
+              opens={bundled(group) && opensHere(group.members, spotOf, deepest)}
+              onOpen={() =>
+                bundled(group) && opensHere(group.members, spotOf, deepest)
+                  ? setOpenKey(group.key)
+                  : onZoomInto(group)
+              }
+              onOpenHere={() => setOpenKey(group.key)}
               nameOf={nameOf}
+              hidden={group.key === openKey}
             />
           ) : (
             <Town
@@ -109,6 +193,32 @@ export function FamilyPlaces({
             />
           ),
         )}
+      {open &&
+        shownOpen &&
+        (open.members.length > FANNED ? (
+          <BundleCard
+            group={open}
+            {...shownOpen}
+            people={people}
+            size={size}
+            spotOf={spotOf}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            box={opened}
+          />
+        ) : (
+          <OpenFan
+            group={open}
+            {...shownOpen}
+            people={people}
+            colourOf={colourOf}
+            faded={faded}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            screenOf={screenOf}
+            box={opened}
+          />
+        ))}
     </div>
   );
 }
@@ -152,23 +262,33 @@ export function MapButtons({
   );
 }
 
-/** A country's or a state's people as a number, or towns too close together to show apart. */
+/** A country's or a state's people as a number; or a bundle, towns too close together to show
+ *  apart, named by its eldest: "Fatimah and 2 more". */
 export function Bubble({
   group,
+  told,
+  opens,
   onOpen,
+  onOpenHere,
   nameOf,
+  hidden,
 }: {
   group: Group;
+  told?: { name: string; place: string; few: string }; // a bundle's, else a place's circle
+  opens?: boolean; // a bundle that opens where it is, rather than zooming in
   onOpen: () => void;
+  onOpenHere: () => void;
   nameOf: (id: string) => string;
+  hidden?: boolean; // open, its people shown instead
 }) {
   const radius = bubbleRadius(group.members.length);
   const count = group.members.length;
-  const what = group.towns > 1 ? `${group.label} and ${group.towns - 1} more` : group.label;
+  const what = told?.name ?? group.label;
   const who = count === 1 ? nameOf(group.members[0] ?? "") : `${count} people`;
+  const pointed = told ? `${told.few} · ${told.place}` : `${what}: ${who}`;
   return (
     <div
-      className="absolute flex flex-col items-center"
+      className={cn("group absolute flex flex-col items-center", hidden && "invisible")}
       style={{
         transform: `translate(${group.at.x}px, ${group.at.y}px) translate(-50%, -${radius}px)`,
       }}
@@ -187,14 +307,29 @@ export function Bubble({
             : "border-white bg-sky-600/85 text-white",
         )}
         style={{ width: radius * 2, height: radius * 2, fontSize: Math.min(18, 10 + radius / 5) }}
-        aria-label={`${what}: ${who}. Zoom in`}
-        title={`${what}: ${who}`}
+        data-bundle={told ? group.key : undefined}
+        aria-label={`${told ? pointed : `${what}: ${who}`}. ${opens ? "Open" : "Zoom in"}`}
+        title={pointed}
       >
         {count}
       </button>
       <span className="mt-0.5 max-w-40 truncate rounded bg-white/80 px-1 text-xs font-medium text-stone-700">
         {what}
       </span>
+      {/* A bundle that zooms in can open where it is too: shown when pointed at or reached. */}
+      {told && !opens && (
+        <button
+          type="button"
+          className="pointer-events-auto mt-0.5 rounded bg-white/90 px-1 text-[11px] text-sky-700 underline-offset-2 opacity-0 shadow-sm group-hover:opacity-100 hover:underline focus-visible:opacity-100"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenHere();
+          }}
+        >
+          Open here
+        </button>
+      )}
     </div>
   );
 }
@@ -270,7 +405,9 @@ export function Town({
               person={person}
               size="sm"
               className={cn(
-                "size-[34px] shadow-sm",
+                // Never narrowed: a photo is an image, which may be no wider than its button,
+                // and a button with no name under it has no width of its own.
+                "size-[34px] max-w-none shadow-sm",
                 group.rough && "border-dashed",
                 id === selectedId && "ring-2 ring-sky-500 ring-offset-1",
               )}

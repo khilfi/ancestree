@@ -48,6 +48,7 @@ export default function MapLibreCanvas({
   onPlace,
   onCancelPlace,
   onCannotDraw,
+  generationOf,
 }: {
   spots: Spot[];
   regions: MapPack[]; // the regions' packs on this computer
@@ -63,6 +64,7 @@ export default function MapLibreCanvas({
   onPlace: (point: { lat: number; lon: number }) => void;
   onCancelPlace: () => void;
   onCannotDraw: () => void; // WebGL failed after all: today's map then
+  generationOf: (id: string) => number | undefined; // on the rings, for a bundle's eldest
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -181,6 +183,11 @@ export default function MapLibreCanvas({
 
   // Bring people into view: those in a state or town chosen in the list, or someone found.
   const byId = useMemo(() => new Map(spots.map((spot) => [spot.id, spot])), [spots]);
+  // Where each really is, for a bundle opened where it is.
+  const screenOf = (id: string) => {
+    const spot = byId.get(id);
+    return spot ? toScreen(spot) : null;
+  };
   const lastTarget = useRef<number | null>(null);
   useEffect(() => {
     const shown = map.current;
@@ -291,6 +298,10 @@ export default function MapLibreCanvas({
           selectedId={selectedId}
           onSelect={onSelect}
           onZoomInto={zoomInto}
+          spotOf={(id) => byId.get(id)}
+          screenOf={screenOf}
+          generationOf={generationOf}
+          deepest={view.getZoom() >= MOST_ZOOM - 0.05}
         />
       )}
 
