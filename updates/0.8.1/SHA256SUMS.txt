@@ -1,0 +1,4 @@
+b0075d4b4f912e7852a068c51e534e7cca3c3430dc3ec4e10805ea59bc7c0edf  AncesTree_0.8.1_aarch64.app.tar.gz
+493015af0cffbccc034a5b5d700ba510ba5433c44f73876b0cbc8a1340c412a7  AncesTree_0.8.1_aarch64.dmg
+e23c4af5eff06d74e8bae96cab2c2451ee097d7d78f3bd13450bf9dc129a6c56  AncesTree_0.8.1_amd64.AppImage
+849973633341007c29ac3f5832b119df484454afd218c9667a70ac2fd66fe5a2  AncesTree_0.8.1_x64-setup.exe
