@@ -219,7 +219,7 @@ describe("where a place is", () => {
     const where = field("Where they live now: where it is");
     type(where, "https://www.google.com/maps/@2.993,101.788,17z");
     enter(where); // read there, not saved
-    await until("Exact (placed by hand)");
+    await until("Confirmedon the map as a pin");
     expect(document.body.textContent).toContain("2.9930, 101.7880");
     await until("Filled in from the nearest place known: Kajang");
     expect(field("Where they live now: town").value).toBe("Kajang");
@@ -243,14 +243,14 @@ describe("where a place is", () => {
     answer();
     show(byHand);
     type(field("Where they live now: town"), "Semenyih");
-    await until("Its pin was put on the map by hand.");
+    await until("Its place on the map was confirmed.");
     act(() => button("Keep it there")?.click());
     expect(document.body.textContent).toContain("3.0006, 101.7869");
     type(field("Where they live now: postcode"), "43500");
-    await until("Its pin was put on the map by hand.");
+    await until("Its place on the map was confirmed.");
     act(() => button("Place it from the address")?.click());
     expect(document.body.textContent).not.toContain("3.0006, 101.7869");
-    expect(document.body.textContent).not.toContain("Its pin was put on the map by hand.");
+    expect(document.body.textContent).not.toContain("Its place on the map was confirmed.");
   });
 
   it("says what would help where the small map can't be drawn", async () => {
@@ -261,6 +261,46 @@ describe("where a place is", () => {
     act(() => button("Show on the map")?.click());
     await until("The small map needs the world's map, downloaded once.");
     expect(button("Download the world's map")).toBeDefined();
+  });
+});
+
+describe("confirmed, or about here", () => {
+  // Placed at their postcode's area from the address, not yet confirmed.
+  const aboutHere = {
+    ...byHand,
+    residence: { ...byHand.residence, lat: 2.993, lon: 101.788, exact: "postcode" },
+  } as unknown as PersonDetail;
+
+  it("says a found place is about here, and confirms it with Confirm", async () => {
+    answer();
+    show(aboutHere);
+    field("Where they live now: address");
+    expect(document.body.textContent).toContain("About hereon the map at Kajang");
+    act(() => button("Confirm")?.click());
+    expect(document.body.textContent).toContain("Confirmedon the map as a pin");
+    expect(button("Confirm")).toBeUndefined();
+    act(() => button("Save")?.click());
+    const { residence } = await saved();
+    expect(residence).toMatchObject({ lat: 2.993, lon: 101.788, exact: "hand" }); // not moved
+  });
+
+  it("confirms it with Looks right, as the small map shows where it is", async () => {
+    answer();
+    show(aboutHere);
+    field("Where they live now: address");
+    act(() => button("Show on the map")?.click());
+    act(() => button("Looks right")?.click());
+    expect(document.body.textContent).toContain("Confirmedon the map as a pin");
+    act(() => button("Save")?.click());
+    expect((await saved()).residence).toMatchObject({ exact: "hand" });
+  });
+
+  it("says one placed by hand is confirmed already", () => {
+    answer();
+    show(byHand);
+    field("Where they live now: address");
+    expect(document.body.textContent).toContain("Confirmedon the map as a pin");
+    expect(button("Confirm")).toBeUndefined();
   });
 });
 
@@ -285,7 +325,9 @@ describe("an address looked up online, once", () => {
       }),
     );
     act(() => button("3 Jalan Sultan · Kota Bharu · Kelantan · 15050 · Malaysia")?.click());
-    expect(document.body.textContent).toContain("On the mapExact6.1301, 102.2402");
+    expect(document.body.textContent).toContain(
+      "On the mapAbout hereon the map at Kota Bharu6.1301, 102.2402",
+    );
     expect(field("Where they live now: address").value).toBe("No. 3, Jalan Sultan"); // as typed
     // Where it went is shown, to check: here, what would let the small map be drawn.
     await until("The small map needs the world's map, downloaded once.");

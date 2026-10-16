@@ -36,8 +36,8 @@ export function hasPlace(place: PlaceLike | null | undefined): boolean {
 
 /** How exactly a place is on the map, as a folded block says it. */
 const HOW: Record<Exactness, string> = {
-  spot: "exactly",
-  hand: "pinned by hand",
+  spot: "at its house",
+  hand: "confirmed",
   street: "at its street",
   postcode: "at its postcode's area",
   town: "at its town",

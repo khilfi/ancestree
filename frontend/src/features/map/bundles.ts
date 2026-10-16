@@ -1,15 +1,20 @@
 /*
  * A bundle on the map: people too close together to show
  * apart, as one circle. Named by its eldest, opened where it is when zooming in wouldn't part
- * them. Plain arithmetic, tested without a browser.
+ * them. One spot: people at the same house, one pin, whose people stand in
+ * columns above it when it's opened. Plain arithmetic, tested without a browser.
  */
 import type { GraphPerson } from "@/api/types";
 import { shortName } from "@/features/tree/words";
 import { PLANE_PER_KM } from "./geo";
 import { MOST, type Point, type Spot } from "./levels";
 
-/** People within this of each other are one house. */
-export const HOUSE_KM = 0.015;
+/** People within this of each other are at one spot, the same house to anyone looking. */
+export const SPOT_KM = 0.002;
+/** The most an opened spot stands in one column; fewer where the window is short. */
+export const COLUMN = 8;
+/** The most columns an opened spot stands in: more people open as a card. */
+export const COLUMNS = 5;
 /** A bundle whose people are within this of each other opens where it is: zooming in, even to
  *  the deepest, wouldn't part them. */
 export const TOGETHER_KM = 0.03;
@@ -127,4 +132,12 @@ export function fanned(count: number, width: number): { at: Point[]; radius: num
     return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
   });
   return { at, radius };
+}
+
+/** How an opened spot stands: `rows` the window has room for above its pin. Up to 8 to a
+ *  column, the next column beside it; past 5 columns, a card instead. */
+export function stacked(count: number, rows: number) {
+  const perColumn = Math.max(1, Math.min(COLUMN, rows));
+  const columns = Math.ceil(count / perColumn);
+  return { perColumn, columns, card: columns > COLUMNS };
 }

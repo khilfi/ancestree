@@ -183,7 +183,9 @@ describe("an address, filled in as it's typed", () => {
     expect(field("Where they live now: address").value).toBe(
       "No. 12, Jalan Melati 3, 43000 Kajang",
     );
-    expect(document.body.textContent).toContain("On the mapPostcode area2.9930, 101.7880");
+    expect(document.body.textContent).toContain(
+      "On the mapAbout hereon the map at Kajang2.9930, 101.7880",
+    );
     act(() => button("Save")?.click());
     const residence = (await saved()).residence;
     expect(residence).toEqual({ address: "No. 12, Jalan Melati 3, 43000 Kajang", ...kajang });

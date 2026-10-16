@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GrowingText } from "@/components/ui/growing-text";
 import { drawsWebGL2 } from "@/features/map/webgl";
 import { showError } from "@/lib/notify";
+import { cn } from "@/lib/utils";
 import { readCoordinates } from "./coordinates";
 import type { PersonFormValues } from "./personSchema";
 
@@ -15,10 +16,11 @@ const SmallMap = import.meta.env.MODE === "viewer" ? null : lazy(() => import(".
 
 type PlaceKey = "birth_place" | "death_place" | "residence";
 
-/** How exactly a pin is placed, as the form marks it. */
+/** How exactly a pin is placed, as the form marks it; placed by hand, or confirmed
+ *  with Looks right, is confirmed. */
 export const MARK: Record<Exactness, string> = {
-  spot: "Exact",
-  hand: "Exact (placed by hand)",
+  spot: "At its house",
+  hand: "Confirmed",
   street: "Street",
   postcode: "Postcode area",
   town: "Town",
@@ -32,9 +34,10 @@ const round = (value: number) => Number(value.toFixed(6));
 
 /**
  * Where a place is: its pin, placed from the address by
- * itself, marked with how exactly; a small map that shows where it went, with **Looks right**,
- * where it's dragged or clicked only if it's wrong, then **Exact (placed by hand)**; and its
- * coordinates, typed or pasted in any common form. A pin put first fills in the address from
+ * itself, about there; a small map that shows where it went, with **Looks right**, which
+ * confirms it, where it's dragged or clicked only if it's wrong, which confirms it too;
+ * and its coordinates, typed or pasted in any common form. Confirmed, it's a pin on the map;
+ * else a round node, about there, with **Confirm**. A pin put first fills in the address from
  * the nearest place known. Where the small map can't be drawn, the numbers and what would help.
  */
 export function PlaceLocation({
@@ -90,6 +93,9 @@ export function PlaceLocation({
 
   const set = (field: keyof PersonFormValues[PlaceKey], value: string | number | null) =>
     setValue(`${name}.${field}`, value as never, { shouldDirty: true });
+  // Confirmed where it is: kept as one placed by hand, which nothing moves by itself.
+  const confirmed = exact === "hand";
+  const confirm = () => set("exact", "hand");
 
   /** Put the pin here, by hand: on the small map, or from coordinates. A pin put first fills in
    *  the address from the nearest place known, each part still to change. */
@@ -134,12 +140,27 @@ export function PlaceLocation({
         <span className="font-medium text-stone-700">On the map</span>
         {placed ? (
           <>
-            <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-800">
-              {MARK[exact ?? "hand"]}
+            <span
+              className={cn(
+                "rounded px-1.5 py-0.5",
+                confirmed ? "bg-sky-50 text-sky-800" : "bg-amber-50 text-amber-900",
+              )}
+            >
+              {confirmed ? "Confirmed" : "About here"}
             </span>
-            <span className="text-stone-500 tabular-nums">
+            <span className="text-stone-600">
+              {confirmed
+                ? "on the map as a pin"
+                : `on the map at ${town || MARK[exact ?? "town"].toLowerCase()}`}
+            </span>
+            <span className="text-stone-400 tabular-nums">
               {lat.toFixed(4)}, {lon.toFixed(4)}
             </span>
+            {!confirmed && (
+              <Button type="button" variant="outline" size="xs" onClick={confirm}>
+                Confirm
+              </Button>
+            )}
           </>
         ) : (
           <span className="text-stone-500">
@@ -148,7 +169,15 @@ export function PlaceLocation({
         )}
         <span className="ml-auto flex gap-1">
           {shown && placed ? (
-            <Button type="button" variant="outline" size="xs" onClick={() => setShown(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => {
+                if (!confirmed) confirm();
+                setShown(false);
+              }}
+            >
               Looks right
             </Button>
           ) : (
@@ -174,7 +203,7 @@ export function PlaceLocation({
       {question && (
         <div className="flex flex-wrap items-center gap-2 rounded bg-amber-50 p-2 text-amber-900">
           <span className="flex-1">
-            Its pin was put on the map by hand. Keep it there, or place it from the new address?
+            Its place on the map was confirmed. Keep it there, or place it from the new address?
           </span>
           <Button type="button" variant="outline" size="xs" onClick={onAnswered}>
             Keep it there

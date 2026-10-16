@@ -13,7 +13,9 @@ import { mapStyle, perKmAt, zoomFor } from "./style";
 // Malaysia, as the map opens and as F shows it: west, south, east, north.
 const MALAYSIA: [number, number, number, number] = [99.6, 0.85, 119.3, 7.4];
 const ONE_PERSON_PER_KM = 3; // a person found alone is shown at the towns, as on today's map
-const MOST_ZOOM = 16; // the regions' packs go to zooms 13 and 14, enlarged past them
+// The regions' packs go to zooms 13 and 14, enlarged past them: on to 19, about 0.15 m a
+// pixel, so people a few metres apart stand apart.
+const MOST_ZOOM = 19;
 
 // MapLibre's worker, a file of its own beside the app's pages, as the page's policy allows.
 maplibregl.setWorkerUrl(workerUrl);
@@ -140,6 +142,7 @@ export default function MapLibreCanvas({
   const level = levelAt(perKm);
   const withNames = perKm >= NAMES_FROM;
   const spacing = withNames ? PHOTO + 30 : PHOTO + 4;
+  const deepest = view ? view.getZoom() >= MOST_ZOOM - 0.05 : false;
 
   // A point of the plane (geo.ts), where MapLibre shows it.
   const toScreen = useCallback((point: Point): Point => {
@@ -152,8 +155,8 @@ export default function MapLibreCanvas({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: frame stands for the view
   const groups = useMemo(
-    (): Group[] => (view ? familyGroups(spots, level, toScreen, withNames, spacing) : []),
-    [spots, level, withNames, spacing, frame, view, toScreen],
+    (): Group[] => (view ? familyGroups(spots, level, toScreen, withNames, spacing, deepest) : []),
+    [spots, level, withNames, spacing, frame, view, toScreen, deepest],
   );
 
   const glideTo = useCallback((options: maplibregl.EaseToOptions) => {
@@ -301,7 +304,7 @@ export default function MapLibreCanvas({
           spotOf={(id) => byId.get(id)}
           screenOf={screenOf}
           generationOf={generationOf}
-          deepest={view.getZoom() >= MOST_ZOOM - 0.05}
+          deepest={deepest}
         />
       )}
 

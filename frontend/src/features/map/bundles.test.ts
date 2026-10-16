@@ -1,8 +1,8 @@
 /**
- * A bundle on the map: people at one house as one place;
- * a bundle named by its eldest; where it is; and whether a click opens it where it is or zooms
- * in. Made-up people at a made-up house on the plane: three pins 6 m apart, as the report had
- * them.
+ * A bundle on the map: named by its eldest; where it is;
+ * and whether a click opens it where it is or zooms in. One spot: pins
+ * within about 2 m one pin, standing in columns when opened, and each its own at the deepest.
+ * Made-up people at a made-up house on the plane.
  */
 import { describe, expect, it } from "vitest";
 import type { GraphPerson } from "@/api/types";
@@ -12,12 +12,14 @@ import {
   eldestFirst,
   fanned,
   firstFew,
-  HOUSE_KM,
   opensHere,
+  SPOT_KM,
   spreadKm,
+  stacked,
 } from "./bundles";
 import { onPlane, PLANE_PER_KM } from "./geo";
-import { gather, houses, type Spot } from "./levels";
+import { DEEPEST_PER_KM, gather, oneSpots, type Spot } from "./levels";
+import { familyGroups } from "./places";
 
 const HOME = { lat: 2.99312, lon: 101.78791 }; // a made-up house in Kajang
 const METRE = 1 / 111_320; // a metre north, in degrees
@@ -48,13 +50,14 @@ const PEOPLE = new Map([
 ]) as unknown as Map<string, GraphPerson>;
 const none = () => undefined;
 
-describe("people at one house", () => {
-  const three = [spot("ali", 0), spot("nora", 6), spot("mak", 3)];
-  const reach = HOUSE_KM * PLANE_PER_KM;
+describe("people at one spot", () => {
+  // Three at one house, a metre or two apart as pins put by hand are; a child 6 m away.
+  const three = [spot("ali", 0), spot("nora", 1.5), spot("mak", 0.8)];
+  const reach = SPOT_KM * PLANE_PER_KM;
 
-  it("makes pins within about 15 m in one town one place, named by its address", () => {
-    const found = houses(three, reach);
-    expect(new Set([...found.values()].map((house) => house.key)).size).toBe(1);
+  it("makes pins within about 2 m one spot, named by its address", () => {
+    const found = oneSpots(three, reach);
+    expect(new Set([...found.values()].map((one) => one.key)).size).toBe(1);
     expect(found.get("mak")?.label).toBe("No. 8, Jalan Kenari 2");
     const groups = gather(
       three,
@@ -68,17 +71,50 @@ describe("people at one house", () => {
     expect(groups[0]?.about).toBe(false); // exactly there, by hand
   });
 
-  it("keeps a neighbour 40 m away, another town's pin, and those only about there apart", () => {
-    const found = houses(
+  it("gives a child 6 m away a spot of their own, and none to those only about there", () => {
+    const found = oneSpots(
       [
         ...three,
-        spot("far", 40),
-        spot("next", 4, { place: "Kapar" }),
-        spot("town", 5, { exact: "town" }),
+        spot("child", 6, { address: "No. 10, Jalan Kenari 2" }),
+        spot("town", 3, { exact: "town" }),
       ],
       reach,
     );
-    expect([...found.keys()].sort()).toEqual(["ali", "mak", "nora"]);
+    expect(found.get("child")?.key).not.toBe(found.get("ali")?.key);
+    expect(found.get("child")?.label).toBe("No. 10, Jalan Kenari 2");
+    expect(found.has("town")).toBe(false);
+  });
+
+  it("stands a child 6 m away apart at the map's deepest, and with their parents above it", () => {
+    const k = DEEPEST_PER_KM / PLANE_PER_KM; // zoom 19: 6 m is 20 pixels
+    const near = [...three, spot("child", 6)];
+    const at = (p: { x: number; y: number }) => ({ x: p.x * k, y: p.y * k });
+    const deepest = familyGroups(near, "towns", at, true, 64, true);
+    expect(deepest.map((group) => group.members.length).sort()).toEqual([1, 3]);
+    const above = familyGroups(
+      near,
+      "towns",
+      (p) => ({ x: p.x * k * 0.5, y: p.y * k * 0.5 }),
+      true,
+      64,
+    );
+    expect(above).toHaveLength(1); // their pins would cover each other: one circle
+    expect(above[0]?.towns).toBe(2);
+  });
+});
+
+describe("an opened spot's columns", () => {
+  it("stands 8 to a column, the next beside it, and a card past 5 columns", () => {
+    expect(stacked(3, 20)).toEqual({ perColumn: 8, columns: 1, card: false });
+    expect(stacked(20, 20)).toEqual({ perColumn: 8, columns: 3, card: false });
+    expect(stacked(40, 20).card).toBe(false);
+    expect(stacked(41, 20).card).toBe(true);
+  });
+
+  it("puts fewer in a column where the window is short", () => {
+    expect(stacked(20, 4)).toEqual({ perColumn: 4, columns: 5, card: false });
+    expect(stacked(20, 3).card).toBe(true);
+    expect(stacked(2, 0)).toEqual({ perColumn: 1, columns: 2, card: false });
   });
 });
 

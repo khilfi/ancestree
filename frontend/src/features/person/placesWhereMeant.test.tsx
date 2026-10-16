@@ -180,7 +180,7 @@ describe("each place where it's meant", () => {
   it("puts where they live first, each place folded to a line, and no death part for the living", () => {
     show(person({ residence: house, birth_place: kajang }));
     expect(blocks().map((each) => each.text)).toEqual([
-      "Where they live nowNo. 8, Jalan Kenari 2, Taman … Klang, Selangor · pinned by hand",
+      "Where they live nowNo. 8, Jalan Kenari 2, Taman … Klang, Selangor · confirmed",
       "Where they were bornKajang, Selangor · at its town",
     ]);
     expect(blocks().some((each) => each.open)).toBe(false);
@@ -203,7 +203,7 @@ describe("each place where it's meant", () => {
   it("keeps a living person's place of death, with a word, never hidden", async () => {
     show(mixedUp);
     await until("Where they died");
-    expect(block("Where they died").text).toContain("Klang, Selangor · pinned by hand");
+    expect(block("Where they died").text).toContain("Klang, Selangor · confirmed");
     expect(document.body.textContent).toContain("They're marked as living");
   });
 
@@ -344,7 +344,7 @@ describe("What's missing: a place where it isn't meant", () => {
     render(<MissingSection />);
     await until("Living, with a place of death");
     expect(document.body.textContent).toContain(
-      "place of death No. 8, Jalan Kenari 2, Taman … Klang, Selangor · pinned by hand",
+      "place of death No. 8, Jalan Kenari 2, Taman … Klang, Selangor · confirmed",
     );
     act(() => button("Move it to Where they live")?.click());
     await vi.waitFor(() => expect(asked.some((each) => each.method === "PATCH")).toBe(true));
@@ -390,8 +390,56 @@ describe("no place of death shown", () => {
       return new Response("{}", { status: 404 });
     });
     render(<MissingSection />);
-    await until("Not on the map exactly");
+    await until("Not confirmed on the map");
     await vi.waitFor(() => expect(asked.some((each) => each.path === "/api/health")).toBe(true));
     expect(document.body.textContent).not.toContain("place of death");
+  });
+});
+
+describe("What's missing: not confirmed on the map", () => {
+  it("lists someone with an address about there, and Confirm keeps it there, confirmed", async () => {
+    const ali = { ...person({ residence: house }), birth_year: 1980, placeholder: false };
+    const graph = { people: [ali], links: [], layout: { unlinked: [] } };
+    const found = { ...house, lat: 3.0312, lon: 101.4631, exact: "postcode" } as Place;
+    const map = {
+      people: [
+        {
+          id: "ali",
+          lives: {
+            place: found,
+            country: "Malaysia",
+            lat: 3.0312,
+            lon: 101.4631,
+            exact: "postcode",
+          },
+        },
+      ],
+      pins: [],
+      towns: [],
+    };
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const request = input as Request;
+      const path = new URL(request.url).pathname;
+      const body = request.method === "PATCH" ? await request.clone().json() : null;
+      asked.push({ method: request.method, path, body });
+      if (path === "/api/graph") return Response.json(graph);
+      if (path === "/api/map") return Response.json(map);
+      if (path === "/api/family/facts")
+        return Response.json({ to_fill_in: { no_birth_order: [] } });
+      if (path === "/api/persons/ali") return Response.json({ person: ali, notices: [] });
+      return new Response("{}", { status: 404 });
+    });
+    render(<MissingSection />);
+    await until("Not confirmed on the map");
+    await until("Place it");
+    act(() => button("Confirm")?.click());
+    await vi.waitFor(() => expect(asked.some((each) => each.method === "PATCH")).toBe(true));
+    const sent = asked.find((each) => each.method === "PATCH")?.body as { residence: Place };
+    expect(sent.residence).toMatchObject({
+      address: house.address,
+      lat: 3.0312,
+      lon: 101.4631,
+      exact: "hand",
+    });
   });
 });

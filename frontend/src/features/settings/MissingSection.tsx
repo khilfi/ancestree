@@ -399,7 +399,8 @@ function ExactRow({
   const regions = (packs.data?.packs ?? []).filter((pack) => !pack.first && pack.installed);
   const { place } = located;
   const where = [place.address, place.postcode].filter(Boolean).join(", ");
-  const put = (point: { lat: number; lon: number }) => {
+  // Put where it is, or confirmed where it is: kept as one placed by hand, a pin.
+  const put = (point: { lat: number; lon: number }, said: string) => {
     const residence = {
       ...place,
       lat: Number(point.lat.toFixed(6)),
@@ -408,18 +409,29 @@ function ExactRow({
     };
     patch.mutate(
       { id: person.id, body: { residence } },
-      {
-        onError: showError,
-        onSuccess: () => toast.success(`${shortName(person)}'s pin is where you put it.`),
-      },
+      { onError: showError, onSuccess: () => toast.success(said) },
     );
   };
+  const here =
+    located.lat != null && located.lon != null ? { lat: located.lat, lon: located.lon } : null;
   return (
     <li className="space-y-1.5 py-2">
       <div className="flex items-center gap-2">
         <Who person={person} about={[about, where, MARK[located.exact ?? "town"]].join(" · ")} />
+        {here && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={patch.isPending}
+            onClick={() =>
+              put(here, `${shortName(person)}'s place is confirmed: a pin on the map.`)
+            }
+          >
+            Confirm
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => setOpen((now) => !now)}>
-          Put the pin where it is
+          Place it
         </Button>
         <Open id={person.id} />
       </div>
@@ -434,7 +446,7 @@ function ExactRow({
                 regions={regions}
                 online={packs.data?.online ?? false}
                 label={shortName(person)}
-                onMove={put}
+                onMove={(point) => put(point, `${shortName(person)}'s pin is where you put it.`)}
               />
               <p>Drag the pin, or click where they live.</p>
             </Suspense>
@@ -524,9 +536,9 @@ export function mixedUp(
   return { death, birth };
 }
 
-/** Who has an address where they live, but is on the map only about there, at their
- *  postcode's area or their town: at a place of their own, not their parents'. As the
- *  map answers it, in its order. */
+/** Who has an address where they live, but whose place on the map isn't confirmed:
+ *  a house found, a street, a postcode's area or a town, about there; at a place of their own,
+ *  not their parents'. As the map answers it, in its order. */
 export function aboutThere(people: MapPerson[]): { id: string; located: Located }[] {
   return people.flatMap(({ id, lives, at_parents }) => {
     if (!lives || at_parents || !(lives.place.address || lives.place.postcode)) return [];
@@ -760,9 +772,9 @@ export function MissingSection() {
       )}
 
       <Section
-        title="Not on the map exactly"
+        title="Not confirmed on the map"
         count={lists.exactly.length + lists.mixed.birth.length}
-        done="Everyone with an address is on the map where they live, not just about there."
+        done="Everyone with an address is confirmed on the map where they live: a pin."
       >
         <Rows
           items={lists.mixed.birth}

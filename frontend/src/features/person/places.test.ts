@@ -28,9 +28,7 @@ const house: PlaceLike = {
 
 describe("a place in one line", () => {
   it("says where, and how exactly it's on the map", () => {
-    expect(placeLine(house)).toBe(
-      "No. 8, Jalan Kenari 2, Taman … Klang, Selangor · pinned by hand",
-    );
+    expect(placeLine(house)).toBe("No. 8, Jalan Kenari 2, Taman … Klang, Selangor · confirmed");
     expect(placeLine({ ...klang, lat: 3.04, lon: 101.45, exact: "town" })).toBe(
       "Klang, Selangor · at its town",
     );

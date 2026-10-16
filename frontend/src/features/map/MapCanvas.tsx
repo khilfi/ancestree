@@ -15,6 +15,7 @@ import { BASE, BORDERS, DISTRICT_NAMES, fromPlane, onPlane, PLANE_PER_KM } from 
 import { BIG_TOWN, type Box, type Label, type Placed, placeLabels, roomFor } from "./labels";
 import {
   bubbleRadius,
+  DEEPEST_PER_KM,
   flowerRadius,
   type Group,
   levelAt,
@@ -33,7 +34,8 @@ export type MapTarget = { ids: string[]; nonce: number };
 type View = { k: number; x: number; y: number }; // screen = plane × k + (x, y)
 
 const MIN_K = 0.04; // the whole world
-const MAX_K = 90; // a kampung's houses would be apart, if the map had them
+// As deep as MapLibre's zoom 19: a child a few metres from their parents stands apart.
+const MAX_K = DEEPEST_PER_KM / PLANE_PER_KM;
 const SEA = "#eef4f7";
 const LAND = "#f5f5f4";
 // The corners the map's own buttons and credits take, which no name on the map covers.
@@ -298,12 +300,13 @@ export function MapCanvas({
   const level = levelAt(perKm);
   const withNames = perKm >= NAMES_FROM;
   const spacing = withNames ? PHOTO + 30 : PHOTO + 4;
+  const deepest = (view?.k ?? 0) >= MAX_K * 0.99;
 
   const groups = useMemo((): Group[] => {
     if (!view) return [];
     const toScreen = (p: Point) => ({ x: p.x * view.k + view.x, y: p.y * view.k + view.y });
-    return familyGroups(spots, level, toScreen, withNames, spacing);
-  }, [spots, level, view, withNames, spacing]);
+    return familyGroups(spots, level, toScreen, withNames, spacing, deepest);
+  }, [spots, level, view, withNames, spacing, deepest]);
 
   // The towns around the family's places, on the plane once.
   const named = useMemo(
@@ -532,7 +535,7 @@ export function MapCanvas({
           return spot && view ? { x: spot.x * view.k + view.x, y: spot.y * view.k + view.y } : null;
         }}
         generationOf={generationOf}
-        deepest={(view?.k ?? 0) >= MAX_K * 0.99}
+        deepest={deepest}
       />
 
       {placing && <PlacingHint placing={placing} />}
