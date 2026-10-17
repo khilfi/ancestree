@@ -63,6 +63,7 @@ export type ExportRequest = Schemas["ExportRequest"];
 export type ExportFile = Schemas["ExportFile"];
 export type Backup = Schemas["Backup"];
 export type BackupList = Schemas["BackupList"];
+export type BackupsBinned = Schemas["BackupsBinned"]; // over 3 months old, to the bin
 // Copies of the backups in a second place (0.4.0)
 export type Elsewhere = Schemas["Elsewhere"];
 export type CopyPlace = Schemas["CopyPlace"];

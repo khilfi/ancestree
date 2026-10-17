@@ -33,6 +33,7 @@ from pydantic import BaseModel
 
 from ancestree import __version__
 from ancestree.domain.dates import describe_partial_date, format_partial_date
+from ancestree.domain.exports import more_exports
 from ancestree.domain.graph import GraphPerson
 from ancestree.domain.person import DateQualifier, PartialDate, Place, death_places
 from ancestree.domain.views import DateView, PersonDetail, PersonSummary
@@ -321,6 +322,7 @@ async def family_snapshot(
             "data_folder": "",
             "backup_folder": "",
             "death_places": death_places(),  # as the app shows them
+            "more_exports": more_exports(),  # as the app's Export offers them
         },
         "map": _json(family_map),
         "tree_settings": _json(settings),
@@ -351,19 +353,22 @@ async def family_snapshot(
                 placed = towns_only(placed)
             persons[pid][language] = _json(placed)
 
-    stamp = f"{made_at:%Y-%m-%dT%H-%M-%S}"
-    shared = hidden_family(family, living) if living else family
-    gedcom_name = f"ancestree-{stamp}.ged"
-    exports: dict[str, Any] = {
-        "gedcom": _file(
+    # Its Export: the tree's picture, made in the copy, and the import template;
+    # the spreadsheet, GEDCOM and the full archive only as the app's Export offers them.
+    exports: dict[str, Any] = {"gedcom": None, "csv": None, "template": template, "archive": None}
+    if more_exports():
+        stamp = f"{made_at:%Y-%m-%dT%H-%M-%S}"
+        shared = hidden_family(family, living) if living else family
+        gedcom_name = f"ancestree-{stamp}.ged"
+        exports["gedcom"] = _file(
             gedcom_name,
             write_gedcom(shared, made_at=made_at, file_name=gedcom_name).encode("utf-8"),
-        ),
-        "csv": _file(f"ancestree-people-{stamp}.csv", write_people_csv(shared).encode(ENCODING)),
-        "template": template,
-        "archive": None,  # everything, so never with living people's details hidden
-    }
-    if options.archive and not living:
+        )
+        exports["csv"] = _file(
+            f"ancestree-people-{stamp}.csv", write_people_csv(shared).encode(ENCODING)
+        )
+    # The archive holds everything, so never with living people's details hidden.
+    if options.archive and not living and more_exports():
         with tempfile.TemporaryDirectory() as folder:
             backup = await create_backup(
                 ctx.driver,

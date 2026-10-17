@@ -1,7 +1,7 @@
 import { LockIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { downloadExport, useBackups, useMakeExport } from "@/api/queries";
+import { downloadExport, useBackups, useMakeExport, useMoreExports } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -23,6 +23,8 @@ const SHORTEST_PASSWORD = 10; // a copy can be tried offline, guess after guess
 /**
  * Export → View-only copy: the app with the family inside, as one .html file to
  * give to relatives. It opens in any browser, needs nothing installed, and changes nothing.
+ * Its Export offers the tree's picture and the import template; the full archive among its
+ * exports only where Export offers the archive.
  */
 export function CopyDialog({
   open,
@@ -37,12 +39,13 @@ export function CopyDialog({
   const [password, setPassword] = useState("");
   const [archive, setArchive] = useState(true);
   const make = useMakeExport();
+  const more = useMoreExports();
   const latest = useBackups().data?.backups[0];
   const passwordProblem =
     locked && password.length < SHORTEST_PASSWORD
       ? `At least ${SHORTEST_PASSWORD} characters.`
       : null;
-  const withArchive = archive && !hideLiving;
+  const withArchive = more && archive && !hideLiving;
 
   function makeCopy() {
     make.mutate(
@@ -56,10 +59,13 @@ export function CopyDialog({
       },
       {
         onSuccess: (file) => {
-          downloadExport(file.name);
-          toast.success(`Saved ${file.name} (${fileSize(file.size)}).`, {
-            description: `A copy stays in ${file.folder}. It opens in any browser: send it as a file.`,
-            duration: ACTION_MS,
+          const then = "It opens in any browser: send it as a file.";
+          downloadExport(file.name, then).then((noted) => {
+            if (noted) return; // where it went, said in Downloads' note
+            toast.success(`Saved ${file.name} (${fileSize(file.size)}).`, {
+              description: `A copy stays in ${file.folder}. ${then}`,
+              duration: ACTION_MS,
+            });
           });
           setPassword("");
           onOpenChange(false);
@@ -152,23 +158,25 @@ export function CopyDialog({
             )}
           </div>
 
-          <div className="flex items-start gap-2">
-            <Checkbox
-              id="copy-archive"
-              className="mt-0.5"
-              checked={withArchive}
-              disabled={hideLiving}
-              onCheckedChange={(checked) => setArchive(checked === true)}
-            />
-            <Label htmlFor="copy-archive" className="block font-normal">
-              Include the full archive in the copy's Export
-              <span className="block text-xs text-stone-500">
-                {hideLiving
-                  ? "Not with living people's details hidden: the archive holds everything."
-                  : `Everything, photos included${latest ? `: about ${fileSize(latest.size)}, like your latest backup` : ""}.`}
-              </span>
-            </Label>
-          </div>
+          {more && (
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="copy-archive"
+                className="mt-0.5"
+                checked={withArchive}
+                disabled={hideLiving}
+                onCheckedChange={(checked) => setArchive(checked === true)}
+              />
+              <Label htmlFor="copy-archive" className="block font-normal">
+                Include the full archive in the copy's Export
+                <span className="block text-xs text-stone-500">
+                  {hideLiving
+                    ? "Not with living people's details hidden: the archive holds everything."
+                    : `Everything, photos included${latest ? `: about ${fileSize(latest.size)}, like your latest backup` : ""}.`}
+                </span>
+              </Label>
+            </div>
+          )}
 
           <p className="rounded-md bg-stone-50 px-3 py-2 text-xs text-stone-600">
             A copy shows the family as it is today. Once it's sent it can't be changed or taken

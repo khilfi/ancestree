@@ -1,0 +1,29 @@
+# Is every release on offer? A release reaches installs only once its signed updates/latest.json
+# is pushed: 0.8.3's waited a night unpushed, and no install heard of it. Each day, and after
+# every release, this compares the newest release with the version latest.json offers, and
+# fails, so GitHub emails, when a release has waited unoffered for over 6 hours, through
+# scripts/unoffered.py.
+
+name: Offer check
+
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offered:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: main
+      - name: The newest release, on offer
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/unoffered.py .

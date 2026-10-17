@@ -70,7 +70,7 @@ def _chosen(text: str | None) -> list[str] | None:
 @router.get("/template", response_class=Response, responses={200: {"content": {_CSV: {}}}})
 async def import_template(example: bool = False) -> Response:
     """The columns an import reads, as a CSV that Excel opens. With example=true, filled in
-    with the fictional test family."""
+    with the example family, every column used."""
     name = "ancestree-import-example.csv" if example else "ancestree-import-template.csv"
     return Response(
         template_csv(example=example).encode(ENCODING),

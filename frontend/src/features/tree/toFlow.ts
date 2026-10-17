@@ -104,9 +104,11 @@ export function toFlow(
       };
     });
 
-  // A child's birth parents share one line from the dot between them; other parents
-  // (adoptive, foster: dashed; kinds not on the rings, like a guardian: dotted) get their own.
-  // Links between people on the same rings curve around their middle.
+  // A child's birth parents share one line from the dot between them, a couple or not; so do
+  // any other two of their parents who are a couple: dashed if either is adoptive,
+  // foster or another kind of care. Other parents get their own line (adoptive, foster: dashed;
+  // kinds not on the rings, like a guardian: dotted). Links between people on the same rings
+  // curve around their middle.
   const middleFor = (parent: string, child: string) => {
     const [a, b] = [graph.layout.seats[parent]?.unit, graph.layout.seats[child]?.unit];
     return a && a === b ? (layout.middles.get(a) ?? null) : null;
@@ -139,13 +141,32 @@ export function toFlow(
       });
     }
   }
+  const married = new Set(
+    graph.links
+      .filter((link) => link.type === "spouse" && shown(link.source) && shown(link.target))
+      .map((link) => [link.source, link.target].sort().join("+")),
+  );
   const couples = new Map<string, [string, string]>();
   for (const [child, links] of byChild) {
     const byBirth = links.filter(blood);
-    const [first, second] = byBirth;
-    if (first) {
+    // Two parents who share a line: the birth parents first, then any couple among the rest.
+    const shared: GraphLink[][] = byBirth.length >= 2 ? [byBirth.slice(0, 2)] : [];
+    const free = () => links.filter((link) => !shared.flat().includes(link));
+    for (const one of free()) {
+      const other = free().find(
+        (link) =>
+          link !== one &&
+          link.source !== one.source &&
+          married.has([one.source, link.source].sort().join("+")),
+      );
+      if (other && !shared.flat().includes(one)) shared.push([one, other]);
+    }
+    // A birth parent with no one to share it: their own line, solid, as ever.
+    const lone = shared.length === 0 ? byBirth.slice(0, 1) : [];
+    for (const [index, pair] of [...shared, ...lone.map((link) => [link])].entries()) {
+      const [first, second] = pair as [GraphLink, GraphLink | undefined];
       edges.push({
-        id: `family:${child}`,
+        id: index === 0 ? `family:${child}` : `family:${child}:${index + 1}`,
         type: "child",
         sourceHandle: "out",
         targetHandle: "in",
@@ -155,18 +176,19 @@ export function toFlow(
         className: dim(first.source, child),
         data: {
           partner: second?.source ?? null,
-          links: byBirth.slice(0, 2),
-          look: "blood",
+          links: pair,
+          look: pair.every(blood) ? "blood" : "care",
           middle: middleFor(first.source, child),
           elbow: elbows,
         },
       });
       if (second) {
-        const pair = [first.source, second.source].sort() as [string, string];
-        couples.set(pair.join("+"), pair);
+        const both = [first.source, second.source].sort() as [string, string];
+        couples.set(both.join("+"), both);
       }
     }
-    for (const link of [...byBirth.slice(2), ...links.filter((l) => !byBirth.includes(l))]) {
+    const drawn = [...shared.flat(), ...lone];
+    for (const link of links.filter((each) => !drawn.includes(each))) {
       edges.push({
         id: `link:${link.id}`,
         type: "child",
@@ -179,7 +201,7 @@ export function toFlow(
         data: {
           partner: null,
           links: [link],
-          look: byBirth.includes(link) ? "blood" : "care",
+          look: blood(link) ? "blood" : "care",
           middle: middleFor(link.source, child),
           elbow: elbows,
         },

@@ -2,7 +2,7 @@
 
 import csv
 import io
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 from ancestree.domain.person import DateQualifier, PartialDate, Place
@@ -498,3 +498,78 @@ def test_a_version_ancestree_didnt_write_is_a_second_look() -> None:
     [look] = planned(family, data).second_look
 
     assert "Version isn't one AncesTree wrote" in look.message
+
+
+# --- Where they live, to the district and the spot ---
+
+
+def with_houses(rows: Sequence[Mapping[str, str]]) -> bytes:
+    """A spreadsheet of these rows, their columns as written."""
+    buffer = io.StringIO(newline="")
+    writer = csv.DictWriter(buffer, list(rows[0]))
+    writer.writeheader()
+    writer.writerows(rows)
+    return buffer.getvalue().encode(ENCODING)
+
+
+def test_a_location_puts_someone_new_on_the_map_by_hand() -> None:
+    """As a phone's map gives it: a pin, where the import doesn't look for one."""
+    data = with_houses(
+        [
+            {
+                "Full name": "Aina binti Karim",
+                "Lives in": "Kajang, Selangor",
+                "Address": "No. 8, Jalan Kenari 2",
+                "District": "Hulu Langat",
+                "Location": "2.9927, 101.7909",
+            },
+            {"Full name": "Siti binti Karim", "Lives in": "Kajang", "Location": "Kajang"},
+        ]
+    )
+
+    result = plan_sheet(read_sheet(data), EMPTY, {})
+
+    aina, siti = (person.data.residence for person in result.people)
+    assert aina is not None
+    assert (aina.town, aina.address, aina.district) == (
+        "Kajang",
+        "No. 8, Jalan Kenari 2",
+        "Hulu Langat",
+    )
+    assert (aina.lat, aina.lon, aina.exact) == (2.9927, 101.7909, "hand")
+    assert siti is not None
+    assert (siti.town, siti.lat) == ("Kajang", None)
+    [left_out] = result.left_out
+    assert (left_out.row, left_out.column, left_out.written) == (3, "Location", "Kajang")
+    assert "phone's map" in left_out.why
+
+
+def test_a_location_for_someone_in_the_tree_waits_for_a_tick() -> None:
+    """Placed by hand once ticked; their address put right beside it doesn't take it away."""
+    family, ids = sample_family()
+    home = Place(town="Kajang", address="No. 12, Jalan Melati 3", postcode="43000")
+    member = family.members[ids["Hassan"]]
+    family.members[ids["Hassan"]] = replace(
+        member, person=member.person.model_copy(update={"residence": home})
+    )
+    rows = list(csv.DictReader(io.StringIO(write_people_csv(family, addresses=True))))
+    hassan = next(row for row in rows if row["Full name"] == "Hassan bin Ismail")
+    assert (hassan["District"], hassan["Location"]) == ("", "")  # not put there by hand
+    hassan["Location"] = "3°08'20.4\"N 101°41'12.7\"E"
+    hassan["Address"] = "No. 14, Jalan Melati 3"
+
+    result = planned(family, with_houses(rows))
+
+    changes = {change.column: change for change in result.changes}
+    assert changes.keys() == {"Location", "Address"}
+    located = changes["Location"]
+    assert (located.before, located.after, located.ticked) == ("", "3.139, 101.686861", False)
+    sets = {each.id: each.props for each in result.sets}
+    assert sets[f"set:{ids['Hassan']}:residence_location"] == {
+        "residence_lat": 3.139,
+        "residence_lon": 101.686861,
+        "residence_exact": "hand",
+    }
+    assert sets[f"set:{ids['Hassan']}:residence_address"] == {
+        "residence_address": "No. 14, Jalan Melati 3"
+    }  # its location isn't cleared: the Location puts it there

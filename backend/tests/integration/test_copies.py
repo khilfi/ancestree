@@ -152,6 +152,7 @@ def strings(value: Any) -> Iterator[str]:
             yield from strings(item)
 
 
+@pytest.mark.usefixtures("more_exports")  # its GEDCOM, spreadsheet and archive
 async def test_a_copy_answers_as_the_app_does(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings, tmp_path: Path
 ) -> None:
@@ -238,6 +239,7 @@ async def test_a_copy_answers_as_the_app_does(
     assert read_info(archive).people == len(ids)
 
 
+@pytest.mark.usefixtures("more_exports")
 async def test_hiding_living_people_leaves_out_their_details(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
 ) -> None:
@@ -404,6 +406,7 @@ async def test_a_locked_copy_opens_with_its_password_only(
     assert short.status_code == 422
 
 
+@pytest.mark.usefixtures("more_exports")
 async def test_a_copy_names_nothing_on_this_pc(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
 ) -> None:
@@ -423,6 +426,26 @@ async def test_a_copy_names_nothing_on_this_pc(
         assert secret not in download.text
         assert not [text for text in strings(copy) if secret in text], secret
     assert copy["health"]["data_folder"] == copy["health"]["backup_folder"] == ""
+
+
+async def test_a_copy_carries_only_the_import_template_as_export_offers(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """Export offers a view-only copy and the tree's picture: a copy's own Export,
+    the picture it draws itself and the import template; no spreadsheet, GEDCOM or archive,
+    even when asked for the archive, so copies are smaller. test_archive.py restores Back up
+    now's archive whole, as ever."""
+    await family(client, driver, settings)
+
+    copy = await copy_of(client, archive=True)
+
+    exports = copy["exports"]
+    assert (exports["gedcom"], exports["csv"], exports["archive"]) == (None, None, None)
+    assert copy["about"]["archive"] is False
+    assert copy["health"]["more_exports"] is False
+    template = await client.get("/api/imports/template")
+    assert carried(copy["exports"]["template"]) == template.content
+    assert (await client.get("/api/health")).json()["more_exports"] is False
 
 
 async def test_a_family_with_no_one_in_it_isnt_copied(client: httpx.AsyncClient) -> None:

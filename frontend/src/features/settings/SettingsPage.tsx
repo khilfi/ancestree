@@ -1,16 +1,12 @@
 import { NavLink, Outlet } from "react-router";
-import { useFamilies } from "@/api/desktop";
 import { useFamilyFolder, waitingIn } from "@/api/familyFolder";
 import { useTrash } from "@/api/queries";
 import { useDatabaseDown } from "@/app/DatabaseWarning";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [
-  { to: "kinship", label: "Kinship words" },
-  { to: "me", label: "Me" },
-  { to: "families", label: "Families" },
-  { to: "family-folder", label: "Family folder" },
-  { to: "kinds", label: "Relationship kinds" },
+  { to: "kinship", label: "Kinship" }, // the kinship words, and the relationship kinds
+  { to: "family", label: "You and your family" }, // Me, Families and the family folder
   { to: "missing", label: "What's missing" },
   { to: "import", label: "Import" },
   { to: "map", label: "Map" },
@@ -35,8 +31,6 @@ export function SettingsPage() {
   const inTrash = useTrash().data?.length ?? 0;
   const { asking, changes, answered, all } = waitingIn(useFamilyFolder().data);
   const down = useDatabaseDown();
-  // Several families on one computer are the desktop app's alone (0.4.0).
-  const desktop = Boolean(useFamilies().data);
 
   return (
     <div className="flex h-full">
@@ -45,10 +39,10 @@ export function SettingsPage() {
         className="w-52 shrink-0 space-y-1 border-r border-stone-200 bg-white p-3"
       >
         <h1 className="px-3 pt-1 pb-2 text-lg font-semibold">Settings</h1>
-        {SECTIONS.filter((section) => desktop || section.to !== "families").map((section) => (
+        {SECTIONS.map((section) => (
           <NavLink key={section.to} to={section.to} className={sectionClass}>
             {section.label}
-            {section.to === "family-folder" && all > 0 && (
+            {section.to === "family" && all > 0 && (
               <span
                 className="rounded-full bg-amber-100 px-1.5 text-xs font-medium text-amber-800 tabular-nums"
                 title={[

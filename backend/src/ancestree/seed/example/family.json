@@ -57,11 +57,11 @@
     {"key": "ali", "full_name": "Ali bin Rosli", "gender": "male", "born": "1980-07-22", "birth_place": {"town": "Klang", "state": "Selangor"}, "residence": {"town": "Petaling Jaya", "state": "Selangor"}, "occupation": "Doctor", "drawn": {"headwear": "none", "skin": 1}},
     {"key": "sarah", "full_name": "Sarah binti Rosli", "gender": "female", "born": "1984-04-02", "birth_place": {"town": "Klang", "state": "Selangor"}, "residence": {"town": "George Town", "state": "Pulau Pinang"}, "drawn": {"headwear": "tudung", "skin": 1}},
     {"key": "imran", "full_name": "Imran bin Hakim", "gender": "male", "born": "1982", "residence": {"town": "George Town", "state": "Pulau Pinang"}, "drawn": {"headwear": "none", "skin": 2, "glasses": true}},
-    {"key": "danial", "full_name": "Danial bin Karim", "gender": "male", "born": "1990-12-12", "birth_place": {"town": "Kajang", "state": "Selangor"}, "residence": {"town": "Putrajaya", "state": "Putrajaya", "address": "Presint 9", "postcode": "62250", "lat": 2.9264, "lon": 101.6964, "exact": "postcode"}, "occupation": "Teacher", "drawn": {"headwear": "none", "skin": 2}},
-    {"key": "farah", "full_name": "Farah binti Ismail", "gender": "female", "born": "1992", "residence": {"town": "Putrajaya", "state": "Putrajaya", "address": "Presint 9", "postcode": "62250", "lat": 2.9264, "lon": 101.6964, "exact": "postcode"}, "drawn": {"headwear": "tudung", "skin": 2}},
+    {"key": "danial", "full_name": "Danial bin Karim", "gender": "male", "born": "1990-12-12", "birth_place": {"town": "Kajang", "state": "Selangor"}, "residence": {"town": "Putrajaya", "state": "W.P. Putrajaya", "address": "Presint 9", "postcode": "62250", "lat": 2.9264, "lon": 101.6964, "exact": "postcode"}, "occupation": "Teacher", "drawn": {"headwear": "none", "skin": 2}},
+    {"key": "farah", "full_name": "Farah binti Ismail", "gender": "female", "born": "1992", "residence": {"town": "Putrajaya", "state": "W.P. Putrajaya", "address": "Presint 9", "postcode": "62250", "lat": 2.9264, "lon": 101.6964, "exact": "postcode"}, "drawn": {"headwear": "tudung", "skin": 2}},
     {"key": "iman", "full_name": "Iman binti Karim", "gender": "female", "born": "1999-06-15", "birth_place": {"town": "Kajang", "state": "Selangor"}, "residence": {"town": "Cyberjaya", "state": "Selangor"}, "drawn": {"headwear": "tudung", "skin": 3}},
-    {"key": "irfan", "full_name": "Irfan bin Azman", "gender": "male", "born": "1995-03-03", "birth_place": {"town": "Kota Bharu", "state": "Kelantan"}, "residence": {"town": "Kuala Lumpur", "state": "Kuala Lumpur"}, "drawn": {"headwear": "none", "skin": 3}},
-    {"key": "balqis", "full_name": "Balqis binti Ahmad", "gender": "female", "born": "1997", "residence": {"town": "Kuala Lumpur", "state": "Kuala Lumpur"}, "drawn": {"headwear": "tudung", "skin": 1}},
+    {"key": "irfan", "full_name": "Irfan bin Azman", "gender": "male", "born": "1995-03-03", "birth_place": {"town": "Kota Bharu", "state": "Kelantan"}, "residence": {"town": "Kuala Lumpur", "state": "W.P. Kuala Lumpur"}, "drawn": {"headwear": "none", "skin": 3}},
+    {"key": "balqis", "full_name": "Balqis binti Ahmad", "gender": "female", "born": "1997", "residence": {"town": "Kuala Lumpur", "state": "W.P. Kuala Lumpur"}, "drawn": {"headwear": "tudung", "skin": 1}},
     {"key": "hana", "full_name": "Hana binti Faizal", "gender": "female", "born": "1995-10-10", "birth_place": {"town": "Singapore", "country": "Singapore"}, "drawn": {"headwear": "tudung", "skin": 2}},
     {"key": "harith", "full_name": "Harith bin Faizal", "gender": "male", "born": "1998", "birth_place": {"town": "Singapore", "country": "Singapore"}, "drawn": {"headwear": "none", "skin": 2}},
     {"key": "adam", "full_name": "Adam bin Johari", "gender": "male", "born": "2000-01-01", "birth_place": {"town": "Seremban", "state": "Negeri Sembilan"}, "drawn": {"headwear": "none", "skin": 1}},
@@ -76,7 +76,7 @@
 
     {"key": "aisyah", "full_name": "Aisyah binti Ali", "gender": "female", "born": "2010-08-08", "birth_place": {"town": "Petaling Jaya", "state": "Selangor"}, "drawn": {"headwear": "tudung", "skin": 1}},
     {"key": "umar", "full_name": "Umar bin Ali", "gender": "male", "born": "2013-11-30", "birth_place": {"town": "Petaling Jaya", "state": "Selangor"}, "drawn": {"headwear": "none", "skin": 1}},
-    {"key": "yusuf", "full_name": "Yusuf bin Danial", "gender": "male", "born": "2020-03-21", "birth_place": {"town": "Putrajaya", "state": "Putrajaya"}, "drawn": {"headwear": "none", "skin": 2}}
+    {"key": "yusuf", "full_name": "Yusuf bin Danial", "gender": "male", "born": "2020-03-21", "birth_place": {"town": "Putrajaya", "state": "W.P. Putrajaya"}, "drawn": {"headwear": "none", "skin": 2}}
   ],
   "families": [
     {"parents": ["ahmad", "som"], "children": ["ismail"]},

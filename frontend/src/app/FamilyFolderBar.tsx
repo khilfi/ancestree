@@ -75,7 +75,7 @@ export function FamilyFolderBar() {
           The family is offered to {status.offer_made.name}: it can't be changed here until they
           answer.
         </span>
-        <Link to="/settings/family-folder" className="text-sky-700 hover:underline">
+        <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
           Family folder
         </Link>
       </div>
@@ -99,7 +99,7 @@ export function FamilyFolderBar() {
             {sync.isPending ? "Sending…" : "Send now"}
           </Button>
         )}
-        <Link to="/settings/family-folder" className="text-sky-700 hover:underline">
+        <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
           Family folder
         </Link>
       </div>
@@ -118,7 +118,7 @@ export function FamilyFolderBar() {
         start your family's own. Or look around a made-up family first.
       </span>
       <Button size="sm" className="ml-auto" asChild>
-        <Link to="/settings/family-folder">Join or start</Link>
+        <Link to="/settings/family#family-folder">Join or start</Link>
       </Button>
       <Button size="sm" variant="outline" disabled={around.busy} onClick={around.look}>
         Look around first

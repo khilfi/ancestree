@@ -3,8 +3,8 @@ cloud service keeps, so that losing the computer, or its disk, doesn't lose the 
 
 Each family chooses its own place, and each family's copies go in a folder of their own there,
 named by the family's id, never its name: `AncesTree <family id>`. Every backup in the family's
-backup folder is copied there, by hand or daily, with the same keeping rule: the last 30 daily
-ones, and those made by hand for ever. A copy can be locked with a password (locked.py): this
+backup folder is copied there, by hand or daily, and kept as the backups are: 3 months, the
+newest 3 for ever, by keeping.py. A copy can be locked with a password (locked.py): this
 computer keeps the key the password made, locked as the family folder's keys are, so the daily
 copies lock by themselves, and the password itself is kept nowhere.
 
@@ -26,7 +26,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ancestree.domain.exports import CopyPlace, Elsewhere
-from ancestree.exchange.backup import KEEP_AUTOMATIC, is_automatic
 from ancestree.exchange.locked import SUFFIX, Key, lock
 from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.services.context import Context, RuleError
@@ -122,8 +121,9 @@ def _is_backup_copy(name: str) -> bool:
 
 
 def catch_up(ctx: Context) -> int:
-    """Copy every backup not copied yet to the place chosen, and tidy the daily copies there;
-    how many were copied. What's in the way is noted for Settings to say, never raised."""
+    """Copy every backup not copied yet to the place chosen; how many were copied. Those over
+    3 months old go from there as from here (keeping.py). What's in the way is noted for
+    Settings to say, never raised."""
     choice = chosen(ctx)
     if choice is None:
         return 0
@@ -147,7 +147,6 @@ def catch_up(ctx: Context) -> int:
                 shutil.copyfile(backup, partial)
                 partial.replace(target / name)
             copied += 1
-        _tidy(target)
         choice.problem = ""
         if copied or not choice.copied:
             choice.copied = datetime.now(UTC).isoformat(timespec="seconds")
@@ -166,18 +165,6 @@ def catch_up(ctx: Context) -> int:
         log.warning("Backups weren't copied elsewhere: %s", choice.problem)
     _save(ctx, choice)
     return copied
-
-
-def _tidy(target: Path) -> None:
-    """The daily copies beyond the last 30 go, as the daily backups do; those of backups made
-    by hand stay."""
-    daily = sorted(
-        path
-        for path in target.iterdir()
-        if _is_backup_copy(path.name) and is_automatic(path.stem + ".zip")
-    )
-    for path in daily[:-KEEP_AUTOMATIC] if len(daily) > KEEP_AUTOMATIC else []:
-        path.unlink(missing_ok=True)
 
 
 def status(ctx: Context) -> Elsewhere | None:

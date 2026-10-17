@@ -134,6 +134,45 @@ def read_place(text: str) -> Place | None:
     return None if place.is_empty else place
 
 
+# A location as a phone's map gives it: Google Maps' "3.139003, 101.686855", Apple Maps'
+# "3.13900° N, 101.68686° E", or degrees, minutes and seconds, "3°08'20.4"N 101°41'12.7"E".
+_NUMBER = r"[+-]?\d{1,3}(?:\.\d+)?"
+_DECIMAL = re.compile(
+    rf"^(?P<lat>{_NUMBER})\s*°?\s*(?P<ns>[NS])?\s*[,;\s]\s*"
+    rf"(?P<lon>{_NUMBER})\s*°?\s*(?P<ew>[EW])?$",
+    re.IGNORECASE,
+)
+# Minutes after ' or a prime (U+2032), seconds before " or a double prime (U+2033).
+_DMS_ONE = (
+    r"(\d{1,3})\s*°\s*(\d{1,2})\s*['\N{PRIME}]\s*"
+    r"(\d{1,2}(?:\.\d+)?)\s*(?:\"|\N{DOUBLE PRIME}|'')?\s*"
+)
+_DMS = re.compile(rf"^{_DMS_ONE}(?P<ns>[NS])\s*,?\s*{_DMS_ONE}(?P<ew>[EW])$", re.IGNORECASE)
+
+
+def read_location(text: str) -> tuple[float, float]:
+    """Where they live, as a phone's map gives it: latitude and longitude. One read from a
+    spreadsheet counts as placed by hand, so they're a pin."""
+    written = " ".join(text.split())
+    if found := _DECIMAL.match(written):
+        lat, lon = float(found["lat"]), float(found["lon"])
+        if (found["ns"] or "").upper() == "S":
+            lat = -abs(lat)
+        if (found["ew"] or "").upper() == "W":
+            lon = -abs(lon)
+    elif found := _DMS.match(written):
+        d1, m1, s1, d2, m2, s2 = (float(found[i]) for i in (1, 2, 3, 5, 6, 7))
+        lat = (d1 + m1 / 60 + s1 / 3600) * (-1 if found["ns"].upper() == "S" else 1)
+        lon = (d2 + m2 / 60 + s2 / 3600) * (-1 if found["ew"].upper() == "W" else 1)
+    else:
+        raise CellError(
+            "Not a location: write it as a phone's map gives it, such as 3.139003, 101.686855."
+        )
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise CellError("Not a place on Earth: the latitude comes first, then the longitude.")
+    return round(lat, 6), round(lon, 6)
+
+
 @dataclass(frozen=True)
 class Mention:
     """Someone named in Parents, Spouses or Children: an ID or a name, and the word in
@@ -196,7 +235,7 @@ def link_kind(label: str | None, kinds: Mapping[str, RelationshipKind], side: st
             return key
     which = "parent" if side == "parent" else "child"
     raise CellError(
-        f"'{label}' isn't a kind of {which}: use one in Settings → Relationship kinds, "
+        f"'{label}' isn't a kind of {which}: use one in Settings → Kinship → Relationship kinds, "
         "such as adoptive, or no word for a birth link."
     )
 

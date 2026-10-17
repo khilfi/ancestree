@@ -259,8 +259,8 @@ export function ExampleBar() {
 
 /**
  * The family's name at the top, in the desktop app (0.4.0, D44): the families on this computer,
- * each kept apart, to open one; Add a family; and Settings → Families. Nothing in a browser or
- * a copy, which hold one family.
+ * each kept apart, to open one; Add a family; and Settings → You and your family → Families.
+ * Nothing in a browser or a copy, which hold one family.
  */
 export function FamilyMenu() {
   const families = useFamilies().data;
@@ -313,7 +313,7 @@ export function FamilyMenu() {
             </DropdownMenuItem>
           )}
           <DropdownMenuItem asChild>
-            <Link to="/settings/families">
+            <Link to="/settings/family#families">
               <SettingsIcon />
               Manage families…
             </Link>

@@ -111,6 +111,14 @@ jobs:
           uv run --locked --group build pyinstaller ../desktop/engine/engine.spec --noconfirm
           --distpath ../desktop/engine/dist --workpath ../desktop/engine/build
 
+      # Backups over 3 months old go to the system's bin: a file sent to this machine's
+      # own, Windows' Recycle Bin, the Mac's Bin or Linux's Trash. Never on a family's computer.
+      - name: A file to the system's bin
+        working-directory: backend
+        env:
+          ANCESTREE_TEST_SYSTEM_BIN: "1"
+        run: uv run --locked pytest tests/unit/test_system_bin.py -v
+
       - name: A throwaway update key, for this run only
         working-directory: desktop
         run: |

@@ -11,7 +11,8 @@ import {
 import { type ReactNode, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { downloadExport, downloadTemplate, useMakeExport } from "@/api/queries";
+import { saveDrawn } from "@/api/downloads";
+import { downloadExport, downloadTemplate, useMakeExport, useMoreExports } from "@/api/queries";
 import type { ExportFormat } from "@/api/types";
 import { InAppOnly, useCopy } from "@/app/copy";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { asPng, saveFile, treePicture } from "@/features/tree/picture";
+import { asPng, treePicture } from "@/features/tree/picture";
 import { fileSize } from "@/lib/files";
 import { showError } from "@/lib/notify";
 import { CopyDialog } from "./CopyDialog";
@@ -63,14 +64,17 @@ function Choice({
   );
 }
 
-/** The top bar's Export: the whole family in each of its forms. In a view-only
- *  copy, the files made with the copy, and the import template for sending additions. */
+/** The top bar's Export: a view-only copy, and a picture of the tree.
+ *  The spreadsheet, GEDCOM and the full archive are hidden unless MORE_EXPORTS brings them
+ *  back; Back up now makes the archive. In a view-only copy, the picture, and the import
+ *  template for sending additions. */
 export function ExportButton() {
   const [open, setOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const make = useMakeExport();
   const picture = useTreePicture();
   const copy = useCopy();
+  const more = useMoreExports();
   const [busy, setBusy] = useState<string | null>(null);
   // Addresses in GEDCOM and the spreadsheet: left out unless chosen.
   const [addresses, setAddresses] = useState(false);
@@ -83,7 +87,7 @@ export function ExportButton() {
           ? { format, title: "", hide_living: false, archive: true, addresses }
           : format,
       );
-      downloadExport(file.name);
+      if (await downloadExport(file.name)) return; // said where it went
       toast.success(`Saved ${file.name} (${fileSize(file.size)}).`, {
         // A copy's files come from the copy itself: there's no folder they stay in.
         description: file.folder ? `A copy stays in ${file.folder}.` : undefined,
@@ -103,7 +107,7 @@ export function ExportButton() {
       const blob =
         kind === "svg" ? new Blob([drawn.svg], { type: "image/svg+xml" }) : await asPng(drawn);
       const name = `ancestree-tree-${today()}.${kind}`;
-      saveFile(blob, name);
+      if (await saveDrawn(blob, name)) return; // said where it went
       toast.success(`Saved ${name} (${fileSize(blob.size)}).`);
     } catch (error) {
       showError(error);
@@ -131,7 +135,11 @@ export function ExportButton() {
         size="sm"
         onClick={() => setOpen(true)}
         aria-label="Export"
-        title="Export: the full archive, GEDCOM, a spreadsheet or a picture"
+        title={
+          more
+            ? "Export: the full archive, GEDCOM, a spreadsheet or a picture"
+            : "Export: a view-only copy or a picture of the tree"
+        }
       >
         <DownloadIcon />
         {/* The word where the top bar has room; the icon alone where it's short. */}
@@ -171,65 +179,69 @@ export function ExportButton() {
                 nothing in it can be changed.
               </Choice>
             </InAppOnly>
-            <Choice
-              icon={ArchiveIcon}
-              title="Full archive"
-              kind=".zip"
-              actions={button(
-                "Download",
-                "archive",
-                "Download the full archive",
-                () => exportFile("archive"),
-                copy !== null && !copy.archive,
-              )}
-            >
-              {!copy
-                ? "Everything: people, links, photos, stories and settings. For backups and moving to a new PC; restore it in Settings."
-                : copy.archive
-                  ? "Everything, as it was when this copy was made: people, links, photos, stories and settings. It can be restored in AncesTree."
-                  : "Not in this copy."}
-            </Choice>
-            <Choice
-              icon={FileTextIcon}
-              title="GEDCOM"
-              kind=".ged"
-              actions={button("Download", "gedcom", "Download a GEDCOM file", () =>
-                exportFile("gedcom"),
-              )}
-            >
-              {copy?.hidden_living
-                ? "For other family-history programs, such as Gramps: people and families, with living people's details left out as they are here. Photos aren't in it."
-                : `For other family-history programs, such as Gramps: people, families, dates, places, notes and stories. ${copy && !copy.archive ? "Photos aren't in it." : "Photos stay in the full archive."}`}
-            </Choice>
-            <Choice
-              icon={FileSpreadsheetIcon}
-              title="Spreadsheet"
-              kind=".csv"
-              actions={button("Download", "csv", "Download the spreadsheet", () =>
-                exportFile("csv"),
-              )}
-            >
-              One row per person, for Excel.
-            </Choice>
-            <InAppOnly>
-              <li className="flex items-start gap-2 py-3 pl-11 text-sm">
-                <Checkbox
-                  id="export-addresses"
-                  className="mt-0.5"
-                  checked={addresses}
-                  onCheckedChange={(on) => setAddresses(on === true)}
-                />
-                <div className="space-y-0.5">
-                  <Label htmlFor="export-addresses" className="font-normal">
-                    Include addresses
-                  </Label>
-                  <p className="text-xs text-stone-500">
-                    In GEDCOM and the spreadsheet: each place's house and street, postcode and where
-                    it is. Off, they stay out, as they're the family's own.
-                  </p>
-                </div>
-              </li>
-            </InAppOnly>
+            {more && (
+              <>
+                <Choice
+                  icon={ArchiveIcon}
+                  title="Full archive"
+                  kind=".zip"
+                  actions={button(
+                    "Download",
+                    "archive",
+                    "Download the full archive",
+                    () => exportFile("archive"),
+                    copy !== null && !copy.archive,
+                  )}
+                >
+                  {!copy
+                    ? "Everything: people, links, photos, stories and settings. For backups and moving to a new PC; restore it in Settings."
+                    : copy.archive
+                      ? "Everything, as it was when this copy was made: people, links, photos, stories and settings. It can be restored in AncesTree."
+                      : "Not in this copy."}
+                </Choice>
+                <Choice
+                  icon={FileTextIcon}
+                  title="GEDCOM"
+                  kind=".ged"
+                  actions={button("Download", "gedcom", "Download a GEDCOM file", () =>
+                    exportFile("gedcom"),
+                  )}
+                >
+                  {copy?.hidden_living
+                    ? "For other family-history programs, such as Gramps: people and families, with living people's details left out as they are here. Photos aren't in it."
+                    : `For other family-history programs, such as Gramps: people, families, dates, places, notes and stories. ${copy && !copy.archive ? "Photos aren't in it." : "Photos stay in the full archive."}`}
+                </Choice>
+                <Choice
+                  icon={FileSpreadsheetIcon}
+                  title="Spreadsheet"
+                  kind=".csv"
+                  actions={button("Download", "csv", "Download the spreadsheet", () =>
+                    exportFile("csv"),
+                  )}
+                >
+                  One row per person, for Excel.
+                </Choice>
+                <InAppOnly>
+                  <li className="flex items-start gap-2 py-3 pl-11 text-sm">
+                    <Checkbox
+                      id="export-addresses"
+                      className="mt-0.5"
+                      checked={addresses}
+                      onCheckedChange={(on) => setAddresses(on === true)}
+                    />
+                    <div className="space-y-0.5">
+                      <Label htmlFor="export-addresses" className="font-normal">
+                        Include addresses
+                      </Label>
+                      <p className="text-xs text-stone-500">
+                        In GEDCOM and the spreadsheet: each place's house and street, postcode and
+                        where it is. Off, they stay out, as they're the family's own.
+                      </p>
+                    </div>
+                  </li>
+                </InAppOnly>
+              </>
+            )}
             <Choice
               icon={ImageIcon}
               title="Picture of the tree"

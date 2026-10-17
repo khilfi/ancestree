@@ -55,7 +55,7 @@ export function MeDialog({
             "your pak long", and the tree can colour everyone by how close they are to you.{" "}
             {copy
               ? "It's kept in this browser only, and Me changes it any time."
-              : "You can change it later in Settings → Me."}
+              : "You can change it later in Settings → You and your family."}
           </DialogDescription>
         </DialogHeader>
         <Input

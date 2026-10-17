@@ -11,6 +11,7 @@ from ancestree.importing.cells import (
     read_date,
     read_gender,
     read_living,
+    read_location,
     read_mentions,
     read_place,
     read_text,
@@ -151,3 +152,32 @@ def test_a_spouses_label_says_married_divorced_or_widowed() -> None:
     assert spouse_status("widowed") is SpouseStatus.WIDOWED
     with pytest.raises(CellError, match="former"):
         spouse_status("second")
+
+
+@pytest.mark.parametrize(
+    ("written", "where"),
+    [
+        ("3.139003, 101.686855", (3.139003, 101.686855)),  # Google Maps
+        ("3.139003,101.686855", (3.139003, 101.686855)),
+        ("  3.139003 ,  101.686855 ", (3.139003, 101.686855)),
+        ("3.13900° N, 101.68686° E", (3.139, 101.68686)),  # Apple Maps
+        ("33.8688° S, 151.2093° E", (-33.8688, 151.2093)),
+        ("-37.8136, 144.9631", (-37.8136, 144.9631)),
+        ("3°08'20.4\"N 101°41'12.7\"E", (3.139, 101.686861)),  # degrees, minutes, seconds
+        (
+            "3°08\N{PRIME}20.4\N{DOUBLE PRIME}N 101°41\N{PRIME}12.7\N{DOUBLE PRIME}E",
+            (3.139, 101.686861),
+        ),
+    ],
+)
+def test_a_location_is_read_as_a_phones_map_gives_it(
+    written: str, where: tuple[float, float]
+) -> None:
+    """Where they live: the latitude, then the longitude."""
+    assert read_location(written) == where
+
+
+@pytest.mark.parametrize("written", ["Kajang", "3.1", "95, 101", "3.1, 181", "N 3, E 101"])
+def test_what_isnt_a_location_is_said(written: str) -> None:
+    with pytest.raises(CellError):
+        read_location(written)

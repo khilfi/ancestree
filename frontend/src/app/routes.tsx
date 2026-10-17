@@ -55,23 +55,26 @@ export const appRoutes: RouteObject[] = [
         }),
         children: [
           { index: true, element: <Navigate to="kinship" replace /> },
+          // Kinship, and You and your family, each of several parts.
           {
             path: "kinship",
             lazy: async () => ({
-              Component: (await import("@/features/settings/KinshipSection")).KinshipSection,
+              Component: (await import("@/features/settings/KinshipPage")).KinshipPage,
             }),
           },
           {
-            path: "me",
+            path: "family",
             lazy: async () => ({
-              Component: (await import("@/features/settings/MeSection")).MeSection,
+              Component: (await import("@/features/settings/FamilyPage")).FamilyPage,
             }),
           },
+          // Their parts' old addresses lead to them, so every link and How does this work? lands.
+          { path: "kinds", element: <Navigate to="/settings/kinship#kinds" replace /> },
+          { path: "me", element: <Navigate to="/settings/family#me" replace /> },
+          { path: "families", element: <Navigate to="/settings/family#families" replace /> },
           {
-            path: "kinds",
-            lazy: async () => ({
-              Component: (await import("@/features/settings/KindsSection")).KindsSection,
-            }),
+            path: "family-folder",
+            element: <Navigate to="/settings/family#family-folder" replace />,
           },
           {
             path: "missing",
@@ -83,19 +86,6 @@ export const appRoutes: RouteObject[] = [
             path: "import",
             lazy: async () => ({
               Component: (await import("@/features/settings/ImportSection")).ImportSection,
-            }),
-          },
-          {
-            path: "families",
-            lazy: async () => ({
-              Component: (await import("@/features/settings/FamiliesSection")).FamiliesSection,
-            }),
-          },
-          {
-            path: "family-folder",
-            lazy: async () => ({
-              Component: (await import("@/features/settings/FamilyFolderSection"))
-                .FamilyFolderSection,
             }),
           },
           {

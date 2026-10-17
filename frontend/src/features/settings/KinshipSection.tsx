@@ -33,9 +33,9 @@ function tidy(titles: string[]): string[] {
   return kept;
 }
 
-/** Settings → Kinship words: the language of the words for relatives, and the family's
- *  Malay birth-order titles. On a relative's computer the titles are the family's,
- *  set by the keeper: shown, not changed (0.3.1). */
+/** Settings → Kinship → Kinship words: the language of the words for relatives, and
+ *  the family's Malay birth-order titles. On a relative's computer the titles are
+ *  the family's, set by the keeper: shown, not changed (0.3.1). */
 export function KinshipSection() {
   const settings = useKinshipSettings();
   const save = useSaveKinshipSettings();

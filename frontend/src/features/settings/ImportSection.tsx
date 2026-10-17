@@ -61,11 +61,21 @@ const COLUMNS: [string, string, string][] = [
     "Town and state; add the country when it isn't Malaysia.",
     "Kota Bharu, Kelantan · Jakarta, Indonesia",
   ],
+  [
+    "Address, Postcode, District",
+    "Where they live, to the house, with Lives in. The district, for a place with no postcode.",
+    "No. 8, Jalan Kenari 2 · 43000 · Hulu Langat",
+  ],
+  [
+    "Location",
+    "Where they live, as a phone's map gives it: the latitude, then the longitude. It puts them on the map by hand, as a pin.",
+    "2.9927, 101.7909",
+  ],
   ["Burial place, Occupation, Notes", "Text.", ""],
   ["Living", "yes or no; empty to work it out from the dates.", ""],
   [
     "Parents, Spouses, Children",
-    "People separated by ;. Each is an ID or a full name. A word in brackets says what kind of link: (adoptive), (foster) or any kind in Relationship kinds for a parent; (former) for a divorced spouse. No word: a birth parent, a married couple.",
+    "People separated by ;. Each is an ID or a full name. A word in brackets says what kind of link: (adoptive), (foster) or any kind in Relationship kinds for a parent; (former) for a divorced spouse, (widowed) for a marriage ended by a death. No word: a birth parent, a married couple.",
     "Ismail bin Ahmad; Fatimah binti Yusof · P1; P2 (adoptive)",
   ],
   [
@@ -524,10 +534,11 @@ export function ImportSection() {
             </Button>
           </div>
           <p className="text-sm text-stone-500">
-            The example is filled in with the made-up test family. A spreadsheet exported from
-            AncesTree can be edited and imported too: the people already here are recognised by
-            their IDs, what was changed in the file is offered for you to tick, and Remove marks
-            someone to take out. Save it from Excel as “CSV UTF-8”.
+            The example is the example family, every column filled in, to show what a spreadsheet
+            can hold. A spreadsheet exported from AncesTree can be edited and imported too: the
+            people already here are recognised by their IDs, what was changed in the file is offered
+            for you to tick, and Remove marks someone to take out. Save it from Excel as “CSV
+            UTF-8”.
           </p>
           <ColumnGuide />
         </div>

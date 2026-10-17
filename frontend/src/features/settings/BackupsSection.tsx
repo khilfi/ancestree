@@ -11,7 +11,7 @@ import {
   useMakeExport,
   useRestoreBackup,
 } from "@/api/queries";
-import type { Backup } from "@/api/types";
+import type { Backup, BackupsBinned } from "@/api/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,8 +48,38 @@ function when(iso: string): string {
   });
 }
 
+const many = (count: number, noun: string, plural = `${noun}s`) =>
+  `${count} ${count === 1 ? noun : plural}`;
+
+/** What went to the system's bin last, and what couldn't go: "On 17 Oct 2026, 4 backups
+ *  older than 3 months went to the Recycle Bin." */
+export function binnedWords(binned: BackupsBinned): { went: string | null; stayed: string | null } {
+  const what = [
+    binned.backups > 0 && many(binned.backups, "backup"),
+    binned.copies > 0 && `${many(binned.copies, "copy", "copies")} in the other place`,
+  ].filter(Boolean);
+  const day = binned.at
+    ? new Date(binned.at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
+  return {
+    went:
+      day && what.length > 0
+        ? `On ${day}, ${what.join(" and ")} older than 3 months went to the ${binned.bin}.`
+        : null,
+    stayed:
+      binned.stayed > 0
+        ? `${many(binned.stayed, "backup")} older than 3 months couldn't go to the ${binned.bin}, ` +
+          `so ${binned.stayed === 1 ? "it stays" : "they stay"}${binned.why ? `: ${binned.why}` : ""}.`
+        : null,
+  };
+}
+
 /** Settings → Backups: make one now, bring one in, restore one. In the desktop
- *  app, one is also made each day. */
+ *  app, one is also made each day, and every backup is kept for 3 months. */
 export function BackupsSection() {
   const backups = useBackups();
   const list = backups.data?.backups ?? [];
@@ -57,6 +87,10 @@ export function BackupsSection() {
   const daily = backups.data?.automatic_backups ?? false;
   // The family open, of several on this computer, in the desktop app (0.4.0).
   const family = backups.data?.family_id ? backups.data.family_name : null;
+  // Those over 3 months old, gone to the system's bin.
+  const { went, stayed } = backups.data?.binned
+    ? binnedWords(backups.data.binned)
+    : { went: null, stayed: null };
   const make = useMakeExport();
   const add = useAddBackup();
   const restore = useRestoreBackup();
@@ -137,8 +171,7 @@ export function BackupsSection() {
           <p className="max-w-2xl text-sm text-stone-500">
             A backup holds everything: people, links, photos, stories and settings.{" "}
             {daily
-              ? "AncesTree makes one each day while it runs, and keeps the last 30 of those. " +
-                "Make one yourself whenever you like; AncesTree never deletes those."
+              ? "AncesTree makes one each day while it runs, and you can make one whenever you like."
               : "Make one whenever you like; AncesTree never deletes one."}
             {folder && (
               <>
@@ -147,6 +180,15 @@ export function BackupsSection() {
               </>
             )}
           </p>
+          {daily && (
+            <p className="max-w-2xl text-sm font-medium text-stone-700">
+              Backups are kept for 3 months. To keep one longer, download it.{" "}
+              <span className="font-normal text-stone-500">
+                Older ones go to the {backups.data?.bin || "bin"}, but the newest 3 always stay.
+              </span>
+            </p>
+          )}
+          {went && <p className="max-w-2xl text-sm text-stone-500">{went}</p>}
           <HowDoesThisWork at="backups" />
         </div>
         <div className="flex shrink-0 gap-2">
@@ -173,6 +215,12 @@ export function BackupsSection() {
       </div>
 
       <ElsewherePanel elsewhere={backups.data?.elsewhere} />
+
+      {stayed && (
+        <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {stayed}
+        </p>
+      )}
 
       {backups.data?.reachable === false && (
         <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">

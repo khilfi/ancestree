@@ -42,6 +42,7 @@ from pydantic import BaseModel, SecretStr, StringConstraints
 
 from ancestree import __version__
 from ancestree.config import Settings
+from ancestree.desktop.downloads import downloads_folder
 from ancestree.desktop.families import Families, FamiliesError, Family
 from ancestree.desktop.guard import PageHeaders, SessionGuard
 from ancestree.exchange.copy_app import PREBUILT
@@ -67,6 +68,7 @@ DEVELOPMENT_SETTINGS = (
     "ANCESTREE_GOOGLE_CLIENT",
     PREBUILT,
     "PHOTON_URL",
+    "ANCESTREE_DOWNLOADS",
 )
 
 
@@ -640,6 +642,9 @@ def main(argv: list[str] | None = None) -> None:
             example_first=family.fill and family.example,
             example=family.example,
             maps_dir=root / "maps",  # every family's, beside Neo4j
+            # Downloads saved by the engine, which says where; a folder of the tests' own
+            # while developing.
+            downloads_dir=Path(os.environ.get("ANCESTREE_DOWNLOADS") or downloads_folder()),
         )
         # Tried once, as the family opens: one that can't be restored stays in its backups.
         families.note(family.id, restore="", fill=False)

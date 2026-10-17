@@ -32,9 +32,10 @@ try {
     } else {
         Invoke-Step 'backend: all tests (starts a throwaway Neo4j)' { uv run pytest -q }
     }
-    Invoke-Step 'desktop: lint and formatting (ruff)' { uv run ruff check ../desktop; if ($LASTEXITCODE -eq 0) { uv run ruff format --check ../desktop } }
+    Invoke-Step 'desktop: lint and formatting (ruff)' { uv run ruff check ../desktop ../scripts; if ($LASTEXITCODE -eq 0) { uv run ruff format --check ../desktop ../scripts } }
     $desktop = @('../desktop/engine', '../desktop/maps', '../desktop/tools' | Where-Object { Test-Path $_ })  # the tools aren't published
-    Invoke-Step 'desktop: types (mypy, strict)' { $env:MYPYPATH = 'src'; uv run mypy @desktop; Remove-Item Env:MYPYPATH }
+    # With the scripts the public repository's workflows run, such as the offer check.
+    Invoke-Step 'desktop: types (mypy, strict)' { $env:MYPYPATH = 'src'; uv run mypy @desktop ../scripts; Remove-Item Env:MYPYPATH }
     Invoke-Step 'desktop: the engine and its tools (tests)' { uv run pytest -q -p no:cacheprovider @desktop }
     Invoke-Step 'api: export schema' { uv run ancestree openapi --out ../frontend/openapi.json }
 } finally { Pop-Location }

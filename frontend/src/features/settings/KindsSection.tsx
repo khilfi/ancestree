@@ -51,7 +51,8 @@ function Wording({
   );
 }
 
-/** Settings → Relationship kinds: the kinds of parent and child link on offer. */
+/** Settings → Kinship → Relationship kinds: the kinds of parent and child link
+ *  on offer. */
 export function KindsSection() {
   const kinds = useKinds();
   const update = useUpdateKind();

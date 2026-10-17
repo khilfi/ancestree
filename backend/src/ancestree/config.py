@@ -30,7 +30,8 @@ class Settings(BaseSettings):
     data_dir: Path
     # Where backup archives go: best on another disk. Unset: DATA_DIR/exports.
     backup_dir: Path | None = None
-    # A backup each day while the app runs, the last 30 kept. The desktop app turns it on.
+    # A backup each day while the app runs, and every backup kept 3 months. The
+    # desktop app turns it on.
     automatic_backups: bool = False
     # In the desktop app (0.4.0), which family this is, of those on the computer; and a backup
     # to restore as it opens, for a family added from one.
@@ -47,6 +48,9 @@ class Settings(BaseSettings):
     # Where an address is looked up online, once and only when chosen: Photon, by komoot.
     # A stand-in's, in checks, so nothing leaves the computer.
     photon_url: str = "https://photon.komoot.io/api/"
+    # Where downloads are saved, in the desktop app: the computer's Downloads folder, so the
+    # page can say where each went. Unset, as in a browser, the browser saves them.
+    downloads_dir: Path | None = None
 
     @property
     def family(self) -> WhichFamily | None:

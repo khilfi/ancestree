@@ -125,9 +125,9 @@ function Row({ family, single }: { family: DesktopFamily; single: boolean }) {
   );
 }
 
-/** Settings → Families (0.4.0, D44): the families on this computer, each kept completely
- *  apart, with its own database, data folder, backups and family folder. Only in the desktop
- *  app. */
+/** Settings → You and your family → Families (0.4.0, D44): the families on this computer,
+ *  each kept completely apart, with its own database, data folder, backups and family folder.
+ *  Only in the desktop app. */
 export function FamiliesSection() {
   const families = useFamilies();
   const putBack = usePutFamilyBack();

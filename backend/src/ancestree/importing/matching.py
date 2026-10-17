@@ -38,7 +38,14 @@ from ancestree.domain.imports import (
 from ancestree.domain.person import DateQualifier, Gender, PartialDate, Person, Place
 from ancestree.domain.relationship import RelationshipKind, SpouseStatus
 from ancestree.domain.requests import PersonInput
-from ancestree.exchange.spreadsheet import VERSIONED, fingerprint, place_shown, read_version, shown
+from ancestree.exchange.spreadsheet import (
+    VERSIONED,
+    fingerprint,
+    location_text,
+    place_shown,
+    read_version,
+    shown,
+)
 from ancestree.importing.cells import (
     CellError,
     Mention,
@@ -47,6 +54,7 @@ from ancestree.importing.cells import (
     read_date,
     read_gender,
     read_living,
+    read_location,
     read_mentions,
     read_place,
     read_remove,
@@ -329,9 +337,9 @@ _TEXT = {
 _DATES = {"Born": "birth_date", "Died": "death_date"}
 _PLACES = {"Birthplace": "birth_place", "Death place": "death_place", "Lives in": "residence"}
 # Where they live to the house: the columns an export with addresses has, after Lives in,
-# the part of the place each is, and the most of it the app keeps.
-_HOUSE = (("Address", "address"), ("Postcode", "postcode"))
-_HOUSE_LONGEST = {"address": 300, "postcode": 20}
+# the part of the place each is, and the most of it the app keeps; and its district.
+_HOUSE = (("Address", "address"), ("Postcode", "postcode"), ("District", "district"))
+_HOUSE_LONGEST = {"address": 300, "postcode": 20, "district": 100}
 _LINK_COLUMNS = ("Spouses", "Parents", "Children")
 _MOST_OPTIONS = 8
 _OUT = ImportOption(id="out", label="Leave this link out")
@@ -402,9 +410,24 @@ class _Planner:
             fields[name] = value
 
     @staticmethod
+    def _location(row: SheetRow, unread: list[ImportLeftOut]) -> tuple[float, float] | None:
+        """A Location cell: where they live, as a phone's map gives it; None if it's
+        empty, or not a location, which is left out."""
+        text = row["Location"]
+        if not text:
+            return None
+        try:
+            return read_location(text)
+        except CellError as error:
+            unread.append(
+                ImportLeftOut(row=row.number, column="Location", written=text, why=str(error))
+            )
+            return None
+
+    @staticmethod
     def _house_cell(row: SheetRow, column: str, part: str, unread: list[ImportLeftOut]) -> str:
-        """An Address or Postcode cell, as one line; "" if it's empty, or longer than the app
-        keeps, which is left out."""
+        """An Address, Postcode or District cell, as one line; "" if it's empty, or longer than
+        the app keeps, which is left out."""
         text = " ".join(row[column].split())
         most = _HOUSE_LONGEST[part]
         if len(text) > most:
@@ -439,10 +462,14 @@ class _Planner:
             cell(column, read_place, name=field_name)
         # Where they live to the house, with Lives in: someone new takes it as written.
         house = {part: self._house_cell(row, column, part, unread) for column, part in _HOUSE}
-        if any(house.values()):
+        located = self._location(row, unread)
+        if any(house.values()) or located:
             home = fields.get("residence")
             home = home if isinstance(home, Place) else Place()
-            fields["residence"] = home.model_copy(update={k: v for k, v in house.items() if v})
+            update: dict[str, object] = {k: v for k, v in house.items() if v}
+            if located:  # placed by hand, so they're a pin
+                update |= {"lat": located[0], "lon": located[1], "exact": "hand"}
+            fields["residence"] = home.model_copy(update=update)
         for column, field_name in _DATES.items():
             text = row[column]
             if not text:
@@ -889,11 +916,14 @@ class _Planner:
         self._house(row, pid, person)
 
     def _house(self, row: _Row, pid: str, person: Person) -> None:
-        """Where they live to the house: an Address or Postcode written otherwise than
-        the tree's waits for your tick, as no Version says which side changed it; an empty
-        cell says nothing. A new one places their pin again, unless it was put there by hand."""
+        """Where they live to the house: an Address, Postcode or District written
+        otherwise than the tree's waits for your tick, as no Version says which side changed
+        it; an empty cell says nothing. A new one places their pin again, unless it was put
+        there by hand, or a Location puts it there."""
         held = person.residence
         unread = {item.column for item in row.unread}
+        located = row.data.residence if row.data.residence and row.data.residence.lat else None
+        self._located(row, pid, person, located)
         for column, part in _HOUSE:
             if column not in self.sheet.columns or column in unread:
                 continue
@@ -902,7 +932,7 @@ class _Planner:
             if not after or _same_text(after, before):
                 continue
             props: dict[str, Any] = {f"residence_{part}": after}
-            if held is None or held.exact != "hand":
+            if (held is None or held.exact != "hand") and located is None:
                 props |= {"residence_lat": None, "residence_lon": None, "residence_exact": None}
             change_id = f"set:{pid}:residence_{part}"
             self.sets.append(PlannedSet(change_id, pid, "residence", props))
@@ -921,6 +951,37 @@ class _Planner:
                     ticked=False,
                 )
             )
+
+    def _located(self, row: _Row, pid: str, person: Person, located: Place | None) -> None:
+        """A Location written otherwise than where they're pinned: it waits for your tick,
+        and ticked, puts them there by hand."""
+        if located is None or located.lat is None or located.lon is None:
+            return
+        held = person.residence
+        before = location_text(held)
+        pinned = held is not None and held.exact == "hand" and held.lat is not None
+        if pinned and before == location_text(located):
+            return  # the tree says so already
+        change_id = f"set:{pid}:residence_location"
+        props = {"residence_lat": located.lat, "residence_lon": located.lon}
+        self.sets.append(
+            PlannedSet(change_id, pid, "residence", {**props, "residence_exact": "hand"})
+        )
+        self._set_changes.append(
+            ImportChange(
+                id=change_id,
+                kind="set",
+                row=row.number,
+                person=UUID(pid),
+                name=person.full_name,
+                column="Location",
+                before=before,
+                after=location_text(located),
+                clash=False,
+                unsure=True,
+                ticked=False,
+            )
+        )
 
     def _skip(self, row: _Row) -> None:
         """Marked Remove, but not anyone in the tree: the row adds nobody, and links to it

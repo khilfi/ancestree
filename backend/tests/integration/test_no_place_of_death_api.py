@@ -101,6 +101,7 @@ async def test_a_save_or_a_quick_fix_that_sends_one_leaves_it_as_it_is(
     assert await kept(client, monkeypatch, him["id"]) == before
 
 
+@pytest.mark.usefixtures("more_exports")  # the copy's archive, too
 async def test_a_merge_takes_it_unseen_and_a_copy_holds_none(
     client: httpx.AsyncClient,
     driver: AsyncDriver,

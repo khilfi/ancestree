@@ -47,6 +47,12 @@ type Answering = (asked: Asked) => Answer | Promise<Answer>;
 const NOT_IN_COPY = "not in the copy";
 /** Anything that adds, changes or deletes: a copy changes nothing. */
 const REFUSED = "refused";
+/** Where downloads go: the browser's own way, as in the app outside the desktop app. */
+const BROWSER_SAVES: Answering = () => ({
+  error: "Here the browser saves downloads.",
+  status: 409,
+  code: "browser_saves",
+});
 
 let copy: CopySnapshot | null = null;
 let twin: KinshipTwin | null = null;
@@ -294,6 +300,10 @@ const writes: Record<WriteRoute, Answering | typeof REFUSED> = {
     choose({ me: person });
     return ok({ person });
   },
+  // Downloads: the desktop app's engine saves them in Downloads; in a copy, the browser.
+  "POST /api/downloads": BROWSER_SAVES,
+  "POST /api/downloads/picture": BROWSER_SAVES,
+  "POST /api/downloads/show": BROWSER_SAVES,
   "PUT /api/layout/positions": REFUSED,
   "DELETE /api/layout/positions": REFUSED,
   "POST /api/persons": REFUSED,

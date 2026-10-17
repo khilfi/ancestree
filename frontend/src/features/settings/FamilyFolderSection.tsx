@@ -527,7 +527,7 @@ function invitationMessage(invitation: string): string {
     "You're invited to our family's AncesTree.",
     `1. Install AncesTree: ${RELEASES}`,
     `   The guide shows each step: ${GUIDE}`,
-    "2. In AncesTree, open Settings → Family folder, and paste this invitation:",
+    "2. In AncesTree, open Settings → You and your family → Family folder, and paste this invitation:",
     invitation,
     "3. Sign in to Google with the account I invited, and ask to join. Then read me the code it shows.",
   ].join("\n");
@@ -1703,8 +1703,9 @@ function ProjectNeeded({ status }: { status: FamilyFolderStatus }) {
   );
 }
 
-/** Settings → Family folder: the family on invited relatives' computers, kept in
- *  step through a private folder in the keeper's Google Drive, encrypted on each computer. */
+/** Settings → You and your family → Family folder: the family on invited
+ *  relatives' computers, kept in step through a private folder in the keeper's Google Drive,
+ *  encrypted on each computer. */
 export function FamilyFolderSection() {
   const folder = useFamilyFolder();
   const status = folder.data;

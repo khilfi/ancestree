@@ -279,8 +279,8 @@ function Guide() {
           </li>
           <li>
             Words differ by region and family. Your Malay birth-order titles are set in Settings →
-            Kinship words. Sources include Kamus Dewan, S. O. Robson's study of Javanese kinship
-            (1987) and Bausastra Jawa.
+            Kinship. Sources include Kamus Dewan, S. O. Robson's study of Javanese kinship (1987)
+            and Bausastra Jawa.
           </li>
         </ul>
       </div>

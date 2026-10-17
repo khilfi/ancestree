@@ -35,9 +35,10 @@ from ancestree.exchange.restore import (
     restore_archive,
 )
 from ancestree.exchange.spreadsheet import ENCODING, write_people_csv
-from ancestree.services import elsewhere
+from ancestree.services import elsewhere, keeping
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.storage.files import atomic_write
+from ancestree.storage.system_bin import bin_name
 
 EXPORTS = "exports"
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.(zip|ged|csv|html)$")
@@ -161,7 +162,7 @@ def ours(ctx: Context, info: ArchiveInfo) -> None:
         "other_family",
         f"That backup is of {info.family_name or 'another family'}, not {family.name}. To "
         "bring it back, open that family, or add it as a family of its own: Settings → "
-        "Families.",
+        "You and your family → Families.",
         family=info.family_name,
     )
 
@@ -191,6 +192,8 @@ def _backups(ctx: Context) -> BackupList:
         family_id=ctx.family.id if ctx.family else None,
         family_name=ctx.family.name if ctx.family else "",
         elsewhere=elsewhere.status(ctx),
+        binned=keeping.binned(ctx),
+        bin=bin_name(),
     )
 
 

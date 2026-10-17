@@ -45,7 +45,11 @@ export function SettingsLink() {
       to="/settings"
       className={iconLinkClass}
       aria-label={waiting > 0 ? `Settings: ${waiting} waiting in Family folder` : "Settings"}
-      title={waiting > 0 ? `${waiting} waiting in Settings → Family folder` : "Settings"}
+      title={
+        waiting > 0
+          ? `${waiting} waiting in Settings → You and your family → Family folder`
+          : "Settings"
+      }
     >
       <SettingsIcon className="size-4" />
       <span className="hidden 2xl:inline">Settings</span>

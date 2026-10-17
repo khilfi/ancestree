@@ -38,7 +38,7 @@ export function exportAddress(name: string): string {
   return address(`/api/exports/${encodeURIComponent(name)}`);
 }
 
-/** The import template: empty, or with the fictional test family. */
+/** The import template: empty, or with the example family. */
 export function templateAddress(example: boolean): string {
   return address(`/api/imports/template${example ? "?example=true" : ""}`);
 }

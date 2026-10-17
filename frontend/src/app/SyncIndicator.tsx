@@ -55,7 +55,7 @@ export function inStep(
     return {
       tone: "warn",
       text: "Needs its Google project",
-      why: "Give the family's Google project, in Settings → Family folder.",
+      why: "Give the family's Google project, in Settings → You and your family → Family folder.",
     };
   }
   if (!status.email) {
@@ -232,7 +232,7 @@ export function SyncIndicator() {
             <RefreshCwIcon className={cn(busy && "animate-spin")} />
             {busy ? "Keeping in step…" : "Sync now"}
           </Button>
-          <Link to="/settings/family-folder" className="text-sky-700 hover:underline">
+          <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
             Family folder settings
           </Link>
         </div>

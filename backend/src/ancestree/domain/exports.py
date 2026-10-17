@@ -34,6 +34,18 @@ class ExportFile(BaseModel):
     size: int  # bytes
 
 
+# Export's spreadsheet, GEDCOM and full archive: hidden from Export and left out of
+# view-only copies, but their code kept, and the command line's `ancestree export` and Back up
+# now unchanged. True brings them all back.
+MORE_EXPORTS = False
+
+
+def more_exports() -> bool:
+    """Whether Export offers the spreadsheet, GEDCOM and the full archive, and a view-only copy
+    carries them (MORE_EXPORTS): read each time, so a test can turn it on."""
+    return MORE_EXPORTS
+
+
 class Backup(BaseModel):
     """A backup archive, from its manifest."""
 
@@ -45,7 +57,7 @@ class Backup(BaseModel):
     people: int
     links: int
     files: int
-    automatic: bool = False  # made by the daily automatic backup, kept 30 at a time
+    automatic: bool = False  # made by the daily automatic backup
     # Which family it's of, of several on the computer (0.4.0); none before 0.4.0.
     family_id: str | None = None
     family_name: str = ""
@@ -87,6 +99,18 @@ class BackupChecked(BaseModel):
     files: int
 
 
+class BackupsBinned(BaseModel):
+    """Backups over 3 months old sent to the system's bin, as last done, and any that
+    couldn't go."""
+
+    at: datetime | None  # when some last went
+    backups: int  # how many backups went then
+    copies: int  # and how many of the copies in another place
+    bin: str  # the bin, as the system names it: "Recycle Bin", "Bin" or "Trash"
+    stayed: int  # due to go at the last look, but still there
+    why: str  # why they couldn't go
+
+
 class BackupList(BaseModel):
     folder: str  # where new backups go (BACKUP_DIR)
     reachable: bool  # False when that folder's disk isn't there
@@ -96,6 +120,8 @@ class BackupList(BaseModel):
     family_id: str | None = None
     family_name: str = ""
     elsewhere: Elsewhere | None = None  # the second place copies go, if one's chosen (0.4.0)
+    binned: BackupsBinned | None = None  # those over 3 months old gone to the bin
+    bin: str = ""  # where they go: "Recycle Bin", "Bin" or "Trash", as the system names it
 
 
 class BackupRestored(BaseModel):

@@ -1,6 +1,6 @@
 [package]
 name = "ancestree-desktop"
-version = "0.8.3"
+version = "0.8.4"
 description = "AncesTree's desktop app"
 license = "MIT"
 edition = "2021"

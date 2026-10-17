@@ -7,7 +7,7 @@ import { MeDialog } from "@/features/me/MeDialog";
 import { showError } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
 
-/** Settings → Me: which person you are, to change or forget. */
+/** Settings → You and your family → Me: which person you are, to change or forget. */
 export function MeSection() {
   const me = useMe().data?.person ?? null;
   const person = usePerson(me);

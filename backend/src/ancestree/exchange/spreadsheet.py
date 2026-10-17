@@ -52,8 +52,10 @@ COLUMNS = (
     "Remove",
     "Version",
 )
-# Where they live, to the house: after "Lives in", only when addresses are chosen.
-ADDRESS_COLUMNS = ("Address", "Postcode")
+# Where they live, to the house: after "Lives in", only when addresses are chosen. With
+# its district, for a place with no postcode, and its location as a phone's map gives it, where
+# it was placed by hand.
+ADDRESS_COLUMNS = ("Address", "Postcode", "District", "Location")
 # The details a row's Version records, by column and field, in this order.
 VERSIONED = (
     ("Full name", "full_name"),
@@ -90,6 +92,14 @@ def place_shown(place: Place | None) -> str:
         return ""
     country = place.country if place.country != "Malaysia" else None
     return ", ".join(part for part in (place.town, place.state, country) if part)
+
+
+def location_text(place: Place | None) -> str:
+    """ "3.139003, 101.686855", as a phone's map gives it: only a place put on the map by hand,
+    as an import takes a location for one."""
+    if place is None or place.lat is None or place.lon is None or place.exact != "hand":
+        return ""
+    return f"{place.lat}, {place.lon}"
 
 
 def shown(value: object) -> str:
@@ -163,7 +173,7 @@ def _words(story: str) -> int | str:
 
 def write_people_csv(data: FamilyData, *, addresses: bool = False) -> str:
     """The spreadsheet's text; save it with ENCODING. With `addresses`, where each lives
-    to the house: the address and postcode, after "Lives in"."""
+    to the house: the address, postcode, district and location, after "Lives in"."""
     parents_of: dict[str, list[tuple[str, str]]] = defaultdict(list)
     children_of: dict[str, list[str]] = defaultdict(list)
     for row in data.parents:
@@ -266,6 +276,8 @@ def write_people_csv(data: FamilyData, *, addresses: bool = False) -> str:
             cells[lives_in:lives_in] = [
                 guard(home.address or "") if home else "",
                 guard(home.postcode or "") if home else "",
+                guard(home.district or "") if home else "",
+                location_text(home),
             ]
         if unsent is not None:
             del cells[unsent]

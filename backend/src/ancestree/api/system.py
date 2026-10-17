@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from ancestree import __version__
 from ancestree.api.deps import AppSettings, Driver
+from ancestree.domain.exports import more_exports
 from ancestree.domain.person import death_places
 
 router = APIRouter(tags=["system"])
@@ -23,6 +24,8 @@ class Health(BaseModel):
     backup_folder: str
     # Whether the place of death is shown: the app's screens ask here.
     death_places: bool = False
+    # Whether Export offers the spreadsheet, GEDCOM and the full archive.
+    more_exports: bool = False
 
 
 @router.get("/health")
@@ -45,6 +48,7 @@ async def health(driver: Driver, settings: AppSettings) -> Health:
             data_folder=data_folder,
             backup_folder=backup_folder,
             death_places=death_places(),
+            more_exports=more_exports(),
         )
     return Health(
         status="ok",
@@ -55,4 +59,5 @@ async def health(driver: Driver, settings: AppSettings) -> Health:
         data_folder=data_folder,
         backup_folder=backup_folder,
         death_places=death_places(),
+        more_exports=more_exports(),
     )

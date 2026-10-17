@@ -1,10 +1,10 @@
-"""Automatic backups: which archives they are, and keeping the last 30 of them."""
+"""Automatic backups: which archives they are. How long every backup is kept, for 3
+months, is test_backups_kept.py's."""
 
-from datetime import datetime, timedelta
 from pathlib import Path
 
 from ancestree.exchange.backup import is_automatic
-from ancestree.services.automatic import KEEP, automatic_archives, tidy
+from ancestree.services.automatic import automatic_archives
 
 
 def made(folder: Path, name: str) -> Path:
@@ -25,22 +25,5 @@ def test_automatic_backups_are_told_apart_by_name(tmp_path: Path) -> None:
     assert found[0][0].year == 2026
     assert is_automatic(first.name)
     assert not is_automatic(by_hand.name)
-    assert not is_automatic(elsewhere.name)  # never tidied away, so not marked as one
+    assert not is_automatic(elsewhere.name)  # not one of ours
     assert automatic_archives(tmp_path / "not-there") == []
-
-
-def test_only_the_last_30_automatic_backups_are_kept_and_every_one_by_hand(
-    tmp_path: Path,
-) -> None:
-    by_hand = [made(tmp_path, f"ancestree-backup-2026-08-{day:02d}T09-00-00.zip") for day in (1, 2)]
-    days = [datetime(2026, 8, 1, 10) + timedelta(days=n) for n in range(KEEP + 2)]
-    automatic = [
-        made(tmp_path, f"ancestree-backup-{day:%Y-%m-%dT%H-%M-%S}-automatic.zip") for day in days
-    ]
-
-    gone = tidy(tmp_path)
-
-    assert gone == [automatic[0].name, automatic[1].name]
-    assert [path for _, path in automatic_archives(tmp_path)] == automatic[2:]
-    assert all(path.exists() for path in by_hand)
-    assert tidy(tmp_path) == []

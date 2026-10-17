@@ -82,24 +82,6 @@ def test_a_place_out_of_reach_waits_and_catches_up(ctx: Context, tmp_path: Path)
     assert (status.reachable, status.waiting, status.problem) == (True, 0, "")
 
 
-def test_the_last_30_daily_copies_are_kept_and_those_made_by_hand_for_ever(
-    ctx: Context, tmp_path: Path
-) -> None:
-    usb = tmp_path / "usb"
-    usb.mkdir()
-    daily = [f"ancestree-backup-2026-09-{day:02d}T09-00-00-automatic.zip" for day in range(1, 31)]
-    backups(ctx, *daily, "ancestree-backup-2026-09-01T12-00-00.zip")
-    elsewhere.choose(ctx, str(usb), None)
-    elsewhere.catch_up(ctx)
-    (ctx.backups / daily[0]).unlink()  # tidied here, as the 31st arrives
-    backups(ctx, "ancestree-backup-2026-10-01T09-00-00-automatic.zip")
-    elsewhere.catch_up(ctx)
-    there = {path.name for path in (usb / "AncesTree 3f9c0a1b2c3d4e5f").iterdir()}
-    assert len(there) == 31  # 30 daily, and the one made by hand
-    assert daily[0] not in there
-    assert "ancestree-backup-2026-09-01T12-00-00.zip" in there
-
-
 def test_what_cant_be_chosen_is_said(ctx: Context, tmp_path: Path) -> None:
     for folder, password, code in (
         (str(tmp_path / "nowhere"), None, "no_such_folder"),

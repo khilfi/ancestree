@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from ancestree import __version__
 from ancestree.api import (
     dates,
+    downloads,
     exports,
     family,
     family_folder,
@@ -213,6 +214,7 @@ def create_app(
         trash,
         dates,
         exports,
+        downloads,
         history,
         family,
         family_folder,

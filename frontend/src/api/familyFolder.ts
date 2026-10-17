@@ -31,9 +31,10 @@ export function useFamilyFolder(enabled = true) {
   });
 }
 
-/** What waits in Settings → Family folder: for the keeper, computers asking to join and
- *  relatives' changes; for a relative, the keeper's answers, unread, a role the keeper changed
- *  since, the family offered to it, or the one it handed over, until seen. */
+/** What waits in Settings → You and your family → Family folder: for the keeper,
+ *  computers asking to join and relatives' changes; for a relative, the keeper's answers,
+ *  unread, a role the keeper changed since, the family offered to it, or the one it
+ *  handed over, until seen. */
 export function waitingIn(status: FamilyFolderStatus | undefined) {
   const asking = status?.asking?.length ?? 0;
   const changes = status?.changes?.length ?? 0;

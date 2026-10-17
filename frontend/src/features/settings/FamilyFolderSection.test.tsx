@@ -364,7 +364,7 @@ describe("Settings → Family folder", () => {
     await until("ATI1-made-up-123456");
     const message = document.querySelector<HTMLTextAreaElement>("textarea")?.value ?? "";
     expect(message).toContain("https://github.com/khilfi/ancestree/releases/latest");
-    expect(message).toContain("Settings → Family folder");
+    expect(message).toContain("Settings → You and your family → Family folder");
   });
 
   it("keeps the invitation's long line inside its window, with Copy in reach", async () => {

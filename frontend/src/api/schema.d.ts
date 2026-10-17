@@ -905,6 +905,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Download
+         * @description Save an export or backup, the import template or its example, or an import's report, in
+         *     the Downloads folder: under its own name, or with " (2)" if that's taken.
+         */
+        post: operations["save_download"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downloads/picture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save Picture
+         * @description Save the tree's picture, as the page drew it, in the Downloads folder.
+         */
+        post: operations["save_picture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downloads/show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show Download
+         * @description Open the Downloads folder with this download chosen: only one saved since the app
+         *     started, and still there.
+         */
+        post: operations["show_download"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/history": {
         parameters: {
             query?: never;
@@ -1669,7 +1731,7 @@ export interface paths {
         /**
          * Import Template
          * @description The columns an import reads, as a CSV that Excel opens. With example=true, filled in
-         *     with the fictional test family.
+         *     with the example family, every column used.
          */
         get: operations["import_template"];
         put?: never;
@@ -2197,6 +2259,12 @@ export interface components {
              */
             family_name: string;
             elsewhere?: components["schemas"]["Elsewhere"] | null;
+            binned?: components["schemas"]["BackupsBinned"] | null;
+            /**
+             * Bin
+             * @default
+             */
+            bin: string;
         };
         /** BackupRestored */
         BackupRestored: {
@@ -2213,6 +2281,25 @@ export interface components {
             files: number;
             /** Backup */
             backup: string;
+        };
+        /**
+         * BackupsBinned
+         * @description Backups over 3 months old sent to the system's bin, as last done, and any that
+         *     couldn't go.
+         */
+        BackupsBinned: {
+            /** At */
+            at: string | null;
+            /** Backups */
+            backups: number;
+            /** Copies */
+            copies: number;
+            /** Bin */
+            bin: string;
+            /** Stayed */
+            stayed: number;
+            /** Why */
+            why: string;
         };
         /** Biography */
         Biography: {
@@ -2300,6 +2387,13 @@ export interface components {
              * @description The changes ticked, as a JSON list of their ids. Left out: those ticked to begin with.
              */
             chosen?: string | null;
+        };
+        /** Body_save_picture */
+        Body_save_picture: {
+            /** File */
+            file: string;
+            /** Name */
+            name: string;
         };
         /** Body_upload_photo */
         Body_upload_photo: {
@@ -2518,6 +2612,18 @@ export interface components {
             krama_inggil?: string | null;
             /** Note */
             note?: string | null;
+        };
+        /** DownloadRequest */
+        DownloadRequest: {
+            /**
+             * What
+             * @enum {string}
+             */
+            what: "export" | "template" | "example" | "report";
+            /** Name */
+            name?: string | null;
+            /** Id */
+            id?: string | null;
         };
         /**
          * Elsewhere
@@ -3031,6 +3137,11 @@ export interface components {
              * @default false
              */
             death_places: boolean;
+            /**
+             * More Exports
+             * @default false
+             */
+            more_exports: boolean;
         };
         /**
          * Helped
@@ -4602,6 +4713,16 @@ export interface components {
             graph: components["schemas"]["Graph"];
         };
         /**
+         * Saved
+         * @description A download, saved.
+         */
+        Saved: {
+            /** Name */
+            name: string;
+            /** Folder */
+            folder: string;
+        };
+        /**
          * Seat
          * @description Where someone sits on the rings; the browser draws it.
          */
@@ -4628,6 +4749,11 @@ export interface components {
             id: string;
             /** Owner */
             owner: string;
+        };
+        /** Shown */
+        Shown: {
+            /** Name */
+            name: string;
         };
         /**
          * SiblingGroup
@@ -6498,6 +6624,103 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BackupRestored"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Saved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_picture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_save_picture"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Saved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    show_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Shown"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

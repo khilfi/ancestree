@@ -37,9 +37,8 @@ To restore it: in AncesTree, Settings > Backups; or `uv run ancestree restore <t
 """
 
 
-# In an automatic backup's name: those are kept 30 at a time, those made by hand for ever.
+# In an automatic backup's name. Every backup is kept for 3 months, by keeping.py.
 AUTOMATIC = "-automatic"
-KEEP_AUTOMATIC = 30
 # Two made in one second are "...-automatic.zip", then "...-automatic-2.zip".
 AUTOMATIC_NAME = re.compile(
     r"ancestree-backup-(\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d)-automatic(?:-(\d+))?\.zip"
@@ -73,8 +72,7 @@ async def create_backup(
 
 
 def is_automatic(name: str) -> bool:
-    """An archive made by the daily automatic backup, by its name: the only kind that is
-    ever tidied away."""
+    """An archive made by the daily automatic backup, by its name."""
     return AUTOMATIC_NAME.fullmatch(name) is not None
 
 

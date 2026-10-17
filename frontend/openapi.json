@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.3"
+    "version": "0.8.4"
   },
   "paths": {
     "/api/health": {
@@ -2415,6 +2415,125 @@
         }
       }
     },
+    "/api/downloads": {
+      "post": {
+        "tags": [
+          "downloads"
+        ],
+        "summary": "Save Download",
+        "description": "Save an export or backup, the import template or its example, or an import's report, in\nthe Downloads folder: under its own name, or with \" (2)\" if that's taken.",
+        "operationId": "save_download",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downloads/picture": {
+      "post": {
+        "tags": [
+          "downloads"
+        ],
+        "summary": "Save Picture",
+        "description": "Save the tree's picture, as the page drew it, in the Downloads folder.",
+        "operationId": "save_picture",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_save_picture"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downloads/show": {
+      "post": {
+        "tags": [
+          "downloads"
+        ],
+        "summary": "Show Download",
+        "description": "Open the Downloads folder with this download chosen: only one saved since the app\nstarted, and still there.",
+        "operationId": "show_download",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Shown"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/history": {
       "get": {
         "tags": [
@@ -3678,7 +3797,7 @@
           "import"
         ],
         "summary": "Import Template",
-        "description": "The columns an import reads, as a CSV that Excel opens. With example=true, filled in\nwith the fictional test family.",
+        "description": "The columns an import reads, as a CSV that Excel opens. With example=true, filled in\nwith the example family, every column used.",
         "operationId": "import_template",
         "parameters": [
           {
@@ -4960,6 +5079,21 @@
                 "type": "null"
               }
             ]
+          },
+          "binned": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BackupsBinned"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bin": {
+            "type": "string",
+            "title": "Bin",
+            "default": ""
           }
         },
         "type": "object",
@@ -5003,6 +5137,53 @@
           "backup"
         ],
         "title": "BackupRestored"
+      },
+      "BackupsBinned": {
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "backups": {
+            "type": "integer",
+            "title": "Backups"
+          },
+          "copies": {
+            "type": "integer",
+            "title": "Copies"
+          },
+          "bin": {
+            "type": "string",
+            "title": "Bin"
+          },
+          "stayed": {
+            "type": "integer",
+            "title": "Stayed"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "backups",
+          "copies",
+          "bin",
+          "stayed",
+          "why"
+        ],
+        "title": "BackupsBinned",
+        "description": "Backups over 3 months old sent to the system's bin, as last done, and any that\ncouldn't go."
       },
       "Biography": {
         "properties": {
@@ -5221,6 +5402,26 @@
           "file"
         ],
         "title": "Body_run_import"
+      },
+      "Body_save_picture": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "name"
+        ],
+        "title": "Body_save_picture"
       },
       "Body_upload_photo": {
         "properties": {
@@ -5794,6 +5995,49 @@
         ],
         "title": "DictionaryWord",
         "description": "One language's words for a row of the Kinship dictionary."
+      },
+      "DownloadRequest": {
+        "properties": {
+          "what": {
+            "type": "string",
+            "enum": [
+              "export",
+              "template",
+              "example",
+              "report"
+            ],
+            "title": "What"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "what"
+        ],
+        "title": "DownloadRequest"
       },
       "Elsewhere": {
         "properties": {
@@ -7202,6 +7446,11 @@
           "death_places": {
             "type": "boolean",
             "title": "Death Places",
+            "default": false
+          },
+          "more_exports": {
+            "type": "boolean",
+            "title": "More Exports",
             "default": false
           }
         },
@@ -11436,6 +11685,25 @@
         "title": "SampleFamily",
         "description": "A made-up family whose married-in families hang off it in a hard way, for trying ways\nof placing them side by side."
       },
+      "Saved": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "folder"
+        ],
+        "title": "Saved",
+        "description": "A download, saved."
+      },
       "Seat": {
         "properties": {
           "unit": {
@@ -11517,6 +11785,20 @@
         ],
         "title": "SharedFolder",
         "description": "A family folder someone has shared with this Google account."
+      },
+      "Shown": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Shown"
       },
       "SiblingGroup": {
         "properties": {

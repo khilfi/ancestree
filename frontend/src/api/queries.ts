@@ -9,6 +9,7 @@ import {
 import { useCallback } from "react";
 import { exportAddress, importReportAddress, templateAddress } from "./addresses";
 import { api } from "./client";
+import { saveDownload } from "./downloads";
 import { toApiError, unwrap } from "./errors";
 import type {
   Backup,
@@ -75,6 +76,13 @@ export function useHealth() {
  *  answer, and a copy's. Off until it says so. */
 export function useDeathPlaces(): boolean {
   return useHealth().data?.death_places === true;
+}
+
+/** Whether Export offers the spreadsheet, GEDCOM and the full archive: the
+ *  backend's switch, MORE_EXPORTS, said in its health answer, and a copy's. Off until it says
+ *  so. */
+export function useMoreExports(): boolean {
+  return useHealth().data?.more_exports === true;
 }
 
 export function useGraph(enabled = true) {
@@ -704,18 +712,10 @@ export function useMakeExport() {
 }
 
 /** Save a file the backend makes: the browser downloads it under its own name. */
-function download(url: string, name = ""): void {
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  document.body.append(link);
-  link.click();
-  link.remove();
-}
-
-/** Save an export or backup. */
-export function downloadExport(name: string): void {
-  download(exportAddress(name), name);
+/** Save an export or backup: in Downloads, with a note saying so, in the desktop app;
+ *  else the browser's download. Whether it was noted: `then` goes in the note. */
+export function downloadExport(name: string, then?: string): Promise<boolean> {
+  return saveDownload({ what: "export", name }, exportAddress(name), name, then);
 }
 
 export function useBackups() {
@@ -804,17 +804,18 @@ export function useDeleteKind() {
   );
 }
 
-/** The import template: empty, or filled in with the fictional test family. */
-export function downloadTemplate(example: boolean): void {
-  download(
+/** The import template: empty, or filled in with the example family. */
+export function downloadTemplate(example: boolean): Promise<boolean> {
+  return saveDownload(
+    { what: example ? "example" : "template" },
     templateAddress(example),
     example ? "ancestree-import-example.csv" : "ancestree-import-template.csv",
   );
 }
 
 /** What an import left out or found different, as a spreadsheet. */
-export function downloadImportReport(id: string): void {
-  download(importReportAddress(id));
+export function downloadImportReport(id: string): Promise<boolean> {
+  return saveDownload({ what: "report", id }, importReportAddress(id), "");
 }
 
 function importForm(file: File, answers: Record<string, string>): FormData {
