@@ -1,14 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect x="64" y="64" width="896" height="896" rx="200" fill="#0f766e"/>
-  <g stroke="#f0fdfa" stroke-width="44" stroke-linecap="round" fill="none">
-    <path d="M512 330 V470"/>
-    <path d="M300 600 V520 H724 V600"/>
-    <path d="M512 470 V600"/>
-  </g>
-  <g fill="#f0fdfa">
-    <circle cx="512" cy="270" r="96"/>
-    <circle cx="300" cy="690" r="84"/>
-    <circle cx="512" cy="690" r="84"/>
-    <circle cx="724" cy="690" r="84"/>
+  <!-- The family leaf: its veins step up like generations, a person at each tip. Drawn
+       whole for 64 px and over; icon-small.svg is the same leaf, simpler, for 32 px and under. -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="8"/>
+  <g transform="translate(512 524) rotate(-18) scale(0.86) translate(-512 -506)">
+    <path d="M512 878 C510 902 500 924 482 944" stroke="#059669" stroke-width="30" stroke-linecap="round" fill="none"/>
+    <path d="M512 128 C712 236 806 470 714 690 C662 806 586 860 512 884 C448 846 370 786 322 676 C240 486 318 250 512 128 Z" fill="#059669"/>
+    <path d="M512 128 C712 236 806 470 714 690 C662 806 586 860 512 884 C506 700 506 450 528 250 Z" fill="#047857"/>
+    <path d="M512 884 C506 700 506 450 528 250 M509 740 C470 690 420 650 372 618 M508 640 C556 600 604 566 652 532 M510 520 C478 478 440 446 400 420 M516 400 C552 368 586 340 620 318" stroke="#ecfdf5" stroke-width="24" stroke-linecap="round" fill="none"/>
+    <g fill="#ecfdf5">
+      <circle cx="372" cy="618" r="34"/>
+      <circle cx="652" cy="532" r="34"/>
+      <circle cx="400" cy="420" r="34"/>
+      <circle cx="620" cy="318" r="34"/>
+      <circle cx="528" cy="246" r="38"/>
+    </g>
   </g>
 </svg>

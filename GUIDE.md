@@ -112,7 +112,7 @@ flowchart LR
 | *Drag* | Press and hold the mouse button on something, move the mouse, then let go. |
 | *Point at* | Move the mouse over something, without clicking. |
 | *The window* | AncesTree's own window on your screen, with the family in it. |
-| *The icon by the clock* | AncesTree's small icon: a green square with a little family tree on it. On Windows it's at the bottom right, by the clock. On a Mac it's at the top right, in the menu bar. |
+| *The icon by the clock* | AncesTree's small icon: a pale green square with a green leaf on it. On Windows it's at the bottom right, by the clock. On a Mac it's at the top right, in the menu bar. |
 | **Ctrl** | The key marked **Ctrl** on Windows. On a Mac, use **⌘ Command** wherever this guide says **Ctrl**. |
 | *The keeper* | The one person who looks after the family's record. Their computer keeps the family, and lets relatives' computers in. |
 | *A relative* | Anyone else in the family with AncesTree. Their computer has the same family, kept in step with the keeper's. |

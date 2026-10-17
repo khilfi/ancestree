@@ -18,6 +18,7 @@ import { CopyBadge } from "./CopyBadge";
 import { CanEdit, InAppOnly, useCopy } from "./copy";
 import { DatabaseWarning } from "./DatabaseWarning";
 import { FamilyFolderBar } from "./FamilyFolderBar";
+import { LeafMark } from "./LeafMark";
 import { SyncIndicator } from "./SyncIndicator";
 import { UpdateBanner } from "./UpdateBanner";
 
@@ -94,12 +95,14 @@ export function AppLayout() {
         {/* On a phone: two rows, the views across the second. */}
         <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-stone-200 bg-white px-3 py-2 md:flex-nowrap md:gap-x-3 md:px-4">
           {/* Where the bar is short, the family's name leads in the desktop app, and the
-              words beside the icons go first (0.4.0). */}
+              words beside the icons go first (0.4.0); the leaf says AncesTree there. */}
           <div className="group/brand flex min-w-0 items-center gap-1 max-md:flex-1">
+            {/* The family leaf, the app's icon: there even where the name gives way. */}
+            <LeafMark className="mr-0.5 h-7 w-[19px] shrink-0" />
             <span
               className={cn(
                 "shrink-0 text-lg font-semibold tracking-tight",
-                "group-has-[[data-family-menu]]/brand:max-xl:hidden",
+                "group-has-[[data-family-menu]]/brand:max-2xl:hidden",
                 copy && "max-md:sr-only", // the copy's badge says what this is
               )}
             >

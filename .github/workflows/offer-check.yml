@@ -1,8 +1,9 @@
 # Is every release on offer? A release reaches installs only once its signed updates/latest.json
-# is pushed: 0.8.3's waited a night unpushed, and no install heard of it. Each day, and after
-# every release, this compares the newest release with the version latest.json offers, and
-# fails, so GitHub emails, when a release has waited unoffered for over 6 hours, through
-# scripts/unoffered.py.
+# is pushed: 0.8.3's waited a night unpushed, and no install heard of it. Each day this compares
+# the newest release with the version latest.json offers, and fails, so GitHub emails, when a
+# release has waited unoffered for over 6 hours, through scripts/unoffered.py. A release
+# made by hand on GitHub starts it too; one the Release workflow makes, with its own token,
+# starts no other workflow (GitHub's rule), so for those the daily run is the check.
 
 name: Offer check
 

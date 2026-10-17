@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The family leaf for 32 px and under: by the clock, in the taskbar and a browser's
+       tab. A bigger leaf, thicker lines, no people, and a stronger edge, so it stays clear. -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="40"/>
+  <g transform="translate(512 512) rotate(-18) scale(0.94) translate(-512 -506)">
+    <path d="M512 128 C712 236 806 470 714 690 C662 806 586 860 512 884 C448 846 370 786 322 676 C240 486 318 250 512 128 Z" fill="#059669"/>
+    <path d="M512 860 C506 700 506 450 526 280 M510 690 C474 652 438 626 398 606 M512 470 C550 438 588 414 628 396" stroke="#ecfdf5" stroke-width="64" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
