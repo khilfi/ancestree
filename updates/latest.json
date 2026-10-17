@@ -1,19 +1,19 @@
 {
-  "version": "0.8.2",
-  "notes": "No place of death shown, and the map's circles that open.\n\n- **No place of death:** where someone died is no longer asked for or shown: not in a person's form or panel, their life story, the map or What's missing, and it's left out of view-only copies, the spreadsheet and GEDCOM. One saved before is kept, but shown nowhere. The date of death and **Where they rest** stay.\n- **The map's circles open:** people too close together to show apart are one circle, named by the eldest of them, *Fatimah and 2 more*. A click opens it where it is, each of them a click from their panel, or zooms in where that would part them, with **Open here** beside it. More than 12 open as a list, with **Show them on the tree**. People at one house are one place, with the address under their photos.\n- **Photos on the map** no longer show as thin bars at a town, zoomed out.\n",
-  "pub_date": "2026-10-15T14:23:03Z",
+  "version": "0.8.3",
+  "notes": "One pin for each spot, standing its people up on a click, and pins only where confirmed.\n\n- **One spot, one pin:** people within about 2 metres of each other on the map, the same house to anyone looking, are one pin, the eldest's photo with how many are there, named *Fatimah and 2 more*. A click stands them in columns above it, up to 8 to a column, each a click from their panel; more than 40 open as a list.\n- **Closer in:** the map now zooms in as far as about 15 centimetres to a dot, so someone a few metres away, such as a child next door, has a pin of their own.\n- **A pin like Google Maps':** someone whose place is confirmed is a pin, its point exactly on the spot, their photo or initials in its head. Anyone else is a round photo, *about here*. **Looks right** now confirms a place, and so does **Confirm**, beside *About here* in a person's form. **Settings \u2192 What's missing** lists those not confirmed on the map, each with **Confirm** or **Place it**.\n",
+  "pub_date": "2026-10-16T15:54:56Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1k3S2hiRTJZN2ROdnpIWDc0RXpLbmw5d2RRY2g1WlFocldTRHVWekQrOS9CbnJ6ZFZxT3BzNVJVSW4yNjJBVFg0QU1XUmFrdVVjenNQQW5vUkQ4MkFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDc1NTM3CWZpbGU6QW5jZXNUcmVlXzAuOC4yX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuOC4yCkVqa3laVm5xZHAvR3lkMFZBL3dsRjl4ZXl1SDBSZWg1alhrazNrNURrUklocW9xeDl0S3NnVGp6djZrQ1VqK3NwUkdIbHUwOVFNNWVtRjdlbk11MUFRPT0K",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.2/AncesTree_0.8.2_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1R3NytGYkcweDkvRENhZlhwZHFNdk5TK2tNYVN5YzE4VHhmWUZoL2ZpWG5wUjFod3RVaHd3SWlKTzVMVEtEN1NROFFUZGRWRklJZlUwYkhvc2FWSEFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY2OTgzCWZpbGU6QW5jZXNUcmVlXzAuOC4zX2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuOC4zCnBwOFJUN053M2JzZWlRTVRvdTRFWXRwWklrTDVPV1pBMUs1M1ZHdjN2N215OUNTbzFpQjlxMXJvK0l6bzA3WEdBRnlKa0ozVStSUkdNREw3OFVhSUR3PT0K",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.3/AncesTree_0.8.3_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1pUYkVSd2g1NXNHdk5URFRMa0srYm44dlNBY1dUOWZISVptV21XY3MxOHJTcytHTHlsRCtIS3lQdTR3dG5XamhkSnc5N2tPb0YvVW9nckUvSE5JK2dVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDc1NTM3CWZpbGU6QW5jZXNUcmVlXzAuOC4yX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC44LjIKWmFCNURxUC9JOVhWZ3oxM3B5dGRIeU5SeElnQmlUbnM5VnBlcXZRTE9ma21jNko3V01maHI2Vm9aVTNkVUJkbzVQdW4vekZXczNrMWc2cDZDSnp6QUE9PQo=",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.2/AncesTree_0.8.2_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2JENjNjdWs4R1hVcTd4eEZmMGcxdThpV2dJazJwclRrd1dneGJNZTVwRmJ6ZDJpVTRBRVV3eS9HQW9RUVBJbjVoby9kMVl5RkE1L3ZiWWRkWk1HWGdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY2OTg0CWZpbGU6QW5jZXNUcmVlXzAuOC4zX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC44LjMKSWk2OUxlWlVXdFJ0bnVRenIyanJzd2tIdUp5YUxuSStsVXZ6MkdUOXdtQWdhRytaRFNMblFFK0htdVpPQmhlaFFtOXR2cFViUWhHampxNC9CR3NpRGc9PQo=",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.3/AncesTree_0.8.3_amd64.AppImage"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2RYY0lBNmVqMmNLamtXbWRZTkxqTE5sYXc5MnlFdytsNDgyUVhLajQ4c01BUGJ4aG1HcjV4VEpwUS9nbWx5Q0JaVEErZ3Z6WC9XU0U5QlYwMURRcFFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMDc1NTM3CWZpbGU6QW5jZXNUcmVlXzAuOC4yX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjguMgpaNGtCOG1zejRxNmU1TUlLc0pzN3VOM3EvZFFOdWcveDdLY044QWltNERzTStvcGhGZDBYeGROcTNjTElEVjJLeW0zWGhaOGRqemxOQTBPNWNIRXZBZz09Cg==",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.2/AncesTree_0.8.2_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2Q3eHVxY1dPQjZMckFIdGVQL251NjFDclhPSjMxSFF0cmJjZnlQV2liUkRrZldSdE5FVnN6UUJKakx5V2Zxcy9WYy90K1Rwa1NhTmRrY2Z5UTUzcUFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMTY2OTgzCWZpbGU6QW5jZXNUcmVlXzAuOC4zX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjguMwo5VGNJdlJxRlFObk1mTHRrWk10N1cxOUN1UC81azA1cnBlK3ZZaUIwc3pzbjVyWFEwZnoxR0tIeTh3YjhvdlVzSTRPQzEyWURmVDR4eXh0RFB2YmREQT09Cg==",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.3/AncesTree_0.8.3_x64-setup.exe"
     }
   }
 }
