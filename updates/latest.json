@@ -1,19 +1,19 @@
 {
-  "version": "0.8.5",
-  "notes": "A new icon: the family leaf.\n\n- **The family leaf:** AncesTree's icon is now a green leaf on a pale green square, its veins branching like a family, with a person at the end of each. You'll see it by the clock, in the taskbar and the Start menu, at the left of AncesTree's top bar, and in a view-only copy's browser tab. The guide's pictures show it too.\n",
-  "pub_date": "2026-10-17T19:14:20Z",
+  "version": "0.8.6",
+  "notes": "On a Mac, AncesTree reaches Google again.\n\n- **The family folder on a Mac:** since 0.8.0, AncesTree on a Mac couldn't reach Google, and said \"No internet just now\" while the browser beside it worked. On a Mac without Homebrew, it couldn't fetch its database at its first start either. AncesTree now checks the certificates of Google and every other site as the computer itself does, so whatever the browser reaches, AncesTree reaches too. A Mac updates itself to 0.8.6, then catches up with the family.\n- **It says what's wrong:** when a computer can't check Google's certificate, AncesTree says so, and suggests checking the computer's date and time, rather than \"No internet just now\".\n",
+  "pub_date": "2026-11-01T10:33:21Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2VwTUUra1F1bklPbkVWVDlycnZOWXQwUUdjdC81YWEzRXNjaDcxSTlUS0FPNmc4NGdYdW51WFlUOWMvenJkT3JKSDYrVGNIT3JEekNWaXRzWmE0ZFFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjgyMTY5CWZpbGU6QW5jZXNUcmVlXzAuOC41X2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuOC41ClVLVjJBbENmandNSWN3amRva0pDUTJ0NnBGRWFTM0hMamsyNGRSUU5Zdlh3V2VPRDdxNzZRYXcwOVFwYVVmR0ppOHFVWWRCUmorZnBBcU43YXM3YUFnPT0K",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.5/AncesTree_0.8.5_aarch64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1pZLzYvMW5rYzFtblBjWnhZRWpOQ1ZmVXNHMko3TG54aFMvMG1TWU03S1Y3aHJnamNGVWdvekk4SE5kTXZkV2NKcmgzOUFwWjFITW9VYzlTS25ldXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTMzNDQ1CWZpbGU6QW5jZXNUcmVlXzAuOC42X2FhcmNoNjQuYXBwLnRhci5negl2ZXJzaW9uOjAuOC42CnVIbXpSOTgranc5K1dabDZxRFhyOHkyVmxSR1VnZ2twbENVNU03YXlzTWFPYzRaVWc2czNiTGorcmxFQXZjaDFVenNyS3pHaFBISHpQWGpRV3AwZkRRPT0K",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.6/AncesTree_0.8.6_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL1ZqM2dhbUZNZm9VbTB1UkdNdzVIWUJsUnJ0OUhNd1lOSGFLK2xnK01nUytpbTZUdTByNzRveituQ2dxL1RNSzgvU0hTMXhGWW82eFpvc3RVN3JIdUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjgyMTY5CWZpbGU6QW5jZXNUcmVlXzAuOC41X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC44LjUKOU5aVEtUU21LUXRnbXJMK0hyZTdDQks5d2RabDJRQ3RNbGI2bndVNmg4VjV1c0cwelVkV280WWFtRklMenJTbHc4Z3RDR0tnUG1WOTBhR2NFbmtPQkE9PQo=",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.5/AncesTree_0.8.5_amd64.AppImage"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2VnK1NpaFp4SGpFYjZVbHdUTE1RMzhGZFVHbWJLcFVyMzZqRlU3a2RaQjRydUZmOVM5KzB4Zjh5Y2RCNnJJakhNVy93SXhHK1JtbzFESEJFeUJkUFFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTMzNDQ2CWZpbGU6QW5jZXNUcmVlXzAuOC42X2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC44LjYKZUhzaWM5L1dRSkRVaWdXdnJyRU5yTUt1Y2RkTDI0MW5Fdi9vYkpCejZUc2EzZjZoOXY2NG5LaHdYS3FxcWRVRXE0ZWk2azVielJ1Mldoc1ZoYXhQQkE9PQo=",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.6/AncesTree_0.8.6_amd64.AppImage"
     },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2Zhdml3a1pNYmtkS3JaZTRocE1UN0FzeGoxRDZxNE52UlpDcWRJL3BHSlI2OUN5LytBbVVtR3dGdTlRR1duWnlyalE5NFNSTmVQOVpScUhXUEphY1FFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMjgyMTY5CWZpbGU6QW5jZXNUcmVlXzAuOC41X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjguNQptYTVtUWN6M3FIMTdGOFBPUkRXNnVuWm51Tm4zTkV5amdSaGJGVHJjaSs3SlNpUUVnUk9VTm1tTTBNTEJPaEdYeVBRNVJlNzYyVk84azQyVFNFWnZEZz09Cg==",
-      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.5/AncesTree_0.8.5_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUWEdOcW1sTCtNL2JVSU1DcFVhYS9ONWRsNFl6ZTdjQzJCZENzaFhzMkE4RlBLNTYzUGk1TlNPQktBYmFYOGM5L2tiSW9HZFhEa09ITUI4UngvRUlUaEh2c2pRb1NKNHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNTMzNDQ1CWZpbGU6QW5jZXNUcmVlXzAuOC42X3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjguNgpvY0NnY2NkZmx0aW5XTVVpcVV4YnkxcDB0dkZzRkRQK2J5MXBDQWRHUGxxcE1JVGdMN2lkTDFmWkJ3VWFNL0ZTR3BiNGV0VTFOOTlXTmJWa1k3VlZBZz09Cg==",
+      "url": "https://github.com/khilfi/ancestree/releases/download/v0.8.6/AncesTree_0.8.6_x64-setup.exe"
     }
   }
 }
