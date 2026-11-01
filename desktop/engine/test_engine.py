@@ -333,6 +333,26 @@ def test_the_engine_may_open_as_many_files_as_the_map_packs_need() -> None:
         assert soft == resource.RLIM_INFINITY or soft >= min(10_240, hard)
 
 
+def test_the_engine_trusts_what_the_computer_trusts() -> None:
+    """Every Mac build before 0.8.6 looked for the certificates it trusts in a folder Homebrew
+    keeps on the machine that built it, so a Mac without it reached nothing, and said "No
+    internet". The engine hands the checking to the computer, as it starts, before the
+    families are read and anything reaches the internet."""
+    import inspect
+    import ssl
+
+    import truststore
+
+    try:
+        engine.trust_what_the_computer_trusts()
+        assert isinstance(ssl.create_default_context(), truststore.SSLContext)
+    finally:
+        truststore.extract_from_ssl()
+    assert not isinstance(ssl.create_default_context(), truststore.SSLContext)
+    main = inspect.getsource(engine.main)
+    assert main.index("trust_what_the_computer_trusts()") < main.index("Families.load(")
+
+
 def test_an_install_is_tidied_of_what_earlier_updates_left(tmp_path: Path) -> None:
     """Every Windows update before 0.8.1 left the earlier version's files beside the new ones,
     so the engine called itself 0.3.1 since 0.4.0. At its start, an install takes away

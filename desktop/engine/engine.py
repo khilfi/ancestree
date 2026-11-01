@@ -17,6 +17,8 @@ app, says "restart" to the shell, which starts the engine again on it.
 With ANCESTREE_NEO4J_URI and ANCESTREE_NEO4J_PASSWORD set, it uses that Neo4j instead, yours
 in Docker for example, and starts none of its own. With ANCESTREE_NEO4J_RUNTIME set, its own
 Neo4j runs from the Neo4j and Java already fetched there, as in the tests.
+
+Whatever it fetches, it checks the certificate as the computer itself does (0.8.6, D89).
 """
 
 from __future__ import annotations
@@ -26,7 +28,9 @@ import asyncio
 import json
 import mimetypes
 import os
+import platform
 import socket
+import ssl
 import sys
 import threading
 import time
@@ -35,6 +39,7 @@ from http.client import HTTPException
 from pathlib import Path
 from typing import Annotated, Any
 
+import truststore
 import uvicorn
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -476,6 +481,15 @@ def drop_development_settings() -> None:
             os.environ.pop(name, None)
 
 
+def trust_what_the_computer_trusts() -> None:
+    """Certificates checked as the computer itself checks them (0.8.6, D89): through the Mac's
+    keychain, Windows' certificate store, or Linux's own list. It covers every fetch: Google
+    and Drive, Neo4j and Java, the map's packs and places, and the address lookup. OpenSSL alone
+    looks where it was told to as it was built; on the Mac, a folder that only Homebrew on the
+    machine that built it has, so a Mac without it reached nothing, and said "No internet"."""
+    truststore.inject_into_ssl()
+
+
 def more_open_files(most: int = 10_240) -> int:
     """As many files open at once as the system lets the engine have, up to `most`: a Mac starts
     a program with 256, and each map pack read holds one (0.8.0). How many it may have now;
@@ -544,6 +558,7 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--data is required")
     if FROZEN:
         drop_development_settings()
+    trust_what_the_computer_trusts()  # before anything reaches the internet
     more_open_files()
     # An install on Windows, tidied of what earlier updates left beside it (0.8.1, D76): the
     # Mac's and Linux's are replaced whole, and changing them would break their signatures.
@@ -573,9 +588,11 @@ def main(argv: list[str] | None = None) -> None:
     if args.managed:
         threading.Thread(target=stop.watch, args=(updates,), daemon=True).start()
     # Each start's version and family, in engine.log too (0.8.1): it held only failures before.
+    # And the Python and OpenSSL it was built with (0.8.6, D89): the builds' own choice, once.
+    python, openssl = platform.python_version(), ssl.OPENSSL_VERSION
     print(
         f"{datetime.now().astimezone().isoformat(timespec='seconds')} AncesTree's engine "
-        f"{__version__} starting, for {family.name}"
+        f"{__version__} starting, for {family.name}, on Python {python} and {openssl}"
         + (f"; {left_behind} files left by earlier versions taken away" if left_behind else ""),
         file=sys.stderr,
         flush=True,
@@ -587,6 +604,8 @@ def main(argv: list[str] | None = None) -> None:
         neo4j=NEO4J_VERSION,
         family=family.name,
         tidied=left_behind,
+        python=python,
+        openssl=openssl,
     )
     if versions_differ(app_version, __version__):
         emit(stage="versions-differ", app=app_version, engine=__version__)

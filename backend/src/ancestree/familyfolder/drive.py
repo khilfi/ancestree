@@ -21,7 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from ancestree.familyfolder.google import OfflineError
+from ancestree.familyfolder.google import unreachable
 
 API = "https://www.googleapis.com/drive/v3"
 UPLOAD = "https://www.googleapis.com/upload/drive/v3"
@@ -168,7 +168,7 @@ class Drive:
                 self.pause(_wait_before(refused, error.headers, attempt))
                 attempt += 1
             except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
-                raise OfflineError("Google Drive can't be reached just now") from error
+                raise unreachable(error, "Google Drive can't be reached just now") from error
 
     def _json(self, method: str, path: str, payload: object = None, **query: str) -> Any:
         url = f"{API}/{path}" + ("?" + urllib.parse.urlencode(query) if query else "")

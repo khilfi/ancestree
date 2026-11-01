@@ -3,7 +3,9 @@
 # the app.
 #
 # Each system: build 0.1.0 and install it; open the 2,000-person sample in its web view and
-# time the frames (the app fetches that system's Neo4j and Java on the way); check that only
+# time the frames (the app fetches that system's Neo4j and Java on the way: on the Mac, with
+# Homebrew's OpenSSL folders moved aside, as on a relative's Mac), the engine on the Python the
+# checks use; check that only
 # the app's window reaches its engine, that it starts at sign-in, and that it survives being
 # ended abruptly, with its data and a first automatic backup; build 0.1.1 and let 0.1.0
 # update itself to it, from a server on the runner; then refuse updates signed with a key it
@@ -63,6 +65,10 @@ jobs:
       APP_ID: app.ancestree.desktop
       # Every start asks for updates: here, a server that isn't there, unless a step says.
       ANCESTREE_UPDATE_URL: http://127.0.0.1:9/latest.json
+      # The engine is built on uv's own Python, of the version backend/.python-version names,
+      # the one the checks use: never one the runner happens to have. The Mac's Homebrew
+      # Python looked for the certificates it trusts in Homebrew's folder (0.8.6, D89).
+      UV_PYTHON_PREFERENCE: only-managed
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -166,6 +172,18 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then echo "PY=python" >> "$GITHUB_ENV"; else echo "PY=python3" >> "$GITHUB_ENV"; fi
           du -sh "$RUNNER_TEMP/v010"/* || true
 
+      # A Mac without Homebrew, as a relative's may be (0.8.6, D89). Every Mac build before
+      # 0.8.6 looked for the certificates it trusts in a folder Homebrew keeps, which this
+      # runner has, so a Mac without it reached nothing. The first start below fetches Neo4j
+      # and Java over https: it shows the engine checks certificates as the Mac itself does.
+      - name: The Mac without Homebrew's OpenSSL folders
+        if: runner.os == 'macOS'
+        run: |
+          for folder in /opt/homebrew/etc/openssl* /usr/local/etc/openssl*; do
+            if [ -d "$folder" ]; then sudo mv "$folder" "$folder-aside"; echo "moved aside: $folder"; fi
+          done
+          echo "SSL_CERT_FILE=${SSL_CERT_FILE-(not set)}, SSL_CERT_DIR=${SSL_CERT_DIR-(not set)}"
+
       - name: The 2,000-person sample in this web view
         run: |
           ANCESTREE_BENCH=1 "$APP" &
@@ -182,6 +200,15 @@ jobs:
           echo
           if grep -q '"error"' "$DATA/bench.json"; then echo "::warning::The sample didn't show in this web view"; fi
           grep -hE "stage\": \"(starting-database|database-ready|ready)\"" "$DATA/logs/shell.log" || true
+
+      - name: The engine's Python, the one the checks use
+        run: |
+          # As it starts, the engine names its Python and OpenSSL (0.8.6, D89).
+          want=$(tr -d '\r\n' < backend/.python-version)
+          started=$(grep -F '"stage": "preparing"' "$DATA/logs/shell.log" | head -n 1)
+          echo "$started"
+          echo "$started" | grep -qF "\"python\": \"$want." \
+            || { echo "::error::the engine isn't on Python $want"; exit 1; }
 
       - name: Only the window gets in, start at sign-in, and a restart
         run: |

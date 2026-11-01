@@ -29,6 +29,7 @@ import json
 import os
 import re
 import secrets
+import ssl
 import threading
 import time
 import urllib.error
@@ -58,6 +59,27 @@ class GoogleError(Exception):
 
 class OfflineError(Exception):
     """Google couldn't be reached: no internet, most likely. Tried again later."""
+
+
+class CertificateError(OfflineError):
+    """Google answered, but this computer couldn't check its certificate (0.8.6, D89): its date
+    and time wrong, most likely, or something on the way that the computer doesn't trust. Tried
+    again later, as no internet is, but said as itself: the Mac's engine called it "no
+    internet" for two weeks, while the browser beside it reached Google."""
+
+
+CERTIFICATE = (
+    "AncesTree couldn't check Google's certificate on this computer: check that its date and "
+    "time are right."
+)
+
+
+def unreachable(error: OSError, what: str) -> OfflineError:
+    """Why Google couldn't be reached, said: a certificate this computer couldn't check, or, for
+    anything else, no internet (`what`)."""
+    if isinstance(getattr(error, "reason", error), ssl.SSLCertVerificationError):
+        return CertificateError(CERTIFICATE)
+    return OfflineError(what)
 
 
 class SignedOutError(GoogleError):
@@ -190,7 +212,7 @@ def _post(url: str, form: dict[str, str]) -> dict[str, Any]:
         reason = said.get("error_description") or f"Google said no ({error.code})"
         raise GoogleError(reason) from error
     except (urllib.error.URLError, TimeoutError) as error:
-        raise OfflineError("Google can't be reached just now") from error
+        raise unreachable(error, "Google can't be reached just now") from error
 
 
 class Session:

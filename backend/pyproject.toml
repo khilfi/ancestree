@@ -1,6 +1,6 @@
 [project]
 name = "ancestree"
-version = "0.8.5"
+version = "0.8.6"
 description = "Private family-history app: people, relationships, kinship, timeline."
 requires-python = ">=3.14"
 license = "MIT"
@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.15.0",
     "python-multipart>=0.0.32",
     "pyyaml>=6.0.3",
+    "truststore>=0.10.5",
     "typer>=0.27.2",
     "uvicorn[standard]>=0.54.0",
 ]

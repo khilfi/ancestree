@@ -1481,6 +1481,7 @@ Inside it:
 | **The sign-in to Google has ended: sign in again** | Open **Settings → You and your family → Family folder**, and click **Sign in with Google**. |
 | **That was …**, and this computer's family folder is with another account | You signed in with another Google account. Sign in again, and on Google's page choose the account it names. If your browser keeps choosing the other one, click **Sign in with Google**, right-click **Open it** beside it, and copy the link. Paste it into a private window (**Ctrl+Shift+N**; on a Mac, **Shift+Command+N**), and sign in there afresh. |
 | **No internet just now** | Nothing to do: AncesTree tries again every minute. |
+| **AncesTree couldn't check Google's certificate on this computer** | Check that the computer's date and time are right: let it set them automatically. If they are right and it stays, send your keeper the `logs` folder (see [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)). |
 | **Photos and stories are still arriving** | Leave AncesTree running: the family comes when they have. |
 | **The family folder isn't shared with this Google account any more** | Ask your keeper. If they started the family folder again, they'll send a new invitation: click **Leave the family folder…**, then join with it. |
 | **This computer was removed from the family** | Your keeper removed it. What's on it stays, but nothing new arrives. |

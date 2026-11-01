@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
+import logging
 import os
 import re
 import sys
@@ -37,7 +38,7 @@ from ancestree.domain.familyfolder import (
 from ancestree.familyfolder import google
 from ancestree.familyfolder.computers import SMALL, Keeper, Member
 from ancestree.familyfolder.drive import DriveError
-from ancestree.familyfolder.google import Client, SignedOutError, Tokens
+from ancestree.familyfolder.google import CERTIFICATE, Client, SignedOutError, Tokens
 from ancestree.familyfolder.invitations import Invitation
 from ancestree.familyfolder.mirror import Mirror
 from ancestree.familyfolder.models import FamilyFile, Instruction
@@ -56,7 +57,7 @@ from ancestree.services.familyfolder import (
     FamilyFolder,
     keep_in_step,
 )
-from tests.fake_drive import Cloud
+from tests.fake_drive import UNCHECKED, Cloud
 
 pytestmark = pytest.mark.anyio
 
@@ -1609,6 +1610,41 @@ async def test_each_round_is_told_and_says_what_stood_in_its_way(
     await keeper.sync()  # a listener's failure never stops a round
     assert heard == [(True, ""), (False, "offline")]
     assert (await keeper.status()).through
+
+
+async def test_a_certificate_that_cant_be_checked_is_said_as_itself_and_logged(
+    tmp_path: Path, cloud: Cloud, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A Mac whose engine couldn't check Google's certificate said "No internet" for two weeks,
+    while its browser reached Google, and wrote nothing of why (0.8.6, D89). It says what it
+    is; and engine.log says what stood in the way, with urllib's own words, once, and when it
+    has gone."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    await keeper.sync()
+    caplog.set_level(logging.WARNING, logger="uvicorn.error")
+    cloud.unchecked = True
+    await keeper.sync()
+    await keeper.sync()  # the same again: nothing more in the log
+    status = await keeper.status()
+    assert (status.trouble, status.problem, status.through) == ("certificate", CERTIFICATE, False)
+    assert "internet" not in status.problem
+    [said] = [record.getMessage() for record in caplog.records]
+    assert said == (
+        f"The family folder can't keep in step: {CERTIFICATE} "
+        f"(URLError: <urlopen error {UNCHECKED}>)"
+    )
+    with pytest.raises(RuleError) as plainly:  # asked for, not in a round: said the same
+        await keeper.invite(Invite(email=RELATIVE))
+    assert (plainly.value.code, plainly.value.message) == ("certificate", CERTIFICATE)
+
+    caplog.clear()
+    cloud.unchecked = False
+    await keeper.sync()
+    status = await keeper.status()
+    assert (status.trouble, status.problem, status.through) == ("", "", True)
+    assert [record.getMessage() for record in caplog.records] == [
+        "The family folder keeps in step again"
+    ]
 
 
 async def test_a_change_here_brings_a_round_soon_and_sync_now_at_once(

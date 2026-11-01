@@ -1,11 +1,13 @@
 """Google Drive's API as the family folder calls it (0.3.1): a busy Drive tried again, as
-Google asks, and a file's id kept to its own place in an address. Nothing here reaches Google:
-urllib's opener is a stand-in that answers as Drive would."""
+Google asks, a file's id kept to its own place in an address, and a certificate that can't be
+checked said as itself (0.8.6). Nothing here reaches Google: urllib's opener is a stand-in that
+answers as Drive would."""
 
 from __future__ import annotations
 
 import io
 import json
+import ssl
 import urllib.error
 import urllib.request
 from email.message import Message
@@ -13,8 +15,9 @@ from typing import Any
 
 import pytest
 
+from ancestree.familyfolder import google
 from ancestree.familyfolder.drive import Drive, DriveError
-from ancestree.familyfolder.google import OfflineError
+from ancestree.familyfolder.google import CERTIFICATE, CertificateError, OfflineError
 
 ACCOUNT = {"user": {"emailAddress": "keeper@example.com"}}
 
@@ -103,9 +106,35 @@ def test_drive_busy_for_too_long_is_left_to_the_next_round(monkeypatch: pytest.M
 
 def test_no_internet_is_said_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
     drive, _, waits = drive_with(monkeypatch, [urllib.error.URLError("no route")])
-    with pytest.raises(OfflineError):
+    with pytest.raises(OfflineError) as said:
         drive.account()
     assert waits == []
+    assert not isinstance(said.value, CertificateError)
+
+
+def test_a_certificate_that_cant_be_checked_is_said_as_itself(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Not "no internet" (0.8.6, D89): the Mac's engine couldn't check Google's certificate for
+    two weeks, and said it was offline. Drive's calls and the sign-in's alike, as urllib gives
+    it; and tried again at the next round, as no internet is."""
+    unchecked = ssl.SSLCertVerificationError(
+        1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer"
+    )
+    drive, _, waits = drive_with(monkeypatch, [urllib.error.URLError(unchecked)])
+    with pytest.raises(CertificateError) as said:
+        drive.account()
+    assert (str(said.value), waits) == (CERTIFICATE, [])
+    assert isinstance(said.value, OfflineError)
+    assert isinstance(said.value.__cause__, urllib.error.URLError)  # kept, for engine.log
+
+    monkeypatch.setattr(urllib.request, "urlopen", Opener([urllib.error.URLError(unchecked)]))
+    with pytest.raises(CertificateError):
+        google._post(google.TOKEN, {"grant_type": "refresh_token"})
+    monkeypatch.setattr(urllib.request, "urlopen", Opener([TimeoutError("timed out")]))
+    with pytest.raises(OfflineError) as offline:
+        google._post(google.TOKEN, {"grant_type": "refresh_token"})
+    assert not isinstance(offline.value, CertificateError)
 
 
 def test_a_files_id_stays_in_its_own_place_in_an_address(monkeypatch: pytest.MonkeyPatch) -> None:

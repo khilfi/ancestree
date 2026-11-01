@@ -55,6 +55,11 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      # The engine is built on uv's own Python, of the version backend/.python-version names,
+      # the one the checks use: never one the runner happens to have. The Mac's Homebrew
+      # Python looked for the certificates it trusts in Homebrew's folder (0.8.6, D89).
+      UV_PYTHON_PREFERENCE: only-managed
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:

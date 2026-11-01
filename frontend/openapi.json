@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.5"
+    "version": "0.8.6"
   },
   "paths": {
     "/api/health": {

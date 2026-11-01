@@ -26,6 +26,7 @@ jobs:
     outputs:
       from: ${{ steps.pick.outputs.from }}
       to: ${{ steps.pick.outputs.to }}
+      python: ${{ steps.pick.outputs.python }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -55,6 +56,7 @@ jobs:
           fi
           echo "from=$from" >> "$GITHUB_OUTPUT"
           echo "to=$to" >> "$GITHUB_OUTPUT"
+          echo "python=$(tr -d '\r\n' < backend/.python-version)" >> "$GITHUB_OUTPUT"
           echo "from $from to $to"
 
   update:
@@ -73,6 +75,7 @@ jobs:
       APP_ID: app.ancestree.desktop
       FROM: ${{ needs.versions.outputs.from }}
       TO: ${{ needs.versions.outputs.to }}
+      PYTHON: ${{ needs.versions.outputs.python }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Linux packages for Tauri and a screen
@@ -135,6 +138,11 @@ jobs:
           grep -qF "$said" "$DATA/logs/shell.log"
           if grep -qF '"stage": "versions-differ"' "$DATA/logs/shell.log"; then
             echo "::error::the app and its engine are of different versions"; exit 1
+          fi
+          # From 0.8.6, it names its Python too: uv's own, of backend/.python-version.
+          if [ "$(printf '%s\n' 0.8.6 "$TO" | sort -V | head -n 1)" = 0.8.6 ]; then
+            grep -F "$said" "$DATA/logs/shell.log" | grep -qF "\"python\": \"$PYTHON." \
+              || { echo "::error::$TO's engine isn't on Python $PYTHON"; exit 1; }
           fi
           case "$RUNNER_OS" in
             Windows) engine="$LOCALAPPDATA/AncesTree/engine" ;;

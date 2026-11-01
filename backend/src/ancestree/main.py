@@ -33,7 +33,7 @@ from ancestree.config import Settings, get_settings
 from ancestree.db import connect
 from ancestree.exchange.restore import ArchiveError, restore_archive
 from ancestree.familyfolder.drive import DriveError
-from ancestree.familyfolder.google import GoogleError, OfflineError
+from ancestree.familyfolder.google import CERTIFICATE, CertificateError, GoogleError, OfflineError
 from ancestree.familyfolder.protect import ProtectError
 from ancestree.familyfolder.seals import RefusedError
 from ancestree.importing.sheet import SheetError
@@ -244,7 +244,9 @@ def create_app(
     # The family folder's own troubles, should one reach here unsaid (0.3.1): a sentence,
     # never a failure without one.
     async def family_folder_trouble(request: Request, error: Exception) -> JSONResponse:
-        if isinstance(error, OfflineError):
+        if isinstance(error, CertificateError):  # not the internet (0.8.6, D89)
+            code, message = "certificate", CERTIFICATE
+        elif isinstance(error, OfflineError):
             code, message = "offline", "Google Drive can't be reached: check the internet."
         elif isinstance(error, DriveError):
             code, message = "drive_said_no", str(error)

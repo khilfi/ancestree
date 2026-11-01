@@ -10,7 +10,7 @@ import pytest
 
 from ancestree.config import Settings
 from ancestree.familyfolder.computers import Member
-from ancestree.familyfolder.google import Client
+from ancestree.familyfolder.google import CERTIFICATE, CertificateError, Client, OfflineError
 from ancestree.familyfolder.invitations import Invitation
 from ancestree.services.familyfolder import Setup
 from tests.integration.conftest import create_person
@@ -28,6 +28,28 @@ def no_google_client(monkeypatch: pytest.MonkeyPatch) -> None:
 def app_folder(client: httpx.AsyncClient) -> Any:
     transport: Any = client._transport
     return transport.app.state.family_folder
+
+
+async def test_a_trouble_that_reaches_the_api_unsaid_is_still_a_sentence(
+    client: httpx.AsyncClient,
+) -> None:
+    """Should one escape every plain sentence, the API says it (0.3.1); and a certificate this
+    computer couldn't check as itself, never "check the internet" (0.8.6, D89)."""
+    transport: Any = client._transport
+
+    async def unchecked() -> None:
+        raise CertificateError(CERTIFICATE)
+
+    async def offline() -> None:
+        raise OfflineError("Google Drive can't be reached just now")
+
+    transport.app.add_api_route("/api/test-unchecked", unchecked)
+    transport.app.add_api_route("/api/test-offline", offline)
+    answer = await client.get("/api/test-unchecked")
+    assert answer.status_code == 409
+    assert answer.json()["detail"] == {"code": "certificate", "message": CERTIFICATE}
+    answer = await client.get("/api/test-offline")
+    assert answer.json()["detail"]["code"] == "offline"
 
 
 async def test_a_new_computer_takes_part_in_no_family_folder(client: httpx.AsyncClient) -> None:

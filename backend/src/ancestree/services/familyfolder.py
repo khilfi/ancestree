@@ -122,6 +122,8 @@ from ancestree.familyfolder.computers import (
 from ancestree.familyfolder.drive import Drive, DriveError, DriveLike, RemoteFile
 from ancestree.familyfolder.entries import Entries, build_archive, changes_between, family_entries
 from ancestree.familyfolder.google import (
+    CERTIFICATE,
+    CertificateError,
     Client,
     ClientFileError,
     GoogleError,
@@ -392,8 +394,12 @@ class FamilyFolder:
         self.went_through = False  # whether it went through: what `problem` says is a note
         self.lost = False  # the last round found the family folder gone from Drive (0.4.0)
         # What stood in the last round's way, as a code for the indicator at the top (0.4.0):
-        # "offline", "signed_out", "project", "lost", "problem", or "" for nothing.
+        # "offline", "certificate" (0.8.6), "signed_out", "project", "lost", "foreign",
+        # "problem", or "" for nothing.
         self.trouble = ""
+        # What lay under it, and what engine.log last said stood in the way (0.8.6, D89).
+        self._why = ""
+        self._noted: tuple[str, str] = ("", "")
         # The keeper moving the family folder to another Google account or project (0.4.0):
         # a sign-in with another account is let through, for the rebuild.
         self.moving = False
@@ -872,6 +878,8 @@ class FamilyFolder:
         as a plain sentence for the person who asked: never a failure without one."""
         try:
             yield
+        except CertificateError as error:
+            raise RuleError("certificate", CERTIFICATE) from error
         except OfflineError as error:
             raise RuleError(
                 "offline", "Google Drive can't be reached: check the internet."
@@ -2825,10 +2833,10 @@ class FamilyFolder:
             log.exception("The family folder's listener failed")
 
     async def _try_round(self) -> None:
-        self.lost, self.trouble = False, ""
+        self.lost, self.trouble, self._why = False, "", ""
         try:
             try:
-                await self._round()
+                await self._round_noted()
             except DriveError as error:
                 # A relative's family folder gone: followed, if its keeper moved it (0.4.0).
                 setup = self.setup
@@ -2836,7 +2844,11 @@ class FamilyFolder:
                     raise
                 if not await asyncio.to_thread(self._follow):
                     raise
-                await self._round()
+                await self._round_noted()
+        except CertificateError:
+            # Not the internet (0.8.6, D89): a Mac said "No internet" for two weeks.
+            self.trouble = "certificate"
+            self.problem = CERTIFICATE
         except OfflineError:
             self.trouble = "offline"
             self.problem = "No internet just now: AncesTree tries again every minute."
@@ -2881,6 +2893,36 @@ class FamilyFolder:
                 f"Something in the family folder didn't check out ({error}), "
                 "so nothing here changed."
             )
+        self._note_in_log()
+
+    async def _round_noted(self) -> None:
+        """A round, and what stopped it, if anything, kept for engine.log (0.8.6, D89)."""
+        try:
+            await self._round()
+        except Exception as error:
+            self._why = underneath(error)
+            raise
+
+    def _note_in_log(self) -> None:
+        """What stands in the round's way, in engine.log whenever it changes, with what lay
+        under it (0.8.6, D89): "No internet" alone had hidden a certificate the Mac couldn't
+        check. Only when it changes: a round a minute, each the same, would bury the rest."""
+        noted = (self.trouble, self.problem) if self.trouble else ("", "")
+        if noted == self._noted:
+            return
+        self._noted = noted
+        if self.trouble:
+            log.warning("The family folder can't keep in step: %s (%s)", self.problem, self._why)
+        else:
+            log.warning("The family folder keeps in step again")
+
+
+def underneath(error: BaseException) -> str:
+    """What lies under an error, for engine.log: the first of its causes, which says why
+    (0.8.6, D89), such as urllib's own words for a certificate it couldn't check."""
+    while error.__cause__ is not None:
+        error = error.__cause__
+    return f"{type(error).__name__}: {error}"
 
 
 async def keep_in_step(folder: FamilyFolder, every: float = EVERY, soon: float = SOON) -> None:

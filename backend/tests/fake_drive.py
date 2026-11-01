@@ -9,19 +9,27 @@ permission D41 chose allows ("read every file, change only AncesTree's own"). As
   account's file: the permission doesn't reach that file, and the change would;
 - a folder an account can't reach is a 404 to look up, but lists as empty.
 
-`offline` makes every call fail as if the internet were gone; a call named in `failing` fails
+`offline` makes every call fail as if the internet were gone; `unchecked`, as if this computer
+couldn't check Google's certificate, as urllib says it (0.8.6); a call named in `failing` fails
 as Drive's own trouble would.
 """
 
 from __future__ import annotations
 
 import itertools
+import ssl
+import urllib.error
 from dataclasses import dataclass, field
 
 from ancestree.familyfolder.drive import DriveError, RemoteFile, md5
-from ancestree.familyfolder.google import OfflineError
+from ancestree.familyfolder.google import OfflineError, unreachable
 
 NOT_ALLOWED = "The user does not have sufficient permissions for this file."
+# urllib's words when the computer can't check a certificate, as the Mac's engine had them.
+UNCHECKED = (
+    "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer "
+    "certificate (a stand-in's)"
+)
 
 
 @dataclass
@@ -43,6 +51,7 @@ class Cloud:
         self.binned: dict[str, _Item] = {}  # put in the bin: kept a while, no longer there
         self._ids = itertools.count(1)
         self.offline = False
+        self.unchecked = False  # Google's certificate can't be checked here (0.8.6)
         self.failing: set[str] = set()  # calls that fail, as when Drive has trouble
         self.calls = 0
 
@@ -82,6 +91,9 @@ class FakeDrive:
     def _touch(self, call: str) -> None:
         if self.cloud.offline:
             raise OfflineError("no internet (a stand-in's)")
+        if self.cloud.unchecked:
+            said = urllib.error.URLError(ssl.SSLCertVerificationError(1, UNCHECKED))
+            raise unreachable(said, "no internet (a stand-in's)") from said
         if call in self.cloud.failing:
             raise DriveError(500, "Internal Error")
         self.cloud.calls += 1
