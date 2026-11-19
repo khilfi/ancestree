@@ -82,8 +82,8 @@ class TermBook:
         match kin:
             case Blood():
                 return self.blood(kin) is not None
-            case Compound(key=key, group=group, gender=gender):
-                entry = self._section(group).get(key)
+            case Compound(gender=gender):
+                entry = self._compound_entry(kin)
                 return self._pick_detailed(entry, gender, kin.seniority, kin.place)[0] is not None
             case Chain():
                 return False
@@ -110,15 +110,26 @@ class TermBook:
                 return self._kind_word(kinds, kind, "parent" if upward else "child", gender)
             case KindSibling():
                 return self._kind_sibling(kin, kinds)
-            case Compound(key=key, group=group, gender=gender, former=former, parts=parts):
+            case Compound(gender=gender, former=former, parts=parts):
                 word, _ = self._pick_detailed(
-                    self._section(group).get(key), gender, kin.seniority, kin.place
+                    self._compound_entry(kin), gender, kin.seniority, kin.place
                 )
                 if word:
                     return self._former(word) if former else word
                 return self.chain(parts, kinds)  # no single word for it: say it in pieces
             case Chain(parts=parts):
                 return self.chain(parts, kinds)
+
+    def _compound_entry(self, kin: Compound) -> object:
+        """An in-law or step relation's entry. A spouse's other spouse from a marriage not
+        known to have overlapped is never a co-wife: its entry is the list's `apart`
+        words, or `late` where the one they both married has died; without them, it's said
+        in pieces."""
+        entry = self._section(kin.group).get(kin.key)
+        if not kin.apart:
+            return entry
+        table = _mapping(entry)
+        return table.get("late") if kin.late and "late" in table else table.get("apart")
 
     # --- Blood -----------------------------------------------------------------------------
 

@@ -67,11 +67,32 @@ class LayoutUnit(BaseModel):
     size: int
 
 
+class ParentLoop(BaseModel):
+    """A loop of parents stored before 0.8.7: A is B's parent, B is C's, C is A's. The
+    tree is seated without `link`, the newest in it, which What's missing offers to take out.
+    `people` go down the loop from that link's child to its parent."""
+
+    link: UUID
+    people: list[UUID]
+
+
+class BirthParents(BaseModel):
+    """A child with more than two birth parents, stored before 0.8.7: What's missing
+    offers to take out `link`, the newest of their links. `parents` in the order they were
+    linked, its parent last."""
+
+    child: UUID
+    parents: list[UUID]
+    link: UUID
+
+
 class GraphLayout(BaseModel):
     units: list[LayoutUnit]
     seats: dict[UUID, Seat]
     unlinked: list[UUID]  # the "Not linked yet" tray
     centre_chosen: bool  # the centre was set by hand rather than found
+    loops: list[ParentLoop] = Field(default_factory=list)
+    three_birth_parents: list[BirthParents] = Field(default_factory=list)
 
 
 class Graph(BaseModel):

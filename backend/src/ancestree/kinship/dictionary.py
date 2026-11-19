@@ -166,8 +166,8 @@ def kin_from_spec(spec: Mapping[str, Any]) -> Kin:
     if "marriage" in spec:
         return Spouse(gender, bool(spec.get("former")))
     if "in_law" in spec:
-        key = str(spec["in_law"])
-        return Compound(key, "in_law", gender, bool(spec.get("former")), parts, seniority, place)
+        key, former, apart = str(spec["in_law"]), bool(spec.get("former")), bool(spec.get("apart"))
+        return Compound(key, "in_law", gender, former, parts, seniority, place, apart)
     if "step" in spec:
         key = str(spec["step"])
         return Compound(key, "step", gender, bool(spec.get("former")), parts, seniority, place)
@@ -211,6 +211,7 @@ def _match(row: Kin, kin: Kin) -> int | None:
                 _same(row.gender is not Gender.UNKNOWN, row.gender == kin.gender),
                 _same(row.seniority is not None, row.seniority == kin.seniority),
                 _same(row.place is not None, _same_place(row.place, kin.place), weight=2),
+                _same(True, row.apart == kin.apart),  # a co-wife, or another wife
             ]
         case KindStep(), KindStep() if (row.kind, row.upward) == (kin.kind, kin.upward):
             checks = [_same(row.gender is not Gender.UNKNOWN, row.gender == kin.gender)]

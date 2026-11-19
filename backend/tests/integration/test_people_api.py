@@ -128,6 +128,33 @@ async def test_delete_to_the_trash_and_restore_with_links_and_files(
     assert (await client.get("/api/trash")).json() == []
 
 
+async def test_an_unknown_parent_goes_with_their_last_child_and_comes_back_with_any(
+    client: httpx.AsyncClient,
+) -> None:
+    """The review's #16: once their last child went to the Trash, an unknown
+    parent stayed in the tree, linked to no one."""
+    long = await create_person(client, "Long bin Ahmad", gender="male")
+    ngah = await create_person(client, "Ngah binti Ahmad", gender="female")
+    assert (await link(client, long["id"], ngah["id"], "sibling")).status_code == 201
+
+    def unknown(graph: dict[str, Any]) -> list[str]:
+        return [person["id"] for person in graph["people"] if person["placeholder"]]
+
+    [parent] = unknown((await client.get("/api/graph")).json())
+    first = (await client.delete(f"/api/persons/{long['id']}")).json()
+    assert unknown((await client.get("/api/graph")).json()) == [parent]  # Ngah's still
+    second = (await client.delete(f"/api/persons/{ngah['id']}")).json()
+    assert unknown((await client.get("/api/graph")).json()) == []
+
+    # Back with whichever of them comes back first, and the other finds them there.
+    for entry in (first, second):
+        restored = (await client.post(f"/api/trash/{entry['entry']}/restore")).json()
+        assert (restored["restored_links"], restored["skipped_links"]) == (1, 0)
+    assert unknown((await client.get("/api/graph")).json()) == [parent]
+    [sister] = (await get_person(client, long["id"]))["siblings"]
+    assert sister["full_name"] == "Ngah binti Ahmad"
+
+
 async def test_children_come_in_families_and_in_birth_order(client: httpx.AsyncClient) -> None:
     rahman = await create_person(client, "Rahman bin Ismail", gender="male")
     zainab = await create_person(client, "Zainab binti Hamzah", gender="female")

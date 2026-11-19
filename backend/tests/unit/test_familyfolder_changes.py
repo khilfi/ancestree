@@ -187,3 +187,73 @@ def test_only_a_changed_storys_pictures_and_a_changed_photo_are_sent(tmp_path: P
     assert sent["photos"][SITI]["display"].startswith("data:image/webp;base64,")
     assert sent["photos"][SITI]["crop"] == {"x": 0, "y": 0, "width": 100, "height": 100}
     assert sent["addresses"] is True  # its places whole, so none is read as taken away
+
+
+IPOH = {"residence_town": "Ipoh", "residence_state": "Perak", "residence_country": "Malaysia"}
+KUANTAN = {"residence_town": "Kuantan", "residence_state": "Pahang"}
+
+
+def test_a_date_or_a_place_travels_whole() -> None:
+    """Never part by part (#3): the keeper's February and this computer's 31st made a
+    31 February nobody entered; the keeper's Kuantan and this computer's pin, a Kuantan with
+    Ipoh's pin."""
+    was = json.loads(json.dumps(RECEIVED))
+    was[f"person/{HASSAN}"] |= {"birth_month": 1, "birth_day": 15, **IPOH}
+    was[f"person/{SITI}"] |= {"birth_qualifier": "between", "birth_year": 1950}
+    was[f"person/{SITI}"]["birth_year_to"] = 1955
+    mine = json.loads(json.dumps(was))
+    mine[f"person/{HASSAN}"] |= {"birth_day": 31, "residence_lat": 4.5975}
+    mine[f"person/{HASSAN}"] |= {"residence_lon": 101.0901, "residence_exact": "hand"}  # by hand
+    mine[f"person/{SITI}"]["birth_year_to"] = 1958
+    now = json.loads(json.dumps(was))
+    now[f"person/{HASSAN}"] |= {"birth_month": 2, **KUANTAN}  # the keeper's, meanwhile
+    now[f"person/{HASSAN}"]["nickname"] = "Pak Hassan"
+    now[f"person/{SITI}"] |= {"birth_year": 1960, "birth_year_to": 1965}
+
+    family_here = rebased(was, mine, now)
+
+    hassan = family_here[f"person/{HASSAN}"]
+    assert (hassan["birth_year"], hassan["birth_month"], hassan["birth_day"]) == (1950, 1, 31)
+    assert (hassan["residence_town"], hassan["residence_exact"]) == ("Ipoh", "hand")
+    assert hassan["nickname"] == "Pak Hassan"  # the keeper's, of a detail not changed here
+    siti = family_here[f"person/{SITI}"]
+    assert (siti["birth_year"], siti["birth_year_to"]) == (1950, 1958)
+
+
+def test_each_person_taken_in_is_checked_and_one_that_wont_read_is_the_keepers() -> None:
+    """A date broken here already, as #3 could break one before 0.8.7: the keeper's person is
+    taken instead, and said."""
+    from ancestree.familyfolder.changes import checked
+
+    mine = json.loads(json.dumps(RECEIVED))
+    mine[f"person/{HASSAN}"] |= {"birth_month": 2, "birth_day": 31}
+    now = json.loads(json.dumps(RECEIVED))
+    now[f"person/{HASSAN}"]["nickname"] = "Pak Hassan"
+
+    family_here, said = checked(rebased(RECEIVED, mine, now), now)
+
+    assert family_here[f"person/{HASSAN}"] == now[f"person/{HASSAN}"]
+    [sentence] = said
+    assert "Hassan bin Ismail" in sentence
+    assert "February 1950 has no day 31" in sentence
+
+
+def test_a_link_made_here_the_keepers_family_refuses_stays_out_and_is_said() -> None:
+    """The keeper made Siti Ali's mother while this computer made Ali Siti's father: both
+    coming in would be a loop of parents."""
+    from ancestree.familyfolder.changes import checked
+
+    was = json.loads(json.dumps(RECEIVED))
+    was[f"person/{ALI}"] = person(ALI, "Ali bin Hassan")
+    mine = json.loads(json.dumps(was))
+    mine["link/l-here"] = link(ALI, SITI, "l-here")
+    now = json.loads(json.dumps(was))
+    now["link/l-keeper"] = link(SITI, ALI, "l-keeper")
+
+    family_here, said = checked(rebased(was, mine, now), now)
+
+    assert "link/l-keeper" in family_here
+    assert "link/l-here" not in family_here
+    [sentence] = said
+    assert "Ali bin Hassan" in sentence
+    assert "Siti binti Hassan" in sentence

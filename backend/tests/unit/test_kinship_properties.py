@@ -1,16 +1,20 @@
 """Property tests on random families: connected people always get an
-answer, every answer has its matching reverse, and paths follow real links."""
+answer, every answer has its matching reverse, and paths follow real links. Since 0.8.7,
+every answer is the same both ways round, in random families and in every pair of the
+test family."""
 
 from collections import deque
 from dataclasses import dataclass
+from itertools import permutations
 
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from ancestree.kinship.blood import blood_ties
 from ancestree.kinship.family import Family
-from ancestree.kinship.finder import relate
-from tests.kinship_fixtures import BOOKS, ENGLISH, Builder
+from ancestree.kinship.finder import Relation, relate
+from tests.kinship_fixtures import BOOKS, ENGLISH, Builder, seed
+from tests.kinship_fixtures import example as example_family
 
 
 @dataclass(frozen=True)
@@ -99,6 +103,117 @@ def test_every_answer_has_its_matching_reverse(drawn: Drawn) -> None:
         assert back[0].generations == -there[0].generations
         assert back[0].forward.sentence == there[0].reverse.sentence
         assert back[0].reverse.sentence == there[0].forward.sentence
+
+
+def said(relations: list[Relation]) -> list[tuple[str, str, tuple[str, ...], int]]:
+    return [(r.forward.sentence, r.reverse.sentence, r.path, r.generations) for r in relations]
+
+
+def mirrored(relations: list[Relation]) -> list[tuple[str, str, tuple[str, ...], int]]:
+    """The same relations as the other one sees them."""
+    return [
+        (r.reverse.sentence, r.forward.sentence, r.path[::-1], -r.generations) for r in relations
+    ]
+
+
+def grandfather_and_half_brother() -> Builder:
+    """Hypothesis's find of 20 Nov 2026, made small: Hassan is Ali's grandfather, by his
+    mother Siti, and his half-brother too, by their father Tok, whom Ali's mother also had Ali
+    by; Hassan adopted Aminah. A stretch up from Ali to Hassan was said as the closer of the
+    two, a half-brother, so each said the other was a generation below."""
+    family = Builder()
+    family.people("Tok:? Hassan:m Siti:f Ali:m Aminah:f")
+    family.child("Tok", "Hassan", "Ali")
+    family.child("Hassan", "Siti")
+    family.child("Siti", "Ali")
+    family.child("Hassan", "Aminah", kind="adoptive")
+    return family
+
+
+@given(families())
+@example(Drawn(grandfather_and_half_brother().family(), "Ali", "Aminah"))
+@settings(max_examples=300, deadline=None)
+def test_every_answer_is_the_same_both_ways_round(drawn: Drawn) -> None:
+    there = relate(drawn.family, drawn.a, drawn.b, ENGLISH, BOOKS)
+    back = relate(drawn.family, drawn.b, drawn.a, ENGLISH, BOOKS)
+
+    assert said(back) == mirrored(there)
+
+
+def test_a_stretch_by_birth_is_said_as_the_tie_it_walks() -> None:
+    family = grandfather_and_half_brother()
+    there = family.relate("Ali", "Aminah")
+    assert said(family.relate("Aminah", "Ali")) == mirrored(there)
+    walked = next(r for r in there if r.path == ("Ali", "Siti", "Hassan", "Aminah"))
+    assert walked.forward.term == "maternal grandfather's adopted daughter"
+    assert walked.reverse.term == "adoptive sister's son"
+    assert walked.generations == 1
+
+
+def test_every_pair_of_the_test_family_answers_the_same_both_ways_round() -> None:
+    # The review's #12: before 0.8.7, 54 of these 1,640 pairs said one thing one
+    # way and another the other way, and 72 had a relation missing on one side.
+    family, ids = seed()
+    pairs = list(permutations(sorted(ids.values()), 2))
+
+    assert len(pairs) == 1640
+    for a, b in pairs:
+        there = relate(family, a, b, ENGLISH, BOOKS)
+        back = relate(family, b, a, ENGLISH, BOOKS)
+        assert said(back) == mirrored(there), (family.members[a].name, family.members[b].name)
+
+
+def test_two_relations_that_tie_are_both_shown() -> None:
+    # The review's example: "Rokiah is Acan's sister-in-law", but "Acan is Rokiah's
+    # co-parent-in-law".
+    family, ids = seed()
+    acan, rokiah = ids["hassan"], ids["rokiah"]
+
+    there = relate(family, acan, rokiah, ENGLISH, BOOKS)
+    assert {r.forward.sentence for r in there} == {
+        "Rokiah is Acan's sister-in-law",
+        "Rokiah is Acan's co-parent-in-law",
+    }
+    assert said(relate(family, rokiah, acan, ENGLISH, BOOKS)) == mirrored(there)
+
+
+def test_of_two_that_tie_the_one_with_its_marriage_at_an_end_comes_first() -> None:
+    """The user's answer of 19 Nov 2026: a relative's husband or wife, or a husband's or
+    wife's relative, before a relation whose marriage is in its middle. A great-uncle's wife
+    and an aunt's mother-in-law: the aunt married the great-uncle's son."""
+    family = Builder()
+    family.people("Tok:m Hassan:m Yusof:m Rokiah:f Azman:m Karim:m Nor:f Danial:m")
+    family.child("Tok", "Hassan", "Yusof")
+    family.marry("Yusof", "Rokiah")
+    family.parents(("Yusof", "Rokiah"), "Azman")
+    family.child("Hassan", "Karim", "Nor")
+    family.marry("Nor", "Azman")
+    family.child("Karim", "Danial")
+
+    there = family.relate("Danial", "Rokiah")
+    assert [r.forward.term for r in there] == ["great-uncle's wife", "aunt's mother-in-law"]
+    assert said(family.relate("Rokiah", "Danial")) == mirrored(there)
+
+
+def test_the_example_familys_rokiah_is_danials_great_uncles_wife_first() -> None:
+    # What the browser journeys found: "Your aunt's mother-in-law" on Rokiah's panel,
+    # Danial being Me.
+    family, ids = example_family()
+    there = relate(family, ids["danial"], ids["rokiah"], ENGLISH, BOOKS)
+    assert there[0].forward.term == "great-uncle's wife"
+    assert "aunt's mother-in-law" in [r.forward.term for r in there[1:]]
+
+
+def test_a_relation_named_only_the_other_way_round_is_shown_both_ways() -> None:
+    # Cousins who married: Nor is Tok Ismail's granddaughter, and his granddaughter-in-law;
+    # he is her grandfather, and her husband's, which has no word of its own.
+    family, ids = seed()
+    ismail, nor = ids["ismail"], ids["nor"]
+
+    assert [r.forward.sentence for r in relate(family, nor, ismail, ENGLISH, BOOKS)] == [
+        "Tok Ismail is Nor's paternal grandfather",
+        "Tok Ismail is Nor's husband's paternal grandfather",
+    ]
 
 
 @given(families())

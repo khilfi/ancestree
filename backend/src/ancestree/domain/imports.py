@@ -185,6 +185,8 @@ class ImportTakenBack(BaseModel):
     moved: int  # people it added, moved to the Trash
     gone: int  # people it added, already out of the tree
     restored: int = 0  # people it removed, brought back from the Trash
+    # Their links the rules refuse, left out, each said.
+    left_out: list[str] = Field(default_factory=list)
     reverted: int = 0  # details it changed, put back as they were
     kept: int = 0  # what it changed that has been changed again since: left as it is
     links: int = 0  # links it took out or changed, put back

@@ -1,12 +1,14 @@
 """Where everyone lives and was born, for the map; and, for someone
 with no place of their own, what says where they live: whom they live with, whether
-they've died, and their parents' places, birth parents first."""
+they've died, and their parents, birth parents first, with how each is their parent, so only
+those they can live with are taken."""
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from neo4j import AsyncManagedTransaction as Tx
 
-from ancestree.domain.person import Gender, LivesWith, PartialDate, Place
+from ancestree.domain.person import LivesWith, PartialDate, Place
 from ancestree.repo.mapping import date_from_props, place_from
 
 
@@ -19,7 +21,8 @@ class Places:
     living: bool | None = None  # as set by hand
     born_on: PartialDate | None = None
     died_on: PartialDate | None = None
-    parents: tuple[tuple[Gender, Place | None], ...] = field(default=())
+    # Each parent's details (unknown parents aside), with the kind of their link.
+    parents: tuple[tuple[dict[str, Any], str], ...] = field(default=())
     died: Place | None = None  # where they died
 
 
@@ -32,7 +35,8 @@ async def read_places(tx: Tx) -> list[Places]:
         WHERE NOT coalesce(parent.placeholder, false)
         WITH p, parent, link
         ORDER BY coalesce(link.kind, 'biological') <> 'biological', link.id
-        RETURN properties(p) AS props, collect(properties(parent)) AS parents
+        RETURN properties(p) AS props,
+               collect([properties(parent), coalesce(link.kind, 'biological')]) AS parents
         """
     )
     rows = []
@@ -47,13 +51,7 @@ async def read_places(tx: Tx) -> list[Places]:
                 props.get("living"),
                 date_from_props("birth", props),
                 date_from_props("death", props),
-                tuple(
-                    (
-                        Gender(parent.get("gender") or Gender.UNKNOWN),
-                        place_from("residence", parent),
-                    )
-                    for parent in row["parents"]
-                ),
+                tuple((parent, str(kind)) for parent, kind in row["parents"] if parent),
                 died=place_from("death", props),
             )
         )

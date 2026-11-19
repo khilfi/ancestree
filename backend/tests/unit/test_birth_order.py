@@ -1,6 +1,7 @@
-from ancestree.domain.person import Gender, PartialDate
+from ancestree.domain.person import DateQualifier, Gender, PartialDate
 from ancestree.lineage.birth_order import (
     Sibling,
+    compare_births,
     compare_siblings,
     order_siblings,
     position_label,
@@ -70,8 +71,75 @@ def test_comparing_two_siblings_agrees_with_the_family_order() -> None:
     c = sib("c", born=year(1968))
 
     assert (compare_siblings(a, b, [a, b]) or 0) > 0  # a complete manual order wins: b is elder
-    assert (compare_siblings(a, b, [a, b, c]) or 0) < 0  # c has no manual place: dates decide
+    assert (compare_siblings(a, b, [a, b, c]) or 0) > 0  # and still does with c added
     assert compare_siblings(sib("x"), sib("y"), [sib("x"), sib("y")]) is None
+
+
+def rough(qualifier: DateQualifier, y: int, to: int | None = None) -> PartialDate:
+    return PartialDate(year=y, qualifier=qualifier, year_to=to)
+
+
+ABOUT, BEFORE, AFTER, BETWEEN = (
+    DateQualifier.ABOUT,
+    DateQualifier.BEFORE,
+    DateQualifier.AFTER,
+    DateQualifier.BETWEEN,
+)
+
+
+def test_about_before_and_between_are_uncertain_where_they_overlap() -> None:
+    # The review's own cases (#6): both said as certain before, both the wrong way.
+    assert compare_births(rough(BEFORE, 1960), year(1955)) is None
+    assert compare_births(rough(BETWEEN, 1950, 1960), year(1955)) is None
+    assert compare_births(rough(ABOUT, 1950), year(1953)) is None
+    assert compare_births(rough(AFTER, 1950), year(1955)) is None
+    assert compare_births(rough(ABOUT, 1950), rough(ABOUT, 1958)) is None
+
+
+def test_about_before_and_between_still_decide_where_they_dont_overlap() -> None:
+    assert (compare_births(rough(BEFORE, 1950), year(1955)) or 0) < 0
+    assert (compare_births(rough(BETWEEN, 1950, 1955), year(1960)) or 0) < 0
+    assert (compare_births(rough(AFTER, 1960), year(1955)) or 0) > 0
+    assert (compare_births(rough(ABOUT, 1950), year(1960)) or 0) < 0  # five years either side
+    assert (compare_births(year(1950, 3, 12), year(1950, 3, 13)) or 0) < 0
+    assert compare_births(year(1950, 3), year(1950, 3, 13)) is None
+
+
+def test_a_hand_set_order_stays_when_a_child_is_added() -> None:
+    # Set by hand against the dates, as when a date looks wrong; then a child is added.
+    a, b = sib("a", born=year(1962), order=2), sib("b", born=year(1965), order=1)
+
+    ordered, decided = order_siblings([a, b, sib("undated")])
+    assert ids(ordered) == ["b", "a", "undated"]  # last, with no date
+    assert not decided  # where the new one comes isn't known
+
+    ordered, _ = order_siblings([a, b, sib("youngest", born=year(1970))])
+    assert ids(ordered) == ["b", "a", "youngest"]
+
+    ordered, _ = order_siblings([a, b, sib("eldest", born=year(1955))])
+    assert ids(ordered) == ["eldest", "b", "a"]  # by its date, the rest as they were
+
+
+def test_a_child_added_among_a_hand_set_order_takes_its_place_by_its_date() -> None:
+    first, second, third = (
+        sib("first", born=year(1960), order=1),
+        sib("second", born=year(1965), order=2),
+        sib("third", born=year(1970), order=3),
+    )
+    new = sib("new", born=year(1967))
+
+    ordered, decided = order_siblings([third, new, first, second])
+    assert ids(ordered) == ["first", "second", "new", "third"]
+    assert decided
+    family = [first, second, third, new]
+    assert (compare_siblings(new, second, family) or 0) > 0  # younger than second
+    assert (compare_siblings(new, third, family) or 0) < 0  # elder than third
+    # Where a hand-set order and a date disagree, the new one's place among them isn't known.
+    early = sib("early", born=year(1962))
+    against = [sib("x", born=year(1964), order=1), sib("y", born=year(1960), order=2), early]
+    ordered, _ = order_siblings(against)
+    assert ids(ordered) == ["x", "y", "early"]
+    assert compare_siblings(early, against[0], against) is None
 
 
 def test_positions_count_sons_among_sons_and_daughters_among_daughters() -> None:

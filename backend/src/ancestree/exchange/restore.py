@@ -2,9 +2,11 @@
 what the archive holds.
 
 Nothing changes until the whole archive has been read and checked: every file against its
-checksum, every path, every link. Then everything as it is now is backed up, the folders are
-swapped, and the database is replaced in one transaction. If that fails, the folders are
-swapped back: a restore happens completely or not at all.
+checksum, every path, every link; and everything a save would check: every date and place
+read as the app reads them, no loop of parents, no one with three birth parents. A family
+that fails is refused with a sentence, and nothing is replaced. Then everything as it is now
+is backed up, the folders are swapped, and the database is replaced in one transaction. If
+that fails, the folders are swapped back: a restore happens completely or not at all.
 """
 
 import asyncio
@@ -26,9 +28,11 @@ from neo4j import AsyncManagedTransaction as Tx
 from pydantic import BaseModel, ValidationError
 
 from ancestree.domain.exports import BackupRestored
+from ancestree.domain.links import Link, family_refusal
 from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.exchange.backup import ARCHIVE_FORMAT, DATA_FOLDERS, create_backup
 from ancestree.migrations.runner import load_migrations
+from ancestree.repo.mapping import unreadable
 from ancestree.services.context import Context, read, write
 from ancestree.storage.files import clean_photos
 
@@ -218,6 +222,24 @@ def _check_graph(graph: Any) -> None:
         if props["id"] in link_ids:
             raise fail(f"link {props['id']} is there twice")
         link_ids.add(props["id"])
+    # What a save checks: a family that breaks it would break reading, or the tree.
+    for person in people:
+        if (problem := unreadable(person)) is not None:
+            raise fail(problem)
+    blood = {kind["key"] for kind in kinds if isinstance(kind, dict) and kind.get("blood")}
+    family = [
+        Link(
+            link["properties"]["id"],
+            link["type"],
+            link["source"],
+            link["target"],
+            link["properties"].get("kind", BIOLOGICAL) in blood,
+        )
+        for link in links
+    ]
+    names = {person["id"]: person["full_name"] for person in people}
+    if (problem := family_refusal(family, names)) is not None:
+        raise fail(problem)
 
 
 def _stage(path: Path, staging: Path) -> tuple[dict[str, Any], _Manifest]:

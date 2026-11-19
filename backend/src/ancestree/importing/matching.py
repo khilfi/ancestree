@@ -354,6 +354,17 @@ def _same_text(a: str, b: str) -> bool:
     return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
 
 
+def _zeros_lost(written: str, held: str) -> bool:
+    """A postcode as a spreadsheet program left it, its leading zeros taken for a
+    number's: "1000" for the tree's "01000". Not a change."""
+    return (
+        written.isdigit()
+        and held.isdigit()
+        and len(written) < len(held)
+        and held.lstrip("0") == written.lstrip("0")
+    )
+
+
 def _rows(numbers: Sequence[int]) -> str:
     listed = ", ".join(str(n) for n in numbers[:-1])
     return f"row {numbers[0]}" if len(numbers) == 1 else f"rows {listed} and {numbers[-1]}"
@@ -931,6 +942,8 @@ class _Planner:
             before = (getattr(held, part) if held is not None else None) or ""
             if not after or _same_text(after, before):
                 continue
+            if part == "postcode" and _zeros_lost(after, before):
+                continue  # Excel took 01000 for the number 1000
             props: dict[str, Any] = {f"residence_{part}": after}
             if (held is None or held.exact != "hand") and located is None:
                 props |= {"residence_lat": None, "residence_lon": None, "residence_exact": None}

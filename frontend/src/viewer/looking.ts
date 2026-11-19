@@ -19,12 +19,16 @@ export function named(name: string): HTMLElement {
   return found;
 }
 
-export async function until(shown: string) {
-  for (let tries = 0; tries < 200; tries++) {
+/** Waits for the words to show, by the clock: up to 10 seconds, so that a computer busy with
+ * other work doesn't fail a test by counting tries that each took longer (0.8.7). */
+export async function until(shown: string, within = 10_000) {
+  const end = Date.now() + within;
+  while (Date.now() < end) {
     if (document.body.textContent?.includes(shown)) return;
     await act(async () => {
       await new Promise((done) => setTimeout(done, 10));
     });
   }
+  if (document.body.textContent?.includes(shown)) return;
   throw new Error(`"${shown}" never showed`);
 }

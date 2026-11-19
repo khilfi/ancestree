@@ -7,7 +7,7 @@
 import type { Gender } from "@/api/types";
 import type { Place } from "./blood";
 import type { TwinKind } from "./family";
-import type { Blood, Kin, KindSibling } from "./kin";
+import type { Blood, Compound, Kin, KindSibling } from "./kin";
 import { blood as bloodKin } from "./kin";
 
 const MAX_CHAIN = 6; // longer than this, a chain of relations stops being an answer
@@ -140,7 +140,7 @@ export class TermBook {
         return this.kindSibling(kin, kinds);
       case "compound": {
         const [word] = this.pickDetailed(
-          this.section(kin.group)[kin.key],
+          this.compoundEntry(kin),
           kin.gender,
           kin.seniority,
           kin.place,
@@ -151,6 +151,15 @@ export class TermBook {
       case "chain":
         return this.chain(kin.parts, kinds);
     }
+  }
+
+  /** An in-law or step relation's entry: a spouse's other spouse from marriages not known to
+   *  have overlapped is never a co-wife, but the list's `apart` words, or `late` ones. */
+  private compoundEntry(kin: Compound): unknown {
+    const entry = this.section(kin.group)[kin.key];
+    if (!kin.apart) return entry;
+    const table = isMapping(entry) ? entry : {};
+    return kin.late && "late" in table ? table.late : table.apart;
   }
 
   // --- Blood -----------------------------------------------------------------------------

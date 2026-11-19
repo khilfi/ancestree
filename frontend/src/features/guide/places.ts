@@ -24,6 +24,7 @@ export const GUIDE_AT = {
   backups: "20-backups",
   elsewhere: "copies-in-another-place",
   import: "17-bringing-people-in-from-a-spreadsheet",
+  remove: "26-removing-ancestree",
 } as const;
 
 export type GuidePlace = keyof typeof GUIDE_AT;

@@ -2,9 +2,13 @@
 
 The order of preference: a direct marriage, then blood (closest first), then in-law
 and step relations, then a chain. The others are the "Also related as..." lines.
+
+Since 0.8.7 the answer is the same whichever way round it's asked: the routes are looked
+for from the same one of the two, judged by how they're said both ways, and put in an order
+that doesn't depend on who asked. Two that say it equally well are both shown.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -79,31 +83,102 @@ def relate(
     found: list[Relation] = []
     if marriage := family.marriage(a, b):
         found.append(_route_relation(family, a, [Step("=", b, marriage.id)], english, books))
-    found += [
-        _blood_relation(family, a, b, tie, english, books) for tie in blood_ties(family, a, b)
-    ]
+    ties = sorted(blood_ties(family, a, b), key=lambda tie: _tie_key(family, tie))
+    found += [_blood_relation(family, a, b, tie, english, books) for tie in ties]
     if found:
         # What a closer tie hides: a cousin who is also a sister-in-law, a grandmother who
-        # adopted you. Only relations with a name; chains would just be noise.
-        for route in short_routes(family, a, b, SHORT_ROUTE):
-            if isinstance(route_kin(family, a, route), Compound | KindStep | KindSibling):
-                found.append(_route_relation(family, a, route, english, books))
-    elif routes := shortest_routes(family, a, b):
-        best = min(routes, key=lambda route: _route_score(family, a, route))
-        found.append(_route_relation(family, a, best, english, books))
-    unique: dict[str, Relation] = {}
+        # adopted you. Only relations with a name, either way round: a granddaughter
+        # who married your grandson is your granddaughter-in-law, and you are her husband's
+        # grandfather. Chains with no name either way would just be noise.
+        hidden = [
+            route
+            for route in _routes(a, b, lambda x, y: short_routes(family, x, y, SHORT_ROUTE))
+            if _named(family, a, route)
+        ]
+        hidden.sort(key=lambda route: (len(route), _marriage_ends(route), *_stable(family, route)))
+        found += [_route_relation(family, a, route, english, books) for route in hidden]
+    elif routes := _routes(a, b, lambda x, y: shortest_routes(family, x, y)):
+        scored = [(_route_score(family, a, route), route) for route in routes]
+        best = min(score for score, _ in scored)
+        # Two that say it equally well are both shown: the second as "Also related as...".
+        tied = sorted(
+            (route for score, route in scored if score == best),
+            key=lambda route: (_marriage_ends(route), *_stable(family, route)),
+        )
+        found += [_route_relation(family, a, route, english, books) for route in tied]
+    unique: dict[tuple[str, str], Relation] = {}
     for relation in found:
-        unique.setdefault(relation.forward.sentence, relation)
+        # Both ways round: two lines down from the same great-grandfather say "great-grandson"
+        # twice from his side, but "paternal" and "maternal great-grandfather" from the other.
+        unique.setdefault((relation.forward.sentence, relation.reverse.sentence), relation)
     return list(unique.values())
 
 
-def _route_score(family: Family, a: str, route: list[Step]) -> tuple[object, ...]:
-    """Among equally short routes, the one that says it best: the fewest pieces, birth links
-    before other kinds, unknown parents last, then a stable order."""
-    parts = combine(family, pieces(family, a, route))
+def _routes(a: str, b: str, find: Callable[[str, str], list[list[Step]]]) -> list[list[Step]]:
+    """The routes from A to B that `find` gives, always looked for from the same one of the
+    two: so the answer is the same whichever way round it's asked, even where there are more
+    routes than are listed."""
+    if a < b:
+        return find(a, b)
+    return [_reversed(b, route) for route in find(b, a)]
+
+
+def _named(family: Family, a: str, route: list[Step]) -> bool:
+    """Whether a route is a relation with a name, from either end."""
+    b = route[-1].to
+    return any(
+        isinstance(route_kin(family, start, steps), Compound | KindStep | KindSibling)
+        for start, steps in ((a, route), (b, _reversed(a, route)))
+    )
+
+
+def _route_score(family: Family, a: str, route: list[Step]) -> tuple[int, int, int]:
+    """Among equally short routes, the ones that say it best, whichever way round: the fewest
+    pieces, counted both ways; birth links before other kinds; unknown parents last."""
+    b = route[-1].to
+    parts = len(combine(family, pieces(family, a, route))) + len(
+        combine(family, pieces(family, b, _reversed(a, route)))
+    )
     unusual = sum(step.move != "=" and not family.is_blood(step.kind) for step in route)
-    unknown = sum(family.members[step.to].placeholder for step in route)
-    return len(parts), unusual, unknown, [family.order_key(step.to) for step in route]
+    unknown = sum(family.members[step.to].placeholder for step in route[:-1])
+    return parts, unusual, unknown
+
+
+def _marriage_ends(route: list[Step]) -> tuple[int, ...]:
+    """How far each marriage on a route is from its nearer end, nearest first: 0 for a
+    relative's husband or wife, or a husband's or wife's relative. Of two that tie, the one
+    whose marriage comes at an end goes first, by the user's answer of 19 Nov 2026:
+    a great-uncle's wife before an aunt's mother-in-law. The same from either end; a route
+    with no marriage at all comes before any with one."""
+    last = len(route) - 1
+    return tuple(sorted(min(n, last - n) for n, step in enumerate(route) if step.move == "="))
+
+
+def _stable(family: Family, route: list[Step]) -> tuple[object, ...]:
+    """An order for routes that doesn't depend on which end they start from: by the people in
+    between (fathers before mothers, then by name), then by their links."""
+    return _between(family, [step.to for step in route[:-1]]), _either_way(
+        tuple(step.link for step in route)
+    )
+
+
+def _tie_key(family: Family, tie: BloodTie) -> tuple[object, ...]:
+    """Blood ties closest first (blood_ties' order), then as `_stable` orders routes."""
+    return (
+        tie.up + tie.down,
+        abs(tie.up - tie.down),
+        [family.order_key(person) for person in tie.ancestors],
+        _between(family, tie.path[1:-1]),
+        _either_way(tie.links),
+    )
+
+
+def _between(family: Family, people: Sequence[str]) -> list[tuple[int, str, str]]:
+    return sorted(family.order_key(person) for person in people)
+
+
+def _either_way(links: tuple[str, ...]) -> tuple[str, ...]:
+    return min(links, links[::-1])
 
 
 # --- Building relations -------------------------------------------------------------------

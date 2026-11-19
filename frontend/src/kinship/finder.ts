@@ -1,11 +1,12 @@
 /**
  * Every way two people are related, both ways round, with the path to highlight
  * (backend/src/ancestree/kinship/finder.py). Closest first: a direct marriage, then blood,
- * then in-law and step relations, then a chain; the rest are "Also related as…".
+ * then in-law and step relations, then a chain; the rest are "Also related as…". Since 0.8.7
+ *, the same whichever way round it's asked, and two that say it equally well both shown.
  */
 import type { Gender } from "@/api/types";
 import { type BloodTie, bloodTies, seniority } from "./blood";
-import { minBy } from "./compare";
+import { compareKeys, compareText, type Key, sortedBy } from "./compare";
 import { type Explanation, explainBlood, explainRoute } from "./explain";
 import type { Family } from "./family";
 import { blood, bloodKin, combine, generations, type Kin, pieces, routeKin } from "./kin";
@@ -55,36 +56,112 @@ export function relate(
     const step: Step = { move: "=", to: b, link: marriage.id, kind: null };
     found.push(routeRelation(family, a, [step], english, books));
   }
-  for (const tie of bloodTies(family, a, b))
-    found.push(bloodRelation(family, a, b, tie, english, books));
+  const ties = sortedBy(bloodTies(family, a, b), (tie) => tieKey(family, tie));
+  for (const tie of ties) found.push(bloodRelation(family, a, b, tie, english, books));
   if (found.length) {
     // What a closer tie hides: a cousin who is also a sister-in-law, a grandmother who adopted
-    // you. Only relations with a name; chains would just be noise.
-    for (const route of shortRoutes(family, a, b, SHORT_ROUTE)) {
-      const kin = routeKin(family, a, route);
-      if (kin.type === "compound" || kin.type === "kindStep" || kin.type === "kindSibling") {
-        found.push(routeRelation(family, a, route, english, books));
-      }
-    }
+    // you. Only relations with a name, either way round; chains would just be noise.
+    const hidden = routesBetween(a, b, (x, y) => shortRoutes(family, x, y, SHORT_ROUTE)).filter(
+      (route) => named(family, a, route),
+    );
+    const order = (route: readonly Step[]): Key => [
+      route.length,
+      marriageEnds(route),
+      ...stable(family, route),
+    ];
+    for (const route of sortedBy(hidden, order))
+      found.push(routeRelation(family, a, route, english, books));
   } else {
-    const routes = shortestRoutes(family, a, b);
-    const best = minBy(routes, (route) => routeScore(family, a, route));
-    if (best) found.push(routeRelation(family, a, best, english, books));
+    const routes = routesBetween(a, b, (x, y) => shortestRoutes(family, x, y));
+    const scored = routes.map((route) => ({ route, score: routeScore(family, a, route) }));
+    const best = scored.reduce<Key | null>(
+      (least, { score }) => (least == null || compareKeys(score, least) < 0 ? score : least),
+      null,
+    );
+    // Two that say it equally well are both shown: the second as "Also related as…".
+    const tied = scored
+      .filter(({ score }) => best != null && compareKeys(score, best) === 0)
+      .map(({ route }) => route);
+    for (const route of sortedBy(tied, (route) => [marriageEnds(route), ...stable(family, route)]))
+      found.push(routeRelation(family, a, route, english, books));
   }
   const unique = new Map<string, Relation>();
   for (const relation of found) {
-    if (!unique.has(relation.forward.sentence)) unique.set(relation.forward.sentence, relation);
+    // Both ways round: "great-grandson" twice from one side may be "paternal" and "maternal
+    // great-grandfather" from the other.
+    const key = JSON.stringify([relation.forward.sentence, relation.reverse.sentence]);
+    if (!unique.has(key)) unique.set(key, relation);
   }
   return [...unique.values()];
 }
 
-/** Among equally short routes, the one that says it best: the fewest pieces, birth links
- *  before other kinds, unknown parents last, then a stable order. */
-function routeScore(family: Family, a: string, route: readonly Step[]) {
-  const parts = combine(family, pieces(family, a, route));
+/** The routes from A to B that `find` gives, always looked for from the same one of the two,
+ *  so the answer is the same whichever way round it's asked. */
+function routesBetween(a: string, b: string, find: (x: string, y: string) => Step[][]): Step[][] {
+  if (compareText(a, b) < 0) return find(a, b);
+  return find(b, a).map((route) => reversed(b, route));
+}
+
+/** Whether a route is a relation with a name, from either end. */
+function named(family: Family, a: string, route: readonly Step[]): boolean {
+  const b = (route[route.length - 1] as Step).to;
+  return [routeKin(family, a, route), routeKin(family, b, reversed(a, route))].some(
+    (kin) => kin.type === "compound" || kin.type === "kindStep" || kin.type === "kindSibling",
+  );
+}
+
+/** Among equally short routes, the ones that say it best, whichever way round: the fewest
+ *  pieces, counted both ways; birth links before other kinds; unknown parents last. */
+function routeScore(family: Family, a: string, route: readonly Step[]): Key {
+  const b = (route[route.length - 1] as Step).to;
+  const parts =
+    combine(family, pieces(family, a, route)).length +
+    combine(family, pieces(family, b, reversed(a, route))).length;
   const unusual = route.filter((step) => step.move !== "=" && !family.isBlood(step.kind)).length;
-  const unknown = route.filter((step) => family.member(step.to).placeholder).length;
-  return [parts.length, unusual, unknown, route.map((step) => family.orderKey(step.to))];
+  const unknown = route.slice(0, -1).filter((step) => family.member(step.to).placeholder).length;
+  return [parts, unusual, unknown];
+}
+
+/** An order for routes that doesn't depend on which end they start from: by the people in
+ *  between, then by their links. */
+/** How far each marriage on a route is from its nearer end, nearest first: of two that tie,
+ *  the one whose marriage comes at an end goes first (the user's answer of 19 Nov 2026), a
+ *  great-uncle's wife before an aunt's mother-in-law. The same from either end. */
+function marriageEnds(route: readonly Step[]): Key {
+  const last = route.length - 1;
+  return route
+    .flatMap((step, index) => (step.move === "=" ? [Math.min(index, last - index)] : []))
+    .sort((x, y) => x - y);
+}
+
+function stable(family: Family, route: readonly Step[]): Key[] {
+  return [
+    between(
+      family,
+      route.slice(0, -1).map((step) => step.to),
+    ),
+    eitherWay(route.map((step) => step.link)),
+  ];
+}
+
+/** Blood ties closest first (bloodTies' order), then as `stable` orders routes. */
+function tieKey(family: Family, tie: BloodTie): Key {
+  return [
+    tie.up + tie.down,
+    Math.abs(tie.up - tie.down),
+    tie.ancestors.map((person) => family.orderKey(person)),
+    between(family, tie.path.slice(1, -1)),
+    eitherWay(tie.links),
+  ];
+}
+
+function between(family: Family, people: readonly string[]): Key {
+  return people.map((person) => family.orderKey(person)).sort(compareKeys);
+}
+
+function eitherWay(links: readonly string[]): Key {
+  const back = links.toReversed();
+  return compareKeys(back, links) < 0 ? back : [...links];
 }
 
 // --- Building relations -------------------------------------------------------------------

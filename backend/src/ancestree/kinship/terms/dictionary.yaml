@@ -17,6 +17,8 @@
 #   seniority             elder or younger
 #   place                 "1/3": the eldest of three; "3/3": the youngest
 #   side                  paternal or maternal (grandparents; half-siblings with `half`)
+#   apart                 a spouse's other spouse from marriages not known to have
+#                         overlapped: never a co-wife
 #   parts                 the same relation in pieces, each a kin, for a language that
 #                         says it that way (a parent's cousin: a parent, then a cousin)
 
@@ -195,8 +197,17 @@ sections:
         relation: A wife you're divorced from
         kin: {marriage: "=", gender: female, former: true}
       - id: co-wife
-        relation: Another wife of your husband
+        relation: Another wife of your husband, married to him at the same time as you
         kin: {in_law: "==", gender: female}
+      - id: husbands-other-wife
+        relation: Another wife of your husband, not at the same time as you
+        kin:
+          in_law: "=="
+          gender: female
+          apart: true
+          parts:
+            - {marriage: "=", gender: male}
+            - {marriage: "=", gender: female}
 
   - id: in-laws
     title: In-laws

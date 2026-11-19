@@ -10,6 +10,7 @@ from ancestree.domain.relationship import (
 from ancestree.kinship.family import Family, Marriage, Member, ParentLink, short_name
 from ancestree.kinship.finder import Relation, relate
 from ancestree.kinship.terms import TermBook
+from ancestree.seed.example import load_example_family
 from ancestree.seed.family import load_seed_family, seed_id
 
 ENGLISH = TermBook.load("en")
@@ -120,17 +121,21 @@ class Builder:
         name: str,
         gender: str = "?",
         *,
-        born: int | tuple[int, int, int] | None = None,
+        born: int | tuple[int, int, int] | PartialDate | None = None,
+        died: int | None = None,
         order: int | None = None,
         unknown_parent: bool = False,
     ) -> str:
         birth = None
-        if isinstance(born, tuple):
+        if isinstance(born, PartialDate):  # "about 1950", "before 1960" ...
+            birth = born
+        elif isinstance(born, tuple):
             birth = PartialDate(year=born[0], month=born[1], day=born[2])
         elif born is not None:
             birth = PartialDate(year=born)
+        death = PartialDate(year=died) if died is not None else None
         self.members[name] = Member(
-            name, name, GENDERS[gender], birth, order, placeholder=unknown_parent
+            name, name, GENDERS[gender], birth, order, placeholder=unknown_parent, died=death
         )
         return name
 
@@ -180,6 +185,34 @@ def seed() -> tuple[Family, dict[str, str]]:
             p.birth,
             p.birth_order,
             p.placeholder,
+            p.death,
+        )
+        for p in family.people
+    ]
+    parent_links = [
+        ParentLink(str(link.id), str(link.parent_id), str(link.child_id), link.kind)
+        for link in family.parent_links()
+    ]
+    marriages = [
+        Marriage(str(link.id), str(link.person_a), str(link.person_b), link.status)
+        for link in family.spouse_links()
+    ]
+    return Family(members, parent_links, marriages, KINDS), ids
+
+
+def example() -> tuple[Family, dict[str, str]]:
+    """The example family (seed/example/), and each person's id by key: whose Me is Danial."""
+    family = load_example_family()
+    ids = {p.key: str(family.person_id(p.key)) for p in family.people}
+    members = [
+        Member(
+            ids[p.key],
+            "an unknown parent" if p.placeholder else short_name(p.full_name, p.nickname),
+            p.gender,
+            p.born,
+            p.birth_order,
+            p.placeholder,
+            p.died,
         )
         for p in family.people
     ]

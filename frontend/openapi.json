@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.6"
+    "version": "0.8.7"
   },
   "paths": {
     "/api/health": {
@@ -2421,7 +2421,7 @@
           "downloads"
         ],
         "summary": "Save Download",
-        "description": "Save an export or backup, the import template or its example, or an import's report, in\nthe Downloads folder: under its own name, or with \" (2)\" if that's taken.",
+        "description": "Save an export or backup, the import template or its example, an import's report, or the\nfamily's Google project's client file (the keeper's), in the Downloads folder: under its own\nname, or with \" (2)\" if that's taken.",
         "operationId": "save_download",
         "requestBody": {
           "content": {
@@ -4930,7 +4930,7 @@
           "whose"
         ],
         "title": "AtParents",
-        "description": "Where someone with no place of their own lives: their parents' place, and\nwhose, the app's alone, never written in. Their mother's when the parents live apart,\nunless their father's is chosen."
+        "description": "Where someone with no place of their own lives: their parents' place, and\nwhose, the app's alone, never written in. When the parents live apart, the one they sit\nunder on the tree laid out from the oldest ancestor, unless the other is chosen."
       },
       "Backup": {
         "properties": {
@@ -5291,6 +5291,36 @@
           "base_version"
         ],
         "title": "BiographyUpdate"
+      },
+      "BirthParents": {
+        "properties": {
+          "child": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Child"
+          },
+          "parents": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Parents"
+          },
+          "link": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "child",
+          "parents",
+          "link"
+        ],
+        "title": "BirthParents",
+        "description": "A child with more than two birth parents, stored before 0.8.7: What's missing\noffers to take out `link`, the newest of their links. `parents` in the order they were\nlinked, its parent last."
       },
       "Body_add_backup": {
         "properties": {
@@ -6004,7 +6034,8 @@
               "export",
               "template",
               "example",
-              "report"
+              "report",
+              "client"
             ],
             "title": "What"
           },
@@ -7098,6 +7129,20 @@
           "centre_chosen": {
             "type": "boolean",
             "title": "Centre Chosen"
+          },
+          "loops": {
+            "items": {
+              "$ref": "#/components/schemas/ParentLoop"
+            },
+            "type": "array",
+            "title": "Loops"
+          },
+          "three_birth_parents": {
+            "items": {
+              "$ref": "#/components/schemas/BirthParents"
+            },
+            "type": "array",
+            "title": "Three Birth Parents"
           }
         },
         "type": "object",
@@ -8333,6 +8378,13 @@
             "type": "integer",
             "title": "Restored",
             "default": 0
+          },
+          "left_out": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Left Out"
           },
           "reverted": {
             "type": "integer",
@@ -10061,6 +10113,30 @@
         "title": "Pair",
         "description": "Two people and what joins them: the links between them, or a kinship word."
       },
+      "ParentLoop": {
+        "properties": {
+          "link": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Link"
+          },
+          "people": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "link",
+          "people"
+        ],
+        "title": "ParentLoop",
+        "description": "A loop of parents stored before 0.8.7: A is B's parent, B is C's, C is A's. The\ntree is seated without `link`, the newest in it, which What's missing offers to take out.\n`people` go down the loop from that link's child to its parent."
+      },
       "Parents": {
         "properties": {
           "parents": {
@@ -11512,6 +11588,13 @@
           "skipped_links": {
             "type": "integer",
             "title": "Skipped Links"
+          },
+          "left_out": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Left Out"
           }
         },
         "type": "object",

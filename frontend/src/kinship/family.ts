@@ -23,6 +23,7 @@ export type TwinPerson = Pick<
   | "nickname"
   | "gender"
   | "born"
+  | "died"
   | "birth_order"
   | "placeholder"
   | "photo_version"
@@ -50,6 +51,7 @@ export type Member = {
   birth: PartialDate | null;
   birthOrder: number | null;
   placeholder: boolean; // an unknown parent
+  died: PartialDate | null; // when they died, if recorded: whose marriage ended first
 };
 
 export type ParentLink = { id: string; parent: string; child: string; kind: string };
@@ -138,6 +140,7 @@ export class Family {
       birth: person.born ?? null,
       birthOrder: person.birth_order ?? null,
       placeholder: !!person.placeholder,
+      died: person.died ?? null,
     }));
     const all = Array.from(links);
     return new Family(

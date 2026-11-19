@@ -69,6 +69,13 @@ export async function saveDownload(
   return false;
 }
 
+/** The family's Google project's client file, saved again in Downloads with its note: the
+ *  keeper's own, before AncesTree is removed. In the desktop app alone, which has a client. */
+export async function saveClientFile(then?: string): Promise<void> {
+  const saved = await unwrap(api.POST("/api/downloads", { body: { what: "client" } }));
+  savedNote(saved, then);
+}
+
 /** Save a file drawn in the page, the tree's picture: as `saveDownload`, the blob uploaded. */
 export async function saveDrawn(blob: Blob, name: string, then?: string): Promise<boolean> {
   try {

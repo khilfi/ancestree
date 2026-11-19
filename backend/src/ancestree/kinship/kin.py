@@ -21,6 +21,7 @@ from ancestree.kinship.blood import (
 )
 from ancestree.kinship.family import Family
 from ancestree.kinship.routes import Step
+from ancestree.lineage.birth_order import compare_births
 
 type Side = Literal["paternal", "maternal"]
 
@@ -82,7 +83,11 @@ class Compound:
 
     Some words follow the blood relative inside: Malay abang ipar or adik ipar by
     the sibling in between, and Mak Long for Pak Long's wife. `seniority` and `place` are
-    that relative's; for step-brothers and sisters, `seniority` compares their ages."""
+    that relative's; for step-brothers and sisters, `seniority` compares their ages.
+
+    A spouse's other spouse ("=="): `apart` when the two marriages aren't known to have
+    overlapped, as when one ended with a wife's death before her husband's, so never a
+    co-wife; `late` when the one they both married has died."""
 
     key: str
     group: Literal["in_law", "step"]
@@ -91,6 +96,8 @@ class Compound:
     parts: tuple[Kin, ...]
     seniority: Seniority | None = None
     place: Place | None = None
+    apart: bool = False
+    late: bool = False
 
 
 @dataclass(frozen=True)
@@ -236,11 +243,18 @@ def pieces(family: Family, a: str, route: list[Step]) -> list[Piece]:
             while j < len(route) and route[j].move == "d" and family.is_blood(route[j].kind):
                 j += 1
             end = route[j - 1].to
+            ups = sum(s.move == "u" for s in route[i:j])
+            # Said as the tie the stretch walks, never the closest between its two ends:
+            # a grandfather who's a half-brother too, walked up through a mother, is the
+            # grandfather; else read from its other end it would say another relation.
+            walked = (here, *(s.to for s in route[i:j]))
             ties = blood_ties(family, here, end)
-            if ties:
-                blood = blood_kin(family, here, end, ties[0])
+            tie = next((t for t in ties if t.path == walked), None) or next(
+                (t for t in ties if (t.up, t.down) == (ups, j - i - ups)), None
+            )
+            if tie is not None:
+                blood = blood_kin(family, here, end, tie)
             else:  # can't happen for a blood stretch, but never guess
-                ups = sum(s.move == "u" for s in route[i:j])
                 blood = Blood(ups, j - i - ups, family.gender(end))
             found.append(Piece(blood, here, end, f"{blood.up},{blood.down}", j - i))
             here, i = end, j
@@ -256,6 +270,23 @@ def _fits(family: Family, key: str, start: str, end: str) -> bool:
     if key == "u=d":
         return not family.parents(start) & family.parents(end)
     return True
+
+
+def _apart(family: Family, a: str, between: str, b: str) -> tuple[bool, bool]:
+    """Two marriages of one person, to A and to B: whether they aren't known to have
+    overlapped, and whether the one they both married has died. Without the marriages'
+    own dates, they're apart when either of the two died before the one they married, or may
+    have: a first wife who died, and then a second wife married. Both lasting until that one's
+    own death, they overlapped."""
+    died = family.members[between].died
+
+    def ended_first(spouse: str) -> bool:
+        theirs = family.members[spouse].died
+        return theirs is not None and not (
+            died is not None and (compare_births(died, theirs) or 0) < 0
+        )
+
+    return ended_first(a) or ended_first(b), died is not None
 
 
 def combine(family: Family, found: list[Piece]) -> list[Kin]:
@@ -281,6 +312,11 @@ def combine(family: Family, found: list[Piece]) -> list[Kin]:
             older = blood.seniority if blood else None
             if key == "u=d":  # step-brothers and sisters: by age
                 older = seniority(family, chunk[-1].end, chunk[0].start)
+            apart, late = (
+                _apart(family, chunk[0].start, chunk[0].end, chunk[1].end)
+                if key == "=="
+                else (False, False)
+            )
             compound = Compound(
                 key,
                 group,
@@ -289,6 +325,8 @@ def combine(family: Family, found: list[Piece]) -> list[Kin]:
                 tuple(p.kin for p in chunk),
                 older,
                 blood.place if blood else None,
+                apart,
+                late,
             )
             options.append((i + len(shapes), compound, sum(p.size for p in chunk)))
         options.append((i + 1, found[i].kin, found[i].size))

@@ -5,6 +5,7 @@ from dataclasses import replace
 
 import pytest
 
+from ancestree.domain.person import DateQualifier, PartialDate
 from ancestree.domain.relationship import SpouseStatus
 from ancestree.kinship.dictionary import row_for
 from ancestree.kinship.kin import Blood
@@ -163,6 +164,41 @@ def test_when_the_order_isnt_known_malay_says_the_general_word_and_javanese_both
     assert words(family, "Ali", "Usu") == ("pak cik", "pakdhé / paklik")
 
 
+@pytest.mark.parametrize(
+    "born",
+    [
+        PartialDate(year=1960, qualifier=DateQualifier.BEFORE),
+        PartialDate(year=1950, year_to=1960, qualifier=DateQualifier.BETWEEN),
+        PartialDate(year=1952, qualifier=DateQualifier.ABOUT),
+    ],
+)
+def test_an_uncle_born_about_before_or_between_says_both_words_where_it_overlaps(
+    born: PartialDate,
+) -> None:
+    # The review's #6: each of these was said as certain against his sister's
+    # 1955, so pak su and paklik, or pak long and pakdhé.
+    family = Builder()
+    family.people("Tok:m Ali:m")
+    family.person("Mak", "f", born=1955)
+    family.person("Usu", "m", born=born)
+    family.child("Tok", "Mak", "Usu")
+    family.child("Mak", "Ali")
+
+    assert words(family, "Ali", "Usu") == ("pak cik", "pakdhé / paklik")
+    assert words(family, "Mak", "Usu") == ("saudara lelaki", "sedulur lanang")
+
+
+def test_an_uncle_born_before_his_sister_for_certain_is_still_the_elder() -> None:
+    family = Builder()
+    family.people("Tok:m Ali:m")
+    family.person("Mak", "f", born=1955)
+    family.person("Along", "m", born=PartialDate(year=1950, qualifier=DateQualifier.BEFORE))
+    family.child("Tok", "Mak", "Along")
+    family.child("Mak", "Ali")
+
+    assert words(family, "Ali", "Along") == ("pak long", "pakdhé")
+
+
 def test_a_brothers_great_grandchild_is_said_in_pieces_in_javanese() -> None:
     family = Builder()
     family.people("P:m S1:m S2:f B:m")
@@ -232,6 +268,41 @@ def test_co_wives() -> None:
 
     assert words(family, "Mariam", "Halimah") == ("madu", "maru")
     assert family.says("Mariam", "Halimah") == "Halimah is Mariam's co-wife"
+
+
+def test_a_first_wife_who_died_before_her_husband_is_no_co_wife() -> None:
+    # The review's #13: Zainab died, and Rahman married Halimah; the marriages never
+    # overlapped, but she was called Halimah's co-wife, and madu.
+    family = Builder()
+    family.person("Rahman", "m", died=2019)
+    family.person("Zainab", "f", died=1976)
+    family.people("Halimah:f")
+    family.marry("Rahman", "Zainab", SpouseStatus.WIDOWED)
+    family.marry("Rahman", "Halimah")
+
+    assert family.says("Halimah", "Zainab") == "Zainab is Halimah's late husband's other wife"
+    assert family.says("Zainab", "Halimah") == "Halimah is Zainab's late husband's other wife"
+    for language in ("ms", "jv"):  # never madu or maru
+        assert family.word("Halimah", "Zainab", language) not in ("madu", "maru")
+    # The user's words of 19 Nov 2026 in Malay; Javanese in pieces, until it has its own.
+    assert words(family, "Halimah", "Zainab") == ("isteri lain arwah suami", "bojoné bojo")
+
+    # While he lives: his other wife.
+    family.members["Rahman"] = replace(family.members["Rahman"], died=None)
+    assert family.says("Halimah", "Zainab") == "Zainab is Halimah's husband's other wife"
+    assert words(family, "Halimah", "Zainab") == ("isteri lain suami", "bojoné bojo")
+
+
+def test_wives_married_until_their_husbands_death_are_co_wives() -> None:
+    family = Builder()
+    family.person("Rahman", "m", died=1990)
+    family.person("Zainab", "f", died=2000)
+    family.people("Halimah:f")
+    family.marry("Rahman", "Zainab", SpouseStatus.WIDOWED)
+    family.marry("Rahman", "Halimah", SpouseStatus.WIDOWED)
+
+    assert family.says("Halimah", "Zainab") == "Zainab is Halimah's co-wife"
+    assert words(family, "Halimah", "Zainab") == ("madu", "maru")
 
 
 def test_an_uncles_wife_takes_his_word() -> None:

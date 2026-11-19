@@ -16,7 +16,13 @@ from ancestree.domain.dates import DateParseError, parse_partial_date
 from ancestree.domain.person import Gender, PartialDate, Place
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind, SpouseStatus
 from ancestree.domain.requests import PersonInput
-from ancestree.places.names import country_named, state_named
+from ancestree.places.gazetteer import Gazetteer, gazetteer
+from ancestree.places.names import TOWN_STATES, state_named
+
+# Where a place that names nothing in Malaysia may be: the neighbours whose places come
+# with the app and are few enough to read for it. Indonesia's are a quarter of a million, read
+# only for a family that has places there.
+NEIGHBOURS = ("SG", "BN", "TH")
 
 
 class CellError(ValueError):
@@ -101,17 +107,30 @@ def written_date(text: str) -> PartialDate:
     return PartialDate(original_text=" ".join(text.split())[:200])
 
 
+def _country(places: Gazetteer, text: str) -> str | None:
+    """The country a part names, as the gazetteer knows them all, in Malay too: "Thailand",
+    "Siam", "Mesir". None for anything else."""
+    code = places.country_code(text) if text else None
+    return places.countries[code].name if code is not None else None
+
+
 def read_place(text: str) -> Place | None:
     """ "Town, state", with the country last when it isn't Malaysia: "Kota Bharu, Kelantan",
     "Jakarta, Indonesia", or the export's "Kota Bharu, Kelantan, Malaysia". A country written
-    on its own ("Singapore") isn't taken for a town in Malaysia; with a town before it, the
-    last part is taken as the country anyway."""
+    on its own ("Singapore") isn't taken for a town in Malaysia.
+
+    Since 0.8.7, read against the gazetteer: a last part is a country only if it is one,
+    so "Taman Melati, Gombak" is a place in Malaysia; and one that names nothing in Malaysia
+    but a town or a state of a neighbour is there: "Pattani" is in Thailand, as is "Hat Yai,
+    Songkhla". Anything it doesn't know stays the town's, in Malaysia. A state written alone is
+    the state; Melaka, Kuala Lumpur, Putrajaya and Labuan, the town of that name too."""
     parts = [" ".join(part.split()) for part in text.split(",")]
     parts = [part for part in parts if part]
     if not parts:
         return None
+    places = gazetteer()
     country, state = "Malaysia", None
-    if len(parts) == 1 and (alone := country_named(parts[0])) is not None:
+    if len(parts) == 1 and (alone := _country(places, parts[0])) is not None:
         country = alone
         parts.pop()
     elif (named := state_named(parts[-1])) is not None:
@@ -122,11 +141,21 @@ def read_place(text: str) -> Place | None:
         if parts and (named := state_named(parts[-1])) is not None:
             state = named
             parts.pop()
-    elif len(parts) >= 2:
-        country = country_named(parts[-1]) or parts[-1]
+    elif len(parts) >= 2 and (abroad := _country(places, parts[-1])) is not None:
+        country = abroad
         parts.pop()
         if len(parts) >= 2:
             state = parts.pop()  # a region abroad: "Medan, Sumatera Utara, Indonesia"
+    elif not places.what_is("MY", parts[-1]):
+        for code in NEIGHBOURS:
+            if kinds := places.what_is(code, parts[-1]):
+                country = places.countries[code].name
+                # Alone, a town before a state ("Pattani"); after a town, its state.
+                if "S" in kinds and (len(parts) >= 2 or not kinds & {"P", "D"}):
+                    state = parts.pop()
+                break
+    if not parts and state in TOWN_STATES:
+        parts = [TOWN_STATES[state]]  # "Melaka" alone: the town too, in its state
     try:
         place = Place(town=", ".join(parts) or None, state=state, country=country)
     except ValidationError as error:

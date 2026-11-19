@@ -1,13 +1,23 @@
 """The tree canvas's view: everyone, every link, and each person's seat on the rings."""
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence, Set
 from typing import Any
 from uuid import UUID
 
-from neo4j import AsyncDriver
+from neo4j import AsyncDriver, RoutingControl
 from pydantic import ValidationError
 
-from ancestree.domain.graph import Graph, GraphLayout, GraphLink, GraphPerson, LayoutUnit, Seat
+from ancestree.domain.graph import (
+    BirthParents,
+    Graph,
+    GraphLayout,
+    GraphLink,
+    GraphPerson,
+    LayoutUnit,
+    ParentLoop,
+    Seat,
+)
+from ancestree.domain.links import three_birth_parents
 from ancestree.domain.person import Gender, PartialDate
 from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.lineage import seating
@@ -21,7 +31,12 @@ _ARCHIVE_NAMES = {"x": "layout_x", "y": "layout_y"}
 
 async def load_graph(driver: AsyncDriver, database: str, centre: UUID | None) -> Graph:
     people, links, in_layout = await read_family(driver, database)
-    return build_graph(people, links, in_layout, centre)
+    kinds, _, _ = await driver.execute_query(
+        "MATCH (k:RelationshipKind) WHERE k.blood RETURN collect(k.key) AS keys",
+        database_=database,
+        routing_=RoutingControl.READ,
+    )
+    return build_graph(people, links, in_layout, centre, blood=set(kinds[0]["keys"]))
 
 
 def graph_from_archive(archive: Mapping[str, Any]) -> Graph:
@@ -55,7 +70,8 @@ def graph_from_archive(archive: Mapping[str, Any]) -> Graph:
     in_layout = {
         kind["key"]: bool(kind.get("in_layout", True)) for kind in archive["relationship_kinds"]
     }
-    return build_graph(people, links, in_layout, None)
+    blood = {kind["key"] for kind in archive["relationship_kinds"] if kind.get("blood")}
+    return build_graph(people, links, in_layout, None, blood=blood or {BIOLOGICAL})
 
 
 def centre_layouts(
@@ -111,16 +127,24 @@ def centre_layouts(
     return layouts
 
 
-def build_graph(
+def seated_under(
     people: Sequence[Mapping[str, Any]],
     links: Sequence[Mapping[str, Any]],
     in_layout: Mapping[str, bool],
-    centre: UUID | None,
-    *,
-    this_year: int | None = None,
-) -> Graph:
-    """Rows as the database returns them (or a generated family) -> the canvas's graph.
-    `this_year` decides who is taken to be alive: this year, unless a test fixes it."""
+) -> dict[str, str]:
+    """The parent each person sits under on the tree laid out from the oldest ancestor,
+    whatever centre is chosen now, by their ids: where someone with no place of their
+    own is shown when their parents live apart. Those at a family's top sit under no one."""
+    seats = _seating(people, links, in_layout, None).seats
+    return {person: seat.parent for person, seat in seats.items() if seat.parent}
+
+
+def _seating(
+    people: Sequence[Mapping[str, Any]],
+    links: Sequence[Mapping[str, Any]],
+    in_layout: Mapping[str, bool],
+    centre: str | None,
+) -> seating.Seating:
     members = [
         seating.Member(
             id=str(row["id"]),
@@ -137,6 +161,7 @@ def build_graph(
             str(link["source"]),
             str(link["target"]),
             in_layout.get(link.get("kind") or BIOLOGICAL, True),
+            str(link["id"]),
         )
         for link in links
         if link["type"] == "parent"
@@ -146,8 +171,23 @@ def build_graph(
         for link in links
         if link["type"] == "spouse"
     ]
+    return seating.seat_family(members, parent_edges, spouse_edges, centre=centre)
+
+
+def build_graph(
+    people: Sequence[Mapping[str, Any]],
+    links: Sequence[Mapping[str, Any]],
+    in_layout: Mapping[str, bool],
+    centre: UUID | None,
+    *,
+    this_year: int | None = None,
+    blood: Set[str] = frozenset({BIOLOGICAL}),
+) -> Graph:
+    """Rows as the database returns them (or a generated family) -> the canvas's graph.
+    `this_year` decides who is taken to be alive: this year, unless a test fixes it. `blood`:
+    the kinds of parent link by birth, to find a child with three birth parents."""
     wanted = str(centre) if centre else None
-    result = seating.seat_family(members, parent_edges, spouse_edges, centre=wanted)
+    result = _seating(people, links, in_layout, wanted)
     return Graph(
         people=[_person(row, this_year) for row in people],
         links=[
@@ -172,6 +212,22 @@ def build_graph(
             centre_chosen=any(
                 unit.centre[0] == wanted for unit in result.units if unit.anchor is None
             ),
+            loops=[
+                ParentLoop(link=UUID(loop.link), people=[UUID(p) for p in loop.people])
+                for loop in result.loops
+            ],
+            three_birth_parents=[
+                BirthParents(
+                    child=UUID(found.child),
+                    parents=[UUID(p) for p in found.parents],
+                    link=UUID(found.link),
+                )
+                for found in three_birth_parents(
+                    (str(link["id"]), str(link["source"]), str(link["target"]))
+                    for link in links
+                    if link["type"] == "parent" and (link.get("kind") or BIOLOGICAL) in blood
+                )
+            ],
         ),
     )
 

@@ -6,6 +6,7 @@ import asyncio
 import random
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import asdict, replace
+from typing import Any
 from uuid import UUID
 
 from ancestree.domain.map import (
@@ -19,16 +20,21 @@ from ancestree.domain.map import (
     PlaceSuggestions,
     Town,
 )
-from ancestree.domain.person import Place, death_places
+from ancestree.domain.person import Gender, Place, death_places
 from ancestree.domain.views import AtParents, at_parents
 from ancestree.maps import photon
 from ancestree.places import gazetteer as gazetteer_module
 from ancestree.places.gazetteer import Entry, Gazetteer, Pinned, gazetteer, pin_key
 from ancestree.places.names import state_named
+from ancestree.repo import kinds as kinds_repo
+from ancestree.repo.graph import read_family
+from ancestree.repo.mapping import place_from
 from ancestree.repo.places import Places, read_places
 from ancestree.seed.generated import generated_family
 from ancestree.services.context import Context, RuleError, read
-from ancestree.services.detail import living_from
+from ancestree.services.detail import lived_with, living_from
+from ancestree.services.families import Kinds
+from ancestree.services.graph import seated_under
 from ancestree.storage.settings import read_pins, write_pins
 
 # The towns named around the family's places, as you chose on 10 Oct 2026: towns of
@@ -134,13 +140,21 @@ async def family_map(
     named for them: a copy hiding living people's details, where, not `exact`, everyone
     else's are no closer than their town (0.8.0)."""
     rows = await read(ctx, read_places)
+    kinds = await read(ctx, kinds_repo.fetch_kinds)
     pins = await asyncio.to_thread(read_pins, ctx.data_dir)
     places = await asyncio.to_thread(gazetteer)
     # Where they died is kept, but put on no map while it's unshown.
     rows = rows if death_places() else [replace(row, died=None) for row in rows]
     shown = [row for row in rows if row.id not in hidden]
-    # The living with no place of their own, at their parents'.
-    homes = {row.id: _at_parents(row) for row in shown}
+    # The living with no place of their own, at their parents'; where the parents live
+    # apart, the one they sit under on the tree from its oldest ancestor, the whole
+    # family's seats read only when someone's parents do.
+    homes = {row.id: _at_parents(row, kinds) for row in shown}
+    apart = [row for row in shown if homes[row.id] is not None and _apart(row, kinds)]
+    if apart:
+        under = seated_under(*await read_family(ctx.driver, ctx.database))
+        for row in apart:
+            homes[row.id] = _at_parents(row, kinds, under.get(row.id))
     # The family's countries' places, read in one go and off the event loop.
     written = {place.country for row in shown for place in (row.lives, row.born, row.died) if place}
     await asyncio.to_thread(places.load, [places.country_code(country) for country in written])
@@ -172,10 +186,29 @@ async def family_map(
     )
 
 
-def _at_parents(row: Places) -> AtParents | None:
-    """Their parents' place, for the living with no place of their own."""
+def _homes(row: Places, kinds: Kinds) -> list[dict[str, Any]]:
+    """The parents whose place theirs can be, birth parents first."""
+    return [parent for parent, kind in row.parents if lived_with(parent, kind, kinds)]
+
+
+def _apart(row: Places, kinds: Kinds) -> bool:
+    """Whether those parents live in different places, and nothing says whose."""
+    places = {place_from("residence", parent) for parent in _homes(row, kinds)}
+    return row.lives_with is None and len(places - {None}) > 1
+
+
+def _at_parents(row: Places, kinds: Kinds, under: str | None = None) -> AtParents | None:
+    """Their parents' place, for the living with no place of their own: as the person's
+    details say it, from the parents whose place it can be; `under`, the one they sit
+    under on the tree from its oldest ancestor."""
     living = living_from(row.living, row.born_on, row.died_on)
-    return at_parents(row.lives, row.lives_with, living, row.parents)
+    parents = _homes(row, kinds)
+    homes = [
+        (Gender(parent.get("gender") or Gender.UNKNOWN), place_from("residence", parent))
+        for parent in parents
+    ]
+    seated = next((n for n, parent in enumerate(parents) if parent["id"] == under), None)
+    return at_parents(row.lives, row.lives_with, living, homes, seated)
 
 
 async def family_countries(ctx: Context) -> FamilyCountries:

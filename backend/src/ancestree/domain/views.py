@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ancestree.domain.person import Gender, LivesWith, PartialDate, Place
 from ancestree.domain.relationship import RelationshipKind, SpouseStatus
@@ -61,12 +61,18 @@ class ChildGroup(BaseModel):
 
 class AtParents(BaseModel):
     """Where someone with no place of their own lives: their parents' place, and
-    whose, the app's alone, never written in. Their mother's when the parents live apart,
-    unless their father's is chosen."""
+    whose, the app's alone, never written in. When the parents live apart, the one they sit
+    under on the tree laid out from the oldest ancestor, unless the other is chosen."""
 
     place: Place
     whose: Literal["mother", "father", "parents"]
     district: str | None = None  # as written, or as the gazetteer has it
+
+
+_WHOSE: dict[Gender, Literal["mother", "father", "parents"]] = {
+    Gender.FEMALE: "mother",
+    Gender.MALE: "father",
+}
 
 
 def at_parents(
@@ -74,11 +80,14 @@ def at_parents(
     lives_with: LivesWith | None,
     living: bool | None,
     parents: Sequence[tuple[Gender, Place | None]],
+    under: int | None = None,
 ) -> AtParents | None:
     """Where someone with no place of their own lives: while not known to have
     died, their parents' own place, never their grandparents'. Both parents' when it's one
-    place; when they live apart, the mother's, unless the father's is chosen. None if they live
-    elsewhere, or no parent has a place. `parents`: their birth parents first."""
+    place; when they live apart, the one chosen, else the one they sit under on the tree laid
+    out from the oldest ancestor, `under`, by their place in `parents`, else the mother's.
+    None if they live elsewhere, or no parent has a place. `parents`: their birth parents
+    first."""
     if own is not None or lives_with == "elsewhere" or living is False:
         return None
     placed = [(gender, place) for gender, place in parents if place is not None]
@@ -92,6 +101,10 @@ def at_parents(
         return AtParents(place=mothers[0], whose="mother")
     if len(placed) > 1 and len({place for _, place in placed}) == 1:
         return AtParents(place=placed[0][1], whose="parents")
+    if under is not None and 0 <= under < len(parents):
+        gender, place = parents[under]
+        if place is not None:
+            return AtParents(place=place, whose=_WHOSE.get(gender, "parents"))
     if mothers:
         return AtParents(place=mothers[0], whose="mother")
     if fathers:
@@ -185,6 +198,8 @@ class RestoreResult(BaseModel):
     person: PersonDetail
     restored_links: int
     skipped_links: int  # links to people who are no longer there
+    # Links the rules refuse, each said: "Hassan's link to Ali stays out: ..."
+    left_out: list[str] = Field(default_factory=list)
 
 
 class DateReading(BaseModel):

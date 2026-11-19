@@ -946,8 +946,9 @@ function NewRecoveryCode() {
   );
 }
 
-/** This computer out of its family folder (0.3.1): it keeps the family as it is. */
-function Leave({ keeper }: { keeper: boolean }) {
+/** This computer out of its family folder (0.3.1): it keeps the family as it is. Also offered
+ *  before AncesTree is removed. */
+export function Leave({ keeper }: { keeper: boolean }) {
   const leave = useLeaveFamilyFolder();
   const [asking, setAsking] = useState(false);
   return (
@@ -1575,8 +1576,9 @@ function RoleNote({ status }: { status: FamilyFolderStatus }) {
   );
 }
 
-/** On a relative's computer that sends its changes: how many wait for the keeper. */
-function Sending({ status }: { status: FamilyFolderStatus }) {
+/** On a relative's computer that sends its changes: how many wait for the keeper. Also
+ *  said before AncesTree is removed. */
+export function Sending({ status }: { status: FamilyFolderStatus }) {
   const pending = status.pending ?? 0;
   return (
     <p className="text-sm text-stone-600" role="status">

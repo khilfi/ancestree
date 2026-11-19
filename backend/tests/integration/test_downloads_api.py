@@ -6,14 +6,17 @@ and a stand-in for the file manager: nothing here opens a window."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
 import pytest
+from fastapi import FastAPI
 
 from ancestree.config import Settings
 from ancestree.desktop import downloads
 from ancestree.exchange.spreadsheet import ENCODING
+from ancestree.familyfolder.google import Client
 from ancestree.importing.template import template_csv
 from ancestree.main import create_app
 from tests.integration.conftest import create_person
@@ -22,13 +25,21 @@ pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
 
 @asynccontextmanager
-async def desktop(settings: Settings, folder: Path) -> AsyncIterator[httpx.AsyncClient]:
+async def desktop_app(
+    settings: Settings, folder: Path
+) -> AsyncIterator[tuple[FastAPI, httpx.AsyncClient]]:
     """The app as the desktop app's engine makes it: downloads saved in `folder`."""
     app = create_app(settings.model_copy(update={"downloads_dir": folder}))
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            yield client
+            yield app, client
+
+
+@asynccontextmanager
+async def desktop(settings: Settings, folder: Path) -> AsyncIterator[httpx.AsyncClient]:
+    async with desktop_app(settings, folder) as (_, client):
+        yield client
 
 
 @pytest.fixture
@@ -60,6 +71,32 @@ async def test_the_template_and_example_are_saved_and_say_where(
         done = await client.post("/api/downloads/show", json={"name": again.json()["name"]})
         assert done.status_code == 204
         assert shown == [folder / "ancestree-import-template (2).csv"]
+
+
+async def test_the_keepers_client_file_is_saved_again_and_never_a_relatives(
+    settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Save it again…, in Remove AncesTree from this computer… (D88): the family's Google
+    project's client file, the keeper's way back with the recovery code. A relative's came with
+    the keeper's invitation, and isn't theirs to hand on; with none, there's nothing to save."""
+    monkeypatch.delenv("ANCESTREE_GOOGLE_CLIENT", raising=False)
+    folder = tmp_path / "Downloads"
+    async with desktop_app(settings, folder) as (app, client):
+        family_folder = app.state.family_folder
+        family_folder.client = None
+        none = await client.post("/api/downloads", json={"what": "client"})
+        assert (none.status_code, none.json()["detail"]["code"]) == (409, "no_client_file")
+
+        own = Client("123456789012-made.apps.googleusercontent.com", "made-up", "keluarga-contoh")
+        family_folder.client = own
+        saved = await client.post("/api/downloads", json={"what": "client"})
+        assert saved.status_code == 201, saved.text
+        assert saved.json() == {"name": own.file_name, "folder": "Downloads"}
+        assert Client.from_file((folder / own.file_name).read_text(encoding="utf-8")) == own
+
+        family_folder.client = replace(own, invited=True)
+        theirs = await client.post("/api/downloads", json={"what": "client"})
+        assert theirs.json()["detail"]["code"] == "no_client_file"
 
 
 async def test_an_export_a_backup_and_a_picture_are_saved_there(

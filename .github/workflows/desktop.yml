@@ -8,9 +8,12 @@
 # checks use; check that only
 # the app's window reaches its engine, that it starts at sign-in, and that it survives being
 # ended abruptly, with its data and a first automatic backup; build 0.1.1 and let 0.1.0
-# update itself to it, from a server on the runner; then refuse updates signed with a key it
-# doesn't know, for another version, or for none. The keys are made for this run and thrown
-# away with it, so no secret is kept anywhere.
+# update itself to it, from a server on the runner, the families where they were; then refuse
+# updates signed with a key it doesn't know, for another version, or for none. Last, remove it
+# from the app, with two families: on Windows its uninstaller's page read and pictured,
+# then uninstalled with the families, their backups kept in Documents; on the Mac and Linux its
+# folder sent to the Bin. The keys are made for this run and thrown away with it, so no secret
+# is kept anywhere.
 #
 # A commit can name the systems to run: "[only: macos linux]" in its message; otherwise, all
 # three. It saves minutes in a private repository, such as the test repository, where a Mac's
@@ -118,7 +121,8 @@ jobs:
           --distpath ../desktop/engine/dist --workpath ../desktop/engine/build
 
       # Backups over 3 months old go to the system's bin: a file sent to this machine's
-      # own, Windows' Recycle Bin, the Mac's Bin or Linux's Trash. Never on a family's computer.
+      # own, Windows' Recycle Bin, the Mac's Bin or Linux's Trash; and on the Mac and Linux a
+      # folder, as removing AncesTree sends its own. Never on a family's computer.
       - name: A file to the system's bin
         working-directory: backend
         env:
@@ -322,6 +326,22 @@ jobs:
           grep -E "starting|update" "$DATA/logs/shell.log"
           grep -q "starting 0.1.1" "$DATA/logs/shell.log"
 
+      # Removing AncesTree shows nothing during an update: the families and their backups
+      # are where they were, nothing was kept in Documents, and nothing went to the Bin.
+      - name: An update keeps the families where they are
+        run: |
+          [ -f "$DATA/families.json" ]
+          ls "$DATA"/backups/ancestree-backup-*.zip
+          case "$RUNNER_OS" in
+            Windows)
+              documents=$(cygpath -u "$(powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')" | tr -d '\r')")
+              [ ! -e "$documents/AncesTree backups" ] ;;
+            macOS) [ -f "$HOME/Library/LaunchAgents/AncesTree.plist" ] ;;
+            Linux)
+              if ls -d "$HOME/.local/share/Trash/files/$APP_ID"* 2> /dev/null; then echo "in the Trash"; exit 1; fi
+              [ -f "$HOME/.config/autostart/AncesTree.desktop" ] ;;
+          esac
+
       - name: An update signed with another key, or for another version or none, is refused
         run: |
           refuses() {  # started with $1.json on offer: it says why it won't update ($2), and starts as it is
@@ -347,6 +367,217 @@ jobs:
           refuses other-version "signed for version 0.1.1"
           refuses no-version "does not specify the version"
 
+      # Remove AncesTree from this computer… (D88), as Settings → About asks it, with two
+      # families, each with backups. On Windows the app starts its uninstaller: here a stand-in,
+      # which notes what it was given, as the real one is checked on its own below. On the Mac
+      # and Linux the app's folder goes to this machine's own Bin.
+      - name: Removing AncesTree from the app
+        run: |
+          readies() { grep -c '"stage": "ready"' "$DATA/logs/shell.log" || true; }
+          ready() {  # waits for one more start than $1, and says the engine's port
+            for i in $(seq 1 60); do
+              if [ "$(readies)" -gt "$1" ]; then
+                grep -o '"stage": "ready", "port": [0-9]*' "$DATA/logs/shell.log" | tail -n 1 | grep -o '[0-9]*$'
+                return 0
+              fi
+              sleep 5
+            done
+            echo "the engine never said it was ready" >&2
+            return 1
+          }
+          running() {
+            if [ "$RUNNER_OS" = Windows ]; then tasklist | grep -i '^AncesTree\.exe' > /dev/null
+            else pgrep -x AncesTree > /dev/null; fi
+          }
+          if [ "$RUNNER_OS" = Windows ]; then taskkill //F //IM AncesTree.exe || true; else pkill -9 -x AncesTree || true; fi
+          for i in $(seq 1 30); do  # until its engine and Neo4j have gone too
+            if [ "$RUNNER_OS" = Windows ]; then tasklist | grep -i ancestree-engine > /dev/null || break
+            else pgrep -f 'ancestree-engine|org[.]neo4j[.]server' > /dev/null || break; fi
+            sleep 2
+          done
+          secret=$("$PY" -c "import secrets; print(secrets.token_hex(32))")
+          as_window() { curl -sf -H "Cookie: ancestree_session=$secret" "$@"; }
+          if [ "$RUNNER_OS" = Windows ]; then
+            printf '@echo %%*> "%s"\r\n' "$(cygpath -w "$RUNNER_TEMP/uninstaller-said.txt")" > "$RUNNER_TEMP/stand-in-uninstaller.cmd"
+            ANCESTREE_UNINSTALLER=$(cygpath -w "$RUNNER_TEMP/stand-in-uninstaller.cmd")
+            export ANCESTREE_UNINSTALLER
+          fi
+          before=$(readies)
+          ANCESTREE_SESSION=$secret "$APP" &
+          port=$(ready "$before")
+
+          # A second family, opened, with someone in it and a backup of its own.
+          added=$(as_window -H 'content-type: application/json' -d '{"name": "Keluarga Contoh"}' \
+            "http://127.0.0.1:$port/api/desktop/families" | "$PY" -c "import json, sys; print(json.load(sys.stdin)['added'])")
+          before=$(readies)
+          as_window -X POST "http://127.0.0.1:$port/api/desktop/families/$added/open" > /dev/null
+          port=$(ready "$before")
+          as_window -H 'content-type: application/json' -d '{"full_name": "Fatimah binti Yusof", "gender": "female"}' \
+            "http://127.0.0.1:$port/api/persons" > /dev/null
+          as_window -H 'content-type: application/json' -d '{"format": "archive"}' \
+            "http://127.0.0.1:$port/api/exports" > /dev/null  # Back up now
+          as_window "http://127.0.0.1:$port/api/desktop/removing" > "$RUNNER_TEMP/removing.json"
+          "$PY" - "$RUNNER_TEMP/removing.json" <<'EOF'
+          import json, sys
+          here = json.load(open(sys.argv[1], encoding="utf-8"))
+          print(json.dumps(here, indent=1))
+          assert here["installed"] is True
+          found = [(family["name"], family["backups"] > 0) for family in here["families"]]
+          assert found == [("My family", True), ("Keluarga Contoh", True)], found
+          EOF
+
+          as_window -H 'content-type: application/json' -d '{"families": "delete"}' \
+            "http://127.0.0.1:$port/api/desktop/removing/remove"
+          echo
+          for i in $(seq 1 60); do running || break; sleep 2; done
+          if running; then echo "AncesTree is still running"; exit 1; fi
+          grep -E "removing AncesTree|uninstaller|start at sign-in off" "$DATA/logs/shell.log" || true
+          if [ "$RUNNER_OS" = Windows ]; then
+            # The stand-in starts on its own as AncesTree goes, and may write a moment after.
+            for i in $(seq 1 30); do [ -s "$RUNNER_TEMP/uninstaller-said.txt" ] && break; sleep 1; done
+            cat "$RUNNER_TEMP/uninstaller-said.txt"
+            grep -q "/DELETEFAMILIES" "$RUNNER_TEMP/uninstaller-said.txt"
+            [ -f "$DATA/families.json" ]  # the stand-in removed nothing
+          fi
+
+      # The Mac and Linux: AncesTree's folder, every family's in it, in the Bin, whole; start at
+      # sign-in off; the app itself left for the person to drag to the Bin.
+      - name: AncesTree's folder is in the Bin
+        if: runner.os != 'Windows'
+        run: |
+          [ ! -e "$DATA/families.json" ] || { echo "AncesTree's folder is still there"; ls -la "$DATA"; exit 1; }
+          [ -e "$APP" ]
+          case "$RUNNER_OS" in
+            macOS)
+              [ ! -e "$HOME/Library/LaunchAgents/AncesTree.plist" ]
+              # The Mac may keep its Bin from a script's eyes; the folder has left its place.
+              ls -d "$HOME/.Trash/$APP_ID"* 2> /dev/null || echo "::notice::The Bin can't be listed here"
+              ls "$HOME/.Trash/$APP_ID"*/families.json 2> /dev/null || true ;;
+            Linux)
+              [ ! -e "$HOME/.config/autostart/AncesTree.desktop" ]
+              trash="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
+              binned=$(ls -d "$trash/files/$APP_ID"* | head -n 1)
+              ls "$binned/families.json" "$binned"/backups/ancestree-backup-*.zip
+              ls "$binned"/families/*/backups/ancestree-backup-*.zip
+              cat "$trash/info/$(basename "$binned").trashinfo" ;;
+          esac
+
+      # Windows: the note AncesTree keeps for its uninstaller names both families. GitHub's
+      # machine reaches no Google, so for the keeper's warning the first family is made the one
+      # this computer keeps, in its family folder's setup.json, and the note written again by
+      # the engine's own code.
+      - name: The note for the uninstaller
+        if: runner.os == 'Windows'
+        working-directory: backend
+        run: |
+          uv run --locked python - "$DATA" <<'EOF'
+          import configparser, json, sys
+          from pathlib import Path
+          from ancestree.desktop import removing
+          from ancestree.desktop.families import Families
+          root = Path(sys.argv[1])
+          def read():
+              note = configparser.ConfigParser(interpolation=None)
+              note.read_string((root / removing.NOTE).read_text(encoding="utf-16"))
+              return note
+          note = read()
+          print({section: dict(note[section]) for section in note.sections()})
+          assert note["AncesTree"]["families"] == "2"
+          assert [note[f"family{n}"]["folder"] for n in (1, 2)] == ["My family", "Keluarga Contoh"]
+          assert note["AncesTree"]["warning"] == ""
+          setup = root / "family" / "familyfolder" / "setup.json"
+          setup.parent.mkdir(parents=True, exist_ok=True)
+          setup.write_text(json.dumps({"role": "keeper"}), encoding="utf-8")
+          removing.write_note(Families.load(root))
+          assert read()["AncesTree"]["warning"].startswith("This computer keeps My family.")
+          EOF
+
+      # Its page, opened as the app opens it, with the families' box ticked: read through
+      # Windows' UI Automation, and pictured; then cancelled, which removes nothing.
+      - name: The uninstaller's page, with the keeper's warning
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms, System.Drawing
+          $auto = [System.Windows.Automation.AutomationElement]
+          $scope = [System.Windows.Automation.TreeScope]
+          $every = [System.Windows.Automation.Condition]::TrueCondition
+          function Uninstaller { $auto::RootElement.FindAll($scope::Children, $every) | Where-Object { $_.Current.Name -like 'AncesTree*Uninstall*' } | Select-Object -First 1 }
+          Start-Process (Join-Path $env:LOCALAPPDATA 'AncesTree\uninstall.exe') -ArgumentList '/DELETEFAMILIES'
+          $window = $null
+          for ($i = 0; $i -lt 60 -and -not $window; $i++) { Start-Sleep -Seconds 1; $window = Uninstaller }
+          if (-not $window) { throw "The uninstaller's page never showed" }
+          Start-Sleep -Seconds 2
+          $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $picture = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+          [System.Drawing.Graphics]::FromImage($picture).CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+          $picture.Save((Join-Path $env:RUNNER_TEMP 'uninstall-page.png'))
+          $all = @($window.FindAll($scope::Descendants, $every))
+          $all | ForEach-Object { Write-Host ('  {0}: {1}' -f $_.Current.ControlType.ProgrammaticName, $_.Current.Name) }
+          # UI Automation names Nullsoft's controls but calls each a pane, so a box's tick is
+          # read from the box itself, and Cancel pressed the same way, through Windows' messages.
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          using System.Text;
+          public static class Page {
+            delegate bool Each(IntPtr window, IntPtr data);
+            [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, Each each, IntPtr data);
+            [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int size);
+            [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr size, StringBuilder text);
+            [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr window, uint message, IntPtr w, IntPtr l);
+            [DllImport("user32.dll")] static extern bool PostMessage(IntPtr window, uint message, IntPtr w, IntPtr l);
+            public static IntPtr Button(IntPtr page, string starts) {
+              IntPtr found = IntPtr.Zero;
+              EnumChildWindows(page, (window, data) => {
+                var kind = new StringBuilder(64);
+                GetClassName(window, kind, kind.Capacity);
+                var text = new StringBuilder(1024);
+                SendMessage(window, 0x000D, (IntPtr)text.Capacity, text);  // WM_GETTEXT
+                if (kind.ToString() == "Button" && text.ToString().StartsWith(starts)) { found = window; return false; }
+                return true;
+              }, IntPtr.Zero);
+              return found;
+            }
+            public static bool Ticked(IntPtr box) { return SendMessage(box, 0x00F0, IntPtr.Zero, IntPtr.Zero) == (IntPtr)1; }  // BM_GETCHECK: BST_CHECKED
+            public static void Press(IntPtr button) { PostMessage(button, 0x00F5, IntPtr.Zero, IntPtr.Zero); }  // BM_CLICK
+          }
+          '@
+          $page = [IntPtr] $window.Current.NativeWindowHandle
+          function Ticked([string] $starts) {
+            $box = [Page]::Button($page, $starts)
+            if ($box -eq [IntPtr]::Zero) { throw "No box: $starts" }
+            return [Page]::Ticked($box)
+          }
+          if (-not (Ticked 'Also delete the families from this computer:')) { throw "The families' box isn't ticked" }
+          if (-not (Ticked 'But keep the backups: move them to Documents\AncesTree backups.')) { throw "But keep the backups isn't ticked" }
+          $said = ($all | ForEach-Object { $_.Current.Name }) -join "`n"
+          foreach ($words in @('This computer keeps My family.', 'None of its backups has been copied to another place in the last 7 days.', 'Hand the family to someone else', 'are never touched')) {
+            if (-not $said.Contains($words)) { throw "The page doesn't say: $words" }
+          }
+          $cancel = [Page]::Button($page, 'Cancel')
+          if ($cancel -eq [IntPtr]::Zero) { throw 'No Cancel button' }
+          [Page]::Press($cancel)
+          for ($i = 0; $i -lt 30 -and (Uninstaller); $i++) { Start-Sleep -Seconds 1 }
+          if (Uninstaller) { throw "The uninstaller didn't close" }
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'app.ancestree.desktop\families.json'))) { throw 'Cancelled, yet the families went' }
+
+      # Uninstalled silently with the families' box ticked: every family's backups are in
+      # Documents\AncesTree backups, each in a folder of its name; the rest is gone.
+      - name: Uninstalled with the families, the backups kept in Documents
+        if: runner.os == 'Windows'
+        run: |
+          "$LOCALAPPDATA/AncesTree/uninstall.exe" //S //DELETEFAMILIES
+          # It carries on from a copy of itself: until AncesTree's folder has gone.
+          for i in $(seq 1 60); do [ -e "$DATA/families.json" ] || break; sleep 2; done
+          documents=$(cygpath -u "$(powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')" | tr -d '\r')")
+          ls -R "$documents/AncesTree backups"
+          ls "$documents/AncesTree backups/My family"/ancestree-backup-*.zip
+          ls "$documents/AncesTree backups/Keluarga Contoh"/ancestree-backup-*.zip
+          [ ! -e "$DATA/families.json" ]
+          [ ! -e "$LOCALAPPDATA/AncesTree/AncesTree.exe" ]
+
       - name: What the app wrote, when something failed
         if: failure()
         run: |
@@ -365,4 +596,14 @@ jobs:
             ${{ env.DATA }}/bench.json
             ${{ env.DATA }}/logs/
             ${{ env.DATA }}/neo4j/store/logs/
+          if-no-files-found: warn
+
+      # The uninstaller's page as pictured, on its own: on Windows it's on another drive than
+      # the app's files, and one upload can't take both.
+      - name: Keep the uninstaller's page
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: uninstall-page-${{ runner.os }}
+          path: ${{ runner.temp }}/uninstall-page.png
           if-no-files-found: warn

@@ -916,8 +916,9 @@ export interface paths {
         put?: never;
         /**
          * Save Download
-         * @description Save an export or backup, the import template or its example, or an import's report, in
-         *     the Downloads folder: under its own name, or with " (2)" if that's taken.
+         * @description Save an export or backup, the import template or its example, an import's report, or the
+         *     family's Google project's client file (the keeper's), in the Downloads folder: under its own
+         *     name, or with " (2)" if that's taken.
          */
         post: operations["save_download"];
         delete?: never;
@@ -2174,8 +2175,8 @@ export interface components {
         /**
          * AtParents
          * @description Where someone with no place of their own lives: their parents' place, and
-         *     whose, the app's alone, never written in. Their mother's when the parents live apart,
-         *     unless their father's is chosen.
+         *     whose, the app's alone, never written in. When the parents live apart, the one they sit
+         *     under on the tree laid out from the oldest ancestor, unless the other is chosen.
          */
         AtParents: {
             place: components["schemas"]["Place"];
@@ -2328,6 +2329,26 @@ export interface components {
             sources?: string[];
             /** Base Version */
             base_version: string;
+        };
+        /**
+         * BirthParents
+         * @description A child with more than two birth parents, stored before 0.8.7: What's missing
+         *     offers to take out `link`, the newest of their links. `parents` in the order they were
+         *     linked, its parent last.
+         */
+        BirthParents: {
+            /**
+             * Child
+             * Format: uuid
+             */
+            child: string;
+            /** Parents */
+            parents: string[];
+            /**
+             * Link
+             * Format: uuid
+             */
+            link: string;
         };
         /** Body_add_backup */
         Body_add_backup: {
@@ -2619,7 +2640,7 @@ export interface components {
              * What
              * @enum {string}
              */
-            what: "export" | "template" | "example" | "report";
+            what: "export" | "template" | "example" | "report" | "client";
             /** Name */
             name?: string | null;
             /** Id */
@@ -3015,6 +3036,10 @@ export interface components {
             unlinked: string[];
             /** Centre Chosen */
             centre_chosen: boolean;
+            /** Loops */
+            loops?: components["schemas"]["ParentLoop"][];
+            /** Three Birth Parents */
+            three_birth_parents?: components["schemas"]["BirthParents"][];
         };
         /**
          * GraphLink
@@ -3508,6 +3533,8 @@ export interface components {
              * @default 0
              */
             restored: number;
+            /** Left Out */
+            left_out?: string[];
             /**
              * Reverted
              * @default 0
@@ -4211,6 +4238,21 @@ export interface components {
             term?: string | null;
         };
         /**
+         * ParentLoop
+         * @description A loop of parents stored before 0.8.7: A is B's parent, B is C's, C is A's. The
+         *     tree is seated without `link`, the newest in it, which What's missing offers to take out.
+         *     `people` go down the loop from that link's child to its parent.
+         */
+        ParentLoop: {
+            /**
+             * Link
+             * Format: uuid
+             */
+            link: string;
+            /** People */
+            people: string[];
+        };
+        /**
          * Parents
          * @description "Hassan & Mariam, 4 children".
          */
@@ -4640,6 +4682,8 @@ export interface components {
             restored_links: number;
             /** Skipped Links */
             skipped_links: number;
+            /** Left Out */
+            left_out?: string[];
         };
         /**
          * ReviewChanges

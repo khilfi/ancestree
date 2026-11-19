@@ -24,6 +24,7 @@ from ancestree.domain.relationship import BIOLOGICAL, SpouseStatus
 from ancestree.domain.views import PersonSaved
 from ancestree.exchange.spreadsheet import shown
 from ancestree.media.photos import Crop
+from ancestree.repo import history as history_repo
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import links as links_repo
 from ancestree.repo import people as people_repo
@@ -151,8 +152,11 @@ async def _merge(tx: Tx, keep_id: str, other_id: str) -> _Merged:
             await links_repo.delete_link(tx, str(props["id"]))
             merged.links.append(MergeLink(description=description, outcome="between"))
             continue
+        # The one kept as the other was, the same way round: the other's child isn't
+        # "linked already" to the one kept as their parent.
+        source = keep_id if link["source"] == other_id else end
         if any(
-            existing["type"] == link["type"]
+            existing["type"] == link["type"] and (spouse or existing["source"] == source)
             for existing in await links_repo.links_between(tx, keep_id, end)
         ):
             merged.links.append(MergeLink(description=description, outcome="already"))
@@ -162,23 +166,18 @@ async def _merge(tx: Tx, keep_id: str, other_id: str) -> _Merged:
         try:
             if spouse:
                 status = SpouseStatus(props.get("status") or SpouseStatus.MARRIED)
-                await add_spouse(tx, keep_id, end, status, people)
+                # Its place among their marriages, as it had.
+                await add_spouse(tx, keep_id, end, status, people, order=props.get("order"))
             else:
                 parent, child = (keep_id, end) if link["source"] == other_id else (end, keep_id)
                 kind = str(props.get("kind") or BIOLOGICAL)
+                if child == keep_id and kinds.get(kind) is not None and kinds[kind].blood:
+                    await _one_of_each(tx, keep, parent, people)
                 await add_parent(tx, parent, child, kind, kinds, people, allow_hidden=True)
         except RuleError as error:
-            # Back as it was, with the other: it goes to the Trash with them.
-            if spouse:
-                await links_repo.create_spouse_link(
-                    tx, str(props["id"]), link["source"], link["target"],
-                    str(props.get("status") or SpouseStatus.MARRIED.value),
-                )  # fmt: skip
-            else:
-                await links_repo.create_parent_link(
-                    tx, str(props["id"]), link["source"], link["target"],
-                    str(props.get("kind") or BIOLOGICAL),
-                )  # fmt: skip
+            # Back exactly as it was, with the other, when it was made and all: so Undo
+            # finds it unchanged. It goes to the Trash with them.
+            await history_repo.create_links(tx, [link])
             merged.links.append(
                 MergeLink(description=description, outcome="left_out", why=error.message)
             )
@@ -186,6 +185,25 @@ async def _merge(tx: Tx, keep_id: str, other_id: str) -> _Merged:
         merged.links.append(MergeLink(description=description, outcome="moved"))
         merged.ends.add(end)
     return merged
+
+
+_BIRTH_PARENT = {Gender.MALE: "birth father", Gender.FEMALE: "birth mother"}
+
+
+async def _one_of_each(tx: Tx, keep: Props, parent: str, people: Mapping[str, Props]) -> None:
+    """A birth parent of the other's, for the one kept, counted by gender: refused where
+    the one kept has a birth father, or mother, already, and said which. Moved first, a second
+    father would have left the mother out as a third parent."""
+    gender = Gender(people[parent].get("gender") or Gender.UNKNOWN)
+    if gender not in _BIRTH_PARENT:
+        return
+    for row in await links_repo.blood_parents(tx, str(keep["id"])):
+        theirs = await people_repo.fetch_person(tx, str(row["id"])) or {}
+        if Gender(theirs.get("gender") or Gender.UNKNOWN) is gender:
+            raise RuleError(
+                "second_birth_parent",
+                f"{keep['full_name']} has a {_BIRTH_PARENT[gender]} already: {row['name']}.",
+            )
 
 
 def _has_story(ctx: Context, person_id: str) -> bool:

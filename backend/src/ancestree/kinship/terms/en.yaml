@@ -19,6 +19,9 @@
 #                    A (siblings), against A's parent (uncles), B's parent against A
 #                    (nephews), their parents (cousins); for in-laws, the sibling in between
 # each either one word, or split by gender: {elder: {male: ..., female: ...}}.
+# A spouse's other spouse ("==") from marriages not known to have overlapped, as when the
+# first wife died before her husband, takes its `apart` words, or `late` ones where the
+# one they both married has died: never "co-wife".
 # Where a language has no word, the relation is said in pieces ("wife's sister's husband").
 #
 # `dictionary` (at the end) adds what only the Kinship dictionary shows, by the rows of
@@ -98,7 +101,10 @@ in_law:
   "ud=": {male: brother-in-law, female: sister-in-law, unknown: sibling-in-law}
   "=ud=": {}                            # no English word: said as "wife's sister's husband"
   "d=u": {any: co-parent-in-law}        # a child's spouse's parent
-  "==": {female: co-wife}               # another wife of one's husband; others in pieces
+  "==":                                 # another wife of one's husband; others in pieces
+    female: co-wife                     # only for marriages that overlapped
+    apart: {female: "husband's other wife"}
+    late: {female: "late husband's other wife"}
   "uud=": {male: uncle by marriage, female: aunt by marriage, unknown: "parent's sibling's spouse"}
   "dd=": {male: grandson-in-law, female: granddaughter-in-law, unknown: grandchild-in-law}
 

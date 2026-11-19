@@ -64,7 +64,7 @@ struct LoadingPage(Mutex<Option<Url>>);
 const TEST_SETTINGS: bool = cfg!(any(debug_assertions, feature = "test-settings"));
 
 /// A setting for tests and development alone: ANCESTREE_SESSION, _ENGINE, _UPDATE_URL,
-/// _DOWNLOADS or _BENCH, from the environment where `allowed`.
+/// _DOWNLOADS, _BENCH or _UNINSTALLER, from the environment where `allowed`.
 fn test_setting_in(allowed: bool, name: &str) -> Option<String> {
     if allowed {
         std::env::var(name).ok()
@@ -247,6 +247,12 @@ fn start_engine(app: &AppHandle) -> std::io::Result<()> {
                     let app = app.clone();
                     std::thread::spawn(move || restart_engine(&app, &family));
                 }
+                // Remove AncesTree from this computer, from Settings → About.
+                Some("remove") => {
+                    let families = event["families"].as_str() == Some("delete");
+                    let app = app.clone();
+                    std::thread::spawn(move || remove_app(&app, families));
+                }
                 // How the family stands with its family folder, each round (0.4.0).
                 Some("in-step") => {
                     let text = event["text"].as_str();
@@ -312,6 +318,78 @@ fn stop_engine(app: &AppHandle) {
     }
     let _ = child.kill();
     log(app, "engine didn't stop within 45s: killed");
+}
+
+/// The uninstaller's word for its families' box, ticked as it opens: the families go too,
+/// their backups kept in Documents first unless that's unticked there (windows/hooks.nsh).
+#[cfg(windows)]
+const DELETE_FAMILIES: &str = "/DELETEFAMILIES";
+
+/// Windows' uninstaller, beside the app; in the tests, a stand-in named in ANCESTREE_UNINSTALLER.
+#[cfg(windows)]
+fn uninstaller() -> std::io::Result<PathBuf> {
+    if let Some(path) = test_setting("ANCESTREE_UNINSTALLER") {
+        return Ok(PathBuf::from(path));
+    }
+    Ok(std::env::current_exe()?.with_file_name("uninstall.exe"))
+}
+
+/// Remove AncesTree from this computer, once Settings → About has said what goes and what
+/// stays. The window and the icon go, and the engine stops. On Windows the uninstaller takes
+/// over, with the families' box ticked if they're to go. On the Mac and Linux, which have none,
+/// start at sign-in goes; and if the families are to go, the engine moves AncesTree's folder to
+/// the Bin, from where it can be put back whole. Nothing is written in it after that, this log
+/// included.
+fn remove_app(app: &AppHandle, families: bool) {
+    #[cfg(windows)]
+    let uninstall = match uninstaller() {
+        Ok(path) if path.is_file() => path,
+        found => {
+            log(app, &format!("no uninstaller to remove AncesTree with ({found:?})"));
+            return;
+        }
+    };
+    log(app, &format!("removing AncesTree (the families too: {families})"));
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+    if let Some(tray) = app.tray_by_id("main") {
+        let _ = tray.set_visible(false);
+    }
+    stop_engine(app);
+    #[cfg(windows)]
+    {
+        let mut command = Command::new(&uninstall);
+        if families {
+            command.arg(DELETE_FAMILIES);
+        }
+        if let Err(error) = command.spawn() {
+            log(app, &format!("the uninstaller couldn't start: {error}"));
+            if let Some(tray) = app.tray_by_id("main") {
+                let _ = tray.set_visible(true);
+            }
+            restart_engine(app, "");
+            show_main(app);
+            return;
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let off = app.autolaunch().disable();
+        log(app, &format!("start at sign-in off ({off:?})"));
+        if families {
+            // The engine's last word, said from outside the folder it moves: nothing after it.
+            let _ = Command::new(engine_program(app))
+                .arg("--data")
+                .arg(data_dir(app))
+                .arg("--to-bin")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+    }
+    app.exit(0);
 }
 
 /// The window and the icon go at once; Neo4j takes some seconds more to close its connections.
@@ -861,6 +939,21 @@ mod tests {
         assert!(public
             .verify(b"AncesTree's update, changed", &signature, false)
             .is_err());
+    }
+
+    /// Removing AncesTree starts the uninstaller beside the app; the tests name a stand-in,
+    /// so no test ever starts a real one.
+    #[cfg(windows)]
+    #[test]
+    fn the_uninstaller_is_the_one_beside_the_app_or_a_stand_in() {
+        std::env::remove_var("ANCESTREE_UNINSTALLER");
+        let beside = uninstaller().expect("the uninstaller's place");
+        let program = std::env::current_exe().expect("this program's place");
+        assert_eq!(beside.file_name().and_then(|name| name.to_str()), Some("uninstall.exe"));
+        assert_eq!(beside.parent(), program.parent());
+        std::env::set_var("ANCESTREE_UNINSTALLER", r"C:\made-up\stand-in.cmd");
+        assert_eq!(uninstaller().unwrap(), PathBuf::from(r"C:\made-up\stand-in.cmd"));
+        std::env::remove_var("ANCESTREE_UNINSTALLER");
     }
 
     #[test]

@@ -26,6 +26,7 @@ import os
 import re
 import secrets
 import shutil
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -68,6 +69,9 @@ class Family:
     # next opens, which it is once.
     example: bool = False
     fill: bool = False
+    # When its backups were last saved to a folder by Remove AncesTree from this computer… (D88):
+    # a copy in another place, as the uninstaller's note counts them.
+    saved: str = ""
 
 
 @dataclass(frozen=True)
@@ -95,6 +99,8 @@ class Families:
     open_id: str = ""
     families: list[Family] = field(default_factory=list)
     removed: list[Family] = field(default_factory=list)
+    # Told after each save: the engine keeps the uninstaller's note in step with it.
+    saved: Callable[[Families], object] | None = field(default=None, repr=False, compare=False)
 
     @classmethod
     def load(cls, root: Path, first_name: str = "My family") -> Families:
@@ -129,6 +135,8 @@ class Families:
         partial = self.root / f"{FILE}.part"
         partial.write_text(json.dumps(saved, indent=1, ensure_ascii=False), encoding="utf-8")
         os.replace(partial, self.root / FILE)
+        if self.saved is not None:
+            self.saved(self)
 
     # Finding
 

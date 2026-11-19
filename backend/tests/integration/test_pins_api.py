@@ -190,13 +190,13 @@ DOWNLOADED = Gazetteer([
 ])  # fmt: skip
 
 
-async def wait_for(client: httpx.AsyncClient, label: str) -> None:
+async def wait_for(client: httpx.AsyncClient, person: dict[str, Any], exact: str) -> None:
+    """Until where they live is placed this exactly: in the background, no Undo step."""
     for _ in range(100):
-        step = (await client.get("/api/history")).json()["undo"]
-        if step is not None and step["label"] == label:
+        if (await get_person(client, person["id"]))["residence"]["exact"] == exact:
             return
         await asyncio.sleep(0.05)
-    raise AssertionError(f"no step {label!r}")
+    raise AssertionError(f"{person['full_name']} wasn't placed to the {exact}")
 
 
 async def test_a_countrys_places_coming_place_its_addresses_more_exactly(
@@ -213,11 +213,12 @@ async def test_a_countrys_places_coming_place_its_addresses_more_exactly(
         monkeypatch.setattr(placing, "gazetteer", lambda: DOWNLOADED)  # Malaysia's, come
 
         app.state.map_packs.places_changed("my", True)
-        await wait_for(client, "1 address in Malaysia placed more exactly")
+        await wait_for(client, aina, "postcode")
         home = (await get_person(client, aina["id"]))["residence"]
         assert (home["lat"], home["lon"], home["exact"]) == (6.1188, 102.2501, "postcode")
         assert (await get_person(client, hassan["id"]))["residence"]["exact"] == "hand"
         assert (await client.get("/api/map/packs")).json()["placed"] == {"my": 1}
+        assert (await client.get("/api/history")).json()["undo"]["label"] == "Add Hassan bin Ismail"
 
 
 async def test_a_relatives_computer_leaves_its_pins_to_the_keepers(

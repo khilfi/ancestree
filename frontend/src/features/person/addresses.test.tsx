@@ -241,6 +241,22 @@ describe("living at their parents'", () => {
     expect((await saved()).lives_with).toBe("father");
   });
 
+  it("starts the choice at the parent they're shown with, the one they sit under", () => {
+    answer();
+    const atFather = { place: place(), whose: "father" as const, district: "Hulu Langat" };
+    show(
+      <PersonForm
+        person={{ ...aina, residence_at_parents: atFather }}
+        onSaved={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const father = document.querySelector("#lives-with-father");
+    const mother = document.querySelector("#lives-with-mother");
+    expect(father?.getAttribute("aria-checked")).toBe("true");
+    expect(mother?.getAttribute("aria-checked")).toBe("false");
+  });
+
   it("offers Lives elsewhere alone when the parents live together, and nothing once there's a place", async () => {
     answer();
     show(

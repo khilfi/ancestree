@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
+from pydantic import ValidationError
+
 from ancestree.domain.person import Gender, PartialDate, Person, Place, death_places
 from ancestree.domain.requests import PersonInput
 
@@ -139,3 +141,48 @@ def place_from(prefix: str, props: Mapping[str, Any]) -> Place | None:
     if all(value is None for value in values.values()):
         return None
     return Place.model_validate({k: v for k, v in values.items() if v is not None})
+
+
+_DATES = (("birth", "date of birth"), ("death", "date of death"))
+
+
+def unreadable(props: Mapping[str, Any]) -> str | None:
+    """Why someone's stored dates or places can't be read as the app reads them, or None:
+    "Ali's date of birth can't be read: February 1950 has no day 31". A restore refuses one,
+    and the family folder keeps the keeper's instead."""
+    name = str(props.get("full_name") or "Someone")
+    for prefix, what in _DATES:
+        try:
+            date_from_props(prefix, props)
+        except ValidationError as error:
+            return f"{name}'s {what} can't be read: {_why(error)}"
+    died = f"where {name} died" if death_places() else f"a place kept for {name}"
+    for prefix, where in (
+        ("birth", f"where {name} was born"),
+        ("death", died),  # unshown: not named
+        ("residence", f"where {name} lives"),
+    ):
+        try:
+            place_from(prefix, props)
+        except ValidationError as error:
+            return f"{where} can't be read: {_why(error)}"
+    return None
+
+
+def _why(error: ValidationError) -> str:
+    first = error.errors()[0]
+    said = str(first["msg"]).removeprefix("Value error, ")
+    part = ".".join(str(step) for step in first.get("loc", ()))
+    return f"{said} ({part})" if part else said
+
+
+def whole_of(name: str) -> str:
+    """The detail a stored property is part of: "birth_day" is part of the date of birth,
+    "residence_lat" of where they live. Any other property is a detail of its own. A date or a
+    place only ever changes whole, so it travels whole between computers."""
+    prefix, _, part = name.partition("_")
+    if prefix in ("birth", "death") and part in _DATE_FIELDS:
+        return f"{prefix}_date"
+    if prefix in ("birth", "death", "residence") and part in _PLACE_FIELDS:
+        return f"{prefix}_place"
+    return name

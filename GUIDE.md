@@ -47,7 +47,7 @@ The guide is inside AncesTree too, for the version you have, without the interne
 23. [Keep your computer safe](#23-keep-your-computer-safe)
 24. [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)
 25. [When something goes wrong](#25-when-something-goes-wrong)
-26. [Removing AncesTree](#26-removing-ancestree)
+26. [Removing AncesTree](#26-removing-ancestree): [from this computer](#remove-ancestree-from-this-computer), [Windows' uninstaller](#windows-uninstaller)
 27. [Linux](#27-linux)
 
 ---
@@ -269,7 +269,7 @@ The bar along the top:
 
 Some show only their icon unless the window is wide, such as Export, Dictionary and Settings, and more in a smaller window. **Guide** shows only its **?** unless the window is very wide. Point at an icon to see its name.
 
-Undo works for almost everything: adding, changing, linking and removing people. Press **Ctrl+Z** to undo and **Ctrl+Y** to redo. Undo reaches back to when AncesTree last started.
+Undo works for almost everything: adding, changing, linking and removing people. Press **Ctrl+Z** to undo and **Ctrl+Y** to redo. Undo reaches back to when AncesTree last started. An undo is done whole or not at all: if part of it can't be put back, nothing is, and it says why.
 
 To find someone quickly, click **Search people…** (or press **Ctrl+K**), and type part of their name or nickname. Click a name to fly to them on the tree. Typing the start of two words also works: "sit rah" finds Siti binti Rahman.
 
@@ -448,9 +448,10 @@ Every box in the form grows as you type, so a long name or address shows whole. 
 *Asked before saving:* if someone has an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, and keeps the town where they were born. **Save as it is** saves it as you wrote it.
 
 *No place of their own:* someone with nothing under **Where they live now** is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
-- if the parents live in different places, it's their mother's. Choose **At their father's** to show them with their father instead;
+- if the parents live in different places, it's the place of the parent they sit under on the tree, laid out from the oldest ancestor, whichever person the tree is centred on now. Choose **At their mother's** or **At their father's** to show them with the other instead;
 - if they don't live with their parents, tick **Lives elsewhere** (or choose it), and they're shown nowhere until their place is known;
-- it's never someone who has died, and never their grandparents' place: only their parents' own.
+- it's never someone who has died, and never their grandparents' place: only their parents' own;
+- it's only a parent by birth or adoption who's alive: never a parent who has died, a foster parent or a guardian.
 
 ### Adding a relative
 
@@ -462,7 +463,7 @@ Every box in the form grows as you type, so a long name or address shows whole. 
 3. Choose **Someone new**, and type their name and anything else you know. Or choose **Already in the tree**, and find them by name.
 4. Click **Add** (or **Link**).
 
-A new brother or sister shares the parents already recorded. If none are recorded, an "unknown parent" joins them for now, shown as **?** on the tree. Click the **?** later to fill them in.
+A new brother or sister shares the parents already recorded. If none are recorded, an "unknown parent" joins them for now, shown as **?** on the tree. Click the **?** later to fill them in. An unknown parent goes to the Trash with the last of their children, and comes back with whichever of them comes back first.
 
 ### Linking two people already in the tree
 
@@ -478,6 +479,10 @@ To change or remove a link, click the line between the two people, or use the **
 ### Birth order
 
 AncesTree works out who's eldest from their dates of birth. When it can't be sure, the **Relatives** tab says so: drag the children into order, eldest first, by the handle beside each name.
+
+A date that's only *about*, *before* or *between* decides only where it can't overlap the other: *about 1945* against *1942* could be either way round. Until an order is set, the words that depend on it say both, such as *pakdhé / paklik* in Basa Jawa, and *mak cik* rather than *mak su*.
+
+An order you set stays when a child is added later. The new child takes their place by their date of birth, or comes last if they have none, until you drag them into place.
 
 ### Photos
 
@@ -505,6 +510,8 @@ To crop it again later, click the circle and **Adjust crop**. **Remove** takes t
 
 Everything can be brought back, photo included, for 30 days: click **Undo** at once, or open **Settings → Trash** and click **Restore** beside them.
 
+Their links come back with them, checked as a new link is. One that the tree's rules now refuse stays out, and AncesTree says which and why: say, if they'd become their own ancestor, or a child they're a birth parent of has been given two other birth parents since.
+
 ![The Trash, with one person in it](guide/app-settings-trash.png)
 
 ### Kinds of parent link
@@ -530,7 +537,9 @@ Only birth links count as blood, for the tree's lineage and the relationship fin
 3. Check what will happen: the details and links that move across, and the photo and life story.
 4. Click **Make them one person**.
 
-The one you kept takes the other's details, photo and life story where they have none, and all of their links. The other goes to the Trash. **Undo** puts them back as two, photos and stories too.
+The one you kept takes the other's details, photo and life story where they have none, and all of their links, each marriage in its place among theirs. The other goes to the Trash. **Undo** puts them back as two, photos and stories too.
+
+A link that can't move stays with the other, and the check says why: a birth father, say, where the one you kept has one already. Their birth mother still moves across.
 
 AncesTree offers it where someone may be in the tree twice, with the two already chosen:
 
@@ -601,7 +610,8 @@ The answer appears in the panel, and the path between them lights up on the tree
 - **English**, **Melayu** and **Jawa** switch the language of the answer.
 - **What does this mean?** explains it, for example by their shared grandparents.
 - **The other way round** gives the answer from the second person's side.
-- **Also related as…** shows other ways they're related, if there are any.
+- **Also related as…** shows other ways they're related, if there are any. Two ways that say it equally well are both shown, the same whichever of the two you start from. One said the same way twice, as for a great-grandson by both his parents, says the other way round under it.
+- A husband's other wife is a *co-wife* (*madu*) only where both were married to him at the same time. One who died before he married again is *her husband's other wife*, or *her late husband's other wife* once he has died.
 - **Swap** swaps the two people. **Pick another person** compares the first person with someone else. **Done** finishes.
 
 ## 11. Me: telling AncesTree who you are
@@ -690,7 +700,7 @@ The biggest countries come in parts, one for each state or province: the United 
 
 Each part is checked before it's used, and kept on your computer, so the map looks nothing up online as you use it. **Remove** takes a country off again, its places with it.
 
-When a country's places come, AncesTree looks again at everyone there whose pin was placed only by their town or postcode area, and moves each to a better spot where it now knows one. Nothing you placed by hand moves. **Settings → Map** says how many moved, and **Undo** takes them all back. On a relative's computer this is left to the keeper's, so it doesn't send them changes to look at: the better pins arrive from the keeper.
+When a country's places come, AncesTree looks again at everyone there whose pin was placed only by their town or postcode area, and moves each to a better spot where it now knows one. Nothing you placed by hand moves. **Settings → Map** says how many moved. It isn't one of your changes, so **Undo** and **Redo** stay as they were: they still take back, and put back, what you did. On a relative's computer this is left to the keeper's, so it doesn't send them changes to look at: the better pins arrive from the keeper.
 
 *Online address lookup:* where an address isn't found without the internet, a person's form offers to **Look it up online once** (see [The details](#the-details)). In **Settings → Map**, **Online address lookup** says whether it asks you first each time (**Ask each time**), goes ahead **Without asking**, or is **Never** offered. It's for this computer alone.
 
@@ -703,6 +713,10 @@ When a country's places come, AncesTree looks again at everyone there whose pin 
 ![Family facts](guide/app-family-facts.png)
 
 **What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address whose place on the map isn't confirmed (**Not confirmed on the map**: click **Confirm** where it's right, or **Place it**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
+
+At the top, rarely, **A loop of parents**: someone recorded as their own ancestor, "Ismail is Hassan's parent, Hassan is Ali's, and Ali is Ismail's". AncesTree refuses a link like that, but a family could store one before 0.8.7. The tree is drawn without the newest of its links, the likeliest mistake: click **Take out …** to take that one out, or open them and put it right. Undo can't put a link back that makes the loop again.
+
+Beside it, as rarely, **A child with three birth parents**: "Ali has three birth parents: Hassan, Siti and Yusof", which a family could store before 0.8.7 too. The newest link is the likeliest mistake: click **Take out …** to take it out, or open them and change its kind, to adoptive, say. Until it's put right, a relative's computer can't take the family in, so it's worth doing at once. Undo can't put it back.
 
 ![What's missing](guide/app-settings-missing.png)
 
@@ -777,6 +791,8 @@ Send the file by WhatsApp, email or a USB stick. A copy is the family as it is t
 AncesTree makes a backup first. **Undo** takes the whole import back. Later, **Take back…** under **Earlier imports** does the same.
 
 *Addresses:* the template has **Address**, **Postcode** and **District** columns, after **Lives in**: the district for a place with no postcode. AncesTree puts everyone it brings in with an address on the map, with no internet, as part of the import, and says before you import how many it found at their postcode's area, how many at their town, and how many it couldn't place. For someone already in the tree, an address written differently is shown as a change, unticked, for you to tick if it's right.
+
+*Dates and places:* dates are read as they're typed: *12/3/1950*, *3/1950*, *c. 1950*, *before 1900*, *1910-1915*, or a decade, *1950s*. A place is *Town, state*, with the country last when it isn't Malaysia, and each part is read for what the map knows it as. A state written alone is the state; *Melaka*, *Kuala Lumpur*, *Putrajaya* and *Labuan* alone are also the town of that name. Then: in *Taman Melati, Gombak*, Gombak is a place in Malaysia, not a country; a town of Singapore, Brunei or Thailand written alone, such as *Pattani*, is in its country. A postcode Excel has taken the leading zero from, *1000* for *01000*, isn't a change.
 
 *Where on the map:* **Location** is where they live as a phone's map gives it, such as `2.9927, 101.7909`. In Google Maps, press and hold the spot, then copy the numbers it shows. A location puts them on the map exactly there, as a pin, as if you'd placed it by hand.
 
@@ -943,6 +959,8 @@ sequenceDiagram
 ### Your keeper's answer
 
 When your keeper leaves something out, or writes you a note, **Settings** shows a number, and **Settings → You and your family → Family folder** shows **The keeper's answer**: their note, and what wasn't taken. What wasn't taken goes from your computer. Click **Got it** when you've read it.
+
+Your changes wait on your computer on top of the family as your keeper last sent it. When a newer family arrives, a date or a place you changed comes whole, never the keeper's month with your day. Each person and link you changed is checked first: one that can't come in with the keeper's family is as your keeper has it, and **Settings → You and your family → Family folder** says which, until the family next arrives.
 
 <img src="guide/relative-5-answer.png" alt="The keeper's answer: their note, and what wasn't taken" width="800">
 
@@ -1145,6 +1163,8 @@ Everything else stays on the keeper's computer: turning a computer away with **N
 - If the keeper's computer turned something down, both computers say why. For a code that isn't the one its request gives, call them again: let in only a computer whose code you've checked.
 - If your other computer is lost or stolen, click **Remove** beside it on the keeper's computer, which also takes away what it may do. Then change your Google password.
 - After you take the family back with the recovery code, or hand it over, your other computer may no longer invite and let in: turn **May invite and let in for me** on again. What it asked before isn't carried out a second time.
+- When a new version of AncesTree comes, update the keeper's computer first. A keeper's computer on a version before 0.8.7 turns down what an updated other computer asks, and says so: so after you remove a relative's computer, wait to invite them again, or let in, from your other computer until the keeper's computer has updated too.
+- Whether your other computer invited someone before or after you removed their computer is told by the family's record, not by the computers' clocks: an invitation made before the removal never keeps the folder shared with them.
 
 ### Changes waiting
 
@@ -1272,6 +1292,8 @@ A backup holds everything: people, links, photos, stories and settings. AncesTre
 
 Backups are kept for 3 months: the daily ones, those you make, and those AncesTree makes before an import or a restore. Older ones go to your computer's bin, the Recycle Bin on Windows, the Bin on a Mac or the Trash on Linux, where you can still put one back until it's emptied. The newest 3 always stay, however old, so a family you haven't opened for months keeps its backups. A backup you add from elsewhere is kept for 3 months from when you add it. To keep one longer, download it.
 
+The backups are kept in AncesTree's own folder, so they go if AncesTree is removed with its families: on Windows its uninstaller keeps them in `Documents\AncesTree backups` first, and on a Mac or Linux they go to the Bin with the folder. Before that, you can save them anywhere (see [Removing AncesTree](#26-removing-ancestree)).
+
 Open **Settings → Backups** to see them all.
 
 ![Backups in Settings](guide/app-settings-backups.png)
@@ -1286,6 +1308,8 @@ Open **Settings → Backups** to see them all.
 | Go back to a backup | Click **Restore…** beside it, then **Replace everything**. |
 
 Restoring replaces everything in the family with what the backup holds. Everything as it is just before is backed up first, so you can always go back. A backup of another family on this computer can't be restored into this one.
+
+A backup is checked as a change in the app is, before anything is replaced: every date and place, and every link. One whose family doesn't hang together, with a date that can't be read, a loop of parents, or a child with three birth parents, is refused, saying what's wrong, and nothing changes. Checking a backup, with its double tick, says the same.
 
 On a relative's computer, restoring is the keeper's alone: the family comes from the family folder.
 
@@ -1460,6 +1484,7 @@ Inside it:
 - `families`: each family added since, in a folder of its own, with the same three inside;
 - `removed`: families removed from this computer, for 30 days;
 - `families.json`: the list of the families, and which one is open;
+- `uninstall.ini`, on Windows: a note for AncesTree's uninstaller, of the families and where their backups are (see [Removing AncesTree](#26-removing-ancestree));
 - `logs`: notes AncesTree keeps of what it did. If something goes wrong, your keeper may ask for this folder.
 
 **Settings → About** shows where the open family's folders are.
@@ -1495,29 +1520,62 @@ Inside it:
 | **What … sends you couldn't be fetched just now** (the keeper) | Nothing to do: the rest of the family is in step, and AncesTree tries again every minute. If it stays, tell whoever looks after AncesTree. |
 | **That backup is of …, not …** | It's another family's backup. Open that family to restore it, or add it as a family of its own (see [Several families](#21-several-families-on-one-computer)). |
 | **That password doesn't open this backup** | Check the password the copies were locked with. Capitals matter. |
+| **The archive's graph.json doesn't hang together: …** (a restore) | The backup's family breaks the tree's rules: it says who and how. Restore an earlier backup, or put it right in the family it came from and back it up again. |
+| **…'s link to … can't come back: …** (the Trash) | That one link stays out, as the tree's rules now refuse it. The rest came back. Link them again in the right way, if it should be there. |
+| **This can't be undone any more: …** | Something changed since, or part of it would break the tree's rules. Nothing was undone. Put it right by hand. |
+| **What this computer changed about … can't be read**, or **A link made on this computer stays out** (a relative) | That change couldn't come in with your keeper's family, so it's as your keeper has it. Make it again, if it's still wanted. |
 | **… can't be reached: is its disk plugged in?** (Backups) | Plug in the USB stick or disk that holds the copies. They catch up by themselves. |
 | A photo won't go in | Photos can be up to 20 MB. Try a smaller copy. |
 | Something else | Note what it says, and tell your keeper. |
 
 ## 26. Removing AncesTree
 
-- *What it's for:* taking AncesTree off a computer.
+- *What it's for:* taking AncesTree off a computer, with the backups safe.
 - *Who does it:* everyone, on their own computer.
 - *Before you start:* if you're leaving the family, ask your keeper to remove your computer, and [leave the family folder](#leaving-the-family) first.
 
-*On Windows:*
+### What goes, and what comes back
 
-1. Click **Start**, then **Settings → Apps → Installed apps**.
-2. Click **…** beside AncesTree, then **Uninstall**.
-3. The uninstaller asks whether to **Delete the application data**:
-   - leave it unticked to keep the families and their backups on this computer, for if you install AncesTree again;
-   - tick it to remove them too.
+Removing AncesTree never touches the family folder in Google Drive, or the family's other computers. On this computer you choose whether its families go too: their people, photos, life stories, settings and backups.
 
-<!-- picture: guide/windows-6-uninstall.png (the uninstaller, with Delete the application data) -->
+| This computer | Its families kept, then AncesTree installed again | Its families deleted, then AncesTree installed again |
+|---|---|---|
+| A relative's | It carries on as before. | It joins again as a new computer: paste the invitation, and ask to join. Ask your keeper to remove the old one. |
+| The keeper's | It carries on as before. | On this computer or another: give AncesTree the family's Google project's client file, sign in with the keeper's Google account, and **Be the keeper again** with the recovery code. Without the recovery code, no computer can keep that family folder again. |
+| One without a family folder | It carries on as before. | Bring the family back from a backup: one kept in `Documents\AncesTree backups`, or elsewhere (see [Moving the family to another computer](#moving-the-family-to-another-computer)). |
 
-The same box appears if you install a new version over an old one and choose to uninstall the old one first. Leave it unticked there.
+So on the keeper's computer, before its families go: have the recovery code, the client file and the Google account to hand, or [hand the family to someone else](#hand-the-family-to-someone-else) first.
 
-*On a Mac:*
+### Remove AncesTree from this computer
+
+- *What it's for:* removing AncesTree with everything said first, on every system. On a Mac or Linux, it's the only way that removes the families too.
+- *Who does it:* everyone.
+
+1. Open **Settings → About**, and click **Remove AncesTree from this computer…**. It says what goes and what stays.
+2. To keep the backups somewhere first, click **Save the backups to a folder…**. Choose a USB stick, **Documents** or **Another folder**, and click **Save them there**. Each family's backups go into a folder of its name, in `AncesTree backups`; those of a family in AncesTree's bin, removed less than 30 days ago, into a folder of its name and "(removed)".
+3. *On the keeper's computer:* tick the three things you have: **I have my recovery code**, **I have my Google project's client file** and **I can sign in to the keeper's Google account**. Lost the client file? **Save it again…** puts it in your Downloads folder. Or click **Hand the family to someone else…** instead, and come back once their computer keeps the family.
+4. *On a relative's computer:* if your changes wait for the keeper, click **Send now**. Ask your keeper to remove this computer, or click **Leave the family folder…**.
+5. Click **Remove AncesTree and its families**, or **Keep the families on this computer**:
+   - *On Windows:* AncesTree closes, and its uninstaller opens (below), with the families' box ticked or not.
+   - *On a Mac or Linux:* **Start when I sign in** goes off, and AncesTree quits. With its families, AncesTree's folder goes to the Bin (the Trash on Linux), where you can still take it out. Then drag AncesTree from **Applications** to the Bin; on Linux, delete the AppImage.
+
+### Windows' uninstaller
+
+1. Click **Start**, then **Settings → Apps → Installed apps**. Click **…** beside AncesTree, then **Uninstall**. Or start it from **Remove AncesTree from this computer…**, above.
+2. The uninstaller says what goes, and asks:
+   - **Also delete the families from this computer: their people, photos, life stories, settings and backups.** Leave it unticked to keep them, for if you install AncesTree again.
+   - **But keep the backups: move them to Documents\AncesTree backups.** Ticked as it opens: each family's backups go into a folder of its name there first, and those of a family in AncesTree's bin into one of its name and "(removed)", such as `Keluarga Contoh (removed)`. Untick it too only if the backups are to go with the families.
+3. On the keeper's computer, it also says what keeping the family again needs, and whether any of its backups was copied to another place in the last 7 days.
+4. Click **Uninstall**.
+
+<!-- picture: guide/windows-6-uninstall.png (the uninstaller, with Also delete the families and But keep the backups) -->
+
+- Copies of the backups kept in another place, such as a USB stick or OneDrive, are never touched.
+- If a backup can't be kept in Documents, the families stay on the computer, as they are, and the uninstaller says so.
+- The same page appears if you install a new version over an old one and choose to uninstall the old one first. Leave the families' box unticked there. An update never shows it.
+- To bring a backup back once AncesTree is installed again: **Settings → Backups → Add a backup file…**, or the family's name at the top, then **Add a family…** and **Add one from a backup…**, and choose it in `Documents\AncesTree backups`.
+
+### On a Mac, by hand
 
 1. Right-click AncesTree's icon in the menu bar, and untick **Start when I sign in**.
 2. Choose **Quit AncesTree**.
@@ -1535,4 +1593,4 @@ AncesTree also runs on Linux, on a 64-bit Intel or AMD computer. Everything in t
 - *The folder* is `~/.local/share/app.ancestree.desktop`.
 - *Copies in another place:* AncesTree finds disks under `/media` and `/run/media`.
 - *Locking the disk:* choose to encrypt the disk when you install Linux. Most kinds of Linux can't switch it on afterwards.
-- *Removing AncesTree:* untick **Start when I sign in**, choose **Quit AncesTree**, and delete the AppImage.
+- *Removing AncesTree:* **Settings → About → Remove AncesTree from this computer…** (see [Removing AncesTree](#26-removing-ancestree)): with its families, AncesTree's folder goes to the Trash. Or by hand: untick **Start when I sign in**, choose **Quit AncesTree**, and delete the AppImage.

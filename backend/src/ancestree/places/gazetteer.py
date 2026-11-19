@@ -227,6 +227,16 @@ class Gazetteer:
         found = self.places.get(code, {}).get(place_key(written))
         return [] if found is None else found if isinstance(found, list) else [found]
 
+    def what_is(self, code: str, written: str) -> set[str]:
+        """What a name is in a country, by the kinds of what it names there: "P" a place,
+        "D" a district, "S" a state; none where it names nothing. Reads the country's places
+        first, if they aren't here yet."""
+        self.load([code])
+        kinds = {entry.kind for entry in self._named(code, written)}
+        if (code, place_key(written)) in self.states:
+            kinds.add("S")
+        return kinds
+
     def towns(self, country: str, people: int) -> list[Entry]:
         """The places in a country with at least this many people, biggest first."""
         self.load([country])

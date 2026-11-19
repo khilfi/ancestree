@@ -5,7 +5,8 @@
 - People at one address share one location, the most exact of theirs; moving its pin moves it
   for all of them.
 - When a country's places come, the addresses there at their town or their postcode's area are
-  placed again, more exactly where they now can be, as one Undo step.
+  placed again, more exactly where they now can be: in the background, never an Undo step of
+  its own, so it never undoes the wrong thing or clears Redo.
 
 Nothing put on the map by hand is ever moved by any of it."""
 
@@ -18,7 +19,7 @@ from neo4j import AsyncManagedTransaction as Tx
 from ancestree.domain.person import EXACTER, Exactness, Place
 from ancestree.domain.requests import PersonInput, PersonPatch
 from ancestree.places.gazetteer import Gazetteer, gazetteer
-from ancestree.places.names import country_named, place_key
+from ancestree.places.names import country_named, place_key, state_named
 from ancestree.repo import people as people_repo
 from ancestree.repo.mapping import place_from
 from ancestree.repo.places import read_addresses, read_places
@@ -77,13 +78,16 @@ def placed[Data: (PersonInput, PersonPatch)](data: Data) -> Data:
 
 
 def household_key(place: Place | None) -> str | None:
-    """Which household a place where someone lives is: its address line, town and country,
-    capitals, spaces and punctuation aside. None without an address line: people with only a
-    town are together at the town already."""
+    """Which household a place where someone lives is: its address line, town, state and
+    country, capitals, spaces and punctuation aside, and a state or country under any of
+    the names people write it by. None without an address line: people with only a town are
+    together at the town already."""
     if place is None or not place.address:
         return None
+    state = state_named(place.state) or place.state
     country = country_named(place.country) or place.country
-    return "|".join(place_key(part or "") for part in (place.address, place.town, country))
+    parts = (place.address, place.town, state, country)
+    return "|".join(place_key(part or "") for part in parts)
 
 
 async def household(ctx: Context, place: Place | None, but: str | None = None) -> list[str]:
@@ -159,8 +163,8 @@ def _better(
 async def place_more_exactly(ctx: Context, history: History, country: str) -> int:
     """When a country's places come, by its key ("my"), or the world's ("world"): every address
     there at its town or its postcode's area, or not placed yet, placed again where it now can
-    be more exactly. Nothing placed by hand, or to the house or street, moves. One Undo step,
-    "34 addresses in Malaysia placed more exactly"; how many."""
+    be more exactly. Nothing placed by hand, or to the house or street, moves. Work in the
+    background: no Undo step, and Undo and Redo still take back what they did; how many."""
     rows = await read(ctx, read_addresses)
     code = None if country == "world" else country.upper()
     changes = await asyncio.to_thread(_better, rows, code)
@@ -178,11 +182,13 @@ async def place_more_exactly(ctx: Context, history: History, country: str) -> in
                     moved += 1
         return moved
 
-    known = gazetteer().countries
-    in_country = f" in {known[code].name}" if code is not None and code in known else ""
-    async with history.change(ctx, list(changes)) as change:
+    keys = {
+        f"{prefix}_{part}"
+        for owned in changes.values()
+        for prefix in owned
+        for part in ("lat", "lon", "exact")
+    }
+    async with history.background(ctx, list(changes), keys):
         moved = await write(ctx, work)
-        many = "1 address" if moved == 1 else f"{moved} addresses"
-        change.label = f"{many}{in_country} placed more exactly"
     await refresh_snapshots(ctx, list(changes))
     return moved

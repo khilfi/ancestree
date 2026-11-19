@@ -19,6 +19,12 @@ in Docker for example, and starts none of its own. With ANCESTREE_NEO4J_RUNTIME 
 Neo4j runs from the Neo4j and Java already fetched there, as in the tests.
 
 Whatever it fetches, it checks the certificate as the computer itself does (0.8.6, D89).
+
+Settings → About's Remove AncesTree from this computer… (D88) asks it to save the backups to a
+folder, then tells the shell, which removes the app. On Windows, it keeps a note for the
+uninstaller in the data folder (ancestree/desktop/removing.py). On the Mac and Linux, the shell
+runs it again with --to-bin once it has stopped, to move the data folder to the Bin. An engine
+run from the code is never an installed AncesTree's: it removes nothing, and says so.
 """
 
 from __future__ import annotations
@@ -34,10 +40,11 @@ import ssl
 import sys
 import threading
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from http.client import HTTPException
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import truststore
 import uvicorn
@@ -47,9 +54,11 @@ from pydantic import BaseModel, SecretStr, StringConstraints
 
 from ancestree import __version__
 from ancestree.config import Settings
-from ancestree.desktop.downloads import downloads_folder
+from ancestree.desktop import removing
+from ancestree.desktop.downloads import documents_folder, downloads_folder
 from ancestree.desktop.families import Families, FamiliesError, Family
 from ancestree.desktop.guard import PageHeaders, SessionGuard
+from ancestree.desktop.removing import RemovingError
 from ancestree.exchange.copy_app import PREBUILT
 from ancestree.exchange.locked import MAGIC, LockedError, key_for, unlock
 from ancestree.exchange.restore import ArchiveError, read_info
@@ -58,6 +67,7 @@ from ancestree.ownneo4j.runtime import NEO4J_VERSION, FetchError, Runtime
 from ancestree.ownneo4j.server import OwnNeo4j, StoppedError, send_ctrl_c
 from ancestree.seed.example import NAME as EXAMPLE_NAME
 from ancestree.services.familyfolder import FamilyFolder
+from ancestree.storage.system_bin import bin_name, folder_to_bin
 
 FROZEN = getattr(sys, "frozen", False)
 # For development and tests alone (0.4.2): a packed engine, as every release is, takes none of
@@ -389,6 +399,140 @@ def add_family_routes(app: FastAPI, families: Families, family: Family, external
         return {**families.listed(), "opening": chosen.name}
 
 
+def system() -> str:
+    return {"win32": "windows", "darwin": "mac"}.get(sys.platform, "linux")
+
+
+def installed_app() -> Path | None:
+    """Where the app itself is, for removing it: on Windows its folder, with its
+    uninstaller; on the Mac AncesTree.app, to drag to the Bin; on Linux its AppImage. None for an
+    engine run from the code, which belongs to no installed app."""
+    if not FROZEN:
+        return None
+    engine_program = Path(sys.executable)
+    if sys.platform == "win32":
+        return engine_program.parent.parent  # <the app's folder>\engine\ancestree-engine.exe
+    if sys.platform == "darwin":
+        return next((folder for folder in engine_program.parents if folder.suffix == ".app"), None)
+    appimage = os.environ.get("APPIMAGE")
+    return Path(appimage) if appimage else None
+
+
+class SaveTo(BaseModel):
+    folder: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+
+
+class Removal(BaseModel):
+    families: Literal["delete", "keep"]  # whether this computer's families go too
+
+
+def add_removing_routes(app: FastAPI, families: Families, root: Path, *, installed: bool) -> None:
+    """Remove AncesTree from this computer… (D88), in Settings → About: what goes and what stays,
+    the backups saved to a folder first, and then the shell asked to remove the app. Only an
+    installed AncesTree's engine asks it: one run from the code says so, and does nothing."""
+
+    def what_goes() -> dict[str, Any]:
+        place = installed_app()
+        return {
+            "system": system(),
+            "installed": installed,
+            "app": str(place) if place else None,
+            "folder": str(root),
+            "documents": str(documents_folder()),
+            "kept": removing.KEPT,
+            "bin": bin_name(),
+            "families": [
+                {
+                    "id": each.family.id,
+                    "name": each.family.name,
+                    "open": each.family.id == families.open_id,
+                    "example": each.family.example,
+                    "keeper": each.keeper,
+                    "backups": each.count,
+                    "removed": each.removed,  # in AncesTree's bin: its backups kept too
+                }
+                for each in removing.families_here(families)
+            ],
+        }
+
+    def save_to(folder: str) -> removing.Saved:
+        return removing.save_backups(families, Path(folder).expanduser())
+
+    @app.get("/api/desktop/removing", include_in_schema=False)
+    async def removing_here() -> dict[str, Any]:
+        """What removing AncesTree takes from this computer, and how it's done on this system."""
+        return await asyncio.to_thread(what_goes)
+
+    @app.post("/api/desktop/removing/save-backups", include_in_schema=False, response_model=None)
+    async def save_backups(body: SaveTo) -> dict[str, Any] | JSONResponse:
+        """Every family's backups copied to a folder anywhere, a folder of each family's name in
+        AncesTree backups there; each family's counted as copied elsewhere from now."""
+        try:
+            saved = await asyncio.to_thread(save_to, body.folder)
+        except RemovingError as error:
+            return _refused(error.code, error.message)
+        except OSError as error:
+            return _refused(
+                "not_saved", f"The backups couldn't be saved there ({error.strerror or error})."
+            )
+        now = datetime.now(UTC).isoformat(timespec="seconds")
+        for each in await asyncio.to_thread(removing.families_here, families):
+            if each.count:
+                families.note(each.family.id, saved=now)
+        return {
+            "folder": str(saved.folder),
+            "families": saved.families,
+            "backups": saved.backups,
+            "copied": saved.copied,
+        }
+
+    @app.post("/api/desktop/removing/remove", include_in_schema=False, response_model=None)
+    async def remove_ancestree(body: Removal, request: Request) -> dict[str, Any] | JSONResponse:
+        """The shell asked to remove AncesTree, the families too or not, once the family folder
+        has had a last round, so nothing that could go is left waiting."""
+        if not installed:
+            return _refused(
+                "not_installed",
+                "This AncesTree runs from its code, for trying things out: only an installed "
+                "AncesTree can be removed this way, so nothing was done.",
+            )
+        folder: FamilyFolder | None = getattr(request.app.state, "family_folder", None)
+        if folder is not None:
+            await folder.last_round()
+        emit(stage="remove", families=body.families)
+        return {"removing": body.families}
+
+
+def keep_note(families: Families) -> None:
+    """The note Windows' uninstaller reads, kept in step with the families here: as the
+    engine starts and stops, and whenever families.json is saved. Never on the Mac or Linux,
+    which have no uninstaller; and nothing that goes wrong with it stops the engine."""
+    if sys.platform != "win32":
+        return
+    try:
+        removing.write_note(families)
+    except OSError, ValueError, FamiliesError:
+        print("The note for AncesTree's uninstaller couldn't be written", file=sys.stderr)
+
+
+def move_to_bin(root: Path, binning: Callable[[Path], str | None] = folder_to_bin) -> bool:
+    """Remove AncesTree from this computer… on the Mac and Linux, its last step: the shell
+    has stopped the engine and runs it again, with --to-bin, to move AncesTree's own folder to
+    the Bin, every family's with it. Said on the output, and nothing written in the folder after
+    it's gone. Only a packed engine moves it: one run from the code, for development, never
+    belongs to an installed AncesTree, and moves nothing. Whether it went."""
+    if not FROZEN:
+        emit(stage="not-binned", why="This engine runs from AncesTree's code: nothing was moved.")
+        return False
+    try:
+        landed = removing.to_bin(root.resolve(), binning)
+    except (RemovingError, OSError) as error:
+        emit(stage="not-binned", why=str(error))
+        return False
+    emit(stage="binned", landed=landed)
+    return True
+
+
 class Stop:
     """A stop the shell asks for, at any time: while Neo4j starts, or once the app runs."""
 
@@ -550,12 +694,17 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--browser", action="store_true", help="also serve Neo4j Browser")
     parser.add_argument("--managed", action="store_true", help="stop when the input closes")
     parser.add_argument("--send-ctrl-c", type=int, help=argparse.SUPPRESS)
+    # Removing AncesTree on the Mac and Linux: the data folder to the Bin, and no more.
+    parser.add_argument("--to-bin", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     if args.send_ctrl_c:
         send_ctrl_c(args.send_ctrl_c)
         return
     if args.data is None:
         parser.error("--data is required")
+    if args.to_bin:  # before anything is made in the folder, or read from it
+        move_to_bin(args.data)
+        return
     if FROZEN:
         drop_development_settings()
     trust_what_the_computer_trusts()  # before anything reaches the internet
@@ -575,6 +724,7 @@ def main(argv: list[str] | None = None) -> None:
         os.umask(0o077)
         root.chmod(0o700)
     families = Families.load(root, first_name(root))
+    families.saved = keep_note  # the uninstaller's note, in step with the families
     external = os.environ.get("ANCESTREE_NEO4J_URI")
     if external:
         families.open_id = families.families[0].id  # one database: the first family alone
@@ -582,6 +732,7 @@ def main(argv: list[str] | None = None) -> None:
     places = families.places(family)
     if gone := families.tidy():
         print(f"Families removed over 30 days ago, deleted: {', '.join(gone)}", file=sys.stderr)
+    keep_note(families)
     stop = Stop()
     app_version = os.environ.get("ANCESTREE_APP_VERSION", "")
     updates = Updates(app_version or __version__)
@@ -686,6 +837,7 @@ def main(argv: list[str] | None = None) -> None:
         stop.app = app
         add_desktop_routes(app, root, about, updates)
         add_family_routes(app, families, family, external=bool(external))
+        add_removing_routes(app, families, root, installed=FROZEN and not external)
         add_pages(app, pages_folder())
         app.add_middleware(PageHeaders)
         port = args.port or free_port()
@@ -701,6 +853,7 @@ def main(argv: list[str] | None = None) -> None:
     except StoppedError:
         emit(stage="stopped-while-starting")
     finally:
+        keep_note(families)  # as it stands now: the uninstaller may come next
         if own is not None:
             emit(stage="stopping-database")
             emit(stage="stopped", database=own.stop())

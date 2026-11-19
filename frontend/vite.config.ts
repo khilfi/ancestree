@@ -105,6 +105,9 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["src/**/*.test.{ts,tsx}"],
+      // Room for a computer busy with other work: these tests check what's shown, with the
+      // engine's answers made up, never how fast (0.8.7).
+      testTimeout: 15_000,
     },
   };
 });

@@ -22,7 +22,7 @@ from typing import Any
 from uuid import UUID, uuid5
 
 from ancestree.config import REPO_ROOT
-from ancestree.domain.person import Gender, PartialDate, Person
+from ancestree.domain.person import DateQualifier, Gender, PartialDate, Person
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind
 from ancestree.kinship.terms import Titles
 from ancestree.repo.mapping import person_to_props
@@ -42,8 +42,8 @@ _ROW = ("id", "full_name", "nickname", "gender", "birth_year", "birth_month", "b
         "photo_version", "birth_town", "birth_state", "birth_country", "x", "y",
         "birth_original_text")  # fmt: skip
 # What the copy's engine reads of the graph (src/kinship/family.ts).
-_PERSON = {"id", "full_name", "nickname", "gender", "born", "birth_order", "placeholder",
-           "photo_version"}  # fmt: skip
+_PERSON = {"id", "full_name", "nickname", "gender", "born", "died", "birth_order",
+           "placeholder", "photo_version"}  # fmt: skip
 _LINK = {"id", "type", "source", "target", "kind", "status"}
 
 
@@ -107,7 +107,7 @@ class Sketch:
         full_name: str,
         gender: str = "?",
         *,
-        born: int | tuple[int, int] | tuple[int, int, int] | None = None,
+        born: int | tuple[int, int] | tuple[int, int, int] | PartialDate | None = None,
         died: int | None = None,
         order: int | None = None,
         nickname: str | None = None,
@@ -116,7 +116,9 @@ class Sketch:
     ) -> str:
         person_id = uuid5(_NAMESPACE, f"{self.name}:person:{key}")
         birth = None
-        if isinstance(born, int):
+        if isinstance(born, PartialDate):  # "about 1950", "before 1960" ...
+            birth = born
+        elif isinstance(born, int):
             birth = PartialDate(year=born)
         elif born is not None:
             birth = PartialDate(year=born[0], month=born[1], day=born[2] if len(born) > 2 else None)
@@ -299,10 +301,53 @@ def tables() -> Golden:
     for n in range(1, 7, 2):
         s.child(chain[n + 1], chain[n], kind="guardian")
     s.person("alone", "Wati binti Salleh", "f")  # linked to no one
+    # Dates said "about", "before" and "between", and an order set by hand against the dates,
+    # with a child added since: elder and younger only where they can't overlap, and the
+    # hand-set order kept.
+    s.person("ahmad", "Ahmad bin Talib", "m", born=1925)
+    s.person("zaharah", "Zaharah binti Musa", "f", born=1928)
+    about, before, between = DateQualifier.ABOUT, DateQualifier.BEFORE, DateQualifier.BETWEEN
+    rough: tuple[tuple[str, str, str, int | PartialDate, int | None], ...] = (
+        ("long", "Long bin Ahmad", "m", 1950, 1),
+        ("ngah", "Ngah binti Ahmad", "f", 1948, 2),
+        ("teh", "Teh bin Ahmad", "m", PartialDate(year=1953, qualifier=about), None),
+        ("su", "Su bin Ahmad", "m", PartialDate(year=1960, qualifier=before), None),
+        (
+            "cu",
+            "Cu binti Ahmad",
+            "f",
+            PartialDate(year=1949, year_to=1956, qualifier=between),
+            None,
+        ),
+    )
+    for key, name, gender, born, order in rough:
+        s.person(key, name, gender, born=born, order=order)
+    s.parents(("ahmad", "zaharah"), *(key for key, *_ in rough))
+    s.person("anak", "Anak binti Ngah", "f", born=1975)
+    s.child("ngah", "anak")
+    # A first wife who died before her husband married again: no co-wife. His other
+    # wife, and his late one's once he has died; and wives until his death, co-wives.
+    s.person("hamzah", "Hamzah bin Latif", "m", born=1930, died=2010)
+    s.person("esah", "Esah binti Musa", "f", born=1932, died=1970)
+    s.person("kalsom", "Kalsom binti Omar", "f", born=1945)
+    s.marry("hamzah", "esah", order=1)
+    s.marry("hamzah", "kalsom", order=2)
+    s.person("yahya", "Yahya bin Latif", "m", born=1935)
+    s.person("bedah", "Bedah binti Musa", "f", born=1936, died=1975)
+    s.person("som", "Som binti Omar", "f", born=1950)
+    s.marry("yahya", "bedah", order=1)
+    s.marry("yahya", "som", order=2)
+    s.person("latif", "Latif bin Hamzah", "m", born=1920, died=1990)
+    s.person("ros", "Ros binti Kassim", "f", born=1925)
+    s.person("mah", "Mah binti Kassim", "f", born=1928, died=2005)
+    s.marry("latif", "ros")
+    s.marry("latif", "mah")
+    wives = ("hamzah", "esah", "kalsom", "yahya", "bedah", "som", "latif", "ros", "mah")
 
     people, links = s.rows()
     ids = s.ids
-    apart = {ids[key] for key in (*line, *side, "cik", "dol", *chain)}
+    household = ("ahmad", "zaharah", *(key for key, *_ in rough), "anak")
+    apart = {ids[key] for key in (*line, *side, "cik", "dol", *chain, *household, *wives)}
     pairs = every_pair([row for row in people if row["id"] not in apart])
     # The line: every generation up and down, and uncles and nephews at every distance.
     pairs += [(ids["g20"], ids[f"g{n}"]) for n in range(20)]
@@ -313,6 +358,9 @@ def tables() -> Golden:
     reach = (2, 3, 4, 5, 7, 11, 12, 20)
     pairs += [(ids[f"g{i}"], ids[f"b{j}"]) for i in reach for j in reach]
     pairs += [(ids["c0"], ids["c7"]), (ids["c7"], ids["c0"]), (ids["c0"], ids["c3"])]
+    pairs += [(ids[a], ids[b]) for a, b in permutations(household[2:], 2)]
+    for start in range(0, len(wives), 3):
+        pairs += [(ids[a], ids[b]) for a, b in permutations(wives[start : start + 3], 2)]
     return Golden(
         "tables",
         "Made up for the kinship tables and their edge cases, with the family's own Malay titles.",

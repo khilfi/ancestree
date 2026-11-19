@@ -17,6 +17,7 @@ from ancestree.exchange.spreadsheet import ENCODING
 from ancestree.importing.template import template_csv
 from ancestree.services import exports, imports
 from ancestree.services.context import NotFoundError, RuleError
+from ancestree.services.familyfolder import FamilyFolder
 
 router = APIRouter(tags=["downloads"])
 
@@ -30,7 +31,8 @@ _TEMPLATES = {
 
 
 class DownloadRequest(BaseModel):
-    what: Literal["export", "template", "example", "report"]
+    # "client": the family's Google project's client file, saved again
+    what: Literal["export", "template", "example", "report", "client"]
     name: str | None = Field(default=None, max_length=200)  # an export's or backup's
     id: str | None = Field(default=None, max_length=100)  # an import's, for its report
 
@@ -67,12 +69,26 @@ async def _save(http: Request, folder: Path, name: str, data: bytes | Path) -> S
     return Saved(name=path.name, folder=folder.name)
 
 
+def _client_file(http: Request) -> tuple[str, bytes]:
+    """The family's Google project's client file, as Google's console gives it: the
+    keeper's, kept with the family, saved again before AncesTree is removed. Never a relative's,
+    whose client came with the keeper's invitation and is the keeper's to give."""
+    folder: FamilyFolder | None = getattr(http.app.state, "family_folder", None)
+    client = folder.client if folder is not None else None
+    if client is None or client.invited:
+        raise RuleError(
+            "no_client_file", "This family has no Google project's client file of its own here."
+        )
+    return client.file_name, client.as_file()
+
+
 @router.post("/downloads", status_code=status.HTTP_201_CREATED)
 async def save_download(
     ctx: Ctx, settings: AppSettings, http: Request, request: DownloadRequest
 ) -> Saved:
-    """Save an export or backup, the import template or its example, or an import's report, in
-    the Downloads folder: under its own name, or with " (2)" if that's taken."""
+    """Save an export or backup, the import template or its example, an import's report, or the
+    family's Google project's client file (the keeper's), in the Downloads folder: under its own
+    name, or with " (2)" if that's taken."""
     folder = _folder(settings)
     data: bytes | Path
     if request.what == "export":
@@ -81,6 +97,8 @@ async def save_download(
     elif request.what == "report":
         data = imports.report_path(ctx, request.id or "")
         name = f"ancestree-import-{request.id}.csv"
+    elif request.what == "client":
+        name, data = _client_file(http)
     else:
         name = _TEMPLATES[request.what]
         data = template_csv(example=request.what == "example").encode(ENCODING)

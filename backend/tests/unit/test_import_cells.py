@@ -91,6 +91,45 @@ def test_places_read_town_state_and_country(text: str, place: Place) -> None:
     assert read_place(text) == place
 
 
+@pytest.mark.parametrize(
+    ("text", "place"),
+    [
+        # The review's #9: Gombak was taken for a country, and Pattani put in Malaysia.
+        ("Taman Melati, Gombak", Place(town="Taman Melati, Gombak")),
+        ("Pattani", Place(town="Pattani", country="Thailand")),
+        # Each part by what the gazetteer has it as: a town, a state or a country.
+        ("Hat Yai, Songkhla", Place(town="Hat Yai", state="Songkhla", country="Thailand")),
+        ("Thailand", Place(country="Thailand")),
+        ("Kuantan", Place(town="Kuantan")),  # a town in Malaysia stays in Malaysia
+        ("Kampung Tiada Nama, Bukit Entah", Place(town="Kampung Tiada Nama, Bukit Entah")),
+    ],
+)
+def test_places_are_read_against_the_gazetteer(text: str, place: Place) -> None:
+    assert read_place(text) == place
+
+
+@pytest.mark.parametrize(
+    ("text", "place"),
+    [
+        # The review's #9, by the user's answer of 19 Nov 2026: Melaka the town
+        # became the state alone. A state written alone is the state; for these four, whose
+        # main town shares its name, that town too.
+        ("Melaka", Place(town="Melaka", state="Melaka")),
+        ("Melaka, Malaysia", Place(town="Melaka", state="Melaka")),
+        ("Malacca", Place(town="Melaka", state="Melaka")),
+        ("Kuala Lumpur", Place(town="Kuala Lumpur", state="W.P. Kuala Lumpur")),
+        ("Putrajaya", Place(town="Putrajaya", state="W.P. Putrajaya")),
+        ("Labuan", Place(town="Labuan", state="W.P. Labuan")),
+        ("Johor", Place(state="Johor")),  # a state, though GeoNames has Johor Bahru so too
+        ("Setapak, Kuala Lumpur", Place(town="Setapak", state="W.P. Kuala Lumpur")),
+    ],
+)
+def test_a_state_written_alone_is_the_state_and_some_their_town_too(
+    text: str, place: Place
+) -> None:
+    assert read_place(text) == place
+
+
 def test_an_empty_place_is_none() -> None:
     assert read_place(" , ") is None
     assert read_place("Malaysia") is None

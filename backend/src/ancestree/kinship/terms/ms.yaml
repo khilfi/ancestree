@@ -98,7 +98,10 @@ in_law:
       younger: {any: adik ipar}
   "=ud=": {any: biras}                  # Kamus Dewan: two people who married two siblings
   "d=u": {any: besan}                   # Kamus Dewan: ibu bapa kpd menantu
-  "==": {female: madu}                  # Kamus Dewan: another wife of one's husband
+  "==":                                 # Kamus Dewan: madu, another wife of one's husband
+    female: madu                        # only for marriages that overlapped
+    apart: {female: isteri lain suami}  # the user's words of 19 Nov 2026
+    late: {female: isteri lain arwah suami}
   "uud=":                               # an uncle's wife takes his title: Mak Long
     male: pak cik
     female: mak cik

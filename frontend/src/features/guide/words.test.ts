@@ -14,12 +14,14 @@ import { describe, expect, it } from "vitest";
 const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 
 /** Where the app's words are: its pages, the engine's messages, and the desktop shell's own:
- *  its first-start page and the menu of its icon by the clock. Tests left out. */
+ *  its first-start page, the menu of its icon by the clock, and Windows' uninstaller's page
+ *  (D88). Tests left out. */
 const PLACES: [string, RegExp][] = [
   ["frontend/src", /\.tsx?$/],
   ["backend/src", /\.py$/],
   ["desktop/loading", /\.(html|js)$/],
   ["desktop/src-tauri/src", /\.rs$/],
+  ["desktop/src-tauri/windows", /\.nsh$/],
 ];
 
 function appWords(): string {
@@ -32,9 +34,11 @@ function appWords(): string {
       texts.push(readFileSync(join(at, name), "utf-8"));
     }
   }
-  // As the screen shows it: JSX's line breaks are spaces, and quotes are as typed.
+  // As the screen shows it: JSX's line breaks are spaces, as are the uninstaller's ($\r$\n),
+  // and quotes are as typed.
   return texts
     .join("\n")
+    .replaceAll("$\\r$\\n", " ")
     .replace(/\s+/g, " ")
     .replace(/\\'/g, "'")
     .replace(/&apos;|&#39;/g, "'")
@@ -62,14 +66,7 @@ const OTHERS: Record<string, string[]> = {
     "Enter",
   ],
   // The Windows installer, Tauri's own.
-  installer: [
-    "Next",
-    "Install",
-    "Finish",
-    "Run AncesTree",
-    "Create desktop shortcut",
-    "Delete the application data",
-  ],
+  installer: ["Next", "Install", "Finish", "Run AncesTree", "Create desktop shortcut"],
   mac: [
     "Done",
     "Move to Trash",

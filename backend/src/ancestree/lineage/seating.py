@@ -12,12 +12,15 @@ centre, even when born the same year as an uncle.
 - Everyone else hangs off the rings in clusters, e.g. a wife's parents and siblings,
   seated the same way around their own centre and folded away by default.
 - Families with no link to each other each get their own rings.
+- A loop of parents, which a family could store before 0.8.7, is seated as if the link that
+  closed it weren't there, and said, so What's missing can list it.
 """
 
 from collections import defaultdict, deque
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from ancestree.domain.links import Loop, parent_loops
 from ancestree.domain.person import Gender, PartialDate
 from ancestree.lineage.birth_order import Sibling, order_siblings
 
@@ -39,6 +42,7 @@ class ParentEdge:
     parent: str
     child: str
     in_layout: bool = True  # False for kinds like guardian, which don't place the child
+    link: str = ""  # its id, if it has one: the newest in a loop is the one left out
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,7 @@ class Seating:
     units: list[Unit]
     seats: dict[str, Seat]
     unlinked: list[str]
+    loops: list[Loop] = field(default_factory=list)  # each seated without its newest link
 
 
 def seat_family(
@@ -89,7 +94,9 @@ def seat_family(
 ) -> Seating:
     family = _Family(members, parents, spouses)
     linked = {person for person in family.members if family.neighbours[person]}
-    seating = Seating([], {}, sorted(set(family.members) - linked, key=family.sort_key))
+    seating = Seating(
+        [], {}, sorted(set(family.members) - linked, key=family.sort_key), family.loops
+    )
     # The family holding the chosen centre comes first, as "main:0", even when a family with
     # no link to it is bigger: it's the one at the centre. Then the biggest first.
     groups = sorted(
@@ -115,8 +122,13 @@ class _Family:
         self.spouses_of: dict[str, list[str]] = defaultdict(list)
         self.marriage_order: dict[frozenset[str], int] = {}
         self.neighbours: dict[str, set[str]] = defaultdict(set)  # any link at all
-        for edge in parents:
-            if edge.parent in self.members and edge.child in self.members:
+        among = [e for e in parents if e.parent in self.members and e.child in self.members]
+        # Nothing here walks a loop for ever: each loop's newest link is left out.
+        named = [(edge.link or f"~{n:09d}", edge) for n, edge in enumerate(among)]
+        self.loops = parent_loops((link, edge.parent, edge.child) for link, edge in named)
+        out = {loop.link for loop in self.loops}
+        for link, edge in named:
+            if link not in out:
                 self.neighbours[edge.parent].add(edge.child)
                 self.neighbours[edge.child].add(edge.parent)
                 if edge.in_layout:
@@ -197,7 +209,7 @@ class _Family:
                     depth[person] = 1 + max((depth.get(c, 0) for c in children), default=-1)
                     continue
                 stack.append((person, True))
-                # A cycle can't be stored (the rules refuse one); `depth` guards anyway.
+                # No loop of parents is left to walk (see __init__); `depth` guards anyway.
                 stack.extend((c, False) for c in children if c not in depth)
         return depth
 

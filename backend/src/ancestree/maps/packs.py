@@ -15,6 +15,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import logging
 import math
 import mmap
 import threading
@@ -40,7 +41,10 @@ from pmtiles.tile import (
 )
 
 from ancestree.domain.map import Lookup, PackKey
+from ancestree.domain.plain import plainly
 from ancestree.maps.online import OpenFreeMap
+
+log = logging.getLogger(__name__)
 
 _PINNED: dict[str, Any] = json.loads(
     (files("ancestree.maps") / "packs.json").read_text(encoding="utf-8")
@@ -419,7 +423,9 @@ class PackStore:
         except PackError as error:
             state.error = str(error)
         except Exception as error:  # said, never left to end the thread unseen
-            state.error = f"{pack.title} couldn't be fetched: {error}"
+            # In words, never Python's; engine.log keeps those.
+            log.warning("%s couldn't be fetched", pack.title, exc_info=error)
+            state.error = f"{pack.title} couldn't be fetched: {plainly(error)}. Try it again."
         finally:
             self._changed()
             state.running = False

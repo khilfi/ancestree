@@ -128,6 +128,9 @@ class ReturnedLink(_Strict):
     target: UUID
     kind: Annotated[str, StringConstraints(max_length=64)] | None = None
     status: SpouseStatus | None = None
+    # A marriage's place among a person's: sent all along (exchange/records.py), and read
+    # since, so a new marriage keeps it.
+    order: int | None = Field(default=None, ge=1, le=10_000)
 
 
 class ReturnedStory(_Strict):

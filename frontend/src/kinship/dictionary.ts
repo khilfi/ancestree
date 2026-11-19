@@ -41,6 +41,7 @@ export function kinFromSpec(spec: Spec): Kin {
         parts,
         seniority,
         place,
+        apart: !!spec.apart,
       };
     }
   }
@@ -100,6 +101,7 @@ function match(row: Kin, kin: Kin): number | null {
       same(row.gender !== "unknown", row.gender === kin.gender),
       same(row.seniority !== null, row.seniority === kin.seniority),
       same(row.place !== null, samePlace(row.place, kin.place), 2),
+      same(true, !!row.apart === !!kin.apart), // a co-wife, or another wife
     ];
   } else if (
     row.type === "kindStep" &&

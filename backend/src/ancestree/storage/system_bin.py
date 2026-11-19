@@ -41,6 +41,21 @@ def to_bin(path: Path) -> str | None:
     return _freedesktop(path)
 
 
+def folder_to_bin(path: Path) -> str | None:
+    """Send `path`, a folder and everything in it, to the Mac's Bin or Linux's Trash, as one
+    item that can be put back whole (D88: AncesTree's own folder, as it's removed). Never
+    on Windows, where AncesTree's uninstaller removes its folder: nothing here sends a folder
+    to the Recycle Bin."""
+    path = Path(os.path.abspath(path))
+    if not path.is_dir():
+        raise BinError(f"{path.name} isn't there")
+    if sys.platform == "win32":
+        raise BinError("on Windows, AncesTree's uninstaller removes it")
+    if sys.platform == "darwin":
+        return _mac(path)
+    return _freedesktop(path)
+
+
 # Windows: the shell's own delete, allowed to undo, asking nothing and showing nothing.
 _FO_DELETE = 3
 _FOF_SILENT = 0x0004

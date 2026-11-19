@@ -42,6 +42,12 @@ from ancestree.domain.person import DateQualifier, PartialDate
         ("between 1910 and 1915", "between 1910 and 1915"),
         ("antara 1910 dan 1915", "between 1910 and 1915"),
         ("  12/3/1950  ", "12 March 1950"),
+        # A decade, the review's #16: "1950s" wasn't read as a date.
+        ("1950s", "between 1950 and 1959"),
+        ("1950's", "between 1950 and 1959"),
+        ("the 1950s", "between 1950 and 1959"),
+        ("1950-an", "between 1950 and 1959"),
+        ("tahun 1950-an", "between 1950 and 1959"),
     ],
 )
 def test_reads_dates_as_people_type_them(text: str, description: str) -> None:

@@ -8,6 +8,7 @@ import {
 import { useHealth } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RemoveAncesTree } from "./RemoveAncesTree";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -81,8 +82,9 @@ function Updates({ update, engine }: { update: DesktopUpdate; engine?: string })
   );
 }
 
-/** Settings → About: the database, the app's version and where the files are kept, and
- *  the map's credits, each with its licence. */
+/** Settings → About: the database, the app's version and where the files are kept,
+ *  removing AncesTree in the desktop app, and the map's credits, each with its licence
+ *  (M42). */
 export function AboutSection() {
   const health = useHealth();
   const about = health.data;
@@ -148,6 +150,11 @@ export function AboutSection() {
         <Row label="Backup folder">
           <Folder path={about?.backup_folder} note="Where Settings → Backups puts new backups." />
         </Row>
+        {desktop && (
+          <Row label="Removing">
+            <RemoveAncesTree />
+          </Row>
+        )}
         <Row label="The map">
           <ul className="space-y-1.5">
             <li>

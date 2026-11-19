@@ -419,7 +419,9 @@ async def _link(tx: Tx, operation: AddLink, change: ImportChange, done: _Done) -
         return
     try:
         if operation.type == "spouse":
-            linked = await add_spouse(tx, operation.a, operation.b, operation.status, people)
+            linked = await add_spouse(
+                tx, operation.a, operation.b, operation.status, people, order=operation.order
+            )
         else:
             free = await links_repo.fetch_link(tx, operation.link) is None
             kinds = await kinds_repo.fetch_kinds(tx)
@@ -1081,9 +1083,10 @@ async def take_back_changes(
             links += await _link_back(ctx, link)
         relinked, relink_kept = await _relink_back(ctx, record.get("relinked", []))
         put_back, kept = await _put_back_details(ctx, record.get("changed", []))
-        restored = await people_service.bring_back(
+        brought = await people_service.bring_back(
             ctx, [str(pid) for pid in record.get("removed", [])]
         )
+        restored = brought.people
         stories = 0
         for item in reversed(record.get("stories", [])):
             async with folder_lock(str(item["person"])):
@@ -1098,6 +1101,7 @@ async def take_back_changes(
         moved=len(present),
         gone=len(people) - len(present),
         restored=restored,
+        left_out=brought.left_out,
         reverted=put_back,
         kept=kept + relink_kept,
         links=links + relinked,

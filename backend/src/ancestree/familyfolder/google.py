@@ -168,6 +168,28 @@ class Client:
         """Kept with the family, locked on this computer as the sign-in is."""
         write_secret(path, json.dumps(asdict(self)).encode())
 
+    @property
+    def file_name(self) -> str:
+        """The client's file's name, as Google's console names it when it's downloaded."""
+        return f"client_secret_{self.client_id}.json"
+
+    def as_file(self) -> bytes:
+        """The client's file again, in the form Google's console gives it: for the
+        keeper about to remove AncesTree, whose way back is this file, the recovery code and
+        their Google account. `from_file` reads it as it read the first."""
+        installed: dict[str, object] = {
+            "client_id": self.client_id,
+            "project_id": self.project,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": TOKEN,
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": self.client_secret,
+            "redirect_uris": ["http://localhost"],
+        }
+        if not self.project:
+            del installed["project_id"]
+        return json.dumps({"installed": installed}, indent=2).encode()
+
 
 @dataclass
 class Tokens:

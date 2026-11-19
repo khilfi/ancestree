@@ -31,7 +31,7 @@ from ancestree.domain.imports import (
     Placed,
 )
 from ancestree.exchange.spreadsheet import ENCODING, guard
-from ancestree.importing.cells import CellError, read_place
+from ancestree.importing.cells import NEIGHBOURS, CellError, read_place
 from ancestree.importing.matching import Ref, SheetPlan, Tree, plan_sheet
 from ancestree.importing.sheet import Sheet, read_sheet
 from ancestree.places.gazetteer import gazetteer
@@ -289,8 +289,10 @@ async def _place(
 
 def _read_places(sheet: Sheet) -> None:
     """The gazetteer's places for the countries the file's Lives in names, and Malaysia's, read
-    before the import's transaction, so placing people waits on nothing."""
+    before the import's transaction, so placing people waits on nothing; and those the
+    places are read against, so reading them waits on nothing either."""
     places = gazetteer()
+    places.load(["MY", *NEIGHBOURS])
     written = {"Malaysia"}
     for row in sheet.rows:
         try:
@@ -568,9 +570,10 @@ async def take_back(ctx: Context, history: History, import_id: str) -> ImportTak
                 await people_service.delete_person(ctx, UUID(pid))
         unlinked = await _unlink(ctx, [str(lid) for lid in record.get("link_ids", [])])
         put_back, kept = await _put_back(ctx, record.get("changed", []))
-        restored = await people_service.bring_back(
+        brought = await people_service.bring_back(
             ctx, [str(pid) for pid in record.get("removed", [])]
         )
+        restored = brought.people
         if present or unlinked or put_back or restored:
             # Steps before it may name what changed: none of them can be undone now.
             history.clear()
@@ -580,6 +583,7 @@ async def take_back(ctx: Context, history: History, import_id: str) -> ImportTak
         moved=len(present),
         gone=len(people) - len(present),
         restored=restored,
+        left_out=brought.left_out,
         reverted=put_back,
         kept=kept,
     )

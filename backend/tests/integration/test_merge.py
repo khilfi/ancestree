@@ -7,9 +7,11 @@ from typing import Any
 
 import httpx
 import pytest
+from neo4j import AsyncDriver
 from PIL import Image
 
 from ancestree.config import Settings
+from ancestree.seed.loader import load_seed
 from tests.integration.conftest import create_person, get_person, link
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
@@ -119,7 +121,8 @@ async def test_a_link_the_rules_refuse_stays_with_the_other(client: httpx.AsyncC
     preview = (await client.get(f"/api/persons/{ali['id']}/merge/{twice['id']}")).json()
     outcomes = {item["description"]: item for item in preview["links"]}
     assert outcomes["Parent: Yusof bin Daud"]["outcome"] == "left_out"
-    assert "two biological parents" in outcomes["Parent: Yusof bin Daud"]["why"]
+    # A second father, said as such since 0.8.7, where it was a third parent.
+    assert "has a birth father already" in outcomes["Parent: Yusof bin Daud"]["why"]
     assert outcomes["Spouse: Ali bin Hassan"]["outcome"] == "between"
 
     merged = await client.post(f"/api/persons/{ali['id']}/merge", json={"other": twice["id"]})
@@ -130,6 +133,62 @@ async def test_a_link_the_rules_refuse_stays_with_the_other(client: httpx.AsyncC
 
     same = await client.post(f"/api/persons/{ali['id']}/merge", json={"other": ali["id"]})
     assert same.status_code == 409
+
+
+async def test_a_merge_counts_birth_parents_by_gender(client: httpx.AsyncClient) -> None:
+    """The review's #8: Ali had his father; the other Ali a father and a mother.
+    The second father moved, and the mother was left out as a third parent."""
+    father = await create_person(client, "Hassan bin Ismail", gender="male")
+    other_father = await create_person(client, "Yusof bin Daud", gender="male")
+    mother = await create_person(client, "Siti binti Ahmad", gender="female")
+    ali = await create_person(client, "Ali bin Hassan")
+    twice = await create_person(client, "Ali")
+    assert (await link(client, father["id"], ali["id"], "parent")).status_code == 201
+    for parent in (other_father, mother):
+        assert (await link(client, parent["id"], twice["id"], "parent")).status_code == 201
+
+    preview = (await client.get(f"/api/persons/{ali['id']}/merge/{twice['id']}")).json()
+    outcomes = {item["description"]: item for item in preview["links"]}
+    assert outcomes["Parent: Siti binti Ahmad"]["outcome"] == "moved"
+    assert outcomes["Parent: Yusof bin Daud"]["outcome"] == "left_out"
+    assert outcomes["Parent: Yusof bin Daud"]["why"] == (
+        "Ali bin Hassan has a birth father already: Hassan bin Ismail."
+    )
+
+    merged = await client.post(f"/api/persons/{ali['id']}/merge", json={"other": twice["id"]})
+    assert merged.status_code == 200, merged.text
+    assert parents_of(await get_person(client, ali["id"])) == {father["id"], mother["id"]}
+
+
+async def test_a_merge_keeps_a_marriages_order_and_minds_which_way_a_link_goes(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """The review's #16: a marriage moved lost its order; and a parent of the one
+    merged away was taken as "linked already" to the one kept, their child, the other way."""
+    await load_seed(driver, settings.neo4j_database)
+    graph = (await client.get("/api/graph")).json()
+    ids = {person["full_name"]: person["id"] for person in graph["people"]}
+    rahman, siti = ids["Rahman bin Ismail"], ids["Siti binti Rahman"]
+    twice = await create_person(client, "Rahman", gender="male")
+    # By mistake, Rahman's daughter Siti is the other Rahman's mother.
+    assert (await link(client, siti, twice["id"], "parent")).status_code == 201
+
+    preview = (await client.get(f"/api/persons/{twice['id']}/merge/{rahman}")).json()
+    outcomes = {item["description"]: item for item in preview["links"]}
+    assert outcomes["Child: Siti binti Rahman"]["outcome"] == "left_out"  # never "already"
+
+    merged = await client.post(f"/api/persons/{twice['id']}/merge", json={"other": rahman})
+    assert merged.status_code == 200, merged.text
+    records, _, _ = await driver.execute_query(
+        "MATCH (:Person {id: $id})-[link:SPOUSE_OF]-(wife:Person) "
+        "RETURN wife.full_name AS wife, link.order AS order",
+        id=twice["id"],
+        database_=settings.neo4j_database,
+    )
+    assert {record["wife"]: record["order"] for record in records} == {
+        "Zainab binti Hamzah": 1,
+        "Halimah binti Omar": 2,
+    }
 
 
 async def test_undo_takes_back_the_photo_and_story_a_merge_copied(

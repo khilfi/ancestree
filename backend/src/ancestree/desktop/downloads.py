@@ -16,8 +16,9 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-# A name as AncesTree gives its files: no folders, nothing hidden, nothing a system refuses.
-_NAME = re.compile(r"[\w][\w .()-]{0,150}\.(csv|zip|html|ged|png|svg)")
+# A name as AncesTree gives its files: no folders, nothing hidden, nothing a system refuses. A
+# .json is the family's Google project's client file, saved again.
+_NAME = re.compile(r"[\w][\w .()-]{0,150}\.(csv|zip|html|ged|png|svg|json)")
 
 
 def downloads_folder() -> Path:
@@ -31,7 +32,29 @@ def downloads_folder() -> Path:
     return found or Path.home() / "Downloads"
 
 
+def documents_folder() -> Path:
+    """The computer's Documents folder, found as Downloads is: on Windows wherever it's been
+    moved to, OneDrive's own included, where the uninstaller keeps the backups."""
+    found = None
+    if sys.platform == "win32":
+        # FOLDERID_Documents, {FDD39AD0-238F-46AF-ADB4-6C85480369C7}
+        found = _windows_known(
+            (0xFDD39AD0, 0x238F, 0x46AF, (0xAD, 0xB4, 0x6C, 0x85, 0x48, 0x03, 0x69, 0xC7))
+        )
+    elif sys.platform != "darwin":
+        found = _xdg("XDG_DOCUMENTS_DIR")
+    return found or Path.home() / "Documents"
+
+
 def _windows_downloads() -> Path | None:
+    # FOLDERID_Downloads, {374DE290-123F-4565-9164-39C4925E467B}
+    return _windows_known(
+        (0x374DE290, 0x123F, 0x4565, (0x91, 0x64, 0x39, 0xC4, 0x92, 0x5E, 0x46, 0x7B))
+    )
+
+
+def _windows_known(folder: tuple[int, int, int, tuple[int, ...]]) -> Path | None:
+    """A known folder of Windows', by its id, where it is now."""
     from ctypes import wintypes
 
     class Guid(ctypes.Structure):
@@ -42,17 +65,12 @@ def _windows_downloads() -> Path | None:
             ("Data4", ctypes.c_ubyte * 8),
         )
 
-    # FOLDERID_Downloads, {374DE290-123F-4565-9164-39C4925E467B}
-    downloads = Guid(
-        0x374DE290,
-        0x123F,
-        0x4565,
-        (ctypes.c_ubyte * 8)(0x91, 0x64, 0x39, 0xC4, 0x92, 0x5E, 0x46, 0x7B),
-    )
+    first, second, third, rest = folder
+    known = Guid(first, second, third, (ctypes.c_ubyte * 8)(*rest))
     shell = ctypes.WinDLL("shell32")  # type: ignore[attr-defined,unused-ignore]
     com = ctypes.WinDLL("ole32")  # type: ignore[attr-defined,unused-ignore]
     found = ctypes.c_wchar_p()
-    if shell.SHGetKnownFolderPath(ctypes.byref(downloads), 0, None, ctypes.byref(found)) != 0:
+    if shell.SHGetKnownFolderPath(ctypes.byref(known), 0, None, ctypes.byref(found)) != 0:
         return None
     try:
         return Path(found.value) if found.value else None
@@ -61,13 +79,18 @@ def _windows_downloads() -> Path | None:
 
 
 def _xdg_downloads() -> Path | None:
+    return _xdg("XDG_DOWNLOAD_DIR")
+
+
+def _xdg(name: str) -> Path | None:
+    """One of the desktop's own folders on Linux, as user-dirs.dirs names it."""
     config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     try:
         lines = (config / "user-dirs.dirs").read_text(encoding="utf-8").splitlines()
     except OSError:
         return None
     for line in lines:
-        if line.startswith("XDG_DOWNLOAD_DIR="):
+        if line.startswith(f"{name}="):
             value = line.partition("=")[2].strip().strip('"')
             value = value.replace("$HOME", Path.home().as_posix())
             return Path(value) if value.startswith("/") else None

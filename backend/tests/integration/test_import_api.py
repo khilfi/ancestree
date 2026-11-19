@@ -204,7 +204,7 @@ async def test_take_back_moves_everyone_it_added_to_the_trash(
     assert taken.status_code == 200, taken.text
     assert taken.json() == {
         "moved": 2, "gone": 0, "restored": 0, "reverted": 0, "kept": 0,
-        "links": 0, "stories": 0, "photos": 0,
+        "links": 0, "stories": 0, "photos": 0, "left_out": [],
     }  # fmt: skip
     assert await names(client) == ["Hassan bin Ismail"]
     trash = (await client.get("/api/trash")).json()
@@ -388,7 +388,7 @@ async def test_take_back_puts_back_what_the_import_changed(client: httpx.AsyncCl
     assert taken.status_code == 200, taken.text
     assert taken.json() == {
         "moved": 1, "gone": 0, "restored": 1, "reverted": 1, "kept": 1,
-        "links": 0, "stories": 0, "photos": 0,
+        "links": 0, "stories": 0, "photos": 0, "left_out": [],
     }  # fmt: skip
     assert await names(client) == ["Hassan bin Ismail", "Latif bin Omar", "Mariam binti Salleh"]
     hassan = await get_person(client, ids["hassan"])

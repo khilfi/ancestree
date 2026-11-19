@@ -1,3 +1,7 @@
+import threading
+from collections.abc import Callable
+from functools import partial
+
 from ancestree.domain.person import Gender, PartialDate
 from ancestree.lineage.seating import Member, ParentEdge, Seat, SpouseEdge, seat_family
 
@@ -249,3 +253,31 @@ def test_a_guardian_doesnt_move_the_child() -> None:
 
     assert seating.seats["Ali"] == seat("main:0", 2, parent="Tok", order=0, branch="Ali")
     assert seating.seats["Guard"].unit == "cluster:Ali"
+
+
+def finished[T](work: Callable[[], T], seconds: float = 10) -> T:
+    """What `work` gives, or a failure if it hasn't finished in time: it may never."""
+    done: list[T] = []
+    thread = threading.Thread(target=lambda: done.append(work()), daemon=True)
+    thread.start()
+    thread.join(seconds)
+    assert done, f"still working after {seconds} seconds"
+    return done[0]
+
+
+def test_a_stored_loop_of_parents_is_seated_and_never_walked_for_ever() -> None:
+    # No rule lets one in now, but one could be stored before 0.8.7 (#1): Aminah is
+    # Ali's parent, Ali is Siti's, and Siti is Aminah's. With Tok above it, or on its own.
+    people = [person(n, born=y) for n, y in (("Tok", 1900), ("Aminah", 1930), ("Ali", 1955))]
+    people.append(person("Siti", born=1960))
+    loop = children(("Aminah",), "Ali") + children(("Ali",), "Siti") + children(("Siti",), "Aminah")
+    for links in (loop, children(("Tok",), "Aminah") + loop):
+        seating = finished(partial(seat_family, people, links, []))
+        everyone = {edge.parent for edge in links} | {edge.child for edge in links}
+        assert set(seating.seats) == everyone
+        for start, seat_of in seating.seats.items():
+            seen, at = {start}, seat_of
+            while at.parent is not None:  # a line down from the centre: it ends
+                assert at.parent not in seen, f"{start}'s line goes round"
+                seen.add(at.parent)
+                at = seating.seats[at.parent]

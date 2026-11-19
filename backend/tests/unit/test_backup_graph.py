@@ -18,6 +18,7 @@ from ancestree.services.graph import graph_from_archive
 HASSAN = "00000000-0000-4000-8000-000000000001"
 MARIAM = "00000000-0000-4000-8000-000000000002"
 YUSOF = "00000000-0000-4000-8000-000000000003"
+ZUL = "00000000-0000-4000-8000-000000000005"
 
 
 def archived() -> dict[str, Any]:
@@ -135,3 +136,61 @@ def test_an_archive_too_big_to_be_a_familys_is_refused_before_its_read(
     monkeypatch.setattr(restore, "MOST_GRAPH", 100)  # far below this family's graph.json
     with made.path.open("rb") as file, pytest.raises(ArchiveError, match="larger than any"):
         read_graph(file, made.path.name)
+
+
+def refusal(tmp_path: Path, family: dict[str, Any]) -> str:
+    """Why a restore refuses this family: it checks what a save would (#4)."""
+    backups = tmp_path / f"backups-{len(list(tmp_path.iterdir()))}"  # a new one each time
+    made = write_archive(family, tmp_path / "data", backups)
+    with made.path.open("rb") as file, pytest.raises(ArchiveError) as refused:
+        read_graph(file, made.path.name)
+    return str(refused.value)
+
+
+def test_a_restore_checks_dates_places_loops_and_birth_parents(tmp_path: Path) -> None:
+    date = archived()
+    date["people"][0] |= {"birth_month": 2, "birth_day": 31}  # as #3 could leave one
+    assert "Hassan bin Ismail's date of birth can't be read" in refusal(tmp_path, date)
+    assert "February 1938 has no day 31" in refusal(tmp_path, date)
+
+    between = archived()
+    between["people"][2] |= {"death_qualifier": "between", "death_year": 1960}
+    between["people"][2]["death_year_to"] = 1955
+    assert "Yusof bin Hassan's date of death can't be read" in refusal(tmp_path, between)
+
+    place = archived()
+    place["people"][1] |= {"residence_town": "Kuantan", "residence_lat": 3.8}  # no longitude
+    assert "where Mariam binti Salleh lives can't be read" in refusal(tmp_path, place)
+
+    loop = archived()
+    loop["people"].append({"id": ZUL, "full_name": "Azman bin Yusof"})
+    loop["links"] += [
+        {
+            "type": "PARENT_OF",
+            "source": parent,
+            "target": child,
+            "properties": {"id": f"00000000-0000-4000-8000-0000000000b{n}", "kind": "biological"},
+        }
+        for n, (parent, child) in enumerate(((YUSOF, ZUL), (ZUL, HASSAN)))
+    ]
+    assert (
+        "a loop of parents: Hassan bin Ismail is Yusof bin Hassan's parent, Yusof bin Hassan is "
+        "Azman bin Yusof's, and Azman bin Yusof is Hassan bin Ismail's"
+    ) in refusal(tmp_path, loop)
+
+    three = archived()
+    three["relationship_kinds"][0]["blood"] = True
+    three["people"].append({"id": "00000000-0000-4000-8000-000000000004", "full_name": "Daud"})
+    three["links"].append({
+        "type": "PARENT_OF",
+        "source": "00000000-0000-4000-8000-000000000004",
+        "target": YUSOF,
+        "properties": {"id": "00000000-0000-4000-8000-0000000000a5", "kind": "biological"},
+    })  # fmt: skip
+    assert "Yusof bin Hassan has three birth parents" in refusal(tmp_path, three)
+
+    fine = archived()
+    fine["relationship_kinds"][0]["blood"] = True
+    made = write_archive(fine, tmp_path / "data", tmp_path / "backups-fine")
+    with made.path.open("rb") as file:
+        assert len(read_graph(file, made.path.name)["people"]) == 3

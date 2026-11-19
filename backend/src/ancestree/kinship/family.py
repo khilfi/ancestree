@@ -29,6 +29,8 @@ class Member:
     birth: PartialDate | None = None
     birth_order: int | None = None
     placeholder: bool = False  # an unknown parent
+    # When they died, if that's recorded: whose marriage ended first, for a co-wife.
+    died: PartialDate | None = None
 
     def as_sibling(self) -> Sibling:
         return Sibling(self.id, self.gender, self.birth, self.birth_order, self.name)

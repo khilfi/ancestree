@@ -78,11 +78,37 @@ def test_linux_finds_the_desktops_own_downloads(
     assert str(downloads.downloads_folder()) == "/home/aminah/Downloads"
 
 
+def test_linux_finds_the_desktops_own_documents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Where Windows' uninstaller keeps the backups, and a place to save them first."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(Path, "home", lambda: PurePosixPath("/home/aminah"))
+    monkeypatch.setattr(sys, "platform", "linux")
+    (tmp_path / "user-dirs.dirs").write_text(
+        'XDG_DOWNLOAD_DIR="$HOME/Muat turun"\nXDG_DOCUMENTS_DIR="$HOME/Dokumen"\n',
+        encoding="utf-8",
+    )
+    assert downloads.documents_folder() == Path("/home/aminah/Dokumen")
+    assert downloads.downloads_folder() == Path("/home/aminah/Muat turun")
+    (tmp_path / "user-dirs.dirs").write_text("nothing here\n", encoding="utf-8")
+    assert str(downloads.documents_folder()) == "/home/aminah/Documents"
+
+
+def test_the_family_projects_client_file_is_a_name_ancestree_saves() -> None:
+    """Saved again before AncesTree is removed, under the name Google's console gives it."""
+    assert plain_name("client_secret_1234567890-abc123def456.apps.googleusercontent.com.json")
+    assert not plain_name("../client_secret.json")
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows' known folders")
 def test_windows_finds_downloads_wherever_its_been_moved() -> None:
     found = downloads._windows_downloads()
     assert found is not None
     assert found.is_absolute()
+    documents = downloads.documents_folder()
+    assert documents.is_absolute()
+    assert documents != found
 
 
 class Started:

@@ -9,6 +9,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -240,6 +241,147 @@ async def test_a_database_of_ones_own_keeps_one_family(tmp_path: Path) -> None:
         assert (await pages.get("/api/desktop/families")).json()["single"] is True
         refused = await pages.post("/api/desktop/families", json={"name": "Keluarga Ibu"})
         assert refused.json()["detail"]["code"] == "one_database"
+
+
+# Removing AncesTree, with the backups safe. Made-up folders, and a stand-in for the bin:
+# nothing here starts an uninstaller, or sends anything to this computer's own bin.
+
+
+def removing_app(root: Path, installed: bool) -> tuple[httpx.AsyncClient, Any]:
+    families = engine.Families.load(root, "Keluarga Contoh")
+    app = FastAPI()
+    engine.add_removing_routes(app, families, root, installed=installed)
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    return client, families
+
+
+async def test_removing_says_what_goes_and_saves_every_familys_backups_first(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pages, families = removing_app(tmp_path / "app", installed=True)
+    added = families.add("Keluarga Ibu")
+    backups = families.places(added).backups
+    (backups / "ancestree-backup-2026-11-02T09-00-00.zip").write_bytes(b"made up")
+    setup = families.places(added).data / "familyfolder" / "setup.json"
+    setup.parent.mkdir(parents=True)
+    setup.write_text(json.dumps({"role": "keeper"}), encoding="utf-8")
+    # One in AncesTree's bin, whose backups are kept too (the user's answer of 19 Nov 2026).
+    binned = families.add("Keluarga Ayah")
+    (families.places(binned).backups / "ancestree-backup-2026-11-03T09-00-00.zip").write_bytes(
+        b"made up too"
+    )
+    families.remove(binned.id)
+    stick = tmp_path / "USB stick"
+    stick.mkdir()
+    async with pages:
+        here = (await pages.get("/api/desktop/removing")).json()
+        assert here["installed"] is True
+        assert here["kept"] == "AncesTree backups"
+        found = [
+            (f["name"], f["keeper"], f["backups"], f["open"], f["removed"])
+            for f in here["families"]
+        ]
+        assert found == [
+            ("Keluarga Contoh", False, 0, True, False),
+            ("Keluarga Ibu", True, 1, False, False),
+            ("Keluarga Ayah", False, 1, False, True),
+        ]
+        saved = (
+            await pages.post("/api/desktop/removing/save-backups", json={"folder": str(stick)})
+        ).json()
+        assert saved == {
+            "folder": str(stick / "AncesTree backups"),
+            "families": 2,
+            "backups": 2,
+            "copied": 2,
+        }
+        assert (stick / "AncesTree backups" / "Keluarga Ayah (removed)").is_dir()
+        copy = (
+            stick
+            / "AncesTree backups"
+            / "Keluarga Ibu"
+            / "ancestree-backup-2026-11-02T09-00-00.zip"
+        )
+        assert copy.read_bytes() == b"made up"
+        # Counted as copied elsewhere from now, for the uninstaller's warning.
+        assert engine.Families.load(tmp_path / "app").get(added.id).saved
+        nowhere = await pages.post(
+            "/api/desktop/removing/save-backups", json={"folder": str(tmp_path / "unplugged")}
+        )
+        assert (nowhere.status_code, nowhere.json()["detail"]["code"]) == (409, "no_such_folder")
+
+        said(capsys)
+        removed = await pages.post("/api/desktop/removing/remove", json={"families": "delete"})
+        assert removed.json() == {"removing": "delete"}
+        lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+        assert [(line["stage"], line["families"]) for line in lines] == [("remove", "delete")]
+        wrong = await pages.post("/api/desktop/removing/remove", json={"families": "all"})
+        assert wrong.status_code == 422
+
+
+async def test_an_engine_run_from_the_code_removes_nothing_and_says_so(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A practice engine, as while developing: never an installed AncesTree's, so the shell is
+    never asked, and the page says why."""
+    pages, _ = removing_app(tmp_path, installed=False)
+    async with pages:
+        assert (await pages.get("/api/desktop/removing")).json()["installed"] is False
+        refused = await pages.post("/api/desktop/removing/remove", json={"families": "delete"})
+        assert (refused.status_code, refused.json()["detail"]["code"]) == (409, "not_installed")
+        assert "nothing was done" in refused.json()["detail"]["message"]
+    assert said(capsys) == []
+    assert engine.installed_app() is None  # not packed: no app of its own
+
+
+def test_the_data_folder_goes_to_the_bin_only_from_an_installed_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    engine.Families.load(tmp_path, "Keluarga Contoh")
+    sent: list[Path] = []
+
+    def binning(path: Path) -> str:
+        sent.append(path)
+        return "/the bin/app.ancestree.desktop"
+
+    assert engine.move_to_bin(tmp_path, binning) is False  # run from the code: never
+    assert said(capsys) == ["not-binned"]
+    monkeypatch.setattr(engine, "FROZEN", True)
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert engine.move_to_bin(tmp_path, binning) is True
+    [line] = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert line == {"at": line["at"], "stage": "binned", "landed": "/the bin/app.ancestree.desktop"}
+    assert sent == [tmp_path.resolve()]
+    monkeypatch.setattr(sys, "platform", "win32")  # Windows' uninstaller does it there
+    assert engine.move_to_bin(tmp_path, binning) is False
+    assert sent == [tmp_path.resolve()]
+
+
+def test_to_bin_moves_the_folder_before_anything_is_made_in_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The shell's last call on the Mac and Linux: nothing else of the engine runs, so nothing is
+    written in the folder, and no families' list made where there was none."""
+    moved: list[Path] = []
+
+    def move(root: Path) -> bool:
+        moved.append(root)
+        return True
+
+    monkeypatch.setattr(engine, "move_to_bin", move)
+    engine.main(["--data", str(tmp_path / "gone"), "--to-bin"])
+    assert moved == [tmp_path / "gone"]
+    assert not (tmp_path / "gone").exists()
+
+
+def test_the_note_is_kept_on_windows_alone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    families = engine.Families.load(tmp_path, "Keluarga Contoh")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    engine.keep_note(families)
+    assert not (tmp_path / "uninstall.ini").exists()
+    monkeypatch.setattr(sys, "platform", "win32")
+    engine.keep_note(families)
+    assert (tmp_path / "uninstall.ini").read_bytes().startswith(b"\xff\xfe")
 
 
 def test_the_first_family_is_named_after_its_family_folder(tmp_path: Path) -> None:

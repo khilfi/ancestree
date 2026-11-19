@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 from uuid import UUID, uuid7
@@ -9,6 +10,7 @@ from uuid import UUID, uuid7
 from neo4j import AsyncManagedTransaction as Tx
 
 from ancestree.domain.person import Gender, PartialDate, Place
+from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.domain.requests import FillIn, NewRelative, PersonInput, PersonPatch
 from ancestree.domain.search import find_people
 from ancestree.domain.views import (
@@ -35,7 +37,12 @@ from ancestree.services.context import (
 from ancestree.services.detail import districted, load_detail, summary
 from ancestree.services.families import by_blood, family_key
 from ancestree.services.placing import placed, share_location
-from ancestree.services.relationships import Linked, connect
+from ancestree.services.relationships import (
+    Linked,
+    connect,
+    parent_refused,
+    spouse_refused,
+)
 from ancestree.services.rules import Facts, life_notices, parent_child_notices
 from ancestree.services.snapshots import refresh_snapshots
 from ancestree.storage.files import (
@@ -263,30 +270,50 @@ async def set_children_order(ctx: Context, person_id: UUID, child_ids: list[UUID
 
 
 async def delete_person(ctx: Context, person_id: UUID) -> TrashEntry:
-    """Move someone to the Trash: their links go into a tombstone, their folder alongside."""
+    """Move someone to the Trash: their links go into a tombstone, their folder alongside. An
+    unknown parent left linked to no one goes too, and comes back with whichever of their
+    children comes back first: each child's tombstone holds their unknown parents."""
     pid = str(person_id)
 
-    async def export(tx: Tx) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    async def export(tx: Tx) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
         props = await people_repo.fetch_person(tx, pid)
         if props is None:
             raise NotFoundError("That person isn't in the tree.")
-        return props, await people_repo.fetch_links_of(tx, pid)
+        links = await people_repo.fetch_links_of(tx, pid)
+        unknown = []
+        for link in links:
+            if link["type"] == "PARENT_OF" and link["target"] == pid:
+                parent = await people_repo.fetch_person(tx, link["source"])
+                if parent is not None and parent.get("placeholder"):
+                    unknown.append(parent)
+        return props, links, unknown
 
     async with folder_lock(pid):
-        props, links = await read(ctx, export)
+        props, links, unknown = await read(ctx, export)
         tombstone = {
             "format": 1,
             "person": _plain(props),
             "links": [{**link, "props": _plain(link["props"])} for link in links],
+            "unknown_parents": [_plain(parent) for parent in unknown],
         }
         entry = await asyncio.to_thread(move_to_trash, ctx.data_dir, pid, tombstone)
+
+        async def remove(tx: Tx) -> set[str]:
+            await people_repo.delete_person(tx, pid)
+            alone = set()
+            for parent in unknown:
+                if not await people_repo.fetch_links_of(tx, parent["id"]):
+                    await people_repo.delete_person(tx, parent["id"])
+                    alone.add(str(parent["id"]))
+            return alone
+
         try:
-            await write(ctx, lambda tx: people_repo.delete_person(tx, pid))
+            gone = await write(ctx, remove)
         except BaseException:
             await asyncio.to_thread(take_out_of_trash, ctx.data_dir, entry, pid)
             raise
     await refresh_snapshots(
-        ctx, {link[end] for link in links for end in ("source", "target")} - {pid}
+        ctx, {link[end] for link in links for end in ("source", "target")} - {pid} - gone
     )
     return _trash_entry(await asyncio.to_thread(read_trash_item, ctx.data_dir, entry))
 
@@ -302,73 +329,141 @@ async def trash_entry(ctx: Context, entry: str) -> TrashEntry:
         raise NotFoundError("That isn't in the Trash.") from error
 
 
-async def restore(ctx: Context, entry: str) -> RestoreResult:
+@dataclass
+class Back:
+    """What came back with someone from the Trash: their links put back; those skipped, to
+    someone no longer here or of a kind deleted since; and why each link the rules refuse was
+    left out."""
+
+    restored: int = 0
+    skipped: int = 0
+    left_out: list[str] = field(default_factory=list)
+    ids: list[str] = field(default_factory=list)  # of those put back
+
+    @property
+    def whole(self) -> bool:
+        return not self.skipped and not self.left_out
+
+
+async def put_person_back(tx: Tx, tombstone: Mapping[str, Any]) -> None:
+    """Someone from their Trash entry, as they were, without their links yet; and their
+    unknown parents no longer in the tree, so those links come back too."""
+    person = tombstone["person"]
+    if await people_repo.fetch_person(tx, person["id"]) is not None:
+        raise RuleError("already_restored", f"{person['full_name']} is already in the tree.")
+    for parent in tombstone.get("unknown_parents", ()):
+        if await people_repo.fetch_person(tx, parent["id"]) is None:
+            await _create_as_was(tx, parent)
+    await _create_as_was(tx, person)
+
+
+async def _create_as_was(tx: Tx, kept: Mapping[str, Any]) -> None:
+    props = dict(kept)
+    created_at = props.pop("created_at", None)
+    props.pop("updated_at", None)
+    await tx.run(
+        """
+        CREATE (p:Person) SET p = $props,
+            p.created_at = coalesce(datetime($created), datetime()), p.updated_at = datetime()
+        """,
+        props=props,
+        created=created_at,
+    )
+
+
+async def put_links_back(tx: Tx, tombstone: Mapping[str, Any], *, checked: bool = True) -> Back:
+    """Someone's links from their Trash entry, once they're back: each through the rules a new
+    link keeps, and each as it was, a marriage's order and all. Not `checked`: put back
+    as they were, for Undo to check once it's done the rest."""
+    person = tombstone["person"]
+    kinds = await kinds_repo.fetch_kinds(tx)
+    back = Back()
+    for link in tombstone["links"]:
+        source, target = link["source"], link["target"]
+        other = target if source == person["id"] else source
+        kind = link["props"].get("kind") or BIOLOGICAL
+        people = await people_repo.fetch_people(tx, [source, target])
+        parent = link["type"] == "PARENT_OF"
+        if other not in people or (parent and kind not in kinds):
+            back.skipped += 1
+            continue
+        if not checked:
+            refused = None
+        elif parent:
+            refused = await parent_refused(
+                tx, source, target, blood=kinds[kind].blood, people=people
+            )
+        else:
+            refused = await spouse_refused(tx, source, target, people)
+        if refused is not None:
+            name = people[other]["full_name"]
+            back.left_out.append(
+                f"{person['full_name']}'s link to {name} can't come back: {refused.message}"
+            )
+            continue
+        await links_repo.put_back_link(tx, link["type"], source, target, dict(link["props"]))
+        back.restored += 1
+        back.ids.append(str(link["props"]["id"]))
+    return back
+
+
+async def restore(ctx: Context, entry: str, *, whole: bool = False) -> RestoreResult:
+    """Someone back from the Trash, with every link the rules let back: one they refuse
+    stays out, and is said. `whole`: all of it, or nothing, as Undo needs."""
     try:
         item = await asyncio.to_thread(read_trash_item, ctx.data_dir, entry)
     except (KeyError, FileNotFoundError) as error:
         raise NotFoundError("That isn't in the Trash.") from error
-    props = dict(item.tombstone["person"])
-    pid = props["id"]
-    created_at = props.pop("created_at", None)
-    props.pop("updated_at", None)
+    pid = item.tombstone["person"]["id"]
 
-    async def work(tx: Tx) -> tuple[int, int]:
-        if await people_repo.fetch_person(tx, pid) is not None:
-            raise RuleError("already_restored", f"{props['full_name']} is already in the tree.")
-        await tx.run(
-            """
-            CREATE (p:Person) SET p = $props,
-                p.created_at = coalesce(datetime($created), datetime()), p.updated_at = datetime()
-            """,
-            props=props,
-            created=created_at,
-        )
-        kinds = await kinds_repo.fetch_kinds(tx)
-        restored = skipped = 0
-        for link in item.tombstone["links"]:
-            other = link["target"] if link["source"] == pid else link["source"]
-            kind = link["props"].get("kind")
-            gone = await people_repo.fetch_person(tx, other) is None
-            if gone or (link["type"] == "PARENT_OF" and kind not in kinds):
-                skipped += 1
-            elif link["type"] == "PARENT_OF":
-                await links_repo.create_parent_link(
-                    tx, link["props"]["id"], link["source"], link["target"], kind
-                )
-                restored += 1
-            else:
-                status = link["props"].get("status") or "married"
-                await links_repo.create_spouse_link(
-                    tx, link["props"]["id"], link["source"], link["target"], status
-                )
-                restored += 1
-        return restored, skipped
+    async def work(tx: Tx) -> Back:
+        await put_person_back(tx, item.tombstone)
+        back = await put_links_back(tx, item.tombstone)
+        if whole and not back.whole:
+            why = back.left_out[0] if back.left_out else "someone they were linked to is gone"
+            raise RuleError("not_whole", why)
+        return back
 
     async with folder_lock(pid):
-        restored, skipped = await write(ctx, work)
+        back = await write(ctx, work)
         await asyncio.to_thread(take_out_of_trash, ctx.data_dir, entry, pid)
     others = {link[end] for link in item.tombstone["links"] for end in ("source", "target")}
     await refresh_snapshots(ctx, others | {pid})
     detail = await get_person(ctx, UUID(pid))
-    return RestoreResult(person=detail, restored_links=restored, skipped_links=skipped)
+    return RestoreResult(
+        person=detail,
+        restored_links=back.restored,
+        skipped_links=back.skipped,
+        left_out=back.left_out,
+    )
 
 
-async def bring_back(ctx: Context, person_ids: list[str]) -> int:
+@dataclass
+class Brought:
+    """People brought back from the Trash, and why each link the rules refused stayed out."""
+
+    people: int = 0
+    left_out: list[str] = field(default_factory=list)
+
+
+async def bring_back(ctx: Context, person_ids: list[str]) -> Brought:
     """People moved to the Trash, back from it while they're still there: the latest entry of
-    each, should they have been restored and removed again since. How many came back."""
+    each, should they have been restored and removed again since. Each link through the rules,
+    as from the Trash."""
+    brought = Brought()
     if not person_ids:
-        return 0
+        return brought
     entries = await trash(ctx)
-    brought = 0
     for pid in person_ids:
         entry = next((e.entry for e in entries if str(e.person_id) == pid), None)
         if entry is None:
             continue
         try:
-            await restore(ctx, entry)
+            result = await restore(ctx, entry)
         except RuleError, NotFoundError:
             continue  # back already
-        brought += 1
+        brought.people += 1
+        brought.left_out += result.left_out
     return brought
 
 

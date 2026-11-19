@@ -2,8 +2,10 @@
 
 A relative's computer changes the family as the keeper's does, in its own database. What it
 changed is kept as the difference between its family and the family it last received, so
-whatever the keeper publishes next can come in beneath it: `rebased`, field by field for
-people. Once the keeper has answered, what was answered goes, and only what came after stays.
+whatever the keeper publishes next can come in beneath it: `rebased`, detail by detail for
+people, a date or a place always whole. Before it's taken in, `checked` checks everyone
+and every link this computer changed, as a restore would. Once the keeper has answered, what
+was answered goes, and only what came after stays.
 
 What it sends the keeper is its whole family (exchange/records.py, exchange/returned.py):
 everyone, every link and every life story; and, where they differ from the family as received,
@@ -22,9 +24,12 @@ import zlib
 from pathlib import Path
 from typing import Any
 
+from ancestree.domain.links import Link, Rules
+from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.exchange.records import in_link_order, link_record, person_record
 from ancestree.familyfolder.entries import Entries
 from ancestree.media.photos import PhotoError, process_picture
+from ancestree.repo.mapping import unreadable, whole_of
 from ancestree.services.biography import told as told_story
 from ancestree.storage import biography as stories
 from ancestree.storage import files
@@ -52,7 +57,8 @@ def rebased(
     """The family as received `now`, with this computer's own changes since `was` on top.
 
     A person's details come in one by one, so whatever else the keeper changed about them
-    stays; a link, a file or a setting comes whole. A person the keeper took out goes, with
+    stays, a date or a place whole, never part by part; a link, a file or a setting
+    comes whole. A person the keeper took out goes, with
     what was changed about them. A link left joining someone no longer here goes too, as does
     a file of theirs. Where people sit on this computer's tree stays as arranged here since
     `arranged_on`, when that's another family than `was` (the one last received)."""
@@ -105,8 +111,15 @@ def _rebased(was: Entries, mine: Entries, now: Entries) -> Entries:
             family[key] = after
         elif key in family:
             theirs = dict(family[key])
-            for name in before.keys() | after.keys():
-                if before.get(name) == after.get(name):
+            # A date's or a place's parts all come from here, or all from the keeper: never
+            # the keeper's month with this computer's day.
+            changed = {
+                whole_of(name)
+                for name in before.keys() | after.keys()
+                if before.get(name) != after.get(name)
+            }
+            for name in before.keys() | after.keys() | theirs.keys():
+                if whole_of(name) not in changed:
                     continue
                 if name in after:
                     theirs[name] = after[name]
@@ -121,6 +134,81 @@ def _rebased(was: Entries, mine: Entries, now: Entries) -> Entries:
         return key.startswith("file/people/") and key.split("/")[2] not in here
 
     return {key: value for key, value in family.items() if not stranded(key, value)}
+
+
+def checked(family: Entries, now: Entries) -> tuple[Entries, list[str]]:
+    """The family as this computer will take it in, with what it changed checked first, as a
+    restore checks it: `now` is the family as the keeper published it. Someone whose
+    dates or places it left unreadable comes in as the keeper has them; a link it made that
+    the rules refuse on the keeper's family stays out. Each is said, in a sentence."""
+    family, said = dict(family), []
+    for key, value in sorted(family.items()):
+        if not key.startswith("person/") or value == now.get(key):
+            continue
+        problem = unreadable(value)
+        if problem is None:
+            continue
+        name = str(value.get("full_name") or "someone")
+        keepers = now.get(key)
+        if keepers is not None and unreadable(keepers) is None:
+            family[key] = keepers
+            said.append(
+                f"What this computer changed about {name} can't be read ({problem}): "
+                f"{name} is as your keeper has them."
+            )
+            continue
+        family[key] = _readable(value)
+        said.append(f"{problem[:1].upper()}{problem[1:]}: it's left out on this computer.")
+    names = {
+        key.removeprefix("person/"): str(value.get("full_name") or "")
+        for key, value in family.items()
+        if key.startswith("person/")
+    }
+    blood = {
+        str(value.get("key"))
+        for key, value in family.items()
+        if key.startswith("kind/") and value.get("blood")
+    }
+
+    def as_link(value: dict[str, Any]) -> Link:
+        props = value.get("properties") or {}
+        return Link(
+            str(props.get("id")),
+            "PARENT_OF" if value.get("type") == "PARENT_OF" else "SPOUSE_OF",
+            str(value.get("source")),
+            str(value.get("target")),
+            (props.get("kind") or BIOLOGICAL) in blood,
+        )
+
+    rules = Rules(names)
+    links = sorted(key for key in family if key.startswith("link/"))
+    for key in links:
+        if family[key] == now.get(key):
+            rules.take(as_link(family[key]))  # the keeper's, as published
+    for key in links:
+        if family[key] == now.get(key):
+            continue
+        refused = rules.add(as_link(family[key]))
+        if refused is None:
+            continue
+        said.append(f"A link made on this computer stays out: {refused}")
+        if key in now:
+            family[key] = now[key]
+            rules.take(as_link(now[key]))
+        else:
+            del family[key]
+    return family, said
+
+
+def _readable(person: dict[str, Any]) -> dict[str, Any]:
+    """Someone with each date and place that can't be read left out."""
+    kept = dict(person)
+    for whole in ("birth_date", "death_date", "birth_place", "death_place", "residence_place"):
+        parts = {name: value for name, value in kept.items() if whole_of(name) == whole}
+        if parts and unreadable({"full_name": "", **parts}) is not None:
+            for name in parts:
+                del kept[name]
+    return kept
 
 
 def _sent_part(key: str, value: dict[str, Any] | None) -> dict[str, Any] | None:

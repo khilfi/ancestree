@@ -242,6 +242,11 @@ class Instruction(_Model):
     role: Literal["trusted", "contributor", "viewer"] = "contributor"
     # The account invited, as the invitation's form takes it (0.8.0: never any text at all).
     email: Annotated[str, Field(max_length=254, pattern=r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$")] = ""
+    # Since 0.8.7: the family's record as far as this computer had read it, so the keeper's
+    # computer knows whether it invited before or after a removal, whatever the two clocks say.
+    # 0 from a computer before it. A keeper's computer before 0.8.7 refuses an instruction that
+    # has it, as it refuses what it doesn't know: the keeper's computer updates first.
+    seen: Annotated[int, Field(ge=0)] = 0
 
 
 class TookOver(_Model):

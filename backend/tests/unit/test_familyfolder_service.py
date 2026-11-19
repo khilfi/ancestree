@@ -44,6 +44,7 @@ from ancestree.familyfolder.mirror import Mirror
 from ancestree.familyfolder.models import FamilyFile, Instruction
 from ancestree.familyfolder.protect import read_secret
 from ancestree.familyfolder.seals import Kind, seal, seal_for
+from ancestree.services import familyfolder as familyfolder_service
 from ancestree.services.context import Context, NotFoundError, RuleError
 from ancestree.services.familyfolder import (
     FOLDER_NAME,
@@ -548,6 +549,26 @@ async def test_the_keepers_next_family_comes_in_beneath_a_relatives_change(
     assert (await relative.status()).pending == 1
 
 
+async def test_a_relatives_change_that_wont_read_comes_in_as_the_keepers_and_is_said(
+    tmp_path: Path, cloud: Cloud
+) -> None:
+    """A date this computer left broken, as before 0.8.7 (#3): checked as it's taken in,
+    the keeper's person comes in instead, and the family folder says so."""
+    keeper, ours, relative, theirs, _ = await admitted(tmp_path, cloud)
+    someone(theirs.graph, HASSAN).update(birth_year=1950, birth_month=2, birth_day=31)
+    someone(ours.graph, SITI)["occupation"] = "Teacher"  # the keeper's, so the family moves on
+    await keeper.sync()
+    await relative.sync()
+
+    latest = theirs.restores[-1]["graph"]
+    assert "birth_day" not in someone(latest, HASSAN)
+    assert someone(latest, SITI)["occupation"] == "Teacher"
+    status = await relative.status()
+    assert "What this computer changed about Hassan bin Ismail can't be read" in status.problem
+    assert "February 1950 has no day 31" in status.problem
+    assert status.through
+
+
 async def test_once_answered_what_was_sent_goes_and_what_came_after_stays(
     tmp_path: Path, cloud: Cloud
 ) -> None:
@@ -755,6 +776,30 @@ async def test_changes_that_cant_be_read_can_still_be_turned_down(
     await relative.sync()
     [answer] = (await relative.status()).answers
     assert (answer.left_out, answer.note) == ([UNREADABLE], "Again, please")
+
+
+async def test_changes_that_cant_be_read_say_so_without_pythons_words(
+    tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The review's #16: Python's own words reached the message.
+    keeper, _, relative, _, device = await admitted(tmp_path, cloud)
+    assert isinstance(relative.computer, Member)
+    assert relative.setup is not None
+    relative.computer.send(
+        [], family="bm90IGEgZmFtaWx5", answered=0, base=relative.setup.restored_seq, changed=1
+    )
+    await relative.sync()
+    await keeper.sync()
+    [waiting] = (await keeper.status()).changes
+
+    def raw(packed: str) -> object:
+        raise ValueError("Invalid isoformat string: 'kelmarin'")
+
+    monkeypatch.setattr(familyfolder_service, "unpack", raw)
+    with pytest.raises(RuleError) as unreadable:
+        await keeper.review(device, waiting.proposal, ReviewChanges())
+    assert "isoformat" not in unreadable.value.message
+    assert "(something unexpected went wrong)" in unreadable.value.message
 
 
 async def test_drive_trouble_comes_back_as_a_sentence(tmp_path: Path, cloud: Cloud) -> None:
@@ -1081,6 +1126,26 @@ async def test_a_file_that_isnt_a_desktop_apps_client_is_refused(
         assert refused.value.code == "not_a_client_file"
         assert says in refused.value.message
     assert keeper.client is None
+
+
+def test_the_client_file_saved_again_is_the_one_the_keeper_gave() -> None:
+    """Save it again…, before AncesTree is removed: the file in Google's own form, under
+    its own name, that AncesTree takes again on the computer the keeper comes back on."""
+    given = client_file("123456789012-newclient.apps.googleusercontent.com")
+    client = Client.from_file(given)
+    again = client.as_file()
+    assert json.loads(again) == {
+        "installed": {
+            **json.loads(given)["installed"],
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        }
+    }
+    assert Client.from_file(again.decode()) == client
+    assert client.file_name == (
+        "client_secret_123456789012-newclient.apps.googleusercontent.com.json"
+    )
+    unnamed = Client("123456789012-x.apps.googleusercontent.com", "made-up-secret")
+    assert "project_id" not in json.loads(unnamed.as_file())["installed"]
 
 
 async def test_once_started_only_its_projects_clients_keep_the_family_folder(
@@ -2473,6 +2538,74 @@ async def test_an_invitation_from_before_a_removal_doesnt_keep_the_folder_shared
     await laptop.sync()
     await keeper.sync()
     assert COUSIN in cloud.items[setup.folder].shared
+
+
+async def a_relative_and_the_laptop(
+    tmp_path: Path, cloud: Cloud
+) -> tuple[FamilyFolder, FamilyFolder, str]:
+    """The keeper's computer, its laptop allowed to help, and a relative's computer let in:
+    the relative's by its id."""
+    keeper, _ = await keeper_with_project(tmp_path, cloud)
+    laptop, _ = await keepers_laptop(tmp_path, cloud, keeper)
+    await keeper.invite(Invite(email=RELATIVE))
+    relative, _, _ = await asks_to_join(tmp_path, cloud, keeper.invitation().text())
+    await keeper.sync()
+    [asking] = (await keeper.status()).asking
+    await keeper.admit(Admit(device=asking.device, role="viewer"))
+    await relative.sync()
+    await laptop.sync()
+    return keeper, laptop, asking.device
+
+
+def clock(monkeypatch: pytest.MonkeyPatch, hours: float) -> None:
+    """This module's clock, so many hours off: as another computer's might be."""
+    off = timedelta(hours=hours)
+
+    class Off(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> Any:
+            return datetime.now(tz) + off
+
+    monkeypatch.setattr(familyfolder_service, "datetime", Off)
+
+
+async def test_an_invitation_before_a_removal_by_the_record_never_undoes_it(
+    tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The review's #11: which came first was the two computers' clocks. The
+    laptop, its clock two hours fast, invites the relative again; then the keeper's computer
+    removes theirs. By the clocks the invitation came after, and the folder stayed shared."""
+    keeper, laptop, device = await a_relative_and_the_laptop(tmp_path, cloud)
+    clock(monkeypatch, 2)
+    await laptop.invite(Invite(email=RELATIVE))
+    monkeypatch.undo()
+    cloud.failing = {"unshare"}  # Drive refuses for now: the removal waits on the next round
+    await keeper.remove(OneComputer(device=device))
+    cloud.failing = set()
+    await laptop.sync()
+    await keeper.sync()
+    assert keeper.setup is not None
+    assert RELATIVE not in cloud.items[keeper.setup.folder].shared  # the removal stands
+
+
+async def test_an_invitation_after_a_removal_by_the_record_stands(
+    tmp_path: Path, cloud: Cloud, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The keeper's computer removes the relative's; the laptop, having read that, its clock
+    two hours slow, invites them again. By the clocks the invitation came first, and the folder
+    stopped being shared with them."""
+    keeper, laptop, device = await a_relative_and_the_laptop(tmp_path, cloud)
+    cloud.failing = {"unshare"}
+    await keeper.remove(OneComputer(device=device))
+    await laptop.sync()  # it has the removal
+    clock(monkeypatch, -2)
+    await laptop.invite(Invite(email=RELATIVE))
+    monkeypatch.undo()
+    cloud.failing = set()
+    await laptop.sync()
+    await keeper.sync()
+    assert keeper.setup is not None
+    assert RELATIVE in cloud.items[keeper.setup.folder].shared  # invited again, after
 
 
 async def test_removing_your_other_computer_takes_its_permission_away(

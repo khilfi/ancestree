@@ -8,6 +8,7 @@ import type { Gender } from "@/api/types";
 import { BloodTie, birthPlace, bloodTies, type Place, type Seniority, seniority } from "./blood";
 import { minBy } from "./compare";
 import type { Family } from "./family";
+import { compareBirths } from "./order";
 import type { Step } from "./routes";
 
 export type Side = "paternal" | "maternal";
@@ -35,7 +36,9 @@ export type KindSibling = {
   gender: Gender;
   seniority: Seniority | null;
 };
-/** An in-law or step relation, by the shape of its route: "=u" a spouse's parent. */
+/** An in-law or step relation, by the shape of its route: "=u" a spouse's parent. A
+ *  spouse's other spouse ("==") is `apart` when the marriages aren't known to have overlapped,
+ *  so never a co-wife, and `late` when the one they both married has died. */
 export type Compound = {
   type: "compound";
   key: string;
@@ -45,6 +48,8 @@ export type Compound = {
   parts: Kin[];
   seniority: Seniority | null;
   place: Place | null;
+  apart?: boolean;
+  late?: boolean;
 };
 /** Anything else, said piece by piece: "wife's cousin's son". */
 export type Chain = { type: "chain"; parts: Kin[] };
@@ -227,13 +232,20 @@ export function pieces(family: Family, a: string, route: readonly Step[]): Piece
       while (j < route.length && route[j]?.move === "u" && family.isBlood(route[j]?.kind)) j++;
       while (j < route.length && route[j]?.move === "d" && family.isBlood(route[j]?.kind)) j++;
       const end = (route[j - 1] as Step).to;
+      const ups = route.slice(i, j).filter((s) => s.move === "u").length;
+      // Said as the tie the stretch walks, never the closest between its two ends: a
+      // grandfather who's a half-brother too, walked up through a mother, is the grandfather.
+      const walked = [here, ...route.slice(i, j).map((s) => s.to)];
       const ties = bloodTies(family, here, end);
+      const tie =
+        ties.find(
+          (t) => t.path.length === walked.length && t.path.every((p, n) => p === walked[n]),
+        ) ?? ties.find((t) => t.up === ups && t.down === j - i - ups);
       let kin: Blood;
-      if (ties.length) {
-        kin = bloodKin(family, here, end, ties[0] as BloodTie);
+      if (tie) {
+        kin = bloodKin(family, here, end, tie as BloodTie);
       } else {
         // Can't happen for a blood stretch, but never guess.
-        const ups = route.slice(i, j).filter((s) => s.move === "u").length;
         kin = blood(ups, j - i - ups, family.gender(end));
       }
       found.push({ kin, start: here, end, shape: `${kin.up},${kin.down}`, size: j - i });
@@ -253,6 +265,18 @@ function fits(family: Family, key: string, start: string, end: string): boolean 
     return ![...family.parents(start)].some((parent) => theirs.has(parent));
   }
   return true;
+}
+
+/** Two marriages of one person, to A and to B: whether they aren't known to have overlapped,
+ *  as when either of the two died before the one they married, or may have; and whether that
+ *  one has died. */
+function marriagesApart(family: Family, a: string, between: string, b: string): [boolean, boolean] {
+  const died = family.member(between).died;
+  const endedFirst = (spouse: string) => {
+    const theirs = family.member(spouse).died;
+    return theirs != null && !(died != null && (compareBirths(died, theirs) ?? 0) < 0);
+  };
+  return [endedFirst(a) || endedFirst(b), died != null];
 }
 
 /** Known combinations become one relation. Of all the ways to group the pieces, the fewest
@@ -275,6 +299,8 @@ export function combine(family: Family, found: readonly Piece[]): Kin[] {
         .find((kin): kin is Blood => kin.type === "blood" && !!kin.up && !!kin.down);
       let older = inside ? inside.seniority : null;
       if (key === "u=d") older = seniority(family, last.end, first.start); // by age
+      const [apart, late] =
+        key === "==" ? marriagesApart(family, first.start, first.end, last.end) : [false, false];
       const compound: Compound = {
         type: "compound",
         key,
@@ -284,6 +310,8 @@ export function combine(family: Family, found: readonly Piece[]): Kin[] {
         parts: chunk.map((p) => p.kin),
         seniority: older,
         place: inside ? inside.place : null,
+        apart,
+        late,
       };
       options.push([i + shapes.length, compound, chunk.reduce((sum, p) => sum + p.size, 0)]);
     }

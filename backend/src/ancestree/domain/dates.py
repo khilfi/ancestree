@@ -5,9 +5,10 @@ Day before month, as written in Malaysia:
     1950 · 3/1950 · 12/3/1950 · 12-3-1950 · 12.3.1950 · 1950-03-12 (ISO)
     March 1950 · Mac 1950 · 12 March 1950 · March 12, 1950
     c. 1950 · about 1950 · before 1900 · after 1900 · 1910-1915 · between 1910 and 1915
+    1950s, the decade from 1950 to 1959
 
 Malay month names and words work too: Mac, Ogos, Disember; sekitar, sebelum, selepas,
-antara 1910 dan 1915.
+antara 1910 dan 1915, tahun 1950-an.
 """
 
 import calendar
@@ -72,6 +73,8 @@ _RANGES = [
     # Hyphen, en dash or em dash: people type all three, so the dashes here are deliberate.
     re.compile(r"^(?P<a>\d{4})\s*(?:-|–|—|to|hingga|sehingga)\s*(?P<b>\d{4})$"),  # noqa: RUF001
 ]
+# A decade: "1950s", "the 1950s", "1950-an", "tahun 1950-an", between 1950 and 1959.
+_DECADE = re.compile(r"^(?:the\s+|tahun\s+)?(?P<decade>\d{3}0)(?:'?s|\s*-?\s*an)$")
 
 _DATES = [
     re.compile(r"^(?P<year>\d{4})$"),
@@ -103,6 +106,9 @@ def parse_partial_date(text: str | None) -> PartialDate | None:
             return _build(
                 year=int(match["a"]), year_to=int(match["b"]), qualifier=DateQualifier.BETWEEN
             )
+    if match := _DECADE.match(cleaned):
+        start = int(match["decade"])
+        return _build(year=start, year_to=start + 9, qualifier=DateQualifier.BETWEEN)
 
     qualifier = DateQualifier.EXACT
     for candidate, pattern in _QUALIFIERS:

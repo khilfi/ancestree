@@ -20,8 +20,18 @@ import {
   useImports,
   usePatchPerson,
   usePerson,
+  useUnlink,
 } from "@/api/queries";
-import type { FactPerson, Graph, GraphPerson, Located, MapPerson, Place } from "@/api/types";
+import type {
+  BirthParents,
+  FactPerson,
+  Graph,
+  GraphPerson,
+  Located,
+  MapPerson,
+  ParentLoop,
+  Place,
+} from "@/api/types";
 import { CanEdit } from "@/app/copy";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
@@ -289,6 +299,89 @@ function OrderGroup({ parents, kids }: { parents: FactPerson[]; kids: FactPerson
       >
         Save this order
       </Button>
+    </li>
+  );
+}
+
+/** "Ismail is Hassan's parent, Hassan is Ali's, and Ali is Ismail's": each the parent of the
+ *  next, the last the first's, through the link to take out. */
+export function loopSaid(loop: ParentLoop, name: (id: string) => string): string {
+  const { people } = loop;
+  const said = people.map((parent, index) => {
+    const child = people[(index + 1) % people.length] ?? parent;
+    return index === 0
+      ? `${name(parent)} is ${name(child)}'s parent`
+      : `${name(parent)} is ${name(child)}'s`;
+  });
+  if (said.length > 1) said[said.length - 1] = `and ${said[said.length - 1]}`;
+  return said.join(said.length > 2 ? ", " : " ");
+}
+
+/** A loop of parents stored before 0.8.7: someone their own ancestor. The tree is drawn
+ *  without its newest link, the likeliest mistake, which this takes out. */
+function LoopRow({ loop, byId }: { loop: ParentLoop; byId: Map<string, GraphPerson> }) {
+  const unlink = useUnlink();
+  const name = (id: string) => byId.get(id)?.full_name ?? "someone";
+  const child = loop.people[0] ?? "";
+  const parent = loop.people[loop.people.length - 1] ?? child;
+  const link = `${name(parent)} as ${name(child)}'s parent`;
+  return (
+    <li className="space-y-1.5 py-2">
+      <p className="text-sm">{loopSaid(loop, name)}.</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <CanEdit>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={unlink.isPending}
+            onClick={() =>
+              unlink.mutate(loop.link, {
+                onSuccess: () => toast.success(`Taken out: ${link}.`),
+                onError: showError,
+              })
+            }
+          >
+            Take out {link}
+          </Button>
+        </CanEdit>
+        <Open id={child} />
+      </div>
+    </li>
+  );
+}
+
+/** A child with three birth parents, stored before 0.8.7: "Ali has three birth parents:
+ *  Hassan, Siti and Yusof", the last linked last, the likeliest mistake, which this takes out. */
+function BirthParentsRow({ found, byId }: { found: BirthParents; byId: Map<string, GraphPerson> }) {
+  const unlink = useUnlink();
+  const name = (id: string) => byId.get(id)?.full_name ?? "someone";
+  const many = ["three", "four", "five"][found.parents.length - 3] ?? `${found.parents.length}`;
+  const listed = found.parents.map(name);
+  const all = `${listed.slice(0, -1).join(", ")} and ${listed.at(-1)}`;
+  const link = `${name(found.parents.at(-1) ?? "")} as ${name(found.child)}'s birth parent`;
+  return (
+    <li className="space-y-1.5 py-2">
+      <p className="text-sm">
+        {name(found.child)} has {many} birth parents: {all}.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <CanEdit>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={unlink.isPending}
+            onClick={() =>
+              unlink.mutate(found.link, {
+                onSuccess: () => toast.success(`Taken out: ${link}.`),
+                onError: showError,
+              })
+            }
+          >
+            Take out {link}
+          </Button>
+        </CanEdit>
+        <Open id={found.child} />
+      </div>
     </li>
   );
 }
@@ -630,6 +723,9 @@ export function MissingSection() {
         .map((p) => ({ id: p.id, kids: kidsOf.get(p.id) ?? [] })),
       unlinked: real.filter((p) => unlinked.has(p.id)).sort(byName),
       twice: enteredTwice(real),
+      byId,
+      loops: data.layout.loops ?? [],
+      crowded: data.layout.three_birth_parents ?? [],
     };
   }, [data, lives]);
 
@@ -658,6 +754,36 @@ export function MissingSection() {
         </p>
         <ImportNote />
       </section>
+
+      {lists.loops.length > 0 && (
+        <Section title="A loop of parents" count={lists.loops.length} done="">
+          <p className="py-1 text-sm text-stone-500">
+            Someone is recorded as their own ancestor, so one of these links is wrong. The tree is
+            drawn without the newest of them, the likeliest mistake: take it out here, or open them
+            and put it right.
+          </p>
+          <ul className="divide-y divide-stone-100">
+            {lists.loops.map((loop) => (
+              <LoopRow key={loop.link} loop={loop} byId={lists.byId} />
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {lists.crowded.length > 0 && (
+        <Section title="A child with three birth parents" count={lists.crowded.length} done="">
+          <p className="py-1 text-sm text-stone-500">
+            No one has more than two birth parents, so one of these links is wrong. The newest is
+            the likeliest mistake: take it out here, or open them and change its kind, to adoptive,
+            say.
+          </p>
+          <ul className="divide-y divide-stone-100">
+            {lists.crowded.map((found) => (
+              <BirthParentsRow key={found.link} found={found} byId={lists.byId} />
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section
         title="Gender not recorded"

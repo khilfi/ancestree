@@ -50,11 +50,13 @@ async def test_a_whole_address_is_kept_and_its_district_said_as_written(
 async def test_a_child_with_no_place_lives_at_their_parents_as_chosen(
     client: httpx.AsyncClient,
 ) -> None:
-    """The mother's when the parents live apart; the father's when chosen; none elsewhere, nor
-    once they've died; never the grandparents', for their own child; and on the map with the
-    parent whose place it is."""
+    """When the parents live apart, the one they sit under on the tree, here their mother, whose
+    family it is; the father's when chosen; none elsewhere, nor once they've died; never
+    the grandparents', for their own child; and on the map with the parent whose place it is."""
     father = await create_person(client, "Hassan bin Ismail", gender="male", residence=KOTA_BHARU)
     mother = await create_person(client, "Siti binti Ali", gender="female", residence=HOME)
+    grandmother = await create_person(client, "Fatimah binti Yusof", gender="female")
+    assert (await link(client, grandmother["id"], mother["id"], "parent")).status_code == 201
     aina = await create_person(client, "Aina binti Hassan", gender="female", birth_date="2010")
     for parent in (father, mother):
         assert (await link(client, parent["id"], aina["id"], "parent")).status_code == 201
@@ -84,6 +86,67 @@ async def test_a_child_with_no_place_lives_at_their_parents_as_chosen(
     family = (await client.get("/api/map")).json()
     [on_map] = [person for person in family["people"] if person["id"] == aina["id"]]
     assert (on_map["lives"], on_map["at_parents"]) == (None, None)
+
+
+async def test_parents_apart_show_them_with_the_one_they_sit_under(
+    client: httpx.AsyncClient,
+) -> None:
+    """The review's #10, by the user's answer of 19 Nov 2026: it was always the
+    mother, whatever the facts. It's the parent they sit under on the tree laid out from the
+    oldest ancestor: here the father, whose family it is; and so whatever the centre now."""
+    grandfather = await create_person(client, "Ismail bin Ahmad", gender="male")
+    father = await create_person(client, "Hassan bin Ismail", gender="male", residence=KOTA_BHARU)
+    assert (await link(client, grandfather["id"], father["id"], "parent")).status_code == 201
+    mother = await create_person(client, "Mariam binti Daud", gender="female", residence=HOME)
+    karim = await create_person(client, "Karim bin Hassan", gender="male", birth_date="2008")
+    for parent in (father, mother):
+        assert (await link(client, parent["id"], karim["id"], "parent")).status_code == 201
+    # Centred on the mother now, whose family hangs off it: still where the oldest seats them.
+    assert (await client.put("/api/settings", json={"centre": mother["id"]})).is_success
+
+    at = (await get_person(client, karim["id"]))["residence_at_parents"]
+    assert (at["whose"], at["place"]["town"]) == ("father", "Kota Bharu")
+    family = (await client.get("/api/map")).json()
+    [on_map] = [person for person in family["people"] if person["id"] == karim["id"]]
+    assert (on_map["at_parents"], on_map["lives"]["name"]) == ("father", "Kota Bharu")
+
+    await edit(client, karim, birth_date="2008", lives_with="mother")  # as chosen on the form
+    at = (await get_person(client, karim["id"]))["residence_at_parents"]
+    assert (at["whose"], at["place"]["town"]) == ("mother", "Kajang")
+
+
+async def test_at_their_parents_takes_only_living_parents_by_birth_or_adoption(
+    client: httpx.AsyncClient,
+) -> None:
+    """The review's #10: a living adult was shown at their late mother's last
+    address, and a foster parent's or a guardian's place could be taken as their parents'."""
+    father = await create_person(client, "Hassan bin Ismail", gender="male", residence=KOTA_BHARU)
+    mother = await create_person(
+        client, "Siti binti Ali", gender="female", residence=HOME, death_date="2020"
+    )
+    aina = await create_person(client, "Aina binti Hassan", gender="female", birth_date="1990")
+    for parent in (father, mother):
+        assert (await link(client, parent["id"], aina["id"], "parent")).status_code == 201
+
+    shown = await get_person(client, aina["id"])
+    assert shown["parents_apart"] is False  # only one of them can be lived with
+    at = shown["residence_at_parents"]
+    assert (at["whose"], at["place"]["town"]) == ("father", "Kota Bharu")
+    family = (await client.get("/api/map")).json()
+    [on_map] = [person for person in family["people"] if person["id"] == aina["id"]]
+    assert (on_map["at_parents"], on_map["lives"]["name"]) == ("father", "Kota Bharu")
+
+    # A foster parent's place isn't their parents'; an adoptive parent's is.
+    zul = await create_person(client, "Zul bin Karim", gender="male", birth_date="2012")
+    foster = await create_person(client, "Rokiah binti Salleh", gender="female", residence=HOME)
+    made = await link(client, foster["id"], zul["id"], "parent", kind="foster")
+    assert made.status_code == 201, made.text
+    assert (await get_person(client, zul["id"]))["residence_at_parents"] is None
+    adoptive = await create_person(client, "Karim bin Osman", gender="male", residence=KOTA_BHARU)
+    made = await link(client, adoptive["id"], zul["id"], "parent", kind="adoptive")
+    assert made.status_code == 201, made.text
+    at = (await get_person(client, zul["id"]))["residence_at_parents"]
+    assert (at["whose"], at["place"]["town"]) == ("father", "Kota Bharu")
 
 
 async def test_an_address_typed_is_suggested_from_the_countrys_places(

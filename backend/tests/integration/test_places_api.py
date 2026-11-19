@@ -131,6 +131,19 @@ async def test_a_place_put_on_the_map_by_hand_is_one_undo_step(
     assert again.status_code == 409
 
 
+async def test_a_pin_with_an_over_long_town_is_refused_not_a_failure(
+    client: httpx.AsyncClient,
+) -> None:
+    # The review's #16: taking off a pin with a town longer than any place keeps
+    # was a 500.
+    long = {"town": "Kampung " + "Panjang " * 20, "country": "Malaysia"}
+    answer = await client.request("DELETE", "/api/places/pins", params=long)
+    assert answer.status_code == 409
+    assert answer.json()["detail"]["code"] == "no_pin"
+    put = await client.put("/api/places/pins", json=long | {"lat": 3.0, "lon": 101.0})
+    assert put.status_code == 422  # never put there either
+
+
 async def test_a_quick_fix_can_clear_a_place_or_give_a_birthplace(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
 ) -> None:

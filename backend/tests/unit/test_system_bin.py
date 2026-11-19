@@ -114,3 +114,25 @@ def test_a_file_goes_to_the_real_bin(tmp_path: Path) -> None:
         assert Path(landed).read_bytes() == b"made by AncesTree's tests"
         trash = Path(landed).parent.parent
         assert (trash / "info" / f"{Path(landed).name}.trashinfo").exists()
+
+
+@pytest.mark.skipif(
+    os.environ.get("ANCESTREE_TEST_SYSTEM_BIN") != "1" or sys.platform == "win32",
+    reason="sends a folder to this computer's own bin: on GitHub's Mac and Linux only",
+)
+def test_a_folder_goes_to_the_real_bin_whole(tmp_path: Path) -> None:
+    """Removing AncesTree on the Mac and Linux: its folder, all in it, as one item."""
+    sent = tmp_path / f"ancestree-bin-test-{uuid4().hex}"
+    (sent / "backups").mkdir(parents=True)
+    (sent / "backups" / "ancestree-backup-2026-11-01T09-00-00.zip").write_bytes(b"made by tests")
+
+    landed = system_bin.folder_to_bin(sent)
+
+    assert not sent.exists()
+    assert landed is not None
+    if sys.platform == "darwin":
+        assert "/.Trash" in landed
+    else:
+        kept = Path(landed) / "backups" / "ancestree-backup-2026-11-01T09-00-00.zip"
+        assert kept.read_bytes() == b"made by tests"
+        assert (Path(landed).parent.parent / "info" / f"{Path(landed).name}.trashinfo").exists()

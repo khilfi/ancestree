@@ -5,6 +5,7 @@ import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from pydantic import ValidationError
 
 from ancestree.api.deps import Ctx, Hist
 from ancestree.config import Settings
@@ -100,7 +101,12 @@ async def remove_pin(
     country: str = "Malaysia",
 ) -> MapPins:
     """Take a place's pin off the map. One Undo step."""
-    place = Place(town=town, state=state, country=country)
+    try:
+        place = Place(town=town, state=state, country=country)
+    except ValidationError as error:
+        # Longer than any place keeps, so never one put on the map: said, not a failure.
+        named = town or state or country
+        raise RuleError("no_pin", f"{named[:40]} isn't on the map by hand.") from error
     async with history.pins_change(ctx) as step:
         pins = await places_service.remove_pin(ctx, place)
         step.label = f"Take {place.town or place.state} off the map"

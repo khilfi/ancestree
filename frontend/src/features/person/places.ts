@@ -65,10 +65,11 @@ export function placeLine(place: PlaceLike | null | undefined): string {
   return [where, how].filter(Boolean).join(" · ");
 }
 
-/** The same household: the same address line, town and country, capitals and spaces aside. */
+/** The same household: the same address line, town, state and country, capitals and
+ *  spaces aside, as the engine has it (services/placing.py). */
 function sameAddress(a: PlaceLike | null | undefined, b: PlaceLike | null | undefined): boolean {
   const key = (place: PlaceLike | null | undefined) =>
-    [place?.address, place?.town, place?.country]
+    [place?.address, place?.town, place?.state, place?.country]
       .map((part) => (part ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ""))
       .join("|");
   return hasAddress(a) && hasAddress(b) && key(a) === key(b);

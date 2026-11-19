@@ -39,6 +39,14 @@ STATES: dict[str, tuple[str, ...]] = {
 _STATE_NAMES = {
     alias: state for state, aliases in STATES.items() for alias in (state.casefold(), *aliases)
 }
+# The states whose main town shares their name: written alone, the town too, by the
+# user's answer of 19 Nov 2026. Johor, Selangor and the rest written alone are the state alone.
+TOWN_STATES: dict[str, str] = {
+    "Melaka": "Melaka",
+    "W.P. Kuala Lumpur": "Kuala Lumpur",
+    "W.P. Putrajaya": "Putrajaya",
+    "W.P. Labuan": "Labuan",
+}
 
 # Countries often written on their own, or in Malay, under the English names the app uses.
 COUNTRIES: dict[str, str] = {

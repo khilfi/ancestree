@@ -126,7 +126,8 @@ in_law:
       younger: {any: adhi ipé}
   "=ud=": {any: pripéan}
   "d=u": {any: bésan}
-  "==": {female: maru}
+  "==": {female: maru}                  # only for marriages that overlapped; the
+                                        # rest said in pieces, until words are chosen
   "uud=":                               # a pakdhé's wife is a budhé, a paklik's a bulik
     male: pakdhé / paklik
     female: budhé / bulik

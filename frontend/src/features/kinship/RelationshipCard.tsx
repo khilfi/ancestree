@@ -144,12 +144,18 @@ export function RelationshipCard({
             <ul className="space-y-1.5">
               {others.map((relation, position) => {
                 const index = position + 1; // the closest relation is 0
+                // Said the same way by another line ("great-grandson" twice): what tells them
+                // apart is the other way round, "paternal" or "maternal great-grandfather".
+                const again = answer?.relations
+                  .slice(0, index)
+                  .some((before) => before.forward.sentence === relation.forward.sentence);
                 return (
-                  <li key={relation.forward.sentence}>
+                  <li key={`${relation.forward.sentence}|${relation.path.join(">")}`}>
                     <AlsoRelated
                       relation={relation}
                       language={language}
                       lit={index === shown}
+                      backwards={again === true}
                       onShow={() => onShow(index === shown ? 0 : index)}
                     />
                   </li>
@@ -328,11 +334,13 @@ function AlsoRelated({
   relation,
   language,
   lit,
+  backwards,
   onShow,
 }: {
   relation: KinRelation;
   language: KinshipLanguage;
   lit: boolean;
+  backwards: boolean; // its sentence is said above already: say the other way round too
   onShow: () => void;
 }) {
   return (
@@ -347,6 +355,11 @@ function AlsoRelated({
       <span className="block text-stone-800">
         <Sentence statement={relation.forward} language={language} />
       </span>
+      {backwards && (
+        <span className="block text-stone-600">
+          The other way round: <Sentence statement={relation.reverse} language={language} />
+        </span>
+      )}
       <Meaning
         statement={relation.forward}
         language={language}

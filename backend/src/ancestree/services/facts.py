@@ -31,6 +31,7 @@ from ancestree.domain.facts import (
     ToFillIn,
 )
 from ancestree.domain.graph import GraphLayout
+from ancestree.domain.links import parent_loops
 from ancestree.domain.person import DateQualifier, Gender, PartialDate
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind
 from ancestree.kinship.blood import climb
@@ -104,6 +105,15 @@ class _Family:
         self.children: dict[str, list[str]] = defaultdict(list)
         self.spouses: dict[str, set[str]] = defaultdict(set)
         self.near: dict[str, set[str]] = defaultdict(set)  # linked either way, any link
+        # A loop of parents stored before 0.8.7 is never walked: its newest link is left
+        # out, as the tree leaves it out.
+        parent_links = [link for link in links if link["type"] == "parent"]
+        looped = {
+            loop.link
+            for loop in parent_loops(
+                (str(link["id"]), str(link["source"]), str(link["target"])) for link in parent_links
+            )
+        }
         for link in links:
             source, target = str(link["source"]), str(link["target"])
             self.near[source].add(target)
@@ -111,6 +121,8 @@ class _Family:
             if link["type"] == "spouse":
                 self.spouses[source].add(target)
                 self.spouses[target].add(source)
+            elif str(link["id"]) in looped:
+                continue
             elif (link.get("kind") or BIOLOGICAL) == BIOLOGICAL:
                 self.parents[target].add(source)
                 self.children[source].append(target)

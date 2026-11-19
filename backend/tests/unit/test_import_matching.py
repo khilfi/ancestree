@@ -512,6 +512,27 @@ def with_houses(rows: Sequence[Mapping[str, str]]) -> bytes:
     return buffer.getvalue().encode(ENCODING)
 
 
+def test_a_postcode_excel_took_the_leading_zero_from_is_no_change() -> None:
+    # The review's #16: Excel reads 01000 as the number 1000, and that was offered
+    # as a change.
+    family, ids = sample_family()
+    home = Place(town="Kangar", state="Perlis", address="No. 3, Jalan Kenari 1", postcode="01000")
+    member = family.members[ids["Hassan"]]
+    family.members[ids["Hassan"]] = replace(
+        member, person=member.person.model_copy(update={"residence": home})
+    )
+    rows = list(csv.DictReader(io.StringIO(write_people_csv(family, addresses=True))))
+    hassan = next(row for row in rows if row["Full name"] == "Hassan bin Ismail")
+    assert hassan["Postcode"] == "01000"
+
+    hassan["Postcode"] = "1000"
+    assert planned(family, with_houses(rows)).changes == []
+
+    hassan["Postcode"] = "02000"  # a postcode changed is still a change
+    [change] = planned(family, with_houses(rows)).changes
+    assert (change.column, change.before, change.after) == ("Postcode", "01000", "02000")
+
+
 def test_a_location_puts_someone_new_on_the_map_by_hand() -> None:
     """As a phone's map gives it: a pin, where the import doesn't look for one."""
     data = with_houses(

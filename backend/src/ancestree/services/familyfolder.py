@@ -97,12 +97,14 @@ from ancestree.domain.familyfolder import (
     TurnDown,
 )
 from ancestree.domain.imports import ChangesPreview, ImportDone
+from ancestree.domain.plain import plainly
 from ancestree.exchange.backup import write_archive
 from ancestree.exchange.restore import restore_archive
 from ancestree.exchange.returned import ReturnedError, sent_family
 from ancestree.familyfolder.changes import (
     UnpackError,
     arranged,
+    checked,
     family_to_send,
     own_changes,
     pack,
@@ -249,9 +251,12 @@ class Setup:
     received: str = ""  # and when it was restored, as ISO 8601
     refused: list[str] = field(default_factory=list)  # the keeper's: computers turned away
     # The keeper's: accounts the folder is to stop being shared with, until Drive has done it;
-    # and when each was noted, so no word of its being invited from before stops it (0.8.0).
+    # and when each was noted, so no word of its being invited from before stops it (0.8.0);
+    # since 0.8.7, the removal's place in the family's record, which orders it against
+    # an invitation whatever the two computers' clocks say.
     unshare: list[str] = field(default_factory=list)
     unshare_since: dict[str, str] = field(default_factory=dict)
+    unshare_at: dict[str, int] = field(default_factory=dict)
     # The keeper's: the Google account of each relative's computer, whose own folder it is.
     accounts: dict[str, str] = field(default_factory=dict)
     own_folder: str = ""  # a relative's: its own folder's id, in its own Drive
@@ -307,6 +312,18 @@ class Setup:
     # and those to let a computer in that the keeper's computer hasn't answered yet.
     instruction: int = 0
     asked: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _after_removal(setup: Setup, wanted: str, instruction: Instruction) -> bool:
+    """Whether a helping computer invited an account after the keeper's computer removed
+    its computer, or with no removal waiting: by their places in the family's record,
+    the removal's against how far the helping computer had read it when it invited, so
+    neither computer's clock decides. An instruction from a computer before 0.8.7, or a
+    removal noted before it, is ordered by the clocks, as it was."""
+    removal = setup.unshare_at.get(wanted)
+    if removal is not None and instruction.seen:
+        return instruction.seen >= removal
+    return _before(setup.unshare_since.get(wanted, ""), instruction.made)
 
 
 def _before(noted: str, made: str) -> bool:
@@ -382,6 +399,9 @@ class FamilyFolder:
             lambda archive, backup_first: restore_archive(ctx, archive, backup_first=backup_first)
         )
         self.history = history or History()  # the app's Undo, for relatives' changes
+        # What of this computer's own changes couldn't come in with the family last taken
+        # in, said with each round until the family next arrives.
+        self.taken_in: list[str] = []
         self.lock = asyncio.Lock()
         self.session: Session | None = None
         self.drive: DriveLike | None = None
@@ -602,7 +622,10 @@ class FamilyFolder:
         try:
             tokens.save(self.dir / "google.bin")
         except (ProtectError, OSError) as error:
-            self.problem = f"The sign-in to Google couldn't be kept on this computer ({error})."
+            log.warning("The sign-in to Google couldn't be kept: %s", error)
+            self.problem = (
+                f"The sign-in to Google couldn't be kept on this computer: {plainly(error)}."
+            )
             return
         self._signed_in(client, tokens)
         self._make_mirror()
@@ -636,7 +659,7 @@ class FamilyFolder:
         except (ProtectError, OSError) as error:
             raise RuleError(
                 "cant_be_locked",
-                f"The family's Google project couldn't be kept on this computer ({error}).",
+                f"The family's Google project couldn't be kept on this computer: {plainly(error)}.",
             ) from error
         self.client = client
         self.problem = self.broken
@@ -831,6 +854,7 @@ class FamilyFolder:
             device=member.device,
             number=setup.instruction,
             made=datetime.now(UTC).isoformat(timespec="seconds"),
+            seen=member.applied,  # how far it had read the family's record
             **what,
         )
         member.instruct(instruction)
@@ -1405,6 +1429,7 @@ class FamilyFolder:
                 wanted = request.email.casefold()
                 setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
                 setup.unshare_since.pop(wanted, None)
+                setup.unshare_at.pop(wanted, None)
                 self._save_setup()
 
     async def admit(self, request: Admit) -> None:
@@ -1483,6 +1508,10 @@ class FamilyFolder:
                     setup.helpers.remove(request.device)  # it hears so at the next round
                     self._save_setup()
                 await asyncio.to_thread(keeper.remove, request.device)
+                if email.casefold() in setup.unshare_since:
+                    # Its place in the record, which an invitation is ordered against.
+                    setup.unshare_at[email.casefold()] = keeper.applied
+                    self._save_setup()
             await self._in_step()
 
     async def allow_helper(self, request: Helper) -> None:
@@ -1676,7 +1705,7 @@ class FamilyFolder:
                     raise RuleError(
                         "not_backed_up",
                         f"Nothing changed: the family here couldn't be backed up first to "
-                        f"{self.ctx.backups} ({error.strerror or error}).",
+                        f"{self.ctx.backups}: {plainly(error)}.",
                     ) from error
                 old_keeper = mirror.owner("family.json")
                 own = old_keeper.casefold() == session.email.casefold()
@@ -1952,7 +1981,7 @@ class FamilyFolder:
                 setup.restored_seq = computer.applied
                 self._save_setup()
             return True
-        family = entries
+        family, said = entries, list[str]()
         received_path = self.dir / "received.json"
         was = self._read(received_path)
         # A viewer's words go back on top too; but not what it changed before it became
@@ -1965,6 +1994,9 @@ class FamilyFolder:
                 if isinstance(sent, dict):
                     since, arranged_on = sent["family"], was
             family = rebased(since, mine, entries, arranged_on=arranged_on)
+            # Everyone and every link this computer changed, checked first, as a restore
+            # checks them: what won't come in is the keeper's, or stays out, and is said.
+            family, said = checked(family, entries)
         elif was is not None and isinstance(computer, Member):
             family = arranged(entries, was, await self._entries_here())
         received = self.dir / "received"
@@ -1984,6 +2016,9 @@ class FamilyFolder:
         finally:
             archive.unlink(missing_ok=True)
         await asyncio.to_thread(self._write, received_path, entries)
+        self.taken_in = said
+        for sentence in said:
+            log.warning("Taking the family in: %s", sentence)
         setup.family = str(entries.get("about", {}).get("name", setup.family))
         setup.restored = fingerprint
         setup.restored_seq = computer.applied
@@ -2159,10 +2194,11 @@ class FamilyFolder:
                         text = data.decode("utf-8", errors="replace")
                         stories[parts[2]] = told_story(text)  # parts and all
         except (UnpackError, ReturnedError, RefusedError, ValueError, RecursionError) as error:
+            log.warning("What %s sent can't be read here: %s", arrived.name, error)
             raise RuleError(
                 "unreadable_changes",
-                f"What {arrived.name} sent can't be read here ({error}). Take none of it: "
-                "their computer hears so, and they can make their changes again.",
+                f"What {arrived.name} sent can't be read here ({plainly(error)}). Take none "
+                "of it: their computer hears so, and they can make their changes again.",
             ) from error
         people, links = records(entries)
         base = Base(people=people, links=links, stories=stories, ids={})
@@ -2445,6 +2481,7 @@ class FamilyFolder:
                 await asyncio.to_thread(mirror.drive.unshare, setup.folder, email)
                 setup.unshare.remove(email)
                 setup.unshare_since.pop(email.casefold(), None)
+                setup.unshare_at.pop(email.casefold(), None)
                 self._save_setup()
             if setup.moved_from and not note:
                 note = OLD_FOLDER
@@ -2474,6 +2511,7 @@ class FamilyFolder:
                 note = "Photos and stories are still arriving: the family comes when they have."
             else:
                 await self._send()
+                note = " ".join(self.taken_in)  # of this computer's, what stayed out
             await self._helping(mirror.drive, computer, setup)  # one of the keeper's own
             if not setup.own_folder:
                 await asyncio.to_thread(self._make_own_folder, mirror, computer, setup)
@@ -2535,9 +2573,10 @@ class FamilyFolder:
             # It shares the family folder now: not to be stopped by a removal queued before;
             # but one queued after it was invited stands (0.8.0).
             wanted = instruction.email.casefold()
-            if _before(setup.unshare_since.get(wanted, ""), instruction.made):
+            if _after_removal(setup, wanted, instruction):
                 setup.unshare = [email for email in setup.unshare if email.casefold() != wanted]
                 setup.unshare_since.pop(wanted, None)
+                setup.unshare_at.pop(wanted, None)
             return True, "", instruction.email
         asks = await asyncio.to_thread(keeper.asking, frozenset(setup.refused))
         ask = next((ask for ask in asks if ask.device == instruction.joining), None)

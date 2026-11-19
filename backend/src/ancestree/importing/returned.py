@@ -116,6 +116,7 @@ class AddLink:
     kind: str
     status: SpouseStatus
     link: str  # their id for it, kept when it's free
+    order: int | None = None  # a marriage's place among theirs, as they sent it
 
 
 @dataclass(frozen=True)
@@ -869,7 +870,7 @@ class _Planner:
                 blocked_by=self.blocked_of(a, b),
                 ticked=True,
             ),
-            AddLink(link["type"], self.tid(a), self.tid(b), kind, status, lid),
+            AddLink(link["type"], self.tid(a), self.tid(b), kind, status, lid, link.get("order")),
         )
 
     def _gone_link(self, lid: str, then: Props) -> None:

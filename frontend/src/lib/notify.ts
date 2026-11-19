@@ -50,6 +50,8 @@ export function showRestored(result: RestoreResult, open?: (id: string) => void)
       { duration: 10_000 },
     );
   }
+  // A link the rules refuse stays out, and is said: "Hassan's link to Ali can't come back: …"
+  for (const said of result.left_out ?? []) toast.warning(said, { duration: 15_000 });
 }
 
 export function showError(error: unknown): void {

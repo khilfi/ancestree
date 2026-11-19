@@ -80,15 +80,28 @@ def test_a_postcode_given_for_two_towns_is_the_one_in_the_town_written(
     assert places.postcode_at("MY", "00000") is None
 
 
-def test_a_household_is_its_address_line_town_and_country(places: Gazetteer) -> None:
-    one = Place(address="No. 12, Jalan Melati 3", town="Kajang")
+def test_a_household_is_its_address_line_town_state_and_country(places: Gazetteer) -> None:
+    one = Place(address="No. 12, Jalan Melati 3", town="Kajang", state="Selangor")
     assert placing.household_key(one) == placing.household_key(
-        Place(address="NO.12 jalan  melati 3", town="kajang", country="malaysia")
+        Place(address="NO.12 jalan  melati 3", town="kajang", state="SELANGOR", country="malaysia")
     )
     assert placing.household_key(one) != placing.household_key(
         one.model_copy(update={"town": "Semenyih"})
     )
     assert placing.household_key(KAJANG) is None  # only with an address line
+
+
+def test_the_same_address_in_two_states_is_two_households() -> None:
+    # The review's #14: the same street name in the same-named town of two states
+    # was one household, so moving one pin moved the other.
+    selangor = Place(address="No. 8, Jalan Kenari 2", town="Bandar Baru", state="Selangor")
+    johor = selangor.model_copy(update={"state": "Johor"})
+    assert placing.household_key(selangor) != placing.household_key(johor)
+    # A state written as people write it is still that state.
+    penang = Place(address="No. 8, Jalan Kenari 2", town="Bandar Baru", state="Penang")
+    assert placing.household_key(penang) == placing.household_key(
+        penang.model_copy(update={"state": "Pulau Pinang"})
+    )
 
 
 def test_a_household_shares_its_most_exact_location() -> None:

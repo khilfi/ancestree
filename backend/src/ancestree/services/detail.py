@@ -30,6 +30,7 @@ from ancestree.lineage.birth_order import (
     position_label,
 )
 from ancestree.places.gazetteer import district_of
+from ancestree.repo import graph as graph_repo
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import people as people_repo
 from ancestree.repo.mapping import date_from_props, person_from_props, place_from
@@ -83,6 +84,22 @@ def living_from(
     return born.year > (this_year or date.today().year) - LIVING_WITHIN_YEARS
 
 
+# The kinds of parent whose place is where their child lives: by birth, or by
+# adoption. A foster parent's or a guardian's home isn't their parents'.
+LIVED_WITH = frozenset({BIOLOGICAL, "adoptive"})
+
+
+def lived_with(
+    parent: Mapping[str, Any], kind: str, kinds: Kinds, *, this_year: int | None = None
+) -> bool:
+    """Whether a parent's place can be where their child lives: a parent by birth
+    or adoption, not an unknown parent, and not known to have died."""
+    if parent.get("placeholder") or not (is_blood(kinds, kind) or kind in LIVED_WITH):
+        return False
+    born, died = date_from_props("birth", parent), date_from_props("death", parent)
+    return living_from(parent.get("living"), born, died, this_year=this_year) is not False
+
+
 async def load_detail(
     tx: AsyncManagedTransaction, person_id: str, language: str = "en", *, kept: bool = False
 ) -> PersonDetail:
@@ -100,9 +117,21 @@ async def load_detail(
     co_parent_ids = {parent["id"] for row in children for parent in row["parents"]} - {person_id}
     co_parents = await people_repo.fetch_people(tx, sorted(co_parent_ids))
     book = TermBook.load(language)
-    return build_detail(
+    detail = build_detail(
         props, kinds, parents, spouses, children, siblings, co_parents, book, kept=kept
     )
+    if detail.parents_apart and detail.lives_with is None and detail.residence_at_parents:
+        # Shown with the parent they sit under on the tree from its oldest ancestor:
+        # the whole family's seats, read for someone whose parents live apart alone.
+        from ancestree.services.graph import seated_under  # here: that service uses this one
+
+        under = seated_under(*await graph_repo.read_family_in(tx)).get(person_id)
+        if under is not None:
+            detail = build_detail(
+                props, kinds, parents, spouses, children, siblings, co_parents, book,
+                kept=kept, under=under,
+            )  # fmt: skip
+    return detail
 
 
 def build_detail(
@@ -117,7 +146,10 @@ def build_detail(
     *,
     this_year: int | None = None,
     kept: bool = False,
+    under: str | None = None,
 ) -> PersonDetail:
+    """`under`: the parent they sit under on the tree laid out from the oldest ancestor, whose
+    place they're shown at when their parents live apart."""
     words = _Words(book or TermBook.load("en"), kinds)
     person = person_from_props(props)
     # Father and mother first, then adoptive, foster and other parents. Two of one gender come
@@ -133,15 +165,21 @@ def build_detail(
     )
     birth_parents = [row for row in parents if is_blood(kinds, _kind(row["link"]))]
     living = is_living(person, this_year=this_year)
-    # With no place of their own, their parents', birth parents first.
+    # With no place of their own, their parents', birth parents first: only those whose
+    # place it can be: by birth or adoption, and not known to have died.
+    at_home = [
+        row
+        for row in parents
+        if lived_with(row["person"], _kind(row["link"]), kinds, this_year=this_year)
+    ]
     homes = [
         (
             Gender(row["person"].get("gender") or Gender.UNKNOWN),
             place_from("residence", row["person"]),
         )
-        for row in parents
-        if not row["person"].get("placeholder")
+        for row in at_home
     ]
+    seated = next((n for n, row in enumerate(at_home) if row["person"]["id"] == under), None)
 
     return PersonDetail(
         id=person.id,
@@ -157,7 +195,7 @@ def build_detail(
         burial_place=person.burial_place,
         residence=person.residence,
         lives_with=person.lives_with,
-        residence_at_parents=at_parents(person.residence, person.lives_with, living, homes),
+        residence_at_parents=at_parents(person.residence, person.lives_with, living, homes, seated),
         parents_apart=len({place for _, place in homes if place is not None}) > 1,
         living=person.living,
         is_living=living,

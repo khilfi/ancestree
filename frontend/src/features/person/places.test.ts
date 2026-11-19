@@ -65,4 +65,17 @@ describe("a mix-up of places", () => {
     });
     expect(toTown(house, blank)).toMatchObject({ town: "Klang", address: "", lat: null });
   });
+
+  it("takes the same address in another state for another house", () => {
+    // Born at the house they now live at is kept to its town; the same street in a Klang of
+    // another state isn't that house.
+    const elsewhere = { ...house, state: "Perak" };
+    const places = { residence: house, birth_place: elsewhere, death_place: house };
+    const wrong = mixup(places, true);
+    if (!wrong) throw new Error("a mix-up");
+    expect(movedHome(places, wrong, blank).birth_place).toEqual(elsewhere);
+    expect(movedHome({ ...places, birth_place: house }, wrong, blank).birth_place).toEqual(
+      toTown(house, blank),
+    );
+  });
 });

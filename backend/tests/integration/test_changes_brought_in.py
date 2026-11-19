@@ -370,6 +370,27 @@ async def test_links_and_unknown_parents_come_back_through_the_rules(
     assert len((await person(client, hafiz))["parents"]) == 2  # unticked: still linked
 
 
+async def test_a_marriage_brought_in_keeps_its_order(
+    client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
+) -> None:
+    """The review's #16: a relative's computer sends each marriage's place among
+    a person's, and it was lost on the way in."""
+    them = await relative(driver, settings)
+    karim = them.id("Karim bin Hassan")
+    third = them.add("Ros binti Kassim", gender="female", birth_year=1975)
+    them.link_up("spouse", karim, third, order=3)
+
+    await bring_in(them)
+    records, _, _ = await driver.execute_query(
+        "MATCH (:Person {id: $karim})-[link:SPOUSE_OF]-(:Person {id: $third}) "
+        "RETURN link.order AS order",
+        karim=karim,
+        third=third,
+        database_=settings.neo4j_database,
+    )
+    assert [record["order"] for record in records] == [3]
+
+
 async def test_take_back_undoes_it_all_and_the_changes_show_again(
     client: httpx.AsyncClient, driver: AsyncDriver, settings: Settings
 ) -> None:

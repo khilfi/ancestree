@@ -79,7 +79,8 @@ const WHOSE = {
 
 /** Where someone with no place of their own lives: at their parents', as long as
  *  they're not known to have died, until they're given a place or **Lives elsewhere** is
- *  ticked. When the parents live apart, their mother's, unless their father's is chosen. */
+ *  ticked. When the parents live apart, the one they sit under on the tree laid out from the
+ *  oldest ancestor, unless the other is chosen: the choice starts at that one. */
 function LivesWith({ person }: { person: PersonDetail }) {
   const { control, watch } = useFormContext<PersonFormValues>();
   const home = watch("residence");
@@ -101,7 +102,7 @@ function LivesWith({ person }: { person: PersonDetail }) {
         render={({ field }) =>
           person.parents_apart ? (
             <RadioGroup
-              value={field.value || "mother"}
+              value={field.value || (at?.whose === "father" ? "father" : "mother")}
               onValueChange={field.onChange}
               aria-label="Where they live, with no place of their own"
               className="gap-1.5"

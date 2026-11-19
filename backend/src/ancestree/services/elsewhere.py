@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ancestree.domain.exports import CopyPlace, Elsewhere
+from ancestree.domain.plain import plainly
 from ancestree.exchange.locked import SUFFIX, Key, lock
 from ancestree.familyfolder.protect import ProtectError, read_secret, write_secret
 from ancestree.services.context import Context, RuleError
@@ -89,8 +90,10 @@ def choose(ctx: Context, folder: str, password: str | None) -> Chosen:
         try:
             write_secret(key_path, Key.from_password(password).saved())
         except (ProtectError, OSError) as error:
+            log.warning("The copies' key couldn't be kept: %s", error)
             raise RuleError(
-                "cant_be_locked", f"The copies' key couldn't be kept on this computer ({error})."
+                "cant_be_locked",
+                f"The copies' key couldn't be kept on this computer: {plainly(error)}.",
             ) from error
     else:
         key_path.unlink(missing_ok=True)

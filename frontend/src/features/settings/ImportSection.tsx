@@ -371,6 +371,8 @@ function takenBack(result: ImportTakenBack): { title: string; description: strin
     result.kept > 0 &&
       `${count(result.kept, "detail was", "details were")} changed again since, so kept.`,
     result.gone > 0 && `${count(result.gone, "person was", "people were")} gone already.`,
+    // Links of those back from the Trash that the rules refuse, each said.
+    ...(result.left_out ?? []),
   ].filter(Boolean);
   return {
     title: done.length > 0 ? `Taken back: ${done.join(", ")}.` : "Nothing was left to take back.",

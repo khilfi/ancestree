@@ -1,4 +1,9 @@
-"""Linking people. "Siti is Ali's mother" becomes a stored link, rules checked first."""
+"""Linking people. "Siti is Ali's mother" becomes a stored link, rules checked first.
+
+The same rules check every link that comes back: from the Trash, through Undo, an
+import's Take back, a merge, or a relative's changes brought in. `parent_refused` and
+`spouse_refused` say why one would break them; domain/links.py words it.
+"""
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -7,6 +12,7 @@ from uuid import UUID, uuid7
 
 from neo4j import AsyncManagedTransaction as Tx
 
+from ancestree.domain import links as rules
 from ancestree.domain.person import Gender
 from ancestree.domain.relationship import BIOLOGICAL, RelationshipKind, SpouseStatus
 from ancestree.domain.requests import Relation, RelationshipCreate, RelationshipUpdate
@@ -135,7 +141,7 @@ async def connect(
 ) -> Linked:
     """Store "a is b's <a_is>" as parent or spouse links, or refuse with the reason."""
     if a == b:
-        raise RuleError("self_link", "Someone can't be linked to themselves.")
+        raise RuleError("self_link", rules.self_link())
     people = await people_repo.fetch_people(tx, [a, b])
     for person_id in (a, b):
         if person_id not in people:
@@ -176,31 +182,9 @@ async def add_parent(
         raise RuleError(
             "hidden_kind", f"'{definition.label}' is hidden. Show it again in Settings to use it."
         )
-    parent_name, child_name = people[parent]["full_name"], people[child]["full_name"]
-    for existing in await links_repo.links_between(tx, parent, child):
-        if existing["type"] == "PARENT_OF":
-            raise RuleError(
-                "already_linked", f"{parent_name} and {child_name} are already parent and child."
-            )
-        raise RuleError(
-            "parent_and_spouse",
-            f"{parent_name} and {child_name} are married, so one can't be the other's parent.",
-        )
-    if await links_repo.is_ancestor(tx, child, parent):
-        raise RuleError(
-            "cycle",
-            f"{child_name} is already an ancestor of {parent_name}. This would make "
-            f"{child_name} their own ancestor.",
-        )
-    if definition.blood:
-        blood_parents = await links_repo.blood_parents(tx, child)
-        if len(blood_parents) >= 2:
-            names = " and ".join(row["name"] for row in blood_parents)
-            raise RuleError(
-                "third_parent",
-                f"{child_name} already has two biological parents: {names}. "
-                "Choose another kind, such as adoptive.",
-            )
+    refused = await parent_refused(tx, parent, child, blood=definition.blood, people=people)
+    if refused is not None:
+        raise refused
 
     link_id = link_id or str(uuid7())
     await links_repo.create_parent_link(tx, link_id, parent, child, kind)
@@ -218,17 +202,81 @@ async def add_parent(
     return Linked([view], notices, await _marriage_suggestions(tx, child, kinds))
 
 
-async def add_spouse(tx: Tx, a: str, b: str, status: SpouseStatus, people: People) -> Linked:
+async def parent_refused(
+    tx: Tx, parent: str, child: str, *, blood: bool, people: People
+) -> RuleError | None:
+    """Why a link making `parent` `child`'s parent would break the rules, as the tree is now;
+    None if it wouldn't. `blood`: its kind is by birth. `people` holds both, by id."""
+    parent_name, child_name = people[parent]["full_name"], people[child]["full_name"]
+    if parent == child:
+        return RuleError("self_link", rules.self_link())
+    for existing in await links_repo.links_between(tx, parent, child):
+        if existing["type"] == "PARENT_OF":
+            return RuleError(
+                "already_linked", rules.already_parent_and_child(parent_name, child_name)
+            )
+        return RuleError("parent_and_spouse", rules.married_not_parent(parent_name, child_name))
+    if await links_repo.is_ancestor(tx, child, parent):
+        return RuleError("cycle", rules.own_ancestor(parent_name, child_name))
+    if blood:
+        blood_parents = await links_repo.blood_parents(tx, child)
+        if len(blood_parents) >= 2:
+            names = [row["name"] for row in blood_parents]
+            return RuleError("third_parent", rules.third_parent(child_name, names))
+    return None
+
+
+async def spouse_refused(tx: Tx, a: str, b: str, people: People) -> RuleError | None:
+    """Why marrying `a` and `b` would break the rules, as the tree is now; None if it wouldn't."""
     a_name, b_name = people[a]["full_name"], people[b]["full_name"]
+    if a == b:
+        return RuleError("self_link", rules.self_link())
     for existing in await links_repo.links_between(tx, a, b):
         if existing["type"] == "SPOUSE_OF":
-            raise RuleError("already_spouses", f"{a_name} and {b_name} are already spouses.")
-        raise RuleError(
-            "parent_and_spouse",
-            f"One of {a_name} and {b_name} is the other's parent, so they can't be married.",
-        )
+            return RuleError("already_spouses", rules.already_spouses(a_name, b_name))
+        return RuleError("parent_and_spouse", rules.parent_not_married(a_name, b_name))
+    return None
+
+
+async def broken(tx: Tx, link_ids: list[str]) -> str | None:
+    """The first rule these links break, now they're stored, as Undo and Redo put them
+    back; None if they keep them all. The same rules as `parent_refused` and
+    `spouse_refused`, checked at once, as a step can put back thousands."""
+    if not link_ids:
+        return None
+    for found in await links_repo.as_stored(tx, link_ids):
+        a, b = found["source"], found["target"]
+        if found["itself"]:
+            return rules.self_link()
+        others = set(found["others"])
+        if found["type"] == "SPOUSE_OF":
+            if "SPOUSE_OF" in others:
+                return rules.already_spouses(a, b)
+            if others:
+                return rules.parent_not_married(a, b)
+            continue
+        if "PARENT_OF" in others:
+            return rules.already_parent_and_child(a, b)
+        if others:
+            return rules.married_not_parent(a, b)
+        if found["loop"]:
+            return rules.own_ancestor(a, b)
+        theirs = [p["name"] for p in found["birth_parents"] if p["id"] != found["parent_id"]]
+        if found["blood"] and len(theirs) >= 2:
+            return rules.third_parent(b, theirs)
+    return None
+
+
+async def add_spouse(
+    tx: Tx, a: str, b: str, status: SpouseStatus, people: People, *, order: int | None = None
+) -> Linked:
+    """`order`: the marriage's place among theirs, where it comes with one: from a merge,
+    or a relative's computer."""
+    refused = await spouse_refused(tx, a, b, people)
+    if refused is not None:
+        raise refused
     link_id = str(uuid7())
-    await links_repo.create_spouse_link(tx, link_id, a, b, status.value)
+    await links_repo.create_spouse_link(tx, link_id, a, b, status.value, order)
     view = LinkView(
         id=UUID(link_id),
         type="spouse",

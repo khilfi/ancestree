@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "AncesTree",
   "mainBinaryName": "AncesTree",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "identifier": "app.ancestree.desktop",
   "build": {
     "frontendDist": "../loading"
@@ -33,6 +33,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "template": "windows/installer.nsi",
         "installerHooks": "windows/hooks.nsh"
       }
     },

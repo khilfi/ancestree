@@ -150,3 +150,84 @@ export const usePutFamilyBack = () =>
  *  on the other's folders. */
 export const useOpenFamily = () =>
   useFamiliesChange((id: string) => families(`/api/desktop/families/${id}/open`, "POST"));
+
+/** What removing AncesTree from this computer takes: its families, whether this computer
+ *  keeps each, and how it's done on this system. `installed` is false for an engine run from the
+ *  code, which removes nothing. */
+export interface Removing {
+  system: "windows" | "mac" | "linux";
+  installed: boolean;
+  app: string | null; // the app itself: its folder on Windows, AncesTree.app, the AppImage
+  folder: string; // AncesTree's own folder, every family's
+  documents: string; // where Windows' uninstaller keeps the backups
+  kept: string; // the folder they're kept in there, or wherever they're saved: AncesTree backups
+  bin: string; // the system's bin, as it names it
+  families: {
+    id: string;
+    name: string;
+    open: boolean;
+    example: boolean;
+    keeper: boolean; // this computer keeps its family folder
+    backups: number;
+    // In AncesTree's bin, for under 30 days: its backups are kept too, as "<name> (removed)".
+    removed?: boolean;
+  }[];
+}
+
+/** Every family's backups, saved to a folder. */
+export interface BackupsSaved {
+  folder: string; // AncesTree backups, in the place chosen
+  families: number;
+  backups: number;
+  copied: number;
+}
+
+async function desktopCall<T>(path: string, method = "GET", body?: object): Promise<T | null> {
+  const response = await fetch(path, {
+    method,
+    body: body ? JSON.stringify(body) : undefined,
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+  });
+  if (response.status === 404 && method === "GET") return null; // not the desktop app
+  const answer = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiError(
+      answer?.detail?.message ?? "AncesTree couldn't answer",
+      response.status,
+      answer?.detail?.code,
+      answer?.detail,
+    );
+  }
+  return answer as T;
+}
+
+const REMOVING = ["desktop", "removing"] as const;
+
+/** What removing AncesTree would take: asked while its dialog is open. */
+export function useRemoving(enabled: boolean) {
+  return useQuery({
+    queryKey: REMOVING,
+    queryFn: () => desktopCall<Removing>("/api/desktop/removing"),
+    enabled,
+    retry: false,
+  });
+}
+
+/** Every family's backups copied to `folder`, each family's in a folder of its name. */
+export function useSaveBackupsTo() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (folder: string) =>
+      desktopCall<BackupsSaved>("/api/desktop/removing/save-backups", "POST", { folder }),
+    onSuccess: () => client.invalidateQueries({ queryKey: REMOVING }),
+  });
+}
+
+/** AncesTree removed from this computer, the families too or not: the app closes, and on
+ *  Windows its uninstaller opens. */
+export function useRemoveAncesTree() {
+  return useMutation({
+    mutationFn: (families: "delete" | "keep") =>
+      desktopCall<{ removing: string }>("/api/desktop/removing/remove", "POST", { families }),
+  });
+}

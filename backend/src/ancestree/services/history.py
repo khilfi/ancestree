@@ -9,15 +9,18 @@ after too.
 
 Only the latest step can be undone, and only while what it touched is still as it left it.
 Anything else is refused and the history is cleared: a change made some other way is never
-overwritten.
+overwritten. Undo and redo are all or nothing: everything is checked before anything is
+done, people coming back from the Trash included, and each link put back keeps the rules a new
+one does. Work in the background, such as a country's places arriving, is no step: the
+steps are brought up to date with it instead, so it never clears Redo.
 
 Each step, and each undoing or redoing of one, is also told to `journal`, when there is one:
 who changed whom, kept beside each person.
 """
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
@@ -30,6 +33,7 @@ from ancestree.domain.map import MapPins
 from ancestree.domain.views import HistoryStep, HistoryView
 from ancestree.repo import history as repo
 from ancestree.services import people as people_service
+from ancestree.services import relationships
 from ancestree.services.context import (
     Context,
     NotFoundError,
@@ -39,7 +43,14 @@ from ancestree.services.context import (
     write,
 )
 from ancestree.services.snapshots import refresh_snapshots
-from ancestree.storage.files import atomic_write, person_dir, remove_bare_folders
+from ancestree.storage.files import (
+    TrashItem,
+    atomic_write,
+    person_dir,
+    read_trash_item,
+    remove_bare_folders,
+    take_out_of_trash,
+)
 from ancestree.storage.settings import (
     read_pins,
     read_tree_settings,
@@ -341,6 +352,41 @@ class History:
                 step.pins = (before, after)
                 self._push(step)
 
+    @asynccontextmanager
+    async def background(
+        self, ctx: Context, people: Iterable[object], keys: Iterable[str]
+    ) -> AsyncIterator[None]:
+        """Work in the background that changes these properties of these people, such as a
+        country's places arriving: never a step of its own, so it never clears Redo.
+        Instead the steps that changed one of them are brought up to date with it, so Undo and
+        Redo still find everything as they left it."""
+        async with self.lock:
+            ids, names = {str(p) for p in people}, frozenset(keys)
+            before = await read(ctx, lambda tx: repo.properties(tx, ids, names))
+            yield
+            after = await read(ctx, lambda tx: repo.properties(tx, ids, names))
+            for pid in before.keys() & after.keys():
+                for key in names:
+                    was, now = before[pid].get(key), after[pid].get(key)
+                    if was != now:
+                        self._brought_up_to_date(pid, key, was, now)
+
+    def _brought_up_to_date(self, pid: str, key: str, was: object, now: object) -> None:
+        """One property changed in the background from `was` to `now`: the latest step to
+        undo that changed it leaves it at `now`, and the next to redo starts from there."""
+        for step in reversed(self._undo):
+            image = step.people.get(pid)
+            if image is not None and key in image.changed_keys():
+                if image.after is not None and image.after.get(key) == was:
+                    image.after[key] = now
+                break
+        for step in reversed(self._redo):
+            image = step.people.get(pid)
+            if image is not None and key in image.changed_keys():
+                if image.before is not None and image.before.get(key) == was:
+                    image.before[key] = now
+                break
+
     async def trash_step[T](
         self,
         direction: Literal["out", "in"],
@@ -425,10 +471,13 @@ async def _apply(ctx: Context, step: Step, *, forward: bool) -> None:
         await _apply_pins(ctx, *step.pins, forward=forward)
     elif not forward:
         await _check_files(ctx, step, forward=False)  # before anything is done
-        # Those it moved to the Trash come back first, so the rest finds everyone it knew.
-        for pid in reversed(step.removed):
-            await _apply_trash(ctx, "out", pid, forward=False)
-        await _apply_graph(ctx, step, forward=False)
+        # Those it moved to the Trash come back first, in the same transaction as the rest, so
+        # the rest finds everyone it knew, and a refusal leaves them in the Trash.
+        back = await _in_trash(ctx, step.removed)
+        async with AsyncExitStack() as locks:
+            for pid in sorted(back):
+                await locks.enter_async_context(folder_lock(pid))
+            await _apply_graph(ctx, step, forward=False, back=back)
         await _apply_files(ctx, step, forward=False)
     else:
         await _check_files(ctx, step, forward=True)
@@ -436,6 +485,21 @@ async def _apply(ctx: Context, step: Step, *, forward: bool) -> None:
         for pid in step.removed:
             await _apply_trash(ctx, "out", pid, forward=True)
         await _apply_files(ctx, step, forward=True)
+
+
+async def _in_trash(ctx: Context, people: Iterable[str]) -> dict[str, TrashItem]:
+    """The latest Trash entry of each of these people; refused if one isn't there."""
+    wanted = list(people)
+    if not wanted:
+        return {}
+    entries = await people_service.trash(ctx)
+    found: dict[str, TrashItem] = {}
+    for pid in wanted:
+        entry = next((e.entry for e in entries if str(e.person_id) == pid), None)
+        if entry is None:
+            raise CantUndoError("someone it moved to the Trash is no longer there")
+        found[pid] = await asyncio.to_thread(read_trash_item, ctx.data_dir, entry)
+    return found
 
 
 def _own_files(ctx: Context, people: Iterable[str]) -> dict[str, bytes]:
@@ -503,8 +567,12 @@ async def _apply_trash(ctx: Context, direction: str, person_id: str, *, forward:
         if entry is None:
             raise CantUndoError("they're no longer in the Trash")
         try:
-            await people_service.restore(ctx, entry)
-        except (RuleError, NotFoundError) as error:
+            await people_service.restore(ctx, entry, whole=True)
+        except RuleError as error:
+            if error.code == "not_whole":
+                raise CantUndoError(error.message.rstrip(".")) from error
+            raise CantUndoError("the Trash has changed since") from error
+        except NotFoundError as error:
             raise CantUndoError("the Trash has changed since") from error
     else:
         try:
@@ -573,7 +641,11 @@ async def _check_graph(tx: Tx, step: Step, *, forward: bool) -> None:
         raise CantUndoError(f"the relationship kind '{sorted(missing)[0]}' has been deleted")
 
 
-async def _apply_graph(ctx: Context, step: Step, *, forward: bool) -> None:
+async def _apply_graph(
+    ctx: Context, step: Step, *, forward: bool, back: Mapping[str, TrashItem] | None = None
+) -> None:
+    """The people and links as the step should leave them, in one transaction; `back`, those
+    it brings back from the Trash first, by their entries."""
     # Anyone it would take out must have nothing of their own yet, such as a photo. person.json
     # and the journal only say who they are and who changed them.
     going = [pid for pid, image in step.people.items() if image.get(forward)[1] is None]
@@ -607,7 +679,21 @@ async def _apply_graph(ctx: Context, step: Step, *, forward: bool) -> None:
         elif now_link is not None and wanted_link is not None:
             link_changes[lid] = {k: wanted_link["props"].get(k) for k in link.changed_keys()}
 
+    trash = dict(back or {})
+
     async def work(tx: Tx) -> None:
+        # Those from the Trash, as they went, so the check finds everyone it knew. Their links
+        # are checked with the step's, once all of it is done.
+        back_links: list[str] = []
+        for item in trash.values():
+            try:
+                await people_service.put_person_back(tx, item.tombstone)
+            except RuleError as error:  # back in the tree some other way
+                raise CantUndoError(error.message.rstrip(".")) from error
+            returned = await people_service.put_links_back(tx, item.tombstone, checked=False)
+            if not returned.whole:
+                raise CantUndoError("someone they were linked to is no longer in the tree")
+            back_links += returned.ids
         await _check_graph(tx, step, forward=forward)  # where it's written: nothing slips in
         await repo.delete_links(tx, old_links)
         await repo.delete_people(tx, going)
@@ -615,9 +701,18 @@ async def _apply_graph(ctx: Context, step: Step, *, forward: bool) -> None:
         await repo.update_people(tx, people_changes)
         await repo.create_links(tx, new_links)
         await repo.update_links(tx, link_changes)
+        # Each link put back keeps the rules a new one does: refused, nothing is done.
+        put_back = [str(link["props"]["id"]) for link in new_links] + back_links
+        broken = await relationships.broken(tx, put_back)
+        if broken is not None:
+            raise CantUndoError(f"a link it would put back breaks a rule. {broken.rstrip('.')}")
 
     await write(ctx, work)
-    await refresh_snapshots(ctx, _snapshots_changed(step) - set(going))
+    for pid, item in trash.items():  # their photos and stories, back with them
+        await asyncio.to_thread(take_out_of_trash, ctx.data_dir, item.entry, pid)
+    links_back = [link for item in trash.values() for link in item.tombstone["links"]]
+    ends = {link[end] for link in links_back for end in ("source", "target")}
+    await refresh_snapshots(ctx, (_snapshots_changed(step) | ends | set(trash)) - set(going))
     await asyncio.to_thread(remove_bare_folders, ctx.data_dir, going)
 
 
