@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TOOL_SELECT, ViewToolbar } from "@/components/ViewToolbar";
+import { TOOL_SELECT, ViewHead, ViewToolbar } from "@/components/ViewToolbar";
 import { StoryMark } from "@/features/biography/StoryMark";
 import { useMeId } from "@/features/me/useMeId";
 import { FilterChips, FilterMenu } from "@/features/tree/FilterMenu";
@@ -307,71 +307,79 @@ export function Timeline({
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <ViewToolbar label="The timeline's tools">
-        <span className="flex items-center gap-2 text-muted-foreground">
-          Group by
-          <Select value={grouping} onValueChange={(value) => setGrouping(value as Grouping)}>
-            <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Group by">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="generation">Generation</SelectItem>
-              <SelectItem value="branch">Branch</SelectItem>
-              <SelectItem value="none">Nothing</SelectItem>
-            </SelectContent>
-          </Select>
-        </span>
-        <span className="flex items-center gap-2 text-muted-foreground">
-          Sort by
-          <Select value={sorting} onValueChange={(value) => setSorting(value as Sorting)}>
-            <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Sort by">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="birth">Birth year</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="death">Death year</SelectItem>
-            </SelectContent>
-          </Select>
-        </span>
-        {onFilter && (
-          <FilterMenu graph={graph} filter={filter} onChange={onFilter} selectedId={selectedId} />
-        )}
-        <span className="text-xs text-faint">
-          {touch
-            ? "Pinch to zoom · drag to move"
-            : "Scroll to go down · Ctrl+scroll to zoom · drag to move"}
-        </span>
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="Zoom out"
-            onClick={() => zoomBy(1 / 1.6)}
-          >
-            <MinusIcon />
-          </Button>
-          <Button variant="outline" size="icon-sm" aria-label="Zoom in" onClick={() => zoomBy(1.6)}>
-            <PlusIcon />
-          </Button>
-          <Button variant="outline" size="sm" onClick={showEveryone}>
-            <MaximizeIcon />
-            Show everyone
-          </Button>
-        </div>
-      </ViewToolbar>
+      {/* The toolbar and the bars under it: Family facts starts below them. */}
+      <ViewHead>
+        <ViewToolbar label="The timeline's tools">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            Group by
+            <Select value={grouping} onValueChange={(value) => setGrouping(value as Grouping)}>
+              <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Group by">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="generation">Generation</SelectItem>
+                <SelectItem value="branch">Branch</SelectItem>
+                <SelectItem value="none">Nothing</SelectItem>
+              </SelectContent>
+            </Select>
+          </span>
+          <span className="flex items-center gap-2 text-muted-foreground">
+            Sort by
+            <Select value={sorting} onValueChange={(value) => setSorting(value as Sorting)}>
+              <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Sort by">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="birth">Birth year</SelectItem>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="death">Death year</SelectItem>
+              </SelectContent>
+            </Select>
+          </span>
+          {onFilter && (
+            <FilterMenu graph={graph} filter={filter} onChange={onFilter} selectedId={selectedId} />
+          )}
+          <span className="text-xs text-faint">
+            {touch
+              ? "Pinch to zoom · drag to move"
+              : "Scroll to go down · Ctrl+scroll to zoom · drag to move"}
+          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Zoom out"
+              onClick={() => zoomBy(1 / 1.6)}
+            >
+              <MinusIcon />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Zoom in"
+              onClick={() => zoomBy(1.6)}
+            >
+              <PlusIcon />
+            </Button>
+            <Button variant="outline" size="sm" onClick={showEveryone}>
+              <MaximizeIcon />
+              Show everyone
+            </Button>
+          </div>
+        </ViewToolbar>
 
-      {/* What the colours say, as on the tree; closeness only for the real family. */}
-      {colours !== "off" && (onSelect || colours !== "closeness") && (
-        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
-          <ColourKey graph={graph} colours={colours} me={me} names={names} />
-        </div>
-      )}
-      {onFilter && (
-        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
-          <FilterChips graph={graph} filter={filter} onChange={onFilter} shown={shownCount} />
-        </div>
-      )}
+        {/* What the colours say, as on the tree; closeness only for the real family. */}
+        {colours !== "off" && (onSelect || colours !== "closeness") && (
+          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
+            <ColourKey graph={graph} colours={colours} me={me} names={names} />
+          </div>
+        )}
+        {onFilter && (
+          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
+            <FilterChips graph={graph} filter={filter} onChange={onFilter} shown={shownCount} />
+          </div>
+        )}
+      </ViewHead>
 
       <div
         className="relative h-7 shrink-0 overflow-hidden border-b border-border bg-card text-xs text-faint select-none"

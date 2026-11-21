@@ -180,13 +180,28 @@ describe("a view-only copy", () => {
     expect((await ask("/api/settings")).json.married_in).toBe("tucked");
   });
 
-  it("places them as fans where an earlier copy of the family chose a retired way", async () => {
-    // Discs and Settled fans retired: kept in the viewer's browser by a copy before 0.9.0.
-    for (const retired of ["discs", "settled"]) {
-      await ask("/api/settings", "PUT", { centre: null, colours: "branch", married_in: retired });
-      expect((await ask("/api/settings")).json.married_in).toBe("fans");
-      expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("fans");
-    }
+  it("keeps its viewer's Discs, back again", async () => {
+    // Discs back at your word of 21 Nov 2026: chosen in this copy, or kept in the viewer's
+    // browser by an earlier copy of the family, it stays Discs.
+    const chosen = await ask("/api/settings", "PUT", {
+      centre: null,
+      colours: "branch",
+      married_in: "discs",
+    });
+    expect(chosen.json.married_in).toBe("discs");
+    expect((await ask("/api/settings")).json.married_in).toBe("discs");
+    expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("discs");
+    // A newer copy of the same family, opened in the same browser, finds it kept.
+    installCopy(family);
+    expect((await ask("/api/settings")).json.married_in).toBe("discs");
+  });
+
+  it("places them as fans where an earlier copy of the family chose Settled fans", async () => {
+    // Settled fans retired, and stays so: kept in the viewer's browser by a copy before
+    // 0.9.0, it's fans.
+    await ask("/api/settings", "PUT", { centre: null, colours: "branch", married_in: "settled" });
+    expect((await ask("/api/settings")).json.married_in).toBe("fans");
+    expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("fans");
   });
 
   it("changes nothing in the family", async () => {

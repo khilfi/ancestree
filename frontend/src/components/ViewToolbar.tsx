@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -34,5 +34,22 @@ export function ViewToolbar({
     >
       {children}
     </fieldset>
+  );
+}
+
+/** Told of the open view's head as it's drawn, and of none as it goes. */
+export const ViewHeadKeeper = createContext<(head: HTMLElement | null) => void>(() => {});
+
+/**
+ * A view's head: its toolbar and the bars under it (the colours' key, the filter's
+ * chips), or what stands in the toolbar's place, as finding a relationship's bar does. The app
+ * keeps where it is, so what's laid over the view, Family facts, starts below it and covers none
+ * of its controls, at any width.
+ */
+export function ViewHead({ children }: { children: ReactNode }) {
+  return (
+    <div ref={useContext(ViewHeadKeeper)} className="shrink-0">
+      {children}
+    </div>
   );
 }

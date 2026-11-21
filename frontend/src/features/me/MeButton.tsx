@@ -108,7 +108,9 @@ export function MeButton() {
           <Button
             variant="ghost"
             size="sm"
-            className="max-w-36"
+            // Below 1024 pixels, no wider than leaves the family's name its first letters beside
+            // In step, at 800 too: a longer name is shortened, whole in its own name.
+            className="max-w-36 max-lg:max-w-28"
             aria-label={`Me: ${you.full_name}`}
           >
             <PersonAvatar person={you} size="sm" className="size-5 text-xs" />

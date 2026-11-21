@@ -269,10 +269,14 @@ export function FamilyMenu() {
   const [adding, setAdding] = useState(false);
   if (!families) return null;
   const current = families.families.find((family) => family.open);
+  // Its whole name in its hint, as a name cut short gives it.
+  const hint = current
+    ? `${current.name} · Families on this computer`
+    : "Families on this computer";
   return (
     <>
       <DropdownMenu>
-        <Hint label="Families on this computer">
+        <Hint label={hint}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

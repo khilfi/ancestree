@@ -918,8 +918,8 @@ async function topShot(page: Page, name: string, bar: Locator): Promise<void> {
   });
 }
 
-// 1000 pixels across, drawn 1.6 times over: 1600 across, as before. At 800, the top bar
-// leaves no room for the family's name beside In step.
+// 1000 pixels across, drawn 1.6 times over: 1600 across, as before. At 800, the top bar left
+// no room for the family's name beside In step until its parts stood closer.
 test.describe("a narrow window's bars", () => {
   test.use({ viewport: { width: 1000, height: 600 }, deviceScaleFactor: 1.6 });
 

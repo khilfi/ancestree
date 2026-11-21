@@ -21,6 +21,7 @@ _COLOURS = {
 }
 _MARRIED_IN = {
     "fans": "Married-in families as fans",
+    "discs": "Married-in families as discs",
     "tucked": "Married-in families tucked in",
 }
 

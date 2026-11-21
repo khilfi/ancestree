@@ -22,6 +22,7 @@ import {
 import { useSavePositions, useTreeSettings } from "@/api/queries";
 import type { Graph, GraphPerson, KinRelation } from "@/api/types";
 import { useCanEdit } from "@/app/copy";
+import { ViewHead } from "@/components/ViewToolbar";
 import { useOfferTreePicture } from "@/features/export/treePicture";
 import { clustersToOpen, glowFor } from "@/features/kinship/glow";
 import { RelatingBar } from "@/features/kinship/RelatingBar";
@@ -614,37 +615,39 @@ export function TreeCanvas({
 
   return (
     // The toolbar above the canvas, not over it; while finding a relationship, what to do
-    // next in its place.
+    // next in its place. Family facts starts below either.
     <div className="flex h-full flex-col">
-      {relating ? (
-        <RelatingBar
-          name={shortName(people.get(relating.from) ?? { full_name: "", nickname: null })}
-          picking={relating.picking}
-          onDone={() => onStopRelating?.()}
-        />
-      ) : (
-        <TreeToolbar
-          graph={graph}
-          readOnly={readOnly}
-          view={view}
-          onView={onView}
-          focus={around}
-          steps={steps}
-          shown={kept}
-          onRearranged={() => {
-            setMoving(true);
-            window.setTimeout(() => setMoving(false), 700);
-          }}
-          families={{
-            all: layout.layout === "rings" || layout.layout === "tree" ? clusters.length : 0,
-            folded: clusters.length - open.size,
-            big: graph.people.length > BIG_FAMILY,
-          }}
-          onFoldAll={(mode) => setFolding(everything(mode))}
-          onShowFamily={showFamily}
-          onHighlight={setHighlight}
-        />
-      )}
+      <ViewHead>
+        {relating ? (
+          <RelatingBar
+            name={shortName(people.get(relating.from) ?? { full_name: "", nickname: null })}
+            picking={relating.picking}
+            onDone={() => onStopRelating?.()}
+          />
+        ) : (
+          <TreeToolbar
+            graph={graph}
+            readOnly={readOnly}
+            view={view}
+            onView={onView}
+            focus={around}
+            steps={steps}
+            shown={kept}
+            onRearranged={() => {
+              setMoving(true);
+              window.setTimeout(() => setMoving(false), 700);
+            }}
+            families={{
+              all: layout.layout === "rings" || layout.layout === "tree" ? clusters.length : 0,
+              folded: clusters.length - open.size,
+              big: graph.people.length > BIG_FAMILY,
+            }}
+            onFoldAll={(mode) => setFolding(everything(mode))}
+            onShowFamily={showFamily}
+            onHighlight={setHighlight}
+          />
+        )}
+      </ViewHead>
       <div
         ref={box}
         className={cn(

@@ -29,8 +29,9 @@ def _read_all(data_dir: Path) -> dict[str, Any]:
 
 def read_tree_settings(data_dir: Path) -> TreeSettings:
     stored = _read_all(data_dir).get("tree") or {}
-    # A way of placing married-in families that retired: fans instead, and stored
-    # so, so it doesn't change again.
+    # A way of placing married-in families that retired, settled fans: fans instead,
+    # and stored so, so it doesn't change again. Discs, retired with it, are back, and
+    # read as discs.
     retired = isinstance(stored, dict) and stored.get("married_in") in RETIRED_WAYS
     if retired:
         stored = stored | {"married_in": "fans"}

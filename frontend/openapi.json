@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.9.0"
+    "version": "0.9.1"
   },
   "paths": {
     "/api/health": {
@@ -12159,6 +12159,7 @@
             "type": "string",
             "enum": [
               "fans",
+              "discs",
               "tucked"
             ],
             "title": "Married In",

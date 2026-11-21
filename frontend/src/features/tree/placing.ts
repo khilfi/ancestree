@@ -17,17 +17,18 @@ import {
 } from "./rings";
 
 /*
- * Where married-in families go on the rings, one of two ways, as this computer
- * chose in the Layout menu:
+ * Where married-in families go on the rings, one of three ways, as this
+ * computer chose in the Layout menu:
  * - fans, the first choice: each family opens outwards from its person, its oldest generation
  *   nearest and its rings drawn as arcs over the fan alone; moved around its host and out where
  *   it would meet another family;
+ * - discs: each family on whole rings of its own, as it was before, moved around its
+ *   host and out until it meets nothing; retired in 0.9.0, and offered again from
+ *   0.9.1, at your word of 21 Nov 2026;
  * - tucked in: each family's people on its host's own rings, at their generations, beside their
  *   person.
- * Two more were tried side by side in S7, and offered until 0.9.0,
- * when your answer of 19 Nov 2026 retired them: the spike's page alone still draws them.
- * - discs: each family on whole rings of its own, as it was before, moved around its
- *   host and out until it meets nothing;
+ * One more was tried side by side in S7, and offered until 0.9.0,
+ * when your answer of 19 Nov 2026 retired it: the spike's page alone still draws it.
  * - settled fans: the fans, then a fixed number of gentle steps that keep photos apart and pull
  *   links towards their length, the same every time.
  * Whichever way, no photo overlaps another, and no family's rings cross another's people. The
@@ -35,10 +36,11 @@ import {
  * them.
  */
 
-/** A way this computer may choose: fans, or tucked in. */
+/** A way this computer may choose: fans, discs, or tucked in. */
 export type Way = TreeSettings["married_in"];
-/** Every way the rings can place them: the two to choose, and the two the spike's page shows. */
-export type Placing = Way | "discs" | "settled";
+/** Every way the rings can place them: the three to choose, and settled fans, which the spike's
+ *  page shows too. */
+export type Placing = Way | "settled";
 
 /** The ways, as the Layout menu offers them: the first is chosen until another is. */
 export const WAYS: { way: Way; name: string; hint: string }[] = [
@@ -46,6 +48,11 @@ export const WAYS: { way: Way; name: string; hint: string }[] = [
     way: "fans",
     name: "Fans",
     hint: "Each opens out from the person who married in, the oldest generation nearest",
+  },
+  {
+    way: "discs",
+    name: "Discs",
+    hint: "Each on whole rings of its own, apart from the others",
   },
   {
     way: "tucked",

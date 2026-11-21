@@ -128,13 +128,14 @@ class TreeSettings(BaseModel):
     # "closeness": how close each person is to you, once you've chosen who you are
     colours: Literal["branch", "generation", "closeness", "off"] = "branch"
     # How married-in families are placed on the rings: as fans from their
-    # person, or tucked into the host's own rings. Each computer's own, like the colours.
-    # Discs and settled fans retired: a computer that chose one is read as fans.
-    married_in: Literal["fans", "tucked"] = "fans"
+    # person; as discs of whole rings, apart, back by the user's word of 21 Nov 2026;
+    # or tucked into the host's own rings. Each computer's own, like the colours. Settled fans
+    # retired: a computer that chose them is read as fans.
+    married_in: Literal["fans", "discs", "tucked"] = "fans"
 
 
 # The ways of placing married-in families that retired: read as fans, stored so.
-RETIRED_WAYS = frozenset({"discs", "settled"})
+RETIRED_WAYS = frozenset({"settled"})
 
 
 class MeSettings(BaseModel):

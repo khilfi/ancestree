@@ -4,10 +4,10 @@ import { allFamilies, ringLayout, WAYS, type Way } from "./placing";
 import { measure } from "./sideBySide/measures";
 
 /*
- * The four ways of placing married-in families, on a family seated
- * by hand: a son's wife and a daughter's husband each bring their family, and the wife's
- * sister's husband brings his, so one married-in family hangs off another. Then each way at
- * 2,000 people.
+ * The ways of placing married-in families the Layout menu offers, three again
+ * since your word of 21 Nov 2026: Fans, Discs and Tucked in. On a family seated by hand: a
+ * son's wife and a daughter's husband each bring their family, and the wife's sister's husband
+ * brings his, so one married-in family hangs off another. Then each way at 2,000 people.
  */
 
 function person(id: string): GraphPerson {
@@ -110,7 +110,7 @@ const everyone = allFamilies(graph);
 const distance = (a?: { x: number; y: number }, b?: { x: number; y: number }) =>
   a && b ? Math.hypot(a.x - b.x, a.y - b.y) : Number.NaN;
 
-describe("the four ways of placing married-in families", () => {
+describe("the ways of placing married-in families", () => {
   it.each(WAYS.map(({ way }) => way))("%s: places everyone, apart, the same every time", (way) => {
     const layout = ringLayout(graph, everyone, way as Way);
     expect([...layout.points.keys()].sort()).toEqual(Object.keys(seats).sort());
@@ -122,6 +122,8 @@ describe("the four ways of placing married-in families", () => {
   });
 
   it("fans, unless this computer chose another way", () => {
+    // Three to choose from, Discs back between the two since your word of 21 Nov 2026.
+    expect(WAYS.map(({ way }) => way)).toEqual(["fans", "discs", "tucked"]);
     expect(WAYS[0]?.way).toBe("fans");
     expect([...ringLayout(graph, everyone).points]).toEqual([
       ...ringLayout(graph, everyone, "fans").points,

@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { TOOL_SELECT, ViewToolbar } from "@/components/ViewToolbar";
+import { TOOL_SELECT, ViewHead, ViewToolbar } from "@/components/ViewToolbar";
 import { ClosenessKey } from "@/features/me/ClosenessKey";
 import { useMeId } from "@/features/me/useMeId";
 import { PersonPanel } from "@/features/person/PersonPanel";
@@ -329,79 +329,82 @@ export function MapPage() {
     const todaysMap = <MapCanvas {...drawn} towns={map.data?.towns ?? NO_TOWNS} />;
     content = (
       <div className="flex h-full flex-col bg-background">
-        <ViewToolbar label="The map's tools">
-          <span className="flex items-center gap-2 text-muted-foreground">
-            Show
-            <Select
-              value={field}
-              onValueChange={(value) =>
-                go({
-                  ...(selectedId ? { person: selectedId } : {}),
-                  by: BY[value as PlaceField],
-                })
-              }
-            >
-              <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Which places">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="residence">Where they live</SelectItem>
-                <SelectItem value="birth_place">Where they were born</SelectItem>
-              </SelectContent>
-            </Select>
-          </span>
-          {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch inside is the control */}
-          <label className="flex items-center gap-2 text-muted-foreground">
-            <Switch
-              checked={showMoves}
-              onCheckedChange={(on) =>
-                go({ ...(selectedId ? { person: selectedId } : {}), moves: on ? "1" : "" })
-              }
-            />
-            Moves
-          </label>
-          {family && (
-            <FilterMenu
-              graph={family}
-              filter={view.filter}
-              onChange={(filter) => setParams((now) => writeView({ ...view, filter }, now))}
-              selectedId={selectedId}
-            />
-          )}
-          <span className="text-xs text-faint">
-            {touch ? "Pinch to zoom · drag to move" : "Scroll to zoom · drag to move"}
-          </span>
-          {coming && (
-            <span className="text-xs text-faint" role="status">
-              Fetching the map's detail: {megabytes(coming.done)} of {megabytes(coming.size)}
+        {/* The toolbar and the bars under it: Family facts starts below them. */}
+        <ViewHead>
+          <ViewToolbar label="The map's tools">
+            <span className="flex items-center gap-2 text-muted-foreground">
+              Show
+              <Select
+                value={field}
+                onValueChange={(value) =>
+                  go({
+                    ...(selectedId ? { person: selectedId } : {}),
+                    by: BY[value as PlaceField],
+                  })
+                }
+              >
+                <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Which places">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="residence">Where they live</SelectItem>
+                  <SelectItem value="birth_place">Where they were born</SelectItem>
+                </SelectContent>
+              </Select>
             </span>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch inside is the control */}
+            <label className="flex items-center gap-2 text-muted-foreground">
+              <Switch
+                checked={showMoves}
+                onCheckedChange={(on) =>
+                  go({ ...(selectedId ? { person: selectedId } : {}), moves: on ? "1" : "" })
+                }
+              />
+              Moves
+            </label>
+            {family && (
+              <FilterMenu
+                graph={family}
+                filter={view.filter}
+                onChange={(filter) => setParams((now) => writeView({ ...view, filter }, now))}
+                selectedId={selectedId}
+              />
+            )}
+            <span className="text-xs text-faint">
+              {touch ? "Pinch to zoom · drag to move" : "Scroll to zoom · drag to move"}
+            </span>
+            {coming && (
+              <span className="text-xs text-faint" role="status">
+                Fetching the map's detail: {megabytes(coming.done)} of {megabytes(coming.size)}
+              </span>
+            )}
+            <Button
+              variant={listOpen ? "secondary" : "outline"}
+              size="sm"
+              className="ml-auto"
+              onClick={() => setListOpen((now) => !now)}
+              aria-pressed={listOpen}
+            >
+              <ListIcon />
+              {found.spots.length} placed
+            </Button>
+          </ViewToolbar>
+          {!sample && colours === "closeness" && (
+            <div className="shrink-0 border-b border-border bg-card px-3 py-1.5">
+              <ClosenessKey chosen={me !== null} />
+            </div>
           )}
-          <Button
-            variant={listOpen ? "secondary" : "outline"}
-            size="sm"
-            className="ml-auto"
-            onClick={() => setListOpen((now) => !now)}
-            aria-pressed={listOpen}
-          >
-            <ListIcon />
-            {found.spots.length} placed
-          </Button>
-        </ViewToolbar>
-        {!sample && colours === "closeness" && (
-          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5">
-            <ClosenessKey chosen={me !== null} />
-          </div>
-        )}
-        {family && (
-          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
-            <FilterChips
-              graph={family}
-              filter={view.filter}
-              onChange={(filter) => setParams((now) => writeView({ ...view, filter }, now))}
-              shown={kept ? [...kept].filter((id) => !people.get(id)?.placeholder).length : null}
-            />
-          </div>
-        )}
+          {family && (
+            <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
+              <FilterChips
+                graph={family}
+                filter={view.filter}
+                onChange={(filter) => setParams((now) => writeView({ ...view, filter }, now))}
+                shown={kept ? [...kept].filter((id) => !people.get(id)?.placeholder).length : null}
+              />
+            </div>
+          )}
+        </ViewHead>
         <div ref={area} className="relative flex min-h-0 flex-1">
           <div className="relative min-w-0 flex-1">
             {detailed && MapLibreCanvas ? (

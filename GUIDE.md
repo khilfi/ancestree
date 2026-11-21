@@ -255,13 +255,13 @@ The bar along the top:
 | | Name | What it does |
 |---|---|---|
 | 1 | **ⓘ** | **Family facts**: facts about the whole family, and what's still missing (see [Family facts](#14-family-facts-and-whats-missing)). It's beside the family's name, however wide the window. |
-| 2 | The family's name | The family you're looking at. Click it to open another family on this computer, or to add one (see [Several families on one computer](#21-several-families-on-one-computer)). |
+| 2 | The family's name | The family you're looking at. Click it to open another family on this computer, or to add one (see [Several families on one computer](#21-several-families-on-one-computer)). In a narrow window it's shortened, as in *Keluarga…*: point at it to see it whole. |
 | 3 | **In step** · 2 minutes ago | Only with a family folder: how the family stands with it. Click it to see more, or to keep in step at once (see [Keeping in step](#keeping-in-step)). |
 | 4 | **Tree**, **Timeline**, **Map** | Three ways to see the family. Click one to switch. |
 | 5 | **Add person** | Adds someone new (see [Adding people](#8-adding-and-changing-people)). |
 | 6 | **Undo** and **Redo** | Undo takes back your last change; Redo puts it back again. Point at them to see which change. |
 | 7 | **Search people…** | Finds someone by name or nickname. |
-| 8 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name, and its menu changes or forgets it (see [Me](#11-me-telling-ancestree-who-you-are)). |
+| 8 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name, a long one shortened in a narrow window, and its menu changes or forgets it (see [Me](#11-me-telling-ancestree-who-you-are)). |
 | 9 | **More** | The rest, each with its words. A number on it means something waits for you in Settings. |
 
 In **More**:
@@ -355,9 +355,10 @@ On the rings you can drag people to where you'd like them; AncesTree remembers. 
 | Choice | What you see |
 |---|---|
 | **Fans** | Each family opens out from the person who married in, their parents nearest, each later generation further out. AncesTree starts with this. |
+| **Discs** | Each family on whole rings of its own, apart from the others. |
 | **Tucked in** | Their people on the family's own rings, at their generations. Unfolding one moves the others. |
 
-Whichever you choose, nobody's photo covers another's. Each computer keeps its own choice. Before 0.9.0 there were two more ways, Discs and Settled fans: a computer that chose one of them shows its families as fans now, and keeps to that. Where a family who married in has rings of its own, they're in the family's generations, but don't say the number, which the main rings already say: the first of them is named for the couple in its middle, such as *Rashid & Kamariah*. The line from each of these families to the person who married in finds its way between the others, never over anyone's photo.
+Whichever you choose, nobody's photo covers another's. Each computer keeps its own choice. Discs were away in 0.9.0, and are back from 0.9.1: a computer that used them before 0.9.0 shows its families as fans until you choose Discs again. Before 0.9.0 there was one more way, Settled fans: a computer that chose it shows its families as fans now, and keeps to that. Where a family who married in has rings of its own, they're in the family's generations, but don't say the number, which the main rings already say: the first of them is named for the couple in its middle, such as *Rashid & Kamariah*. The line from each of these families to the person who married in finds its way between the others, never over anyone's photo.
 
 ### Showing only some of the family
 
@@ -374,7 +375,7 @@ What you choose shows as small labels under the tools. Click **×** on a label t
 
 ### Families and the centre
 
-<img src="guide/app-tree-centre.png" alt="The Centre menu, listing the families in the tree" width="866">
+<img src="guide/app-tree-centre.png" alt="The Centre menu, listing the families in the tree" width="929">
 
 Click **Centre:** to see the families in the tree: the main one, its branches, and the families who married in. Click **Centre the tree here** to put one in the middle, or **Show** to light it up. **Use the oldest ancestor** puts the tree back as it was. "Centre" always means this: whom the tree has in its middle.
 
@@ -755,7 +756,9 @@ When a country's places come, AncesTree looks again at everyone there whose pin 
 
 ## 14. Family facts, and what's missing
 
-**Family facts** shows facts about the whole family: how many people and generations, the oldest and youngest, the longest life, the biggest family, the most common names, birthdays and remembrance days this month, and what's still to fill in. Click the **ⓘ** beside the family's name, at the top left. Click a name to open their panel. Click the **ⓘ** again, or **×**, to close it. **Esc** closes it too, once anything opened over it has closed.
+**Family facts** shows facts about the whole family: how many people and generations, the oldest and youngest, the longest life, the biggest family, the most common names, birthdays and remembrance days this month, and what's still to fill in. Click the **ⓘ** beside the family's name, at the top left. It opens on the left, below the tools of the tree, the timeline or the map, so they stay in reach. Click a name to open their panel. Click the **ⓘ** again, or **×**, to close it. **Esc** closes it too, once anything opened over it has closed.
+
+Its charts, of the generations and of births by decade, have a bar for each. Where there isn't room to name every bar, only some are named, every other one or every third, the latest always among them: the bars between are still there, and pointing at one says what it is.
 
 ![Family facts](guide/app-family-facts.png)
 

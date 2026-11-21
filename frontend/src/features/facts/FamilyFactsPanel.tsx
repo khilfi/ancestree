@@ -1,5 +1,15 @@
 import { ChevronDownIcon, ChevronRightIcon, RouteIcon, XIcon } from "lucide-react";
-import { lazy, type ReactNode, Suspense, useRef, useState } from "react";
+import {
+  lazy,
+  type ReactNode,
+  type RefObject,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useFamilyFacts } from "@/api/queries";
 import type { FactPerson, FamilyFacts, NameCount } from "@/api/types";
@@ -142,6 +152,41 @@ function Counted({
 
 type Bar = { key: string; label: string; title: string; count: number };
 
+const APART = 4; // pixels, at least, between two labels under the bars
+
+/**
+ * Every how many bars a label is shown: under each bar where they fit side by side;
+ * else under every other, every third and so on, so no two touch, the last bar always among them
+ * (the latest decade). Each label is measured where it stands, before it's drawn, and again as
+ * the chart's width changes. A label left out keeps its place, unseen, for a screen reader.
+ */
+function useLabelledEvery(chart: RefObject<HTMLFieldSetElement | null>): number {
+  const [every, setEvery] = useState(1);
+  const [, resized] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    const element = chart.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(resized);
+    watch.observe(element);
+    return () => watch.disconnect();
+  }, [chart]);
+  useLayoutEffect(() => {
+    const bars = [...(chart.current?.querySelectorAll<HTMLElement>(":scope > button") ?? [])];
+    const [first, second] = bars;
+    const pitch =
+      first && second
+        ? second.getBoundingClientRect().left - first.getBoundingClientRect().left
+        : 0;
+    const widest = Math.max(
+      0,
+      ...bars.map((bar) => bar.lastElementChild?.getBoundingClientRect().width ?? 0),
+    );
+    const next = pitch > 0 ? Math.max(1, Math.ceil((widest + APART) / pitch)) : 1;
+    if (next !== every) setEvery(next);
+  });
+  return every;
+}
+
 /** A small bar chart; a click on a bar shows its people as a filter. */
 function Bars({
   bars,
@@ -152,15 +197,18 @@ function Bars({
   label: string;
   onPick?: (key: string) => void;
 }) {
+  const chart = useRef<HTMLFieldSetElement>(null);
+  const every = useLabelledEvery(chart);
   const most = Math.max(1, ...bars.map((bar) => bar.count));
   return (
     // As many columns as bars, sharing the width: a long family history still fits.
     <fieldset
+      ref={chart}
       aria-label={label}
       className="grid min-w-0 items-end gap-0.5 pt-1"
       style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0, 1.5rem))` }}
     >
-      {bars.map((bar) => (
+      {bars.map((bar, index) => (
         <Hint key={bar.key} label={onPick && bar.count ? `${bar.title}: show them` : bar.title}>
           <button
             type="button"
@@ -173,7 +221,14 @@ function Bars({
               className="w-full max-w-5 rounded-sm bg-facts-bar group-enabled:group-hover:bg-facts-bar-pointed"
               style={{ height: `${Math.max(2, Math.round((bar.count / most) * 40))}px` }}
             />
-            <span className="text-xs whitespace-nowrap text-faint">{bar.label}</span>
+            <span
+              className={cn(
+                "text-xs whitespace-nowrap text-faint",
+                (bars.length - 1 - index) % every !== 0 && "opacity-0",
+              )}
+            >
+              {bar.label}
+            </span>
           </button>
         </Hint>
       ))}
@@ -472,20 +527,48 @@ const Missing =
       );
 
 /**
+ * Where the panel's top is: at the foot of the open view's head, its toolbar and the
+ * bars under it, so none of their controls is under the panel, at any width; at the top where
+ * there's none, as in Settings. Measured where it stands, and again as the head grows or
+ * shrinks: a filter's chips coming, a toolbar wrapping onto a second line.
+ */
+function useBelow(head: HTMLElement | null, own: RefObject<HTMLElement | null>): number {
+  const [top, setTop] = useState(0);
+  useLayoutEffect(() => {
+    const place = () => {
+      const over = own.current?.offsetParent;
+      const foot =
+        head && over ? head.getBoundingClientRect().bottom - over.getBoundingClientRect().top : 0;
+      setTop(Math.max(0, Math.ceil(foot)));
+    };
+    place();
+    if (!head || typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(place);
+    watch.observe(head);
+    return () => watch.disconnect();
+  }, [head, own]);
+  return top;
+}
+
+/**
  * Family facts: facts about the whole family, from the ⓘ beside the family's
  * name; and What's missing, with a quick fix for each gap, as its second tab, in the
- * app itself. It slides in from the left, over the tree or the timeline, wider for What's
- * missing; the person panel keeps the right. It takes the focus as it opens, and Esc closes it
- * when nothing opened after it is still open, a dialog over it closing first.
+ * app itself. It slides in from the left, over the tree, the timeline or the map, below their
+ * toolbar, which stays in reach, wider for What's missing; the person panel keeps the
+ * right. It takes the focus as it opens, and Esc closes it when nothing opened after it is still
+ * open, a dialog over it closing first.
  */
 export function FamilyFactsPanel({
   tab,
   onTab,
   onClose,
+  below = null,
 }: {
   tab: FactsTab;
   onTab: (tab: FactsTab) => void;
   onClose: () => void;
+  /** The open view's head, its toolbar and the bars under it, to start below; none elsewhere. */
+  below?: HTMLElement | null;
 }) {
   const facts = useFamilyFacts(true);
   const copy = useCopy(); // facts as they were when the copy was made
@@ -493,14 +576,16 @@ export function FamilyFactsPanel({
   const own = useRef<HTMLElement>(null);
   useTakeFocus(own);
   useEscape(onClose);
+  const top = useBelow(below, own);
 
   return (
     <aside
       ref={own}
       tabIndex={-1}
       aria-label="Family facts"
+      style={{ top }}
       className={cn(
-        "absolute inset-y-0 left-0 z-30 flex w-[26rem] max-w-full flex-col border-r border-border bg-card shadow-xl outline-none",
+        "absolute bottom-0 left-0 z-30 flex w-[26rem] max-w-full flex-col border-r border-border bg-card shadow-xl outline-none",
         shown === "missing" && "w-[40rem]",
       )}
     >

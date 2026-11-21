@@ -4921,7 +4921,7 @@ export interface components {
              * @default fans
              * @enum {string}
              */
-            married_in: "fans" | "tucked";
+            married_in: "fans" | "discs" | "tucked";
         };
         /**
          * TurnDown

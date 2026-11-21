@@ -76,8 +76,22 @@ async def test_married_in_families_are_placed_the_way_this_computer_chose(
     )
     await client.post("/api/history/undo")
     assert (await client.get("/api/settings")).json()["married_in"] == "fans"
-    # Two ways since your answer of 19 Nov 2026: Discs and Settled fans retired.
-    for way in ("spiral", "discs", "settled"):
+
+    # Discs back, at your word of 21 Nov 2026: each family on whole rings of its own.
+    discs = await client.put(
+        "/api/settings", json={"centre": None, "colours": "branch", "married_in": "discs"}
+    )
+
+    assert discs.status_code == 200
+    assert discs.json()["married_in"] == "discs"
+    saved = json.loads((settings.data_dir / "settings" / "app.json").read_text("utf-8"))
+    assert saved["tree"]["married_in"] == "discs"
+    assert (await client.get("/api/settings")).json()["married_in"] == "discs"
+    assert (await client.get("/api/history")).json()["undo"]["label"] == (
+        "Married-in families as discs"
+    )
+    # Settled fans still retired, and a way there never was is refused as well.
+    for way in ("spiral", "settled"):
         refused = await client.put(
             "/api/settings", json={"centre": None, "colours": "branch", "married_in": way}
         )

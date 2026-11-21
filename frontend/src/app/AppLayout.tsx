@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ViewHeadKeeper } from "@/components/ViewToolbar";
 import { LifeStoryHost } from "@/features/biography/LifeStory";
 import { CopyDialog } from "@/features/export/CopyDialog";
 import { ExportItems, ExportMenu } from "@/features/export/ExportMenu";
@@ -41,7 +42,7 @@ import { UpdateBanner } from "./UpdateBanner";
 
 function tabClass({ isActive }: { isActive: boolean }): string {
   const base =
-    "rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors max-md:flex-1";
+    "rounded-md px-2 py-1.5 text-center text-sm font-medium transition-colors max-md:flex-1 lg:px-3";
   return isActive
     ? `${base} bg-card text-foreground shadow-sm`
     : `${base} text-muted-foreground hover:text-foreground`;
@@ -54,7 +55,9 @@ function tabClass({ isActive }: { isActive: boolean }): string {
  * Tailwind finds a class only so), where there's room for them all; narrower, they're in
  * **More**, with their words there, Export's two items among them. Family facts has one place,
  * its ⓘ beside the family's name, at every width. Nothing is cut short: the family's
- * name gives way first.
+ * name gives way first, its whole name in its hint. Below 1024 pixels, the bar's parts stand
+ * closer, as they do on a phone, and the views' tabs are narrower, so the family's name is
+ * still read there with the family folder's state beside it.
  */
 // A link of the bar's, the page it opens marked by NavLink's aria-current. A string, not
 // NavLink's function: under a hint, Radix's Slot joins classes as words, and a function's came
@@ -166,6 +169,7 @@ export function AppLayout() {
   // Family facts, opened from its ⓘ, or at What's missing from anywhere.
   const facts = useFamilyFactsOpen();
   const [copying, setCopying] = useState(false); // Export → View-only copy…
+  const [head, setHead] = useState<HTMLElement | null>(null); // the open view's toolbar and bars
   // The tree and the timeline share their filters: moving between them keeps them.
   const params = new URLSearchParams(useLocation().search);
   const kept = viewSearch(params);
@@ -176,7 +180,7 @@ export function AppLayout() {
     <TreePictureProvider>
       <div className="flex h-full flex-col bg-background text-foreground">
         {/* On a phone: two rows, the views across the second. */}
-        <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-border bg-card px-3 py-2 md:flex-nowrap md:gap-x-3 md:px-4">
+        <header className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-border bg-card px-3 py-2 md:flex-nowrap md:px-4 lg:gap-x-3">
           {/* Where the bar is short, the family's name leads in the desktop app, and the
               words beside the icons go first (0.4.0); the leaf says AncesTree there. */}
           <div className="group/brand flex min-w-0 items-center gap-1 max-md:flex-1">
@@ -243,7 +247,7 @@ export function AppLayout() {
             <UndoRedo />
           </CanEdit>
           <PeopleSearch />
-          <div className="ml-auto flex items-center gap-1 md:gap-2">
+          <div className="ml-auto flex items-center gap-1 lg:gap-2">
             {!copy && <DatabaseWarning />}
             {/* In a copy, each viewer chooses who they are, kept in their browser. */}
             <MeButton />
@@ -277,9 +281,18 @@ export function AppLayout() {
         <LifeStoryHost />
         {copying && <CopyDialog open onOpenChange={(next) => !next && setCopying(false)} />}
         <main className="relative min-h-0 flex-1">
-          <Outlet />
+          {/* The view's head, its toolbar and the bars under it: Family facts starts below it,
+              covering none of its controls. */}
+          <ViewHeadKeeper.Provider value={setHead}>
+            <Outlet />
+          </ViewHeadKeeper.Provider>
           {facts && (
-            <FamilyFactsPanel tab={facts} onTab={openFamilyFacts} onClose={closeFamilyFacts} />
+            <FamilyFactsPanel
+              tab={facts}
+              onTab={openFamilyFacts}
+              onClose={closeFamilyFacts}
+              below={head}
+            />
           )}
         </main>
       </div>

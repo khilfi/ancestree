@@ -85,7 +85,7 @@ export function FamiliesMenu({
       <PopoverContent
         align="start"
         aria-label="Families in the tree"
-        className="w-[26rem] max-w-[calc(100vw-1.5rem)] gap-0 p-0"
+        className="w-[30rem] max-w-[calc(100vw-1.5rem)] gap-0 p-0"
       >
         <div className="border-b border-border px-3 py-2 text-xs font-semibold tracking-wide text-faint uppercase">
           Families in the tree
@@ -98,16 +98,15 @@ export function FamiliesMenu({
                 style={{ paddingLeft: `${0.75 + family.depth}rem` }}
                 onMouseEnter={() => light(familyMembers(graph, family.unit))}
               >
-                <div className="min-w-0 flex-1">
-                  <Hint label={family.name}>
-                    <div className="truncate">
-                      <span className="font-medium text-foreground">{family.name}</span>{" "}
-                      <span className="text-faint">{count(family.people)}</span>
-                    </div>
-                  </Hint>
-                  <Hint label={joins(family, index)}>
-                    <div className="truncate text-xs text-faint">{joins(family, index)}</div>
-                  </Hint>
+                {/* Each family named whole: the menu wider, within the window, and
+                    a name onto a second line where it still must. A married-in family's
+                    couple, beside Centre the tree here, was cut short. */}
+                <div className="min-w-0 flex-1 break-words">
+                  <div>
+                    <span className="font-medium text-foreground">{family.name}</span>{" "}
+                    <span className="whitespace-nowrap text-faint">{count(family.people)}</span>
+                  </div>
+                  <div className="text-xs text-faint">{joins(family, index)}</div>
                 </div>
                 <Button variant="ghost" size="xs" onClick={() => show(family.unit)}>
                   Show
@@ -133,7 +132,7 @@ export function FamiliesMenu({
                           style={{ background: branch.colour ?? undefined }}
                           aria-hidden
                         />
-                        <span className="min-w-0 flex-1 truncate text-foreground">
+                        <span className="min-w-0 flex-1 break-words text-foreground">
                           {branch.name} <span className="text-faint">{branch.people}</span>
                         </span>
                         {canCentre(branch.id) && (

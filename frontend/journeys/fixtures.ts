@@ -16,7 +16,7 @@ import {
 import { refused } from "./rules";
 
 /** The day the pages believe it is, so ages, "today" and the like stay as pictured. */
-const TODAY = new Date("2026-11-19T10:00:00+08:00");
+export const TODAY = new Date("2026-11-19T10:00:00+08:00");
 const ENGINE_BACK_IN = 180_000; // ms: the engine starting again on another family
 /** How many times slower the browser is made: 1 unless ANCESTREE_JOURNEYS_SLOW says, as 4 does,
  *  to find on a quick computer what only a busy one shows. */

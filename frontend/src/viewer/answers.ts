@@ -121,11 +121,12 @@ function exportNamed(name: string): CopyFile | null {
  *  the viewer's own once they choose. Closeness is to whoever looks: the maker's was to them,
  *  so a copy opens with branch colours instead, until its viewer picks closeness to the person
  *  they chose as "Me". A copy made before there was a way to choose opens with fans,
- *  the first choice. A way that retired, chosen in an earlier copy of the family,
- *  is fans, and kept so. */
+ *  the first choice. Settled fans, a way that retired, chosen in an earlier copy of
+ *  the family, is fans, and kept so; Discs, retired with it, is back, and stays Discs. */
 function treeSettings(): TreeSettings {
   const madeWith = family().tree_settings;
-  if (!["fans", "tucked", undefined].includes(choices().married_in)) choose({ married_in: "fans" });
+  const ways = ["fans", "discs", "tucked", undefined];
+  if (!ways.includes(choices().married_in)) choose({ married_in: "fans" });
   const colours =
     choices().colours ?? (madeWith.colours === "closeness" ? "branch" : madeWith.colours);
   const chosen = choices().centre;
