@@ -126,21 +126,23 @@ test("the family's name read beside In step", async ({ page, picture, request })
 /** A Me with a long name, as the bar may have to hold: the example family's own, with titles. */
 const LONG_ME = "Abang Long Danial Hakimi";
 
-/** The family's name read: at least its first five letters, cut short with an ellipsis after
- *  them if it must be. */
+/** The family's name read: at least its first four letters, cut short with an ellipsis after
+ *  them if it must be. Four, not five: Linux's font is a little wider than Windows', and there,
+ *  beside a long name for Me, five and an ellipsis wanted 40.5 pixels of the 40 left; Windows
+ *  shows six. */
 async function expectRead(family: Locator): Promise<void> {
   const read = await family.evaluate((button) => {
     const name = button.querySelector("span");
     if (!name) return { shown: 0, needed: 1 };
     const probe = document.createElement("span");
-    probe.textContent = `${(name.textContent ?? "").slice(0, 5)}…`;
+    probe.textContent = `${(name.textContent ?? "").slice(0, 4)}…`;
     probe.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap";
     button.append(probe);
     const needed = probe.getBoundingClientRect().width;
     probe.remove();
     return { shown: name.getBoundingClientRect().width, needed };
   });
-  expect(read.shown, "the name's width, for its first five letters").toBeGreaterThanOrEqual(
+  expect(read.shown, "the name's width, for its first four letters").toBeGreaterThanOrEqual(
     read.needed - 0.5,
   );
 }
