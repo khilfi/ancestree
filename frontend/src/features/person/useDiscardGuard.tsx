@@ -71,6 +71,11 @@ export function useDiscardGuard(
  * from its `onOpenChange`. A dialog covers the page, so nothing guards leaving it for another
  * address: React Router keeps one such guard at a time, the person form's, which may be open
  * behind it.
+ *
+ * An Esc that reaches the dialog while the question is open is the question's: Keep editing.
+ * Radix hands Esc to a dialog opened over another only once it has drawn both again, a moment
+ * after the question shows, and an Esc pressed in that moment went to the dialog under it, which
+ * asked again, so the question stayed.
  */
 export function useDialogDiscard(
   changed: () => boolean,
@@ -79,17 +84,23 @@ export function useDialogDiscard(
   const now = useRef(changed);
   now.current = changed;
   const [asking, setAsking] = useState(false);
+  const open = useRef(false); // asking, as the next key finds it
+  const ask = (next: boolean) => {
+    open.current = next;
+    setAsking(next);
+  };
   useAskOnClosing(changed());
   const cancel = () => {
-    if (now.current()) setAsking(true);
+    if (open.current) ask(false);
+    else if (now.current()) ask(true);
     else leave();
   };
   const question = (
     <DiscardQuestion
       open={asking}
-      onKeep={() => setAsking(false)}
+      onKeep={() => ask(false)}
       onDiscard={() => {
-        setAsking(false);
+        ask(false);
         leave();
       }}
     />

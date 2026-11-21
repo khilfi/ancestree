@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { expect, fromTopBar, test } from "./fixtures";
+import { expect, fromTopBar, slowly, test } from "./fixtures";
 
 /** A file saved in this run's Downloads, as the engine said. */
 function saved(name: string): boolean {
@@ -50,7 +50,7 @@ test("Settings, part by part", async ({ page, picture }) => {
 });
 
 test("Export: a view-only copy, and a picture of the tree", async ({ page, picture }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(slowly(180_000));
   await page.goto("/tree");
   await expect(page.getByRole("img", { name: "Hassan bin Ismail" })).toBeVisible();
   // Export's two, in More where the bar has no room for Export itself.

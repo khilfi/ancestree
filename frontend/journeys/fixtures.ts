@@ -18,6 +18,14 @@ import { refused } from "./rules";
 /** The day the pages believe it is, so ages, "today" and the like stay as pictured. */
 const TODAY = new Date("2026-11-19T10:00:00+08:00");
 const ENGINE_BACK_IN = 180_000; // ms: the engine starting again on another family
+/** How many times slower the browser is made: 1 unless ANCESTREE_JOURNEYS_SLOW says, as 4 does,
+ *  to find on a quick computer what only a busy one shows. */
+const SLOW = Math.max(1, Number(process.env.ANCESTREE_JOURNEYS_SLOW) || 1);
+
+/** A journey's own time limit, as many times longer as the browser is slowed. */
+export function slowly(ms: number): number {
+  return ms * SLOW;
+}
 
 export type Options = {
   /** Whether the test starts on the example family, fresh; the first journey starts before. */
@@ -70,6 +78,21 @@ async function freshBackup(request: APIRequestContext): Promise<string> {
   const { name } = (await made.json()) as { name: string };
   writeFileSync(kept, JSON.stringify({ name }));
   return name;
+}
+
+/** A busy computer, `times` slower: the processor, and the work a page has put off for a moment.
+ *  React's next render, which it asks for by posting itself a message, waits `times` × 25 ms
+ *  more, so keys and clicks come before it, as Chrome takes them first on a busy computer: a
+ *  page that's right only once it has caught up shows it. */
+async function slowDown(page: Page, times: number): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: times });
+  await page.addInitScript((wait) => {
+    const post = MessagePort.prototype.postMessage;
+    MessagePort.prototype.postMessage = function (this: MessagePort, ...message: unknown[]) {
+      setTimeout(() => Reflect.apply(post, this, message), wait);
+    } as MessagePort["postMessage"];
+  }, times * 25);
 }
 
 /** Requests on their way, so a picture waits until none is. */
@@ -165,6 +188,11 @@ export async function findPerson(page: Page, fullName: string): Promise<Locator>
 
 const quietOf = new WeakMap<Page, () => Promise<void>>();
 
+/** The page as a person sees it once it has come, settled as it is for a picture. */
+export async function settle(page: Page): Promise<void> {
+  await settled(page, quietOf.get(page) ?? (async () => {}));
+}
+
 export const test = base.extend<Fixtures & Options>({
   example: [true, { option: true }],
 
@@ -191,6 +219,7 @@ export const test = base.extend<Fixtures & Options>({
 
   page: async ({ page }, use) => {
     quietOf.set(page, watchRequests(page));
+    if (SLOW > 1) await slowDown(page, SLOW);
     await use(page);
   },
 

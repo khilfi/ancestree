@@ -10,9 +10,10 @@ test("add a person, link a relative, then Undo both", async ({ page, picture }) 
   await panel.getByRole("textbox", { name: "Full name" }).fill("Aina binti Hassan");
   await panel.getByRole("combobox", { name: "Gender" }).click();
   await page.getByRole("option", { name: "Female", exact: true }).click();
-  // The list gone first: as it fades, it gives the focus back to Gender, and once took it from
-  // the date being typed.
+  // The list gone, and the focus back on Gender, as the list gives it a moment after it goes:
+  // given then, it once took it from the date being typed.
   await expect(page.getByRole("listbox")).toBeHidden();
+  await expect(panel.getByRole("combobox", { name: "Gender" })).toBeFocused();
   // Typed, as it's said.
   await panel.getByRole("textbox", { name: "Date of birth" }).fill("1965");
   await picture("new-person-form");

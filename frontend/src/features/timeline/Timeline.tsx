@@ -1,6 +1,7 @@
 import { ChevronDownIcon, ChevronRightIcon, MaximizeIcon, MinusIcon, PlusIcon } from "lucide-react";
 import {
   type CSSProperties,
+  type FocusEvent,
   type PointerEvent,
   useCallback,
   useEffect,
@@ -35,6 +36,7 @@ import { DRAWING } from "@/styles/drawing";
 import { ColourKey } from "./ColourKey";
 import {
   arrange,
+  drawnRows,
   fitAll,
   GROUP_HEIGHT,
   type Grouping,
@@ -47,7 +49,6 @@ import {
   spans,
   standings,
   type View,
-  visibleRows,
   yearNow,
   yearTicks,
   zoomAround,
@@ -119,6 +120,10 @@ export function Timeline({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [scrollTop, setScrollTop] = useState(0);
   const [trayOpen, setTrayOpen] = useState(true);
+  // Whose lane has the focus: it and those beside it are drawn, whatever the scroll. The scroll
+  // follows the focus a frame later, and Tab, quicker than that on a busy computer, ran past the
+  // last lane drawn and out of the timeline, missing those after it.
+  const [focused, setFocused] = useState<string | null>(null);
 
   useEffect(() => {
     const element = scroller.current;
@@ -296,7 +301,8 @@ export function Timeline({
   const perYear = size.width / (view.end - view.start);
   const x = (year: number) => (year - view.start) * perYear;
   const ticks = size.width ? yearTicks(view, size.width) : [];
-  const shown = visibleRows(rows, scrollTop - 200, scrollTop + size.height + 200);
+  const focusAt = rows.find((row) => row.kind === "lane" && row.key === focused)?.top ?? null;
+  const shown = drawnRows(rows, scrollTop - 200, scrollTop + size.height + 200, focusAt);
   const todayShown = today >= view.start && today <= view.end;
 
   return (
@@ -435,6 +441,12 @@ export function Timeline({
                 selected={row.key === selectedId}
                 faded={faded !== null && !faded.has(row.key)}
                 onSelect={onSelect}
+                onFocus={() => setFocused(row.key)}
+                onBlur={(event) => {
+                  // Gone from the lanes, rather than on to the next.
+                  const lanes = event.currentTarget.parentElement;
+                  if (!lanes?.contains(event.relatedTarget)) setFocused(null);
+                }}
               />
             ),
           )}
@@ -500,6 +512,8 @@ function Lane({
   selected,
   faded = false,
   onSelect,
+  onFocus,
+  onBlur,
 }: {
   lane: Span;
   top: number;
@@ -508,6 +522,8 @@ function Lane({
   selected: boolean;
   faded?: boolean; // left out by the filter, which fades the others
   onSelect?: (id: string) => void;
+  onFocus?: () => void;
+  onBlur?: (event: FocusEvent<HTMLButtonElement>) => void;
 }) {
   const photoAt = x(lane.start ?? lane.end);
   const endAt = x(lane.end);
@@ -526,6 +542,8 @@ function Lane({
       type="button"
       disabled={!onSelect}
       onClick={() => onSelect?.(lane.person.id)}
+      onFocus={onFocus}
+      onBlur={onBlur}
       aria-label={`${calledOnTimeline(lane.person)}, ${lane.years}`}
       className={cn(
         "group absolute inset-x-0 text-left",

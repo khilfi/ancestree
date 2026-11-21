@@ -23,9 +23,10 @@ async function add(
   if (someone.gender) {
     await dialog.getByRole("combobox", { name: "Gender" }).click();
     await page.getByRole("option", { name: someone.gender, exact: true }).click();
-    // Gone first: as it fades, the list gives the focus back to Gender, which once took it
-    // from the date being typed.
+    // Gone, and the focus back on Gender, as the list gives it a moment after it goes: given
+    // then, it once took it from the date being typed.
     await expect(page.getByRole("listbox")).toBeHidden();
+    await expect(dialog.getByRole("combobox", { name: "Gender" })).toBeFocused();
   }
   await dialog.getByRole("textbox", { name: "Date of birth" }).fill(someone.born);
   await expect(dialog.getByText(someone.reading, { exact: true })).toBeVisible();
@@ -47,6 +48,7 @@ test("a new person with parents, a spouse and three children, in under 2 minutes
   await panel.getByRole("combobox", { name: "Gender" }).click();
   await page.getByRole("option", { name: "Female", exact: true }).click();
   await expect(page.getByRole("listbox")).toBeHidden(); // as in `add`, above
+  await expect(panel.getByRole("combobox", { name: "Gender" })).toBeFocused();
   // The day first, as in Malaysia: what it understood, beside it.
   await panel.getByRole("textbox", { name: "Date of birth" }).fill("12/3/1950");
   await expect(panel.getByText("12 March 1950", { exact: true })).toBeVisible();

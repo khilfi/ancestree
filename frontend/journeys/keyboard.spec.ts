@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, findPerson, test } from "./fixtures";
+import { expect, findPerson, settle, slowly, test } from "./fixtures";
 
 /*
  * Every control by keyboard: Tab reaches each one on the page, and each shows that
@@ -158,6 +158,9 @@ async function everyControlByKeyboard(
   where: string,
   { people = false } = {},
 ): Promise<void> {
+  // Once the page has come, as a person waits for it: on a busy computer, Settings → Map's
+  // packs came after the walk had gone round without them.
+  await settle(page);
   const found = await walk(page, people);
   expect(found.reached, `${where}: controls reached`).toBeGreaterThan(3);
   // Soft, so every page is walked and each says what it found.
@@ -167,7 +170,7 @@ async function everyControlByKeyboard(
 }
 
 test("every control reached by Tab, showing its focus", async ({ page, request }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(slowly(240_000));
   await page.goto("/tree");
   await expect(page.getByRole("img", { name: "Hassan bin Ismail" })).toBeVisible();
   await test.step("a hint, shown as the keyboard brings the focus there", async () => {

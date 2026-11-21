@@ -271,6 +271,19 @@ export function visibleRows(rows: Row[], from: number, to: number): Row[] {
   return shown;
 }
 
+/** How far each side of the lane with the focus is drawn, wherever the list is scrolled to. */
+const BESIDE = 200; // px
+
+/** The rows to draw: those reaching into view, from `from` to `to`, and those beside the lane
+ *  with the focus, at `focusAt`, in their order down the page, so Tab always has the next. */
+export function drawnRows(rows: Row[], from: number, to: number, focusAt: number | null): Row[] {
+  const shown = visibleRows(rows, from, to);
+  if (focusAt === null) return shown;
+  const seen = new Set(shown);
+  const beside = visibleRows(rows, focusAt - BESIDE, focusAt + BESIDE);
+  return [...shown, ...beside.filter((row) => !seen.has(row))].sort((a, b) => a.top - b.top);
+}
+
 /** Year marks that fit: every 50, 10, 5 or 1 year as the zoom allows. */
 export function yearTicks(view: View, width: number): number[] {
   const perYear = width / (view.end - view.start);

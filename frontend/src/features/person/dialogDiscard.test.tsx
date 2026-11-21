@@ -163,6 +163,41 @@ async function settle() {
   });
 }
 
+/** Esc where the focus is, without `act`. */
+function escNow() {
+  (document.activeElement ?? document.body).dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+  );
+}
+
+/** Typed as `type` does, without `act`. */
+function typeNow(box: HTMLTextAreaElement | null, text: string) {
+  if (!box) throw new Error("No box");
+  box.focus();
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(box, text);
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+/**
+ * Esc in the very next moment after `before`, as a quick hand or a busy computer can (GitHub's
+ * machines did, 21 Nov 2026): what React does at once (its microtasks) is done, and nothing it
+ * has put off for later. Outside `act`, which would do everything first. Whether the question
+ * showed as Esc came.
+ */
+async function escNext(before: () => void): Promise<boolean> {
+  const scope = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  scope.IS_REACT_ACT_ENVIRONMENT = false;
+  try {
+    before();
+    for (let tick = 0; tick < 20; tick += 1) await Promise.resolve();
+    const shown = asking();
+    escNow();
+    return shown;
+  } finally {
+    scope.IS_REACT_ACT_ENVIRONMENT = true;
+  }
+}
+
 describe("Add a relative asks before throwing typed words away", () => {
   it("closes at once on Esc, Cancel or × with nothing typed", async () => {
     show(adding);
@@ -187,6 +222,31 @@ describe("Add a relative asks before throwing typed words away", () => {
 
     pressEsc();
     await vi.waitFor(() => expect(asking()).toBe(false));
+    expect(closed).toBe(0);
+    expect(nameBox()?.value).toBe("Johari bin Latif");
+  });
+
+  it("asks on Esc pressed the moment the name is typed", async () => {
+    // The dialog heard of the typing a render after the form did: an Esc between threw the
+    // name away without a question (the journey on GitHub's Mac).
+    show(adding);
+    await until("Add a parent of Aina binti Hassan");
+    await escNext(() => typeNow(nameBox(), "Johari bin Latif"));
+    await until("Discard your changes?");
+    expect(closed).toBe(0);
+    expect(nameBox()?.value).toBe("Johari bin Latif");
+  });
+
+  it("keeps editing on Esc pressed the moment the question shows", async () => {
+    // The question takes Esc from the dialog under it once Radix has drawn both again, a
+    // moment later: an Esc before then reached the dialog, which asked again, and the question
+    // stayed (the journey on GitHub's Linux).
+    show(adding);
+    await until("Add a parent of Aina binti Hassan");
+    type(nameBox(), "Johari bin Latif");
+    expect(await escNext(escNow)).toBe(true);
+    await settle();
+    expect(asking()).toBe(false);
     expect(closed).toBe(0);
     expect(nameBox()?.value).toBe("Johari bin Latif");
   });
@@ -266,5 +326,16 @@ describe("Add a relationship kind asks before throwing typed words away", () => 
     await until("Discard your changes?");
     act(() => button("Discard").click());
     expect(closed).toBe(1);
+  });
+
+  it("keeps editing on Esc pressed the moment the question shows", async () => {
+    show(kind);
+    await until("Add a relationship kind");
+    type(document.querySelector<HTMLInputElement>("#kind_label"), "Guardian");
+    expect(await escNext(escNow)).toBe(true);
+    await settle();
+    expect(asking()).toBe(false);
+    expect(closed).toBe(0);
+    expect(document.querySelector<HTMLInputElement>("#kind_label")?.value).toBe("Guardian");
   });
 });

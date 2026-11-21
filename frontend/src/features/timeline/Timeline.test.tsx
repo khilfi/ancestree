@@ -168,3 +168,42 @@ describe("the timeline's key", () => {
     expect(show("off").textContent).not.toContain("branch");
   });
 });
+
+describe("the timeline by keyboard", () => {
+  /** The lanes drawn, top to bottom, each by where it is down the list. */
+  const drawn = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLButtonElement>("button[aria-label]")]
+      .filter((each) => each.style.top !== "")
+      .map((each) => ({ button: each, top: Number.parseFloat(each.style.top) }));
+
+  it("draws the lanes after the one Tab has reached, before the scroll catches up", () => {
+    // Only the lanes in view are drawn, and a few more: the scroll follows the focus a frame
+    // later, and Tab, quicker than that on a busy computer, ran past the last lane drawn and
+    // out of the timeline, missing those after it (the keyboard journey on GitHub's Mac, 21
+    // Nov 2026).
+    const tall = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get: () => 344, // the list at 800 × 600
+    });
+    try {
+      const container = show();
+      const before = drawn(container);
+      const last = before.at(-1);
+      if (!last) throw new Error("No lane drawn");
+      act(() => last.button.focus());
+      const after = drawn(container);
+      expect(after.some(({ top }) => top > last.top)).toBe(true);
+      // Down the list in order, so Tab goes from one to the next.
+      expect(after.map(({ top }) => top)).toEqual(
+        [...after.map(({ top }) => top)].sort((a, b) => a - b),
+      );
+
+      // Gone again once the focus has left the timeline.
+      act(() => container.querySelector<HTMLButtonElement>("button:not([aria-label])")?.focus());
+      expect(drawn(container).map(({ top }) => top)).toEqual(before.map(({ top }) => top));
+    } finally {
+      if (tall) Object.defineProperty(HTMLElement.prototype, "clientHeight", tall);
+    }
+  });
+});

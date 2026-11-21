@@ -16,6 +16,8 @@ import type { Options } from "./journeys/fixtures";
 
 const WINDOWS = process.platform === "win32";
 const CI = Boolean(process.env.CI);
+// A busy computer, as journeys/fixtures.ts makes it: the time limits as many times longer.
+const SLOW = Math.max(1, Number(process.env.ANCESTREE_JOURNEYS_SLOW) || 1);
 
 export default defineConfig<Options>({
   testDir: "journeys",
@@ -26,12 +28,12 @@ export default defineConfig<Options>({
   fullyParallel: false,
   forbidOnly: CI,
   retries: 0,
-  timeout: 90_000,
+  timeout: 90_000 * SLOW,
   reporter: CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
   snapshotPathTemplate: "{testDir}/pictures/{arg}{ext}",
   ignoreSnapshots: !WINDOWS,
   expect: {
-    timeout: 10_000,
+    timeout: 10_000 * SLOW,
     toHaveScreenshot: {
       animations: "disabled",
       caret: "hide",

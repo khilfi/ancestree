@@ -1,4 +1,4 @@
-import { type ReactFlowState, useReactFlow, useStore } from "@xyflow/react";
+import { type ReactFlowState, useOnViewportChange, useReactFlow, useStore } from "@xyflow/react";
 import { type RefObject, useCallback, useEffect, useRef } from "react";
 import { NODE_HEIGHT, NODE_WIDTH } from "./geometry";
 
@@ -61,6 +61,10 @@ export function anyoneInView(
  * for someone just added, and Undo of adding them took it away, leaving nothing in view. When
  * fewer are drawn and no one is in view, the first view comes back. Not while a search flies to
  * someone (`waiting`), and never for your own panning, which draws no one fewer.
+ *
+ * While the view is moving, it's where it stops that counts. With Undo pressed twice, quickly,
+ * the view was still gliding after her into her corner as she went: someone was in view at that
+ * moment, so it was left to land on an empty canvas.
  */
 export function useNeverEmpty(
   box: RefObject<HTMLDivElement | null>,
@@ -69,15 +73,39 @@ export function useNeverEmpty(
   waiting: boolean,
 ) {
   const { getViewport } = useReactFlow();
+  const now = useRef({ drawn, showFirst });
+  now.current = { drawn, showFirst };
+  const look = useCallback(() => {
+    const element = box.current;
+    const { drawn, showFirst } = now.current;
+    if (!element || drawn.length === 0) return;
+    const size = { width: element.clientWidth, height: element.clientHeight };
+    if (size.width > 0 && !anyoneInView(drawn, getViewport(), size)) showFirst(500);
+  }, [box, getViewport]);
+
+  // Moves under way, counted: a glide cut short by the next says it has ended only after the
+  // next has begun.
+  const moves = useRef(0);
+  const later = useRef(false); // someone went as it moved: look once it stops
+  const onStart = useCallback(() => {
+    moves.current += 1;
+  }, []);
+  const onEnd = useCallback(() => {
+    moves.current = Math.max(0, moves.current - 1);
+    if (moves.current > 0 || !later.current) return;
+    later.current = false;
+    look();
+  }, [look]);
+  useOnViewportChange({ onStart, onEnd }); // React Flow keeps one such listener: this one
+
   const before = useRef(drawn.length);
   useEffect(() => {
     const fewer = drawn.length < before.current;
     before.current = drawn.length;
-    const element = box.current;
-    if (!fewer || waiting || !element || drawn.length === 0) return;
-    const size = { width: element.clientWidth, height: element.clientHeight };
-    if (size.width > 0 && !anyoneInView(drawn, getViewport(), size)) showFirst(500);
-  }, [drawn, waiting, box, getViewport, showFirst]);
+    if (!fewer || waiting) return;
+    look();
+    if (moves.current > 0) later.current = true;
+  }, [drawn, waiting, look]);
 }
 
 /** The canvas's bottom left corner, where the overview map stands, or its button once

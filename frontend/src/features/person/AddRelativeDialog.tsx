@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ApiError, inWords } from "@/api/errors";
 import { useAddRelative, useLink, useSearchPeople } from "@/api/queries";
@@ -167,10 +167,12 @@ export function AddRelativeDialog({ person, relation, onClose, onOpenPerson }: P
   );
 }
 
-/** Says whether anything is typed in a tab, as it changes, and nothing once it's gone. */
+/** Says whether anything is typed in a tab, as it changes, and nothing once it's gone: before
+ *  the next key, so an Esc right after the last letter asks too. Said a moment later, after the
+ *  page was drawn, an Esc between found nothing typed and threw the name away. */
 function useTyped(typed: boolean, onTyped: (typed: boolean) => void): void {
-  useEffect(() => onTyped(typed), [typed, onTyped]);
-  useEffect(() => () => onTyped(false), [onTyped]);
+  useLayoutEffect(() => onTyped(typed), [typed, onTyped]);
+  useLayoutEffect(() => () => onTyped(false), [onTyped]);
 }
 
 const newSchema = z.object({
