@@ -55,7 +55,7 @@ export function MeDialog({
             "your pak long", and the tree can colour everyone by how close they are to you.{" "}
             {copy
               ? "It's kept in this browser only, and Me changes it any time."
-              : "You can change it later in Settings → You and your family."}
+              : "Me, at the top right, changes or forgets it any time."}
           </DialogDescription>
         </DialogHeader>
         <Input
@@ -72,19 +72,19 @@ export function MeDialog({
                 type="button"
                 disabled={setMe.isPending}
                 onClick={() => choose(person.id, person.nickname || person.full_name)}
-                className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-stone-100"
+                className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-muted"
               >
                 <PersonAvatar person={person} size="sm" />
                 <span className="min-w-0 flex-1 truncate">
                   {person.full_name}
-                  {person.nickname && <span className="text-stone-500"> “{person.nickname}”</span>}
+                  {person.nickname && <span className="text-faint"> “{person.nickname}”</span>}
                 </span>
-                <span className="text-xs text-stone-500">{lifeYears(person)}</span>
+                <span className="text-xs text-faint">{lifeYears(person)}</span>
               </button>
             </li>
           ))}
           {text.trim() && results.isFetched && people.length === 0 && (
-            <li className="px-2 py-1.5 text-sm text-stone-500">No one by that name.</li>
+            <li className="px-2 py-1.5 text-sm text-faint">No one by that name.</li>
           )}
         </ul>
       </DialogContent>

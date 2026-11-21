@@ -3,10 +3,12 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useGraph, useKinship } from "@/api/queries";
 import { useCanEdit } from "@/app/copy";
-import { StartAdvice } from "@/app/StartAdvice";
+import { CouldNotLoad } from "@/app/StartAdvice";
+import { LoadingView } from "@/components/Loading";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { RelationshipCard } from "@/features/kinship/RelationshipCard";
 import { PersonPanel } from "@/features/person/PersonPanel";
+import { usePanelWidth } from "@/features/person/panelWidth";
 import { useMoveToTrash } from "@/features/person/useMoveToTrash";
 import { useNarrow } from "@/lib/media";
 import { drawnFrom, readView, type TreeView, withView, writeView } from "./filters";
@@ -15,20 +17,26 @@ import { focusFor, NO_TRAIL, step, visit } from "./trail";
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center p-8 text-center text-stone-500">
+    <div className="flex h-full items-center justify-center p-8 text-center text-faint">
       <div className="max-w-md space-y-2">{children}</div>
     </div>
   );
+}
+
+/** Someone on the tree, as the keyboard reaches them: drawn only while in view. */
+function onTree(id: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);
 }
 
 /** The tree, with the person panel docked beside it: the canvas shrinks, nothing is covered. */
 export function TreePage() {
   const graph = useGraph();
   const narrow = useNarrow();
+  const width = usePanelWidth(); // the panel as wide as it was last
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("person");
-  // Someone new, where people can be added: not in a view-only copy, nor in a copy to edit
-  // that doesn't allow it.
+  // Someone new, where people can be added: not in a view-only copy, nor on a computer that
+  // only receives the family.
   const mayAdd = useCanEdit();
   const creating = params.has("new") && mayAdd;
   const panelOpen = creating || selectedId !== null;
@@ -110,26 +118,30 @@ export function TreePage() {
   const findRelationship = (id: string) => go({ person: id, relate: "pick" });
   const pick = (id: string) => selectedId && go({ person: selectedId, relate: id });
   const stopRelating = () => (selectedId ? go({ person: selectedId }) : go({}));
+  // Esc, once nothing over the panel is open: finding a relationship ends first; then the
+  // panel closes, and the focus goes back to them on the tree, where the keyboard goes on.
+  const onEscape = () => {
+    if (relate) return stopRelating();
+    if (selectedId) onTree(selectedId)?.focus();
+    close();
+  };
 
   // Handled here rather than in the panel, which closes first: the Undo outlives it.
   const moveToTrash = useMoveToTrash(close, select);
 
   let canvas: ReactNode;
   if (graph.isPending) {
-    canvas = <Message>Loading the family…</Message>;
+    canvas = <LoadingView label="Loading the family…" view="tree" />;
   } else if (graph.isError) {
     canvas = (
       <Message>
-        <p className="font-medium text-stone-700">Could not load the family.</p>
-        <p className="text-sm">
-          <StartAdvice />
-        </p>
+        <CouldNotLoad what="the family" error={graph.error} onRetry={() => void graph.refetch()} />
       </Message>
     );
   } else if (graph.data.people.length === 0) {
     canvas = (
       <Message>
-        <p className="font-medium text-stone-700">No one here yet.</p>
+        <p className="font-medium text-foreground">No one here yet.</p>
         <p className="text-sm">Start with the oldest ancestor you know: use “Add person” above.</p>
       </Message>
     );
@@ -173,6 +185,7 @@ export function TreePage() {
         personId={creating ? null : selectedId}
         onSelect={select}
         onClose={close}
+        onEscape={onEscape}
         onDelete={moveToTrash}
         onFindRelationship={findRelationship}
         fromHere={
@@ -197,20 +210,20 @@ export function TreePage() {
       <div className="relative h-full">
         {canvas}
         {panelOpen && relate !== "pick" && (
-          <div className="absolute inset-0 z-20 bg-white">{panel}</div>
+          <div className="absolute inset-0 z-20 bg-card">{panel}</div>
         )}
       </div>
     );
   }
   return (
-    <ResizablePanelGroup className="h-full">
+    <ResizablePanelGroup className="h-full" {...width.group}>
       <ResizablePanel id="canvas" minSize="30">
         {canvas}
       </ResizablePanel>
       {panelOpen && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel id="person" defaultSize={440} minSize={340} maxSize="60">
+          <ResizablePanel id="person" {...width.panel}>
             {panel}
           </ResizablePanel>
         </>

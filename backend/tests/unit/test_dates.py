@@ -71,6 +71,26 @@ def test_reads_dates_as_the_date_picker_does(example: dict[str, Any]) -> None:
     assert describe_partial_date(date) == example["reading"]
 
 
+# The person form reads typed dates in the browser too, with `readDate` in lib/dates.ts:
+# both read these examples, so what the form says it understood is what the server would read,
+# and both refuse the same dates with the same words.
+_TYPED: list[dict[str, Any]] = json.loads(
+    (REPO_ROOT / "frontend" / "src" / "lib" / "typed-dates.json").read_text("utf-8")
+)
+
+
+@pytest.mark.parametrize("example", _TYPED, ids=[repr(e["text"]) for e in _TYPED])
+def test_reads_typed_dates_as_the_person_form_does(example: dict[str, Any]) -> None:
+    if "problem" in example:
+        with pytest.raises(DateParseError) as refused:
+            parse_partial_date(example["text"])
+        assert str(refused.value) == example["problem"]
+        return
+    date = parse_partial_date(example["text"])
+
+    assert (describe_partial_date(date) if date else None) == example["reading"]
+
+
 @pytest.mark.parametrize("text", [None, "", "   "])
 def test_blank_means_unknown(text: str | None) -> None:
     assert parse_partial_date(text) is None
@@ -85,7 +105,7 @@ def test_blank_means_unknown(text: str | None) -> None:
         ("32/1/1950", "no day 32"),
         ("Smarch 1950", "isn't a month name"),
         ("zaman Jepun", "Couldn't read"),
-        ("1915-1910", "must not be before"),
+        ("1915-1910", "can't be before the first"),
     ],
 )
 def test_explains_what_it_cannot_read(text: str, message: str) -> None:

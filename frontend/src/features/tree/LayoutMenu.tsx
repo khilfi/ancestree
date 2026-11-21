@@ -75,7 +75,7 @@ export function LayoutMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="xs" aria-label={`Layout: ${NAMES[view.layout]}`}>
+        <Button variant="outline" size="sm" aria-label={`Layout: ${NAMES[view.layout]}`}>
           {ICONS[view.layout]}
           {NAMES[view.layout]}
           <ChevronDownIcon />
@@ -91,7 +91,7 @@ export function LayoutMenu({
             <DropdownMenuRadioItem key={layout} value={layout} className="items-start py-1.5">
               <span className="flex flex-col">
                 <span className="font-medium">{NAMES[layout]}</span>
-                <span className="text-xs text-stone-500">{hint(layout, focusName)}</span>
+                <span className="text-xs text-faint">{hint(layout, focusName)}</span>
               </span>
             </DropdownMenuRadioItem>
           ))}
@@ -105,7 +105,7 @@ export function LayoutMenu({
                 <DropdownMenuRadioItem key={way} value={way} className="items-start py-1.5">
                   <span className="flex flex-col">
                     <span className="font-medium">{name}</span>
-                    <span className="text-xs text-stone-500">{how}</span>
+                    <span className="text-xs text-faint">{how}</span>
                   </span>
                 </DropdownMenuRadioItem>
               ))}
@@ -119,7 +119,7 @@ export function LayoutMenu({
               <LayoutGridIcon className="mt-0.5" />
               <span className="flex flex-col">
                 <span className="font-medium">Tidy up</span>
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-faint">
                   Put everyone you moved back in their place on the rings
                 </span>
               </span>
@@ -143,21 +143,21 @@ export function DepthStepper({
   const depth = view.depth ?? DEFAULT_DEPTH[view.layout];
   const most = view.layout === "fan" ? 6 : 8;
   return (
-    <span className="flex items-center gap-1 text-stone-600">
+    <span className="flex items-center gap-1 text-muted-foreground">
       Generations
       <Button
         variant="outline"
-        size="icon-xs"
+        size="icon-sm"
         aria-label="One generation fewer"
         disabled={depth <= 1}
         onClick={() => onView({ ...view, depth: depth - 1 })}
       >
         <MinusIcon />
       </Button>
-      <span className="w-4 text-center font-medium text-stone-800 tabular-nums">{depth}</span>
+      <span className="w-4 text-center font-medium text-foreground tabular-nums">{depth}</span>
       <Button
         variant="outline"
-        size="icon-xs"
+        size="icon-sm"
         aria-label="One generation more"
         disabled={depth >= most}
         onClick={() => onView({ ...view, depth: depth + 1 })}

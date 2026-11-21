@@ -33,7 +33,7 @@ from ancestree.places.gazetteer import district_of
 from ancestree.repo import graph as graph_repo
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo import people as people_repo
-from ancestree.repo.mapping import date_from_props, person_from_props, place_from
+from ancestree.repo.mapping import date_from_props, date_from_row, person_from_props, place_from
 from ancestree.services.context import NotFoundError
 from ancestree.services.families import Kinds, blood_parents, family_key, is_blood, makes_family
 
@@ -53,6 +53,8 @@ def summary(props: Mapping[str, Any]) -> PersonSummary:
         death_year=props.get("death_year"),
         photo_version=props.get("photo_version") if props.get("has_photo") else None,
         placeholder=bool(props.get("placeholder", False)),
+        born=date_from_row(props, "birth"),
+        died=date_from_row(props, "death"),
     )
 
 

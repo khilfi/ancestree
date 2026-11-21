@@ -42,6 +42,9 @@ desktop/src-tauri/gen/
 # Node
 node_modules/
 frontend/dist/
+# The journeys' results, made by each run; their pictures are kept, in journeys/pictures
+frontend/test-results/
+frontend/playwright-report/
 # The view-only copy's app, built when a copy is made
 frontend/dist-viewer/
 *.tsbuildinfo

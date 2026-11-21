@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AncesTree",
-    "version": "0.8.7"
+    "version": "0.9.0"
   },
   "paths": {
     "/api/health": {
@@ -42,120 +42,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Graph"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/sample/graph": {
-      "get": {
-        "tags": [
-          "tree"
-        ],
-        "summary": "Get Sample Graph",
-        "description": "A generated, fictional family, for trying the canvas at size. Nothing is stored.",
-        "operationId": "get_sample_graph",
-        "parameters": [
-          {
-            "name": "people",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 5000,
-              "minimum": 10,
-              "default": 2000,
-              "title": "People"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Graph"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/sample/families": {
-      "get": {
-        "tags": [
-          "tree"
-        ],
-        "summary": "Get Sample Families",
-        "description": "Six made-up families whose married-in families hang off them in hard ways, each seated\nas the tree seats it, for trying ways of placing those families side by side.\nNothing is stored.",
-        "operationId": "get_sample_families",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SampleFamily"
-                  },
-                  "type": "array",
-                  "title": "Response Get Sample Families"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/sample/families/backup": {
-      "post": {
-        "tags": [
-          "tree"
-        ],
-        "summary": "Get Family From Backup",
-        "description": "The family in a backup archive, seated as the tree seats it, to try the same ways on\n(S7). Read in memory and checked as a restore checks it: nothing is restored or kept.\nRefused (422, \"bad_archive\") if it isn't a backup that can be read.",
-        "operationId": "get_family_from_backup",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_get_family_from_backup"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Graph"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -4213,52 +4099,6 @@
         }
       }
     },
-    "/api/sample/map": {
-      "get": {
-        "tags": [
-          "map"
-        ],
-        "summary": "Get Sample Map",
-        "description": "The made-up family on the map, spread over real towns. Nothing is stored.",
-        "operationId": "get_sample_map",
-        "parameters": [
-          {
-            "name": "people",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 5000,
-              "minimum": 10,
-              "default": 2000,
-              "title": "People"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FamilyMap"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/places/pins": {
       "put": {
         "tags": [
@@ -4807,6 +4647,166 @@
           },
           "204": {
             "description": "No tile there"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/graph": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample Graph",
+        "description": "A generated, fictional family, for trying the canvas at size. Nothing is stored.",
+        "operationId": "get_sample_graph",
+        "parameters": [
+          {
+            "name": "people",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 10,
+              "default": 2000,
+              "title": "People"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/map": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample Map",
+        "description": "The made-up family on the map, spread over real towns. Nothing is stored.",
+        "operationId": "get_sample_map",
+        "parameters": [
+          {
+            "name": "people",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 10,
+              "default": 2000,
+              "title": "People"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMap"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/families": {
+      "get": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Sample Families",
+        "description": "Six made-up families whose married-in families hang off them in hard ways, each seated\nas the tree seats it, for trying ways of placing those families side by side.\nNothing is stored.",
+        "operationId": "get_sample_families",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SampleFamily"
+                  },
+                  "type": "array",
+                  "title": "Response Get Sample Families"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sample/families/backup": {
+      "post": {
+        "tags": [
+          "samples"
+        ],
+        "summary": "Get Family From Backup",
+        "description": "The family in a backup archive, seated as the tree seats it, to try the same ways on\n(S7). Read in memory and checked as a restore checks it: nothing is restored or kept.\nRefused (422, \"bad_archive\") if it isn't a backup that can be read.",
+        "operationId": "get_family_from_backup",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_get_family_from_backup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -10875,6 +10875,26 @@
           "placeholder": {
             "type": "boolean",
             "title": "Placeholder"
+          },
+          "born": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "died": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -11494,6 +11514,26 @@
           "placeholder": {
             "type": "boolean",
             "title": "Placeholder"
+          },
+          "born": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "died": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartialDate"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "label": {
             "type": "string",
@@ -12119,8 +12159,6 @@
             "type": "string",
             "enum": [
               "fans",
-              "discs",
-              "settled",
               "tucked"
             ],
             "title": "Married In",

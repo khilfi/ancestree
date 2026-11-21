@@ -54,7 +54,41 @@ const CHANGES = [
 ];
 
 function changes(): string[] {
-  return controls().filter((name) => CHANGES.some((change) => change.test(name)));
+  return [...controls(), ...items()].filter((name) => CHANGES.some((change) => change.test(name)));
+}
+
+/** The items of the menus open now, by what they say. */
+function items(): string[] {
+  return [...document.querySelectorAll('[role="menuitem"]')].map(
+    (item) => item.textContent?.trim() ?? "",
+  );
+}
+
+/** The panel's More, opened as the keyboard opens it. A menu measures where it goes. */
+async function openMore(): Promise<void> {
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+  const more = document.querySelector('aside button[aria-label^="More for "]');
+  if (!more) throw new Error(`No More in the panel, among: ${controls().join(", ")}`);
+  act(() => {
+    more.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+  for (let tries = 0; tries < 100 && items().length === 0; tries++) {
+    await act(async () => {
+      await new Promise((done) => setTimeout(done, 10));
+    });
+  }
+}
+
+function item(name: string): HTMLElement {
+  const found = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (each) => each.textContent?.trim() === name,
+  );
+  if (!found) throw new Error(`No "${name}" among: ${items().join(", ")}`);
+  return found;
 }
 
 describe("a view-only copy, looked around", () => {
@@ -110,10 +144,18 @@ describe("a view-only copy, looked around", () => {
   });
 
   it("exports what the copy carries, but makes no copies of it", async () => {
-    act(() => named("Export").click());
+    // Export, a short menu.
+    act(() => {
+      named("Export").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }));
+    });
     await until("Import template");
+    expect(document.body.textContent).not.toContain("View-only copy…");
     expect(changes()).toEqual([]);
-    act(() => named("Close").click());
+    act(() => {
+      document
+        .querySelector('[role="menu"]')
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
   });
 
   it("gives Family facts as they were when the copy was made", async () => {
@@ -127,7 +169,15 @@ describe("a view-only copy, looked around", () => {
       named("Details").dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     });
     await until("Full name");
-    expect(controls()).toContain("Find relationship");
+    // In More, under their name: only what changes nothing.
+    await openMore();
+    expect(items()).toEqual(["Find relationship"]);
+    expect(changes()).toEqual([]);
+    act(() => {
+      item("Find relationship").dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
 
     act(() => named("Me").click());
     await until("Which person are you?");
@@ -175,7 +225,9 @@ describe("a view-only copy's fan chart, drawn from someone", () => {
     act(() => root.render(<Root router={router} copy={copy.about} />));
     await until("Hassan bin Ismail");
 
-    act(() => named("Fan from here").click());
+    await openMore();
+    expect(items()).toEqual(["Fan from here"]);
+    act(() => item("Fan from here").click());
     expect(drawn).toBe(1);
     expect(changes()).toEqual([]);
     act(() => root.unmount());

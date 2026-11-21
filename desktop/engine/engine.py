@@ -364,7 +364,7 @@ def add_family_routes(app: FastAPI, families: Families, family: Family, external
         except OSError as error:
             return _refused(
                 "cant_be_moved",
-                f"That family's folders couldn't be moved to AncesTree's bin ({error}).",
+                f"That family's folders couldn't be moved to the Trash ({error}).",
             )
         return families.listed()
 
@@ -449,7 +449,7 @@ def add_removing_routes(app: FastAPI, families: Families, root: Path, *, install
                     "example": each.family.example,
                     "keeper": each.keeper,
                     "backups": each.count,
-                    "removed": each.removed,  # in AncesTree's bin: its backups kept too
+                    "removed": each.removed,  # in the Trash: its backups kept too
                 }
                 for each in removing.families_here(families)
             ],
@@ -833,7 +833,8 @@ def main(argv: list[str] | None = None) -> None:
             )
             emit(stage="in-step", family=family.name, text=in_step_line(folder, family.name))
 
-        app = create_app(settings, on_round=in_step, docs=False)
+        # The test pages' made-up families only from the code, never in a release.
+        app = create_app(settings, on_round=in_step, docs=False, samples=not FROZEN)
         stop.app = app
         add_desktop_routes(app, root, about, updates)
         add_family_routes(app, families, family, external=bool(external))

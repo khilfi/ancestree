@@ -1,7 +1,7 @@
 import type { Graph } from "@/api/types";
 import { type ChildEdgeData, childPath } from "../edges";
 import { PHOTO, pathPoints, rim, SMALL_PHOTO } from "../geometry";
-import { allFamilies, ringLayout, type Way } from "../placing";
+import { allFamilies, type Placing, ringLayout } from "../placing";
 import type { Point, Ring, RingLayout } from "../rings";
 import { routable, routeLinks } from "../routing";
 import { toFlow } from "../toFlow";
@@ -249,7 +249,7 @@ export function measure(graph: Graph, layout: RingLayout): Measures {
 
 /** How far the others move, at most, when one married-in family is unfolded, the rest open:
  *  for each of the `most` biggest families. */
-export function unfoldMove(graph: Graph, way: Way, most = 12): number {
+export function unfoldMove(graph: Graph, way: Placing, most = 12): number {
   const everyone = allFamilies(graph);
   const opened = ringLayout(graph, everyone, way);
   const biggest = graph.layout.units
@@ -269,7 +269,7 @@ export function unfoldMove(graph: Graph, way: Way, most = 12): number {
 }
 
 /** The time a layout takes, in milliseconds: the quickest of a few. */
-export function layoutTime(graph: Graph, way: Way, tries = 3): number {
+export function layoutTime(graph: Graph, way: Placing, tries = 3): number {
   const everyone = allFamilies(graph);
   let quickest = Number.POSITIVE_INFINITY;
   for (let attempt = 0; attempt < tries; attempt++) {
@@ -281,7 +281,7 @@ export function layoutTime(graph: Graph, way: Way, tries = 3): number {
 }
 
 /** The time routing the links between families takes, once laid out: the quickest of a few. */
-export function routeTime(graph: Graph, way: Way, tries = 3): number {
+export function routeTime(graph: Graph, way: Placing, tries = 3): number {
   const layout = ringLayout(graph, allFamilies(graph), way);
   const { nodes, edges } = toFlow(graph, layout, "off", { saved: false });
   let quickest = Number.POSITIVE_INFINITY;

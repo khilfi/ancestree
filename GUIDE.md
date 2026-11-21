@@ -4,7 +4,7 @@ AncesTree keeps your family's tree on your own computer: everyone in it, how the
 
 This guide is for everyone in the family, on Windows or a Mac. New to AncesTree? Begin with [Start here](#start-here). Joining your family's AncesTree? [Quick start for relatives](#quick-start-for-relatives) has the five steps.
 
-The guide is inside AncesTree too, for the version you have, without the internet: click **?** at the top right of the window, or open **Settings → Help**. Beside the harder steps in AncesTree, **How does this work?** opens the part of the guide about them.
+The guide is inside AncesTree too, for the version you have, without the internet: click **More** at the top right of the window, then **Guide**, or **Help** in **Settings**. Beside the harder steps in AncesTree, **How does this work?** opens the part of the guide about them.
 
 ## Contents
 
@@ -254,22 +254,35 @@ The bar along the top:
 
 | | Name | What it does |
 |---|---|---|
-| 1 | **Family facts** | Facts about the whole family at a glance (see [Family facts](#14-family-facts-and-whats-missing)). |
+| 1 | **ⓘ** | **Family facts**: facts about the whole family, and what's still missing (see [Family facts](#14-family-facts-and-whats-missing)). It's beside the family's name, however wide the window. |
 | 2 | The family's name | The family you're looking at. Click it to open another family on this computer, or to add one (see [Several families on one computer](#21-several-families-on-one-computer)). |
 | 3 | **In step** · 2 minutes ago | Only with a family folder: how the family stands with it. Click it to see more, or to keep in step at once (see [Keeping in step](#keeping-in-step)). |
 | 4 | **Tree**, **Timeline**, **Map** | Three ways to see the family. Click one to switch. |
 | 5 | **Add person** | Adds someone new (see [Adding people](#8-adding-and-changing-people)). |
 | 6 | **Undo** and **Redo** | Undo takes back your last change; Redo puts it back again. Point at them to see which change. |
 | 7 | **Search people…** | Finds someone by name or nickname. |
-| 8 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name (see [Me](#11-me-telling-ancestree-who-you-are)). |
-| 9 | **Export** | Copies for phones, and a picture of the tree (see [Copies](#16-copies-for-phones-and-other-files)). |
-| 10 | **Dictionary** | The words for relatives in English, Malay and Javanese. |
-| 11 | **?** (**Guide**) | This guide, inside AncesTree. |
-| 12 | **Settings** | Settings, backups, the Trash, and the family folder. A number here means something waits for you there. |
+| 8 | **Me** | Tells AncesTree who you are. Once you've chosen, it shows your name, and its menu changes or forgets it (see [Me](#11-me-telling-ancestree-who-you-are)). |
+| 9 | **More** | The rest, each with its words. A number on it means something waits for you in Settings. |
 
-Some show only their icon unless the window is wide, such as Export, Dictionary and Settings, and more in a smaller window. **Guide** shows only its **?** unless the window is very wide. Point at an icon to see its name.
+In **More**:
+
+| Name | What it does |
+|---|---|
+| **View-only copy…** | The whole family in one file, for phones (see [Copies](#16-copies-for-phones-and-other-files)). |
+| **Picture of the tree** | The tree as it looks now, to print. |
+| **Dictionary** | The words for relatives in English, Malay and Javanese. |
+| **Guide** | This guide, inside AncesTree. |
+| **Settings** | Settings, backups, the Trash, and the family folder. A number beside it means something waits for you there. |
+
+In a very wide window, **More** isn't needed: **Export**, **Dictionary**, **Guide** and **Settings** sit at the right, each with its words, and **Export** holds **View-only copy…** and **Picture of the tree**. In a narrow one, **Search people…** shows its magnifying glass alone. Point at a button to see what it does.
+
+On the tree, the timeline and the map, **Show everyone**, or **F**, shows everything again: everyone on the tree and the timeline, and every place the family is at on the map.
+
+*With the keyboard:* press **Tab** to go from one button to the next, and **Shift+Tab** to go back. The one you're on has a blue ring around it, and shows the same few words as pointing at it does. Press **Enter** to click it. **Esc** closes what's on top, and only that: a menu or a box first, then a card on the tree, then a panel such as **Family facts** or someone's panel. In a form, it's **Cancel**. As a box or a card closes, you're back on the button that opened it.
 
 Undo works for almost everything: adding, changing, linking and removing people. Press **Ctrl+Z** to undo and **Ctrl+Y** to redo. Undo reaches back to when AncesTree last started. An undo is done whole or not at all: if part of it can't be put back, nothing is, and it says why.
+
+*Notes:* after a change, one note at the bottom right says what was done. Anything worth a second look is inside it, such as someone who may be in the tree already, each with its own button, and its **Undo** or **Open** stays beside it. Point at a note to keep it there.
 
 To find someone quickly, click **Search people…** (or press **Ctrl+K**), and type part of their name or nickname. Click a name to fly to them on the tree. Typing the start of two words also works: "sit rah" finds Siti binti Rahman.
 
@@ -279,17 +292,23 @@ To find someone quickly, click **Search people…** (or press **Ctrl+K**), and t
 
 ![The tree, closer up](guide/app-tree.png)
 
-The tree starts with the family's oldest ancestor at the centre. Each ring around them is a generation: their children on the next ring, their grandchildren on the next, and so on. Each person is a circle with their photo, or their first letter, and their name and years underneath.
+The tree starts with the family's oldest ancestor at the centre. Each ring around them is a generation: their children on the next ring, their grandchildren on the next, and so on. Each ring says which, once, at its top. Each person is a circle with their photo, or their first letters, and their name and years underneath. While a photo is still on its way, their first letters show in its place.
+
+It opens close enough to read the names, around the oldest ancestor: in a big family, that's the first few generations. Click **Show everyone**, or press **F**, to see everyone at once.
 
 *Moving around:*
 
 | To | Do this |
 |---|---|
 | Move the tree | Drag an empty part of it. |
-| Zoom in or out | Turn the mouse wheel, or pinch on a touchpad. Or click **+** and **−** at the bottom left. |
-| See everyone again | Click the square button under **−**, or press **F**. |
-| Open someone | Click them. |
-| See more about someone | Point at them: a card shows their full name, years, age and birthplace. |
+| Zoom in or out | Turn the mouse wheel, or pinch on a touchpad. Or click **−** and **+**, at the right of the tools above the tree. |
+| See everyone again | Click **Show everyone**, beside them, or press **F**. |
+| Open someone | Click them. Their panel opens beside the tree, and the tree moves, if it must, so they stay in view. |
+| Add their parent, husband or wife, or child | Click them, then **+ Parent**, **+ Spouse** or **+ Child**, just below them (see [Adding a relative](#adding-a-relative)). |
+| See more about someone | Point at them: a card shows their full name, nickname, years, age and birthplace. |
+| Find your way | The small map of the whole tree, at its bottom left: click or drag in it to go there. **×** hides it, and the map button that's left in its place brings it back. It isn't shown in a small window. |
+
+*With the keyboard:* **Tab** goes from person to person, as a page is read: a row at a time from the top, left to right. The one you're on has a blue ring around them, and shows their card. The tree moves to keep them in view. Press **Enter** to open them. **+** and **−** zoom in and out.
 
 *The lines between people:*
 
@@ -297,13 +316,18 @@ The tree starts with the family's oldest ancestor at the centre. Each ring aroun
 - a double line joins a married couple; it's dashed when they divorced;
 - children hang from a small dot between their two parents: a couple's adopted and foster children too, by a dashed line. Two parents who aren't a couple each have a line of their own.
 
-*The tools along the top of the tree:*
+Names sit on a soft background of their own, so a line passes behind a name, never across it. The lines from a family who married in find their way around names where they can.
+
+*The tools above the tree:*
 
 - **Rings** (or the name of the layout you're using) changes how the tree is laid out.
 - **Filter** shows only some of the family.
 - **Colour by branch** chooses what the colours mean.
 - **Fold all** and **Unfold all** hide and show families who married in.
 - **Centre:** chooses which family is in the middle.
+- **−**, **+** and **Show everyone**, at the right, zoom in and out, and frame the whole family.
+
+In a narrow window, or with someone's panel open, the tools that don't fit wait under **⋯** at the end of the line.
 
 ### Layouts
 
@@ -319,7 +343,7 @@ The tree starts with the family's oldest ancestor at the centre. Each ring aroun
 *The hourglass and the fan chart* are drawn from one person, and stay so while you look around:
 
 - Click someone to open their panel. The chart stays as it is.
-- To draw it from them, click **Fan from here** (or **Hourglass from here**) in their panel, or double-click them.
+- To draw it from them, click **More** under their name in their panel, then **Fan from here** (or **Hourglass from here**), or double-click them.
 - To step down a generation in the fan chart, double-click one of the children in the row beneath.
 - **Back** and **Forward**, beside **Generations**, step through the people it was drawn from. Your mouse's own back and forward buttons do the same, over the chart.
 - **−** and **+** beside **Generations** show more or fewer.
@@ -331,11 +355,9 @@ On the rings you can drag people to where you'd like them; AncesTree remembers. 
 | Choice | What you see |
 |---|---|
 | **Fans** | Each family opens out from the person who married in, their parents nearest, each later generation further out. AncesTree starts with this. |
-| **Discs** | Each family on whole rings of its own, apart from the others. |
-| **Settled fans** | Fans, evened out a little. |
 | **Tucked in** | Their people on the family's own rings, at their generations. Unfolding one moves the others. |
 
-Whichever you choose, nobody's photo covers another's. Each computer keeps its own choice. The line from each of these families to the person who married in finds its way between the others, never over anyone's photo.
+Whichever you choose, nobody's photo covers another's. Each computer keeps its own choice. Before 0.9.0 there were two more ways, Discs and Settled fans: a computer that chose one of them shows its families as fans now, and keeps to that. Where a family who married in has rings of its own, they're in the family's generations, but don't say the number, which the main rings already say: the first of them is named for the couple in its middle, such as *Rashid & Kamariah*. The line from each of these families to the person who married in finds its way between the others, never over anyone's photo.
 
 ### Showing only some of the family
 
@@ -352,9 +374,9 @@ What you choose shows as small labels under the tools. Click **×** on a label t
 
 ### Families and the centre
 
-<img src="guide/app-tree-centre.png" alt="The Centre menu, listing the families in the tree" width="800">
+<img src="guide/app-tree-centre.png" alt="The Centre menu, listing the families in the tree" width="866">
 
-Click **Centre:** to see the families in the tree: the main one, its branches, and the families who married in. Click **Centre here** to put one in the middle, or **Show** to light it up. **Use the oldest ancestor** puts the tree back as it was.
+Click **Centre:** to see the families in the tree: the main one, its branches, and the families who married in. Click **Centre the tree here** to put one in the middle, or **Show** to light it up. **Use the oldest ancestor** puts the tree back as it was. "Centre" always means this: whom the tree has in its middle.
 
 ### Colours
 
@@ -365,31 +387,29 @@ Click **Centre:** to see the families in the tree: the main one, its branches, a
 
 ## 7. Looking at someone
 
-Click someone on the tree. Their panel opens beside the tree.
+Click someone on the tree. Their panel opens beside the tree, and the tree moves, if it must, so they're never under it. Drag the panel's edge to make it wider or narrower: it opens as wide the next time, beside the tree, the timeline and the map.
 
 ![Someone's panel, open beside the tree](guide/app-person.png)
 
 At the top: their name, nickname, years and age, which child they are (for example "Eldest son of…"), and, once you've chosen [Me](#11-me-telling-ancestree-who-you-are), what they are to you, such as "Your father".
 
-The panel has three tabs:
-
-- **Details**: everything recorded about them, such as when and where they were born, where they live, and their occupation. Below it, **Who changed this** lists the latest changes to them, and which computer they came from.
-- **Relatives**: their parents, husband or wife, brothers and sisters, and children.
-- **Biography**: the opening of their life story, and **Read** and **Write**, which open it large (see [Life stories](#9-life-stories)).
-
-<img src="guide/app-person-relatives.png" alt="The Relatives tab" width="440">
-
-The buttons at the bottom of **Details**:
+Under their name:
 
 | Button | What it does |
 |---|---|
 | **Edit** | Change their details. |
-| **Find relationship** | How is someone else related to them? (see [How are two people related?](#10-how-are-two-people-related)) |
-| **Centre the tree here** | Puts them at the middle of the tree. **Undo centre** puts it back. |
-| **Move to Trash** | Takes them out of the tree, for 30 days (see [Removing someone](#removing-someone)). |
-| **More** | What's seldom needed: **Same person as…**, for someone entered twice (see [Someone entered twice](#someone-entered-twice)). |
+| **Life story** | Opens their life story (see [Life stories](#9-life-stories)). |
+| **More**, the three dots | The rest, in a short list: **Find relationship**, how someone else is related to them (see [How are two people related?](#10-how-are-two-people-related)); **Centre the tree here**, which puts them at the middle of the tree, and **Use the oldest ancestor** puts it back; **Same person as…**, for someone entered twice (see [Someone entered twice](#someone-entered-twice)); and **Move to Trash**, which takes them out of the tree for 30 days (see [Removing someone](#removing-someone)). In an hourglass or a fan chart, **Hourglass from here** or **Fan from here** comes first. |
 
-To close the panel, click **×** at its top right.
+The panel has three tabs:
+
+- **Details**: everything recorded about them, such as when and where they were born, where they live, and their occupation. Below it, **Who changed this** lists the latest changes to them, and which computer they came from.
+- **Relatives**: their parents, husband or wife, brothers and sisters, and children.
+- **Life story**: the opening of their life story, and **Read** and **Write**, which open it large (see [Life stories](#9-life-stories)).
+
+<img src="guide/app-person-relatives.png" alt="The Relatives tab" width="440">
+
+To close the panel, click **×** at its top right, or press **Esc** once nothing is open over it: a menu, a box or **Family facts** opened after it closes first, and while you're finding a relationship, **Esc** ends that first. You're back on them on the tree, to go on with **Tab**. If the person goes from the tree while their panel is open, as when you **Undo** adding them, the panel closes, and if no one is left in view, the tree goes back to how it opens.
 
 ## 8. Adding and changing people
 
@@ -403,11 +423,11 @@ On a relative's computer, what you add and change waits for your keeper, who loo
 1. Click **Add person** in the top bar.
 2. Type their **Full name**. It's the only thing you must fill in.
 3. Fill in anything else you know (see [The details](#the-details) below).
-4. Click **Add person** at the bottom.
+4. Click **Add person** at the foot of the form, or press **Ctrl+Enter**.
 
 <img src="guide/app-add-person.png" alt="The Add a person form" width="440">
 
-They appear on the tree, not yet linked to anyone. To link them, see [Adding a relative](#adding-a-relative) and [Linking two people](#linking-two-people-already-in-the-tree).
+They appear on the tree, not yet linked to anyone, with **+ Parent**, **+ Spouse** and **+ Child** just below them. To link them, see [Adding a relative](#adding-a-relative) and [Linking two people](#linking-two-people-already-in-the-tree).
 
 ### Changing someone's details
 
@@ -415,21 +435,39 @@ They appear on the tree, not yet linked to anyone. To link them, see [Adding a r
 - *Who does it:* anyone whose computer may change the family.
 
 1. Click them on the tree.
-2. Click **Edit**.
+2. Click **Edit**, under their name.
 3. Change what you need.
-4. Click **Save**. Or **Cancel** to leave everything as it was.
+4. Click **Save**, or press **Ctrl+Enter**. Or **Cancel**, or press **Esc**, to leave everything as it was. **Save** and **Cancel** stay at the foot of the form, however far down you are.
 
 <img src="guide/app-person-edit.png" alt="The Edit form" width="440">
+
+*Nothing typed is lost without a question:* if you've changed something, **Cancel** and **Esc** ask **Discard your changes?** first, and so does going to another person or view, or closing the window. **Keep editing**, or **Esc** again, goes back to the form as you left it; **Discard** throws the changes away. The same goes for adding someone new.
 
 ### The details
 
 - *Name:* their **Full name**, **Nickname** (for example *Pak Mat*), **Title** (for example *Haji* or *Dato'*), **Gender**, **Living or deceased**, and **Name in Jawi**. Leave **Living or deceased** on **Work it out from the dates** if you're not sure.
 - *Now:* **Where they live now**, the place the map shows, and their **Occupation**.
 - *Birth:* the **Date**, and **Where they were born**.
-- *Death:* only for someone who has died. Choose **Deceased** beside their name, and it opens: the **Date**, and **Where they rest**, such as *Tanah Perkuburan Islam Kg. Baru*. Where someone died isn't asked for or shown anywhere: one saved before 0.8.2 is kept, but shown nowhere, and left out of everything you send. If someone marked living has any of it filled in, it stays, with a note to choose **Deceased** or clear it.
+- *Death:* only for someone who has died. Choose **Deceased** beside their name, and it opens: the **Date**, and **Buried at**, such as *Tanah Perkuburan Islam Kg. Baru*. Where someone died isn't asked for or shown anywhere: one saved before 0.8.2 is kept, but shown nowhere, and left out of everything you send. If someone marked living has any of it filled in, it stays, with a note to choose **Deceased** or clear it.
 - *Notes:* a few short notes. Write longer things in their [life story](#9-life-stories).
 
-*Dates:* first choose how sure the date is: **Exact**, **About**, **Before**, **After** or **Between**. Then pick the day, month and year from the lists. A year alone is enough. While a list is open, typing jumps to it: type "19" then "38" for 1938, or "feb" for February. The **×** clears the date.
+*Dates:* type the date as you'd say it. What AncesTree understood shows beside it, so you can see it read the day and month the right way round:
+
+| Type | It understands |
+|---|---|
+| 12/3/1950, 12-3-1950 or 12.3.1950 | 12 March 1950: the day first, as in Malaysia |
+| March 1950, Mac 1950 or 3/1950 | March 1950 |
+| 1950 | 1950: a year alone is enough |
+| about 1950, c. 1950, sekitar 1950 or kira-kira 1950 | about 1950 |
+| before 1960 or sebelum 1960; after 1945 or selepas 1945 | before 1960; after 1945 |
+| 1950–1955, between 1950 and 1955, or antara 1950 dan 1955 | between 1950 and 1955 |
+| 1950s or tahun 1950-an | between 1950 and 1959 |
+
+Month names work in English and Malay, in full or short: *Ogos*, *Dis*, *Sept*. If it can't read a date, it says why once you leave the box, such as "Use a 4-digit year", and the form isn't saved until it can. Empty the box to have no date. A spreadsheet's dates are read the same way (see [Bringing people in from a spreadsheet](#17-bringing-people-in-from-a-spreadsheet)).
+
+*Or pick it from lists:* click the calendar beside the box, then choose how sure the date is (**Exact**, **About**, **Before**, **After** or **Between**), and the day, month and year. While a list is open, typing jumps to it: type "19" then "38" for 1938, or "feb" for February. The box says what you picked.
+
+*Short years:* wherever someone's years are shown short, under them on the tree, in the **Relatives** tab, on the timeline and in search, a date that isn't certain says so: *b. c. 1920* for about 1920, *b. before 1950*, *d. after 1990*, and *b. 1976–1978* for between them, as you'd type them.
 
 *Places:* each place is one line, with its sign: a house for where they live, a cradle for where they were born. The line says what's there, such as *Kajang, Selangor · at its town*. Click it to open it; one opens at a time. To fill a place in from another, click **Same as where they live**, **Same as where they were born**, or **Same as their parents'** (or their mother's or father's, where the parents live apart).
 
@@ -445,7 +483,7 @@ Suggestions come from the places on your computer, with no internet: to begin wi
 
 Every box in the form grows as you type, so a long name or address shows whole. **Enter** still saves.
 
-*Asked before saving:* if someone has an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, and keeps the town where they were born. **Save as it is** saves it as you wrote it.
+*Asked before saving:* if someone has an address where they were born and none where they live, AncesTree asks **Is that where they live?** first. **Move it to Where they live** moves the address and its pin there, and keeps the town where they were born. **Save as it is** saves it as you wrote it. **Keep editing**, or **Esc**, goes back to the form, saving nothing.
 
 *No place of their own:* someone with nothing under **Where they live now** is shown where their parents live, marked *(at their parents')*: on their panel, in the map's list, and on the map beside them. It stops when you give them a place of their own. Their form says where they're shown:
 - if the parents live in different places, it's the place of the parent they sit under on the tree, laid out from the oldest ancestor, whichever person the tree is centred on now. Choose **At their mother's** or **At their father's** to show them with the other instead;
@@ -458,10 +496,13 @@ Every box in the form grows as you type, so a long name or address shows whole. 
 - *What it's for:* adding someone's parent, husband or wife, brother or sister, or child, linked to them at once.
 - *Who does it:* anyone whose computer may change the family.
 
-1. Click the person on the tree, then the **Relatives** tab.
-2. Click **+** beside **Parents**, **Married to**, **Brothers and sisters** or **Children**.
-3. Choose **Someone new**, and type their name and anything else you know. Or choose **Already in the tree**, and find them by name.
-4. Click **Add** (or **Link**).
+1. Click the person on the tree. Just below them are **+ Parent**, **+ Spouse** and **+ Child**: click one. Or, in their panel, click the **Relatives** tab, then **+** beside **Parents**, **Married to**, **Brothers and sisters** or **Children**.
+2. Choose **Someone new**, and type their name and anything else you know, the date of birth as you'd say it. Or choose **Already in the tree**, and find them by name.
+3. Click **Add** (or **Link**). To add another straight after, such as the other parent or the next child, click **Add and add another**: the form empties for the next, and stays open. After a father, it offers a mother; the next child keeps the same other parent.
+
+A whole family goes in quickly this way: add the person, then **+ Parent** for both parents, **+ Spouse**, and **+ Child** for each child, one after another.
+
+Nothing typed is lost without a question: once you've typed something, or chosen someone already in the tree, **Cancel**, **Esc** and **×** ask **Discard your changes?** first, as the person form does. **Keep editing**, or **Esc** again, goes back to it. After **Add and add another**, the emptied form counts as nothing typed, so **Esc** then closes it at once.
 
 A new brother or sister shares the parents already recorded. If none are recorded, an "unknown parent" joins them for now, shown as **?** on the tree. Click the **?** later to fill them in. An unknown parent goes to the Trash with the last of their children, and comes back with whichever of them comes back first.
 
@@ -473,6 +514,8 @@ A new brother or sister shares the parents already recorded. If none are recorde
 1. Point at the first person on the tree. A small blue arrow appears at their edge.
 2. Drag the arrow onto the second person.
 3. Choose what the first person is to the second: for example **Father**, **Daughter**, **Wife** or **Brother**. **More…** shows other kinds, such as an adoptive father.
+
+To link nobody after all, press **Esc**, or click the × at the card's corner.
 
 To change or remove a link, click the line between the two people, or use the **…** button beside a relative in the **Relatives** tab. There you can change the kind of link (for example to adoptive), change a marriage to **Divorced** or **Widowed**, or click **Remove link**. Removing a link keeps both people.
 
@@ -505,7 +548,7 @@ To crop it again later, click the circle and **Adjust crop**. **Remove** takes t
 - *What it's for:* taking someone out of the tree, with their links.
 - *Who does it:* anyone whose computer may change the family.
 
-1. Click them on the tree, then **Move to Trash**.
+1. Click them on the tree, then **More** under their name, then **Move to Trash**.
 2. Click **Move to Trash** again to confirm.
 
 Everything can be brought back, photo included, for 30 days: click **Undo** at once, or open **Settings → Trash** and click **Restore** beside them.
@@ -524,6 +567,8 @@ Only birth links count as blood, for the tree's lineage and the relationship fin
 1. Open **Settings → Kinship → Relationship kinds**.
 2. Click **Add kind**, and type what the parent and the child are called, in English and, if you like, Malay and Javanese.
 3. Choose whether it's **Offered** when linking, and whether such children sit under that parent on the tree (**In the tree**).
+
+Once you've typed something in a kind, **Cancel**, **Esc** and **×** ask **Discard your changes?** first.
 
 ![Relationship kinds in Settings](guide/app-settings-kinds.png)
 
@@ -544,7 +589,7 @@ A link that can't move stays with the other, and the check says why: a birth fat
 AncesTree offers it where someone may be in the tree twice, with the two already chosen:
 
 - when you add someone and it says **There's already a … in the tree**, click **Same person as…** on that message;
-- in **Settings → What's missing**, under **Possibly entered twice**: people with the same name, and birth years close together or not known.
+- in **Family facts**, on its **What's missing** tab, under **Possibly entered twice**: people with the same name, and birth years close together or not known.
 
 *If it doesn't work:* if **Undo** says the photo or story has changed since, it leaves them as they are: someone has changed the one you kept since. Move the copied photo or story by hand, or restore a backup.
 
@@ -553,7 +598,7 @@ AncesTree offers it where someone may be in the tree twice, with the two already
 - *What it's for:* someone's life story: their story itself, the parts of their life, with pictures, sayings and sources, and a page to read it all.
 - *Who does it:* anyone whose computer may change the family writes. Everyone can read, in a view-only copy too.
 
-1. Click the person on the tree, then **Life story** beside **Edit** in their panel. Or click the small book mark on their photo, on the tree, the timeline or the map: it shows on anyone who has a story.
+1. Click the person on the tree, then **Life story** under their name, beside **Edit**. Or click the small book mark on their photo, on the tree, the timeline or the map: it shows on anyone who has a story.
 2. The life story opens large, in the middle of the screen. Someone with a story opens on **Read**; someone without, on **Write**. Switch between them at the top. **Esc** closes it.
 3. In **Write**, write their story. It saves itself as you type; it says **Saved** when it has.
 
@@ -566,13 +611,13 @@ AncesTree offers it where someone may be in the tree twice, with the two already
 - A list, such as **Hobbies**, takes one a line: **Enter** starts the next. **Add a saying** takes what they used to say, with when or to whom, if known. Early, middle and later life can each have a picture.
 - Last, **Sources** lists where it came from: "Birth certificate, 1938", or "A talk with Nenek". Click **Add a source** for each.
 
-*Reading:* **Read** lays it all out as a page of its own: their photo, name and dates at the top, with the line of their life beside it (born, married, their children born, died); their story; each part as a card, the sayings as large quotes and the message to the next generations framed; their family, each a click away; and the sources. **Print** prints the page alone, on A4; to keep it as a PDF, choose to save as a PDF in the print window.
+*Reading:* **Read** lays it all out as a page of its own: their photo, name and dates at the top, with the line of their life beside it, a sentence for each: *Born 12 March 1950 in Kuantan, Pahang*, *Married …*, *Aminah binti Hassan, a daughter, born 1962*, *Died …*; where they live, or *Lived in* for someone who has died; their story; each part as a card, the sayings as large quotes and the message to the next generations framed; their family, each a click away; and the sources. **Print** prints the page alone, on A4; to keep it as a PDF, choose to save as a PDF in the print window.
 
 ![A life story to read: the photo, name and the line of their life, their story, and the parts as cards](guide/app-life-story.png)
 
-The **Biography** tab in their panel shows the story's opening and which parts are written, with **Read** and **Write**.
+The **Life story** tab in their panel shows the story's opening and which parts are written, with **Read** and **Write**.
 
-<img src="guide/app-person-story.png" alt="The Biography tab: the story's opening, the parts written, and Read and Write" width="440">
+<img src="guide/app-person-story.png" alt="The Life story tab: the story's opening, the parts written, and Read and Write" width="440">
 
 ### What people say
 
@@ -598,10 +643,10 @@ They're signed with your name under **Me** (see [Me](#11-me-telling-ancestree-wh
 - *What it's for:* what one person is to another, in English, Malay or Javanese, with the path between them on the tree.
 - *Who does it:* everyone.
 
-1. Click the first person on the tree, then **Find relationship**.
+1. Click the first person on the tree, then **More** under their name, then **Find relationship**.
 2. A yellow bar asks you to click anyone. Click the second person on the tree. Or press **Ctrl+K** and search for them.
 
-<img src="guide/app-find-start.png" alt="The bar asking you to click the second person" width="700">
+<img src="guide/app-find-start.png" alt="The bar asking you to click the second person" width="636">
 
 The answer appears in the panel, and the path between them lights up on the tree.
 
@@ -631,11 +676,10 @@ Once you've chosen, the **Me** button shows your name. Click it for these choice
 - **Open my panel**;
 - **How is someone related to me?**;
 - **Colour by closeness to me**;
-- **I'm someone else…**, to choose again.
+- **I'm someone else…**, to choose again;
+- **Forget who I am**, so nothing says "your" until you choose again.
 
-Each computer keeps its own choice. **Settings → You and your family → Me** also has **Forget who I am**.
-
-![Me in Settings](guide/app-settings-me.png)
+Each computer keeps its own choice, in the **Me** menu alone. If the person you chose goes to the Trash, **Me** says so, with **I'm someone else…** and **Forget who I am**.
 
 ## 12. The timeline
 
@@ -643,21 +687,24 @@ Click **Timeline** in the top bar. Everyone appears along the years, with a bar 
 
 ![The timeline](guide/app-timeline.png)
 
+- Each person is named as on the tree, with their nickname after: *Hassan bin Ismail “Acan”*.
+- The colours are the tree's (see [Colours](#colours)), and the key above the years says what each means: a branch by whom it starts with, *Acan's branch*, or a generation. Grey is for those with no colour of their own: by branch, the oldest generations and the families who married in.
 - **Group by** puts people in rows by **Generation** or **Branch**. **Sort by** orders them.
-- Turn the mouse wheel to zoom in and out on the years. Drag to move along them. Hold **Shift** and turn the wheel to move down.
-- **Fit** shows all the years again.
+- Turn the mouse wheel to move down the list. Hold **Ctrl** and turn the wheel to zoom in and out on the years, or pinch on a touchpad or a touch screen. Drag to move along the years; **Shift** and the wheel, or a sideways swipe, move along them too.
+- **Show everyone**, or **F**, shows all the years and everyone again.
 - A bar ending in an arrow is someone living. A bar that fades out is someone whose death isn't recorded.
 - People with no birth year wait at the bottom, under **Undated**. Add their year of birth to place them.
 
 ## 13. The map
 
-Click **Map** in the top bar. It shows where the family lives, or where they were born.
+Click **Map** in the top bar. It shows where the family lives, or where they were born. It opens showing every place they're at, wherever in the world; **F**, or the last of the buttons in its corner, shows them all again.
 
 ![The map](guide/app-map.png)
 
 - **Show** chooses **Where they live** or **Where they were born**.
 - **Moves** draws a line from where each person was born to where they live.
-- Turn the mouse wheel to zoom. A country's or a state's circle shows how many people are there: click it to zoom in. Close up, you see each person's photo in their town. Someone whose place isn't confirmed, found at their house, street, postcode's area or town, is a round photo with a soft ring around them, which says *about here*. Someone whose place is confirmed, placed by hand or with **Looks right**, is a pin like Google Maps', its point exactly on the spot, their photo or initials in its head.
+- No name covers another, or a circle or a photo. Where there's no room under a circle, its name goes above it or beside it; where there's none at all, point at the circle to read it.
+- Turn the mouse wheel to zoom. A country's or a state's circle shows how many people are there: click it to zoom in to them, close enough that it parts into its states or towns. Where a country's states would crowd each other, the country is one circle until you zoom in. Close up, you see each person's photo in their town; until a photo has come, their initials show. Someone whose place isn't confirmed, found at their house, street, postcode's area or town, is a round photo with a soft ring around them, which says *about here*. Someone whose place is confirmed, placed by hand or with **Looks right**, is a pin like Google Maps', its point exactly on the spot, their photo or initials in its head.
 
 ![A confirmed home as a pin, and a town's people about there](guide/app-map-pins.png)
 
@@ -667,7 +714,7 @@ Click **Map** in the top bar. It shows where the family lives, or where they wer
 ![A circle opened where it is: six people around their spot, each with a line to where they live](guide/app-map-bundle.png)
 
 - Zoom in for more. Once the map's detail is on your computer (below), the map shows the land as OpenStreetMap draws it: towns, kampungs, roads, rivers and districts, each in its own name, with the English beneath where it differs. Without it, and in a view-only copy, the map draws each district and names the towns around your family's places as you zoom in.
-- The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. Someone with no place of their own is with their parents, marked *(at their mother's)* or whoever's it is. Click a name to see them on the map.
+- The list on the right counts people by country, state and town, each town with its district: *Kampung Laut, Tumpat* under *Kelantan*. A country without states, such as Singapore or Brunei, lists its towns. Someone with no place of their own is with their parents, marked *(at their mother's)* or whoever's it is. Click a name to see them on the map. The button saying how many are placed, *64 placed*, opens and closes the list. On a narrow window, it steps aside when someone's panel opens and comes back as the panel closes; opened meanwhile, it lies over the map.
 - **Not on the map yet** lists those with no place recorded. Click **Add where they live** to fill it in there and then.
 
 The map's towns and borders come with AncesTree, so it needs no internet for them. It knows every town and kampung in Malaysia, Indonesia, Singapore and Brunei, by its other spellings too, and towns of 1,000 people or more elsewhere. A country downloaded in **Settings → Map** brings its every town and village too (below). A person's **Lives in** says their district too, where the map knows their town. The map's corner names who made it, OpenStreetMap's contributors first, and **Settings → About** says who made each part, under what licence.
@@ -708,17 +755,17 @@ When a country's places come, AncesTree looks again at everyone there whose pin 
 
 ## 14. Family facts, and what's missing
 
-**Family facts** shows the whole family at a glance: how many people and generations, the oldest and youngest, the longest life, the biggest family, the most common names, birthdays and remembrance days this month, and what's still to fill in. Click **Family facts** at the top left. Click a name to open their panel.
+**Family facts** shows facts about the whole family: how many people and generations, the oldest and youngest, the longest life, the biggest family, the most common names, birthdays and remembrance days this month, and what's still to fill in. Click the **ⓘ** beside the family's name, at the top left. Click a name to open their panel. Click the **ⓘ** again, or **×**, to close it. **Esc** closes it too, once anything opened over it has closed.
 
 ![Family facts](guide/app-family-facts.png)
 
-**What's missing** lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address whose place on the map isn't confirmed (**Not confirmed on the map**: click **Confirm** where it's right, or **Place it**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Open **Settings → What's missing**. Every fix can be undone.
+**What's missing**, its second tab, lists what the family's record doesn't say yet, with a quick way to fill in each: genders, dates of birth, birth order, unknown parents, photos, where people live, grown-ups shown at their parents' for want of a place of their own, people with an address whose place on the map isn't confirmed (**Not confirmed on the map**: click **Confirm** where it's right, or **Place it**, and drag it on the small map; or, where the address was saved under where they were born, **Move it to Where they live**), people not linked to anyone, and people possibly entered twice (see [Someone entered twice](#someone-entered-twice)). Click **What's missing** at the top of **Family facts**, or **Fill them in…** under *Still to fill in*. Every fix can be undone. It's in AncesTree itself, not in a view-only copy.
 
 At the top, rarely, **A loop of parents**: someone recorded as their own ancestor, "Ismail is Hassan's parent, Hassan is Ali's, and Ali is Ismail's". AncesTree refuses a link like that, but a family could store one before 0.8.7. The tree is drawn without the newest of its links, the likeliest mistake: click **Take out …** to take that one out, or open them and put it right. Undo can't put a link back that makes the loop again.
 
 Beside it, as rarely, **A child with three birth parents**: "Ali has three birth parents: Hassan, Siti and Yusof", which a family could store before 0.8.7 too. The newest link is the likeliest mistake: click **Take out …** to take it out, or open them and change its kind, to adoptive, say. Until it's put right, a relative's computer can't take the family in, so it's worth doing at once. Undo can't put it back.
 
-![What's missing](guide/app-settings-missing.png)
+![What's missing, in Family facts](guide/app-family-facts-missing.png)
 
 ## 15. Kinship words and the dictionary
 
@@ -729,28 +776,31 @@ AncesTree knows the words for relatives in three languages: English, Bahasa Mela
 - *What it's for:* the language AncesTree's words for relatives are in, and the titles your family uses for uncles and aunts.
 - *Who does it:* everyone, for their own computer. In a family folder, the keeper sets the titles for everyone.
 
-1. Open **Settings → Kinship**.
-2. Choose **English**, **Bahasa Melayu** or **Basa Jawa**. The rest of AncesTree stays in English.
-3. Under Malay birth-order titles, check the titles for uncles and aunts by birth order, such as *Long*, *Ngah* and *Lang*, and *Su* for the youngest. Change them if your family says them differently, then click **Save titles**. On a relative's computer, the keeper's titles are shown, not changed.
+The language is chosen where the words are: click **English**, **Melayu** or **Jawa** beside the answer of [How are two people related?](#10-how-are-two-people-related), or at the top of the **Dictionary**. The answers, the **Relatives** tab and the dictionary all follow it. The rest of AncesTree stays in English.
 
-![Kinship words in Settings](guide/app-settings-kinship.png)
+The titles:
+
+1. Open **Settings → Kinship**.
+2. Under **Malay birth-order titles**, check the titles for uncles and aunts by birth order, such as *Long*, *Ngah* and *Lang*, and *Su* for the youngest. Change them if your family says them differently, then click **Save titles**. On a relative's computer, the keeper's titles are shown, not changed.
+
+![The Malay birth-order titles in Settings](guide/app-settings-kinship.png)
 
 ### The dictionary
 
-**Dictionary**, in the top bar, lists every word AncesTree uses for a relative in the three languages, with other words people say. Type in **Search words or relations…** to find one.
+**Dictionary**, in the top bar's **More**, lists every word AncesTree uses for a relative in the three languages, with other words people say. Type in **Search words or relations…** to find one.
 
 ![The kinship dictionary](guide/app-dictionary.png)
 
 ## 16. Copies for phones, and other files
 
-Click **Export** in the top bar.
+Click **More** in the top bar: its first two are what AncesTree makes for others. In a very wide window, they're under **Export**, in the bar itself.
 
-<img src="guide/app-export.png" alt="The Export window" width="608">
+<img src="guide/app-export.png" alt="More's menu, with View-only copy… and Picture of the tree first" width="242">
 
 | Choice | What you get |
 |---|---|
-| **View-only copy** | The whole family in one file, to give to relatives on phones, tablets or computers without AncesTree. It opens in any web browser, and nothing in it can be changed. |
-| **Picture of the tree** | The tree as it looks now, to print. **PNG** is a picture; **SVG** stays sharp at any size. |
+| **View-only copy…** | The whole family in one file, to give to relatives on phones, tablets or computers without AncesTree. It opens in any web browser, and nothing in it can be changed. |
+| **Picture of the tree** | The tree as it looks now, to print: point at it, then click **PNG**, a picture, or **SVG**, which stays sharp at any size. Away from the tree, it offers **Open the tree** first. |
 
 Each goes to your **Downloads** folder, and AncesTree says so, with its name: click **Show in folder** to see it there.
 
@@ -761,7 +811,7 @@ To move the family to another computer, use a backup: see [Moving the family to 
 - *What it's for:* the whole family in one file, for relatives on phones, tablets or computers without AncesTree.
 - *Who does it:* everyone.
 
-1. Click **Export**, then **Make a copy…** beside **View-only copy**.
+1. Click **More**, then **View-only copy…**. In a very wide window, click **Export**, then **View-only copy…**.
 2. Give it a **Title**, such as the family's name.
 3. For copies that go beyond close family, choose **Hide their details** under **Living people**. Living people's day and month of birth, places, notes and life stories are then left out. Everyone else's places show to their town: no one's house address, postcode or exact pin, as someone living may live where a relative who has died lived.
 4. If you like, tick **Lock the copy with a password**, and type one. Tell them the password by phone, not with the file.
@@ -1400,8 +1450,8 @@ AncesTree can keep several families on one computer, such as your mother's side 
 |---|---|
 | Open one | Click **Open** beside it. |
 | Rename one | Click **Rename…**. Only this computer sees the name. |
-| Remove one from this computer | Click **Remove…**, then **Remove**. It goes to AncesTree's bin for 30 days, then it's deleted. The family that's open can't be removed: open another first. |
-| Bring one back | Under **In AncesTree's bin**, click **Put back** beside it. |
+| Remove one from this computer | Click **Remove…**, then **Remove**. It goes to the Trash for 30 days, then it's deleted. The family that's open can't be removed: open another first. |
+| Bring one back | Under **In the Trash**, click **Put back** beside it. |
 
 ![Families, in Settings → You and your family](guide/app-settings-families.png)
 
@@ -1494,6 +1544,7 @@ Inside it:
 | What you see | What to do |
 |---|---|
 | **AncesTree needs the internet this once, to fetch its database** | Connect to the internet. AncesTree tries again by itself. |
+| **AncesTree's engine isn't answering.** | Click **Try again**: it may have been starting again. What you typed is still in the form. If it says the same again, do as for **AncesTree's engine stopped**, below. |
 | **AncesTree's engine stopped**, or **Can't reach the database** | Right-click the icon by the clock and choose **Quit AncesTree**. Then open AncesTree again. Nothing is lost: your family is safe on the disk. If it happens again, send your keeper the `logs` folder (see [Where AncesTree keeps the family](#24-where-ancestree-keeps-the-family)). |
 | The window has gone | AncesTree is still running. Click its icon by the clock. On a Mac, you can also click AncesTree in the Dock. |
 | No icon by the clock | On Windows, click the small **^** arrow beside the clock: the icon may be hidden there. If it isn't, AncesTree isn't running: open it from **Start** (Windows) or **Applications** (Mac). |
@@ -1552,7 +1603,7 @@ So on the keeper's computer, before its families go: have the recovery code, the
 - *Who does it:* everyone.
 
 1. Open **Settings → About**, and click **Remove AncesTree from this computer…**. It says what goes and what stays.
-2. To keep the backups somewhere first, click **Save the backups to a folder…**. Choose a USB stick, **Documents** or **Another folder**, and click **Save them there**. Each family's backups go into a folder of its name, in `AncesTree backups`; those of a family in AncesTree's bin, removed less than 30 days ago, into a folder of its name and "(removed)".
+2. To keep the backups somewhere first, click **Save the backups to a folder…**. Choose a USB stick, **Documents** or **Another folder**, and click **Save them there**. Each family's backups go into a folder of its name, in `AncesTree backups`; those of a family in the Trash, removed less than 30 days ago, into a folder of its name and "(removed)".
 3. *On the keeper's computer:* tick the three things you have: **I have my recovery code**, **I have my Google project's client file** and **I can sign in to the keeper's Google account**. Lost the client file? **Save it again…** puts it in your Downloads folder. Or click **Hand the family to someone else…** instead, and come back once their computer keeps the family.
 4. *On a relative's computer:* if your changes wait for the keeper, click **Send now**. Ask your keeper to remove this computer, or click **Leave the family folder…**.
 5. Click **Remove AncesTree and its families**, or **Keep the families on this computer**:
@@ -1564,7 +1615,7 @@ So on the keeper's computer, before its families go: have the recovery code, the
 1. Click **Start**, then **Settings → Apps → Installed apps**. Click **…** beside AncesTree, then **Uninstall**. Or start it from **Remove AncesTree from this computer…**, above.
 2. The uninstaller says what goes, and asks:
    - **Also delete the families from this computer: their people, photos, life stories, settings and backups.** Leave it unticked to keep them, for if you install AncesTree again.
-   - **But keep the backups: move them to Documents\AncesTree backups.** Ticked as it opens: each family's backups go into a folder of its name there first, and those of a family in AncesTree's bin into one of its name and "(removed)", such as `Keluarga Contoh (removed)`. Untick it too only if the backups are to go with the families.
+   - **But keep the backups: move them to Documents\AncesTree backups.** Ticked as it opens: each family's backups go into a folder of its name there first, and those of a family in the Trash into one of its name and "(removed)", such as `Keluarga Contoh (removed)`. Untick it too only if the backups are to go with the families.
 3. On the keeper's computer, it also says what keeping the family again needs, and whether any of its backups was copied to another place in the last 7 days.
 4. Click **Uninstall**.
 

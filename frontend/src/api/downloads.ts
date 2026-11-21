@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { ACTION_MS, showError } from "@/lib/notify";
 import { api } from "./client";
-import { ApiError, toApiError, unwrap } from "./errors";
+import { ApiError, reach, toApiError, unwrap } from "./errors";
 import type { components } from "./schema";
 
 type DownloadRequest = components["schemas"]["DownloadRequest"];
@@ -84,7 +84,7 @@ export async function saveDrawn(blob: Blob, name: string, then?: string): Promis
       const form = new FormData();
       form.append("file", blob, name);
       form.append("name", name);
-      const response = await fetch("/api/downloads/picture", { method: "POST", body: form });
+      const response = await reach("/api/downloads/picture", { method: "POST", body: form });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw toApiError(response.status, body);
       return body as Saved;

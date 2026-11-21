@@ -50,6 +50,38 @@ async def test_create_edit_and_find_a_person(client: httpx.AsyncClient) -> None:
     assert [p["full_name"] for p in found] == ["Hassan bin Ismail"]
 
 
+async def test_a_relatives_and_a_search_results_dates_say_how_sure_they_are(
+    client: httpx.AsyncClient,
+) -> None:
+    """Short years keep a date's qualifier, by the user's answer of 19-20 Nov 2026: a
+    relative, and someone found by search, came with their years alone, so "before 1950" was
+    shown as "b. 1950". Their dates come whole now, as the tree's people's do."""
+    hassan = await create_person(client, "Hassan bin Ismail", birth_date="before 1950")
+    aminah = await create_person(
+        client, "Aminah binti Hassan", birth_date="c. 1975", death_date="2010-2012"
+    )
+    assert (await link(client, hassan["id"], aminah["id"], "parent")).status_code == 201
+
+    [group] = (await get_person(client, hassan["id"]))["child_groups"]
+    [child] = group["children"]
+    assert child["born"] == {
+        "year": 1975,
+        "month": None,
+        "day": None,
+        "qualifier": "about",
+        "year_to": None,
+        "original_text": None,
+    }
+    assert child["died"]["qualifier"] == "between"
+    assert (child["died"]["year"], child["died"]["year_to"]) == (2010, 2012)
+    [parent] = (await get_person(client, aminah["id"]))["parents"]
+    assert (parent["born"]["qualifier"], parent["born"]["year"]) == ("before", 1950)
+    assert parent["died"] is None
+
+    [found] = (await client.get("/api/persons", params={"q": "aminah"})).json()
+    assert (found["born"]["qualifier"], found["died"]["year_to"]) == ("about", 2012)
+
+
 async def test_an_unreadable_date_is_refused_on_its_field(client: httpx.AsyncClient) -> None:
     response = await client.post("/api/persons", json={"full_name": "X", "birth_date": "30/2/1950"})
 

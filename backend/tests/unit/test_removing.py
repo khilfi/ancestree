@@ -136,7 +136,7 @@ def test_the_note_follows_the_families_list(tmp_path: Path) -> None:
     assert read_note(tmp_path)["family2"]["name"] == "Ibu"
     families.remove(added.id)
     note = read_note(tmp_path)
-    assert note["AncesTree"]["families"] == "2"  # one in AncesTree's bin, still on this computer
+    assert note["AncesTree"]["families"] == "2"  # one in the Trash, still on this computer
     assert note["family2"]["folder"] == "Ibu (removed)"
 
 

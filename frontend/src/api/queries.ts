@@ -10,7 +10,7 @@ import { useCallback } from "react";
 import { exportAddress, importReportAddress, templateAddress } from "./addresses";
 import { api } from "./client";
 import { saveDownload } from "./downloads";
-import { toApiError, unwrap } from "./errors";
+import { reach, toApiError, unwrap } from "./errors";
 import type {
   Backup,
   BackupList,
@@ -70,19 +70,6 @@ export function useHealth() {
     queryFn: () => unwrap(api.GET("/api/health")),
     refetchInterval: 15_000,
   });
-}
-
-/** Whether the place of death is shown: the backend's switch, said in its health
- *  answer, and a copy's. Off until it says so. */
-export function useDeathPlaces(): boolean {
-  return useHealth().data?.death_places === true;
-}
-
-/** Whether Export offers the spreadsheet, GEDCOM and the full archive: the
- *  backend's switch, MORE_EXPORTS, said in its health answer, and a copy's. Off until it says
- *  so. */
-export function useMoreExports(): boolean {
-  return useHealth().data?.more_exports === true;
 }
 
 export function useGraph(enabled = true) {
@@ -524,7 +511,7 @@ export function useUnlink() {
 
 /** Multipart upload; openapi-fetch's typed body doesn't model File objects. */
 async function sendForm<T>(url: string, method: "PUT" | "POST", form: FormData): Promise<T> {
-  const response = await fetch(url, { method, body: form });
+  const response = await reach(url, { method, body: form });
   const body = await response.json().catch(() => null);
   if (!response.ok) throw toApiError(response.status, body);
   return body as T;

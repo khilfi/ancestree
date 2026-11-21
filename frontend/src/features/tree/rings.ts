@@ -28,7 +28,15 @@ export type Ring = {
   // Only part of the circle, from one angle clockwise to the other, as `polar` counts them:
   // a married-in family drawn as a fan. No span: the whole circle.
   span?: { from: number; to: number };
+  // What it says, once its families are named (`nameRings` in families.ts): null, nothing; not
+  // named yet, its generation.
+  label?: string | null;
 };
+
+/** What a ring says, as the canvas and the picture write it. */
+export function ringText(ring: Pick<Ring, "generation" | "label">): string | null {
+  return ring.label === undefined ? `Generation ${ring.generation}` : ring.label;
+}
 
 export type Fold = { unit: string; size: number; open: boolean };
 

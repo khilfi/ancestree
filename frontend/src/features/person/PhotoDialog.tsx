@@ -138,7 +138,7 @@ export function PhotoDialog({
 
         {stage.step === "crop" ? (
           <div className="space-y-4">
-            <div className="relative h-72 overflow-hidden rounded-lg bg-stone-900">
+            <div className="relative h-72 overflow-hidden rounded-lg bg-foreground">
               <Cropper
                 image={stage.src}
                 crop={position}
@@ -199,7 +199,7 @@ export function PhotoDialog({
                 )}
               </div>
             )}
-            {busy && <p className="text-xs text-stone-500">Working on the photo…</p>}
+            {busy && <p className="text-xs text-faint">Working on the photo…</p>}
             <input
               ref={input}
               type="file"

@@ -80,18 +80,18 @@ export function PersonDetails({ person }: { person: PersonDetail }) {
 
   return (
     <div className="space-y-4">
-      <dl className="divide-y divide-stone-100 text-sm">
+      <dl className="divide-y divide-border text-sm">
         {rows
           .filter(([, value]) => Boolean(value))
           .map(([label, value]) => (
             <div key={label} className="grid grid-cols-[7.5rem_1fr] gap-3 py-2">
-              <dt className="text-stone-500">{label}</dt>
-              <dd className="min-w-0 break-words text-stone-900">{value}</dd>
+              <dt className="text-faint">{label}</dt>
+              <dd className="min-w-0 break-words text-foreground">{value}</dd>
             </div>
           ))}
       </dl>
       {added && (
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-faint">
           Added {added}
           {updated && updated !== added ? ` · last changed ${updated}` : ""}
         </p>

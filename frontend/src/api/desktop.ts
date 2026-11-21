@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError } from "./errors";
+import { ApiError, reach } from "./errors";
 
 /** What the desktop app's engine knows about new versions of the app. */
 export interface DesktopUpdate {
@@ -13,7 +13,7 @@ export interface DesktopUpdate {
 const UPDATE = ["desktop", "update"] as const;
 
 async function send(path: string, method = "GET"): Promise<DesktopUpdate | null> {
-  const response = await fetch(path, { method });
+  const response = await reach(path, { method });
   if (response.status === 404) return null; // not the desktop app: the browser, or a copy
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.detail?.message ?? "AncesTree couldn't answer");
@@ -73,7 +73,7 @@ async function families(
   body?: BodyInit,
   json = true,
 ): Promise<DesktopFamilies | null> {
-  const response = await fetch(path, {
+  const response = await reach(path, {
     method,
     body,
     headers: body && json ? { "Content-Type": "application/json" } : undefined,
@@ -137,7 +137,7 @@ export const useRenameFamily = () =>
     families(`/api/desktop/families/${id}`, "PATCH", JSON.stringify({ name })),
   );
 
-/** A family out of the way, in AncesTree's bin for 30 days. */
+/** A family out of the way, in the Trash for 30 days. */
 export const useRemoveFamily = () =>
   useFamiliesChange((id: string) => families(`/api/desktop/families/${id}`, "DELETE"));
 
@@ -169,7 +169,7 @@ export interface Removing {
     example: boolean;
     keeper: boolean; // this computer keeps its family folder
     backups: number;
-    // In AncesTree's bin, for under 30 days: its backups are kept too, as "<name> (removed)".
+    // In the Trash, for under 30 days: its backups are kept too, as "<name> (removed)".
     removed?: boolean;
   }[];
 }
@@ -183,7 +183,7 @@ export interface BackupsSaved {
 }
 
 async function desktopCall<T>(path: string, method = "GET", body?: object): Promise<T | null> {
-  const response = await fetch(path, {
+  const response = await reach(path, {
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { "Content-Type": "application/json" } : undefined,

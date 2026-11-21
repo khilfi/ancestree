@@ -100,7 +100,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-3 rounded-lg border border-stone-200 p-4">
+    <div className="space-y-3 rounded-lg border border-border p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="text-sm font-semibold">{title}</h3>
         {guide && <HowDoesThisWork at={guide} />}
@@ -116,11 +116,11 @@ function InStep({ status }: { status: FamilyFolderStatus }) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm" role="status">
       {status.problem ? (
-        <span className="font-medium text-amber-700">{status.problem}</span>
+        <span className="font-medium text-warning">{status.problem}</span>
       ) : status.last_sync ? (
-        <span className="text-stone-600">In step · {ago(status.last_sync)}</span>
+        <span className="text-muted-foreground">In step · {ago(status.last_sync)}</span>
       ) : (
-        <span className="text-stone-500">Not in step yet</span>
+        <span className="text-faint">Not in step yet</span>
       )}
       <Button
         size="sm"
@@ -137,13 +137,13 @@ function InStep({ status }: { status: FamilyFolderStatus }) {
 function GoogleAccount({ status }: { status: FamilyFolderStatus }) {
   const signOut = useSignOutOfGoogle();
   return (
-    <p className="text-xs text-stone-500">
+    <p className="text-xs text-faint">
       Signed in to Google as {status.email}, through{" "}
       {status.project_invited ? "your keeper's" : "the family's"} Google project,{" "}
       <span className="font-mono">{status.project}</span>.{" "}
       <button
         type="button"
-        className="text-sky-700 hover:underline"
+        className="text-link hover:underline"
         onClick={() => signOut.mutate(undefined, { onError: showError })}
       >
         Sign out
@@ -157,26 +157,26 @@ function SignIn({ status }: { status: FamilyFolderStatus }) {
   const waiting = status.signing_in || signIn.isPending;
   return (
     <Panel title="Sign in to Google" guide="signIn">
-      <p className="max-w-2xl text-sm text-stone-600">
+      <p className="max-w-2xl text-sm text-muted-foreground">
         The family folder is in Google Drive, so AncesTree needs your Google account. Google asks
         whether AncesTree may see your Drive's files and change only the files it makes: tick both.
         AncesTree only ever looks in the family folder. It isn't verified by Google, so Google first
         says "Google hasn't verified this app": choose <strong>Advanced</strong>, then{" "}
         <strong>Go to AncesTree (unsafe)</strong>. Google says so of any app it hasn't checked.
       </p>
-      {status.problem && <p className="text-sm font-medium text-amber-700">{status.problem}</p>}
+      {status.problem && <p className="text-sm font-medium text-warning">{status.problem}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => signIn.mutate(undefined, { onError: showError })} disabled={waiting}>
           {waiting ? "Waiting for Google…" : "Sign in with Google"}
         </Button>
         {waiting && signIn.data && (
-          <span className="text-xs text-stone-500">
+          <span className="text-xs text-faint">
             Finish on Google's page, in your browser. No page?{" "}
             <a
               href={signIn.data}
               target="_blank"
               rel="noreferrer"
-              className="text-sky-700 hover:underline"
+              className="text-link hover:underline"
             >
               Open it
             </a>
@@ -305,7 +305,7 @@ function NoProject() {
   return (
     <div className="space-y-4">
       <Panel title="Join your family's AncesTree" guide="join">
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           Your family's keeper sends you an invitation: a line of text that starts with{" "}
           <span className="font-mono">ATI1-</span>. Paste it here, then sign in to Google with the
           account they invited, and ask to join.
@@ -313,16 +313,16 @@ function NoProject() {
         <PasteInvitation label="Your keeper's invitation" />
       </Panel>
       <Panel title="Start your family's folder, as its keeper" guide="startFolder">
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           The family folder signs in to Google through a Google Cloud project of your own family's:
           free, and set up once, in about 20 minutes.{" "}
-          <Link to={guideAt("project")} className="text-sky-700">
+          <Link to={guideAt("project")} className="text-link">
             The guide shows each step
           </Link>
           . Then choose the file Google gives you for its client.
         </p>
         <ChooseClientFile>Choose the client's file…</ChooseClientFile>
-        <p className="max-w-2xl text-xs text-stone-500">
+        <p className="max-w-2xl text-xs text-faint">
           The family's keeper on a new computer? Choose the same project's client file, sign in,
           then be the keeper again with your recovery code.
         </p>
@@ -334,7 +334,7 @@ function NoProject() {
 /** The project's client, or the invitation, changed for another before signing in. */
 function OtherProject({ status }: { status: FamilyFolderStatus }) {
   return (
-    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+    <details className="rounded-lg border border-border p-4 text-sm">
       <summary className="cursor-pointer font-semibold">
         {status.project_invited ? "Another invitation?" : "Joining your family instead?"}
       </summary>
@@ -342,7 +342,7 @@ function OtherProject({ status }: { status: FamilyFolderStatus }) {
         <PasteInvitation label="The invitation from your family's keeper" />
         {status.project_invited && (
           <div className="space-y-2">
-            <p className="max-w-2xl text-stone-600">
+            <p className="max-w-2xl text-muted-foreground">
               Starting your own family's folder instead? Choose your own Google project's client
               file.
             </p>
@@ -368,7 +368,7 @@ function Join() {
           join.mutate({ computer }, { onError: showError });
         }}
       >
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           Your keeper's invitation says which family to join. Asking to join puts a small folder in
           your own Google Drive, shared with your keeper, for what this computer sends them.
         </p>
@@ -413,7 +413,7 @@ function Start() {
     );
   return (
     <Panel title="Start your family's folder, as its keeper" guide="startFolder">
-      <p className="max-w-2xl text-sm text-stone-600">
+      <p className="max-w-2xl text-sm text-muted-foreground">
         Your family, as it is in AncesTree here, goes into a new folder in your Google Drive,
         encrypted. You then invite relatives, and let each of their computers in.
       </p>
@@ -486,7 +486,7 @@ function ComeBack() {
   const recover = useRecoverFamily();
   const [code, setCode] = useState("");
   return (
-    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+    <details className="rounded-lg border border-border p-4 text-sm">
       <summary className="cursor-pointer font-semibold">
         The family's keeper, on a new computer?
       </summary>
@@ -497,7 +497,7 @@ function ComeBack() {
           recover.mutate({ code }, { onError: showError });
         }}
       >
-        <p className="max-w-2xl text-stone-600">
+        <p className="max-w-2xl text-muted-foreground">
           Sign in with the Google account that started the family folder, and type the recovery code
           from your sheet.
         </p>
@@ -543,7 +543,7 @@ function InvitationDialog({ to, onClose }: { to: string | null; onClose: () => v
         <AlertDialogHeader>
           <AlertDialogTitle>The invitation to send</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm text-stone-600">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <p>
                 {to
                   ? `The family folder is shared with ${to}. Google doesn't tell them, so send them this, by message or email.`
@@ -552,7 +552,7 @@ function InvitationDialog({ to, onClose }: { to: string | null; onClose: () => v
                 invite can open the folder, and you check each computer's code.
               </p>
               {invitation.isError ? (
-                <p className="text-amber-700">{(invitation.error as Error).message}</p>
+                <p className="text-warning">{(invitation.error as Error).message}</p>
               ) : (
                 <Textarea
                   readOnly
@@ -623,13 +623,9 @@ function Invite() {
           Invite
         </Button>
       </form>
-      <p className="max-w-xl text-xs text-stone-500">
+      <p className="max-w-xl text-xs text-faint">
         A computer of your own joins with your own Google account: no need to invite it.{" "}
-        <button
-          type="button"
-          className="text-sky-700 hover:underline"
-          onClick={() => setSending("")}
-        >
+        <button type="button" className="text-link hover:underline" onClick={() => setSending("")}>
           Show the invitation
         </button>{" "}
         to paste on it, or to send again. <HowDoesThisWork at="ownComputers" />
@@ -647,20 +643,18 @@ function Asking({ ask, keeper }: { ask: FolderAsking; keeper?: string }) {
   const refuse = useRefuse();
   const [role, setRole] = useState<keyof typeof ROLES>("contributor");
   return (
-    <li className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+    <li className="space-y-3 rounded-lg border border-warning-border bg-warning-soft/50 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <div className="font-medium">{ask.name}</div>
-          <div className="text-xs text-stone-500">
-            {ask.email || "Google account not known yet"}
-          </div>
+          <div className="text-xs text-faint">{ask.email || "Google account not known yet"}</div>
         </div>
         <div className="text-right">
-          <div className="text-xs text-stone-500">Their code</div>
+          <div className="text-xs text-faint">Their code</div>
           <div className="font-mono text-lg tracking-wider">{ask.code}</div>
         </div>
       </div>
-      <p className="text-xs text-stone-600">
+      <p className="text-xs text-muted-foreground">
         Let them in only if they read you the same code, by phone or message.
         {keeper && ` ${keeper} lets them in at its next round.`}
       </p>
@@ -747,7 +741,7 @@ function ChangeRoleDialog({
           ))}
         </RadioGroup>
         {waiting && (
-          <p className="text-sm font-medium text-amber-700" role="status">
+          <p className="text-sm font-medium text-warning" role="status">
             Review its {count ? `${count} ${count === 1 ? "change" : "changes"}` : "changes"} first:
             they wait for you above.
           </p>
@@ -784,15 +778,15 @@ function Members({
   const [changing, setChanging] = useState<FolderMember | null>(null);
   return (
     <>
-      <ul className="divide-y divide-stone-100 text-sm">
+      <ul className="divide-y divide-border text-sm">
         {members.map((member) => (
           <li key={member.device} className="flex items-center justify-between gap-3 py-2">
             <div className="min-w-0">
-              <div className={member.role === "removed" ? "text-stone-400 line-through" : ""}>
+              <div className={member.role === "removed" ? "text-faint line-through" : ""}>
                 {member.name}
-                {member.you && <span className="text-stone-500"> · this computer</span>}
+                {member.you && <span className="text-faint"> · this computer</span>}
               </div>
-              <div className="truncate text-xs text-stone-500">{member.email}</div>
+              <div className="truncate text-xs text-faint">{member.email}</div>
               {keeper && member.own && member.role !== "removed" && (
                 // Another of the keeper's own computers, on its Google account.
                 <div className="mt-1 flex items-center gap-2">
@@ -817,7 +811,7 @@ function Members({
                   />
                   <Label
                     htmlFor={`helps-${member.device}`}
-                    className="text-xs font-normal text-stone-600"
+                    className="text-xs font-normal text-muted-foreground"
                   >
                     May invite and let in for me
                   </Label>
@@ -825,7 +819,7 @@ function Members({
               )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="text-xs text-stone-600">{ROLE_NAMES[member.role]}</span>
+              <span className="text-xs text-muted-foreground">{ROLE_NAMES[member.role]}</span>
               {keeper && !member.you && member.role !== "removed" && (
                 <>
                   <Button size="sm" variant="ghost" onClick={() => setChanging(member)}>
@@ -876,12 +870,12 @@ function RecoverySheet({ code }: { code: string }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Your recovery code</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm text-stone-600">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <p>
                 With this code, and the Google account that started the family folder, you can be
                 the family's keeper again on a new computer. Without it, no one can.
               </p>
-              <p className="rounded-md bg-stone-100 p-3 text-center font-mono text-lg tracking-wider text-stone-900">
+              <p className="rounded-md bg-muted p-3 text-center font-mono text-lg tracking-wider text-foreground">
                 {code}
               </p>
               <p>
@@ -909,10 +903,10 @@ function NewRecoveryCode() {
   const make = useNewRecoveryCode();
   const [asking, setAsking] = useState(false);
   return (
-    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+    <details className="rounded-lg border border-border p-4 text-sm">
       <summary className="cursor-pointer font-semibold">Lost your recovery code?</summary>
       <div className="mt-3 space-y-3">
-        <p className="max-w-2xl text-stone-600">
+        <p className="max-w-2xl text-muted-foreground">
           Make a new one, and keep it as you kept the old. Once it's in your Google Drive, the old
           code opens nothing. Make one too if someone else may have seen your code.
         </p>
@@ -998,7 +992,7 @@ function Stuck({ status }: { status: FamilyFolderStatus }) {
             : "This computer's part can't be opened here"
         }
       >
-        <p className="max-w-2xl text-sm text-amber-700" role="status">
+        <p className="max-w-2xl text-sm text-warning" role="status">
           {status.problem}
         </p>
         {status.may_leave && <Leave keeper={status.setup === "keeper"} />}
@@ -1014,7 +1008,7 @@ function ChangesWaiting({ changes }: { changes: FolderChanges[] }) {
   const shown = changes.find((item) => item.device === open) ?? null;
   return (
     <Panel title={`Changes waiting (${changes.length})`} guide="changesWaiting">
-      <p className="max-w-2xl text-sm text-stone-600">
+      <p className="max-w-2xl text-sm text-muted-foreground">
         What relatives changed on their computers, for you to look at. Nothing comes in until you
         bring it in; what you don't take goes back to them, with your note.
       </p>
@@ -1023,8 +1017,8 @@ function ChangesWaiting({ changes }: { changes: FolderChanges[] }) {
           <li key={item.device} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span>
               <strong>{item.name}</strong>
-              {item.email && <span className="text-stone-500"> · {item.email}</span>}
-              <span className="text-stone-500">
+              {item.email && <span className="text-faint"> · {item.email}</span>}
+              <span className="text-faint">
                 {" "}
                 · {ROLE_NAMES[item.role] ?? item.role} · sent {ago(item.sent_at)}
               </span>
@@ -1097,7 +1091,7 @@ function Move({ status }: { status: FamilyFolderStatus }) {
   if (status.moving) {
     return (
       <Panel title="Moving the family folder" guide="moveFolder">
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           Signed in as {status.email}, through <span className="font-mono">{status.project}</span>.
           Rebuild the family folder here: relatives' computers follow it. If the family's Google
           project changed, send relatives the new invitation too, once they're asked for it.
@@ -1107,12 +1101,12 @@ function Move({ status }: { status: FamilyFolderStatus }) {
     );
   }
   return (
-    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+    <details className="rounded-lg border border-border p-4 text-sm">
       <summary className="cursor-pointer font-semibold">
         Move the family folder to another Google account or project?
       </summary>
       <div className="mt-3 space-y-3">
-        <p className="max-w-2xl text-stone-600">
+        <p className="max-w-2xl text-muted-foreground">
           The family folder is made again from this computer, in the account or project you choose,
           and relatives' computers follow it. The old one goes to Drive's bin.
         </p>
@@ -1142,7 +1136,7 @@ const AFTERWARDS = {
 /** Where the family's Google project is shared, said at a handover. */
 function ProjectOwner({ to }: { to: string }) {
   return (
-    <p className="max-w-2xl text-xs text-stone-500">
+    <p className="max-w-2xl text-xs text-faint">
       Your family signs in to Google through your Google Cloud project. Add {to} as an{" "}
       <strong>Owner</strong> of it in the Google Cloud console (
       <strong>IAM &amp; Admin → IAM → Grant access</strong>), so the family no longer depends on
@@ -1164,10 +1158,10 @@ function HandOver({ status }: { status: FamilyFolderStatus }) {
   const [after, setAfter] = useState<keyof typeof AFTERWARDS>("trusted");
   const chosen = others.find((member) => member.device === device) ?? others[0];
   return (
-    <details className="rounded-lg border border-stone-200 p-4 text-sm">
+    <details className="rounded-lg border border-border p-4 text-sm">
       <summary className="cursor-pointer font-semibold">Hand the family to someone else?</summary>
       <div className="mt-3 space-y-3">
-        <p className="max-w-2xl text-stone-600">
+        <p className="max-w-2xl text-muted-foreground">
           Another of the family's computers becomes the keeper: it reviews relatives' changes and
           lets computers in, and the family folder moves to its owner's Google Drive. They're asked
           first, on that computer.
@@ -1179,7 +1173,7 @@ function HandOver({ status }: { status: FamilyFolderStatus }) {
           <HowDoesThisWork at="handOver" />
         </div>
         {others.length === 0 && (
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-faint">
             Their computer joins the family first, as any relative's does.
           </p>
         )}
@@ -1206,7 +1200,7 @@ function HandOver({ status }: { status: FamilyFolderStatus }) {
                   <RadioGroupItem value={member.device} id={`keeper-${member.device}`} />
                   <Label htmlFor={`keeper-${member.device}`} className="text-sm font-normal">
                     {member.name}
-                    {member.email && <span className="text-stone-500"> · {member.email}</span>}
+                    {member.email && <span className="text-faint"> · {member.email}</span>}
                   </Label>
                 </div>
               ))}
@@ -1253,7 +1247,7 @@ function Offered({ offer, to }: { offer: OfferMade; to: string }) {
   const withdraw = useWithdrawOffer();
   return (
     <Panel title={`Offered to ${offer.name}`} guide="handOver">
-      <p className="max-w-2xl text-sm text-stone-600">
+      <p className="max-w-2xl text-sm text-muted-foreground">
         Sent {ago(offer.made)}: they're asked on their computer to keep the family, or to turn it
         down. While the offer stands, this computer keeps nothing, and the family can't be changed
         here. Once it's taken, this computer carries on as{" "}
@@ -1281,7 +1275,7 @@ function OfferedHere({ offer }: { offer: OfferHere }) {
   const busy = accept.isPending || decline.isPending;
   return (
     <Panel title={`${offer.keeper} asks you to keep the family`} guide="takeOver">
-      <ul className="max-w-2xl list-disc space-y-0.5 pl-5 text-sm text-stone-600">
+      <ul className="max-w-2xl list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
         <li>You review relatives' changes, and let computers in.</li>
         {offer.own ? (
           <li>The family folder stays where it is, in your Google Drive.</li>
@@ -1294,7 +1288,7 @@ function OfferedHere({ offer }: { offer: OfferHere }) {
           <li>You get a recovery code, to keep safe.</li>
         )}
       </ul>
-      <p className="text-xs text-stone-500">Asked {ago(offer.made)}. A backup is made first.</p>
+      <p className="text-xs text-faint">Asked {ago(offer.made)}. A backup is made first.</p>
       <div className="flex gap-2">
         <Button disabled={busy} onClick={() => accept.mutate(undefined, { onError: showError })}>
           {accept.isPending ? "Taking it over…" : "Accept"}
@@ -1377,7 +1371,7 @@ function Helping({ status, helping }: { status: FamilyFolderStatus; helping: Hel
         </Panel>
       )}
       <Panel title={`Inviting and letting in for ${helping.keeper}`} guide="helpers">
-        <p className="max-w-2xl text-sm text-stone-600" role="status">
+        <p className="max-w-2xl text-sm text-muted-foreground" role="status">
           {helping.running
             ? `${helping.keeper} lets in the computers you choose here at its next round, within a minute while it runs.`
             : `${helping.keeper} isn't running${helping.looked ? `: last heard from ${ago(helping.looked)}` : ""}. The computers you let in here wait until it runs again.`}
@@ -1387,7 +1381,7 @@ function Helping({ status, helping }: { status: FamilyFolderStatus; helping: Hel
             {waiting.map((name) => (
               <li key={name}>
                 <div className="font-medium">{name}</div>
-                <div className="text-xs text-amber-700">
+                <div className="text-xs text-warning">
                   Waiting for {helping.keeper} to let them in
                   {helping.running ? "" : ": it's not running"}
                 </div>
@@ -1396,7 +1390,7 @@ function Helping({ status, helping }: { status: FamilyFolderStatus; helping: Hel
           </ul>
         )}
         {done.length > 0 && (
-          <ul className="space-y-1 text-sm text-stone-600">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             {done.map((helped, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: plain lines, and one computer can be named twice
               <HelpedLine key={index} helped={helped} />
@@ -1449,7 +1443,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
           }
           guide="rebuild"
         >
-          <p className="max-w-2xl text-sm text-stone-600">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             {status.trouble === "foreign"
               ? "Your family's Google project can read it, not change it. Rebuild it through your project, from this computer, which holds every one of its files: relatives' computers follow it."
               : "If it's in Drive's bin, take it out there. If it's gone for good, rebuild it from this computer, which holds every one of its files."}
@@ -1459,7 +1453,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
       )}
       {status.old_folder_left && (
         <Panel title="The old family folder is still in Google Drive" guide="moveFolder">
-          <p className="max-w-2xl text-sm text-stone-600">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             AncesTree couldn't put it in Drive's bin. Delete it in Google Drive, so relatives'
             computers move to the new one, then say so here.
           </p>
@@ -1489,7 +1483,7 @@ function Keeper({ status }: { status: FamilyFolderStatus }) {
       </Panel>
       {helped.length > 0 && (
         <Panel title="What your other computers asked" guide="helpers">
-          <ul className="space-y-1 text-sm text-stone-600">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             {helped.map((done, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: plain lines, and one computer can be named twice
               <HelpedLine key={index} helped={done} />
@@ -1515,8 +1509,8 @@ function Answers({ answers }: { answers: FolderAnswer[] }) {
           {answer.note && <p className="whitespace-pre-line">“{answer.note}”</p>}
           {answer.left_out.length > 0 && (
             <>
-              <p className="text-stone-600">Not taken, so no longer shown here:</p>
-              <ul className="list-disc space-y-0.5 pl-5 text-stone-600">
+              <p className="text-muted-foreground">Not taken, so no longer shown here:</p>
+              <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
                 {answer.left_out.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
@@ -1556,9 +1550,9 @@ function RoleNote({ status }: { status: FamilyFolderStatus }) {
         Now <strong>{ROLE_NAMES[changed.role]}</strong>. {ROLE_HERE[changed.role] ?? ""}
       </p>
       {changed.backup && (
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           What you'd changed here is kept in a backup, <code>{changed.backup}</code>, in{" "}
-          <Link to="/settings/backups" className="text-sky-700 hover:underline">
+          <Link to="/settings/backups" className="text-link hover:underline">
             Settings → Backups
           </Link>
           . The family here is the keeper's now.
@@ -1581,7 +1575,7 @@ function RoleNote({ status }: { status: FamilyFolderStatus }) {
 export function Sending({ status }: { status: FamilyFolderStatus }) {
   const pending = status.pending ?? 0;
   return (
-    <p className="text-sm text-stone-600" role="status">
+    <p className="text-sm text-muted-foreground" role="status">
       {pending === 0
         ? "Nothing of yours is waiting for the keeper."
         : sendsWords(status)
@@ -1598,7 +1592,7 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
     return (
       <div className="space-y-4">
         <Panel title="Waiting to be let in" guide="join">
-          <p className="max-w-2xl text-sm text-stone-600">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             Read this code to your family's keeper, by phone or message. Once they let this computer
             in, the family arrives here by itself.
           </p>
@@ -1607,7 +1601,7 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
         <InStep status={status} />
         <GoogleAccount status={status} />
         {status.may_leave && (
-          <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-faint">
             <span>Asked the wrong family, or turned away? Leave, then ask again.</span>
             <Leave keeper={false} />
           </div>
@@ -1643,12 +1637,12 @@ function Relative({ status }: { status: FamilyFolderStatus }) {
         <Members members={members} keeper={false} />
       </Panel>
       <GoogleAccount status={status} />
-      <details className="rounded-lg border border-stone-200 p-4 text-sm">
+      <details className="rounded-lg border border-border p-4 text-sm">
         <summary className="cursor-pointer font-semibold">
           Your keeper sent a new invitation?
         </summary>
         <div className="mt-3 space-y-3">
-          <p className="max-w-2xl text-stone-600">
+          <p className="max-w-2xl text-muted-foreground">
             When your keeper moves the family to another Google project, they send a new invitation.
             Paste it here, then sign in to Google again.
           </p>
@@ -1671,13 +1665,13 @@ function ProjectNeeded({ status }: { status: FamilyFolderStatus }) {
         title={keeper ? "Your family's Google project" : "Your keeper's invitation"}
         guide={keeper ? "project" : "join"}
       >
-        <p className="max-w-2xl text-sm text-stone-600">
+        <p className="max-w-2xl text-sm text-muted-foreground">
           {keeper ? (
             <>
               Each family signs in to Google through its own Google project. Choose the file Google
               gives for your project's client, then sign in again: the family folder carries on as
               it was.{" "}
-              <Link to={guideAt("project")} className="text-sky-700">
+              <Link to={guideAt("project")} className="text-link">
                 The guide shows how
               </Link>
               .
@@ -1697,7 +1691,7 @@ function ProjectNeeded({ status }: { status: FamilyFolderStatus }) {
         )}
       </Panel>
       {status.problem && (
-        <p className="text-sm font-medium text-amber-700" role="status">
+        <p className="text-sm font-medium text-warning" role="status">
           {status.problem}
         </p>
       )}
@@ -1713,7 +1707,7 @@ export function FamilyFolderSection() {
   const status = folder.data;
   let body: React.ReactNode;
   if (!status) {
-    body = <p className="text-sm text-stone-500">{folder.isError ? "Can't be reached." : "…"}</p>;
+    body = <p className="text-sm text-faint">{folder.isError ? "Can't be reached." : "…"}</p>;
   } else if (status.broken || status.replaced) {
     body = <Stuck status={status} />;
   } else if (!status.available) {
@@ -1729,7 +1723,7 @@ export function FamilyFolderSection() {
     body = (
       <div className="space-y-4">
         {status.moving ? (
-          <p className="max-w-2xl text-sm font-medium text-stone-700">
+          <p className="max-w-2xl text-sm font-medium text-foreground">
             Moving the family folder: sign in with the Google account that's to hold it. Then
             rebuild the family folder there.
           </p>
@@ -1760,10 +1754,10 @@ export function FamilyFolderSection() {
     body = status.setup === "keeper" ? <Keeper status={status} /> : <Relative status={status} />;
   }
   return (
-    <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
       <div className="space-y-1">
         <h2 className="font-semibold">Family folder</h2>
-        <p className="max-w-2xl text-sm text-stone-500">
+        <p className="max-w-2xl text-sm text-faint">
           Your family's AncesTree on invited relatives' computers, kept in step through a private
           folder in the keeper's Google Drive, reached through the family's own Google project.
           Everything in it is encrypted on each computer: Google keeps the files, but can't read

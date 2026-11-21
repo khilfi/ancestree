@@ -115,13 +115,33 @@ const NAMED = new Set([
   "places_locality",
 ]);
 
+/** No name on the map under 12 px, as nowhere in the app. */
+const SMALLEST_TEXT = 12;
+
+/** A label's size, each size it can take at least SMALLEST_TEXT: a number, or what a step, an
+ *  interpolation, a match or a case gives. Protomaps' own go down to 8 px. */
+export function readable(size: unknown): unknown {
+  if (typeof size === "number") return Math.max(SMALLEST_TEXT, size);
+  if (!Array.isArray(size)) return size;
+  // Where each kind of expression keeps what it gives: [kind, …, output, …, output].
+  const outputs: Record<string, (at: number, length: number) => boolean> = {
+    interpolate: (at) => at >= 4 && at % 2 === 0,
+    step: (at) => at >= 2 && at % 2 === 0,
+    match: (at, length) => (at >= 3 && at % 2 === 1) || at === length - 1,
+    case: (at, length) => (at >= 2 && at % 2 === 0) || at === length - 1,
+  };
+  const given = outputs[String(size[0])];
+  return given ? size.map((part, at) => (given(at, size.length) ? readable(part) : part)) : size;
+}
+
 /** Protomaps' layers for one pack, labelled as above, each named for its pack. */
 function packLayers(source: string): LayerSpecification[] {
   return layers(source, LIGHT, { lang: "en" }).map((layer) => {
     const id = `${source}:${layer.id}`;
     if (layer.type !== "symbol") return { ...layer, id };
+    const sized = { ...layer.layout, "text-size": readable(layer.layout?.["text-size"] ?? 16) };
     if (NAMED.has(layer.id)) {
-      return { ...layer, id, layout: { ...layer.layout, "text-field": LABEL } };
+      return { ...layer, id, layout: { ...sized, "text-field": LABEL } } as LayerSpecification;
     }
     if (layer.id === "places_region") {
       // Its short form ("Kel.") zoomed out, then its name as the others'.
@@ -129,10 +149,10 @@ function packLayers(source: string): LayerSpecification[] {
       return {
         ...layer,
         id,
-        layout: { ...layer.layout, "text-field": ["step", ["zoom"], short, 6, LABEL] },
-      };
+        layout: { ...sized, "text-field": ["step", ["zoom"], short, 6, LABEL] },
+      } as LayerSpecification;
     }
-    return { ...layer, id };
+    return { ...layer, id, layout: sized } as LayerSpecification;
   });
 }
 
@@ -310,7 +330,7 @@ function onlineLayers(): LayerSpecification[] {
       filter: kind("ocean", "sea", "bay", "strait"),
       ...names(c.ocean_label, c.water, {
         "text-font": ["Noto Sans Italic"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 10, 10, 12],
+        "text-size": 12, // no name under 12 px
         "text-letter-spacing": 0.1,
         "text-max-width": 9,
         "text-transform": "uppercase",
@@ -340,7 +360,7 @@ function onlineLayers(): LayerSpecification[] {
         "text-max-width": 7,
         "text-letter-spacing": 0.1,
         "text-padding": ["interpolate", ["linear"], ["zoom"], 5, 2, 8, 4, 12, 18, 15, 20],
-        "text-size": ["interpolate", ["exponential", 1.2], ["zoom"], 11, 8, 14, 14, 18, 24],
+        "text-size": ["interpolate", ["exponential", 1.2], ["zoom"], 11, 12, 14, 14, 18, 24],
         "text-transform": "uppercase",
       }),
     }),
@@ -367,11 +387,12 @@ function onlineLayers(): LayerSpecification[] {
           "interpolate",
           ["linear"],
           ["zoom"],
-          // As Protomaps sizes the packs' towns: a city large, the rest at 11 or 12.
+          // As Protomaps sizes the packs' towns, a city large; the rest at 12 or more, as no
+          // name is smaller.
           7,
-          byClass("city", 13, "town", 11, 10),
+          byClass("city", 13, 12),
           10,
-          byClass("city", 18, "town", 12.5, "village", 11.5, 11),
+          byClass("city", 18, "town", 12.5, 12),
           15,
           byClass("city", 22, "town", 14, "village", 12.5, 12),
         ],

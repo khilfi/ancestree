@@ -3,15 +3,25 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GraphPerson, MapPack } from "@/api/types";
+import { useEscape } from "@/lib/escape";
 import { typing } from "@/lib/keyboard";
-import { fromPlane } from "./geo";
-import { type Group, levelAt, NAMES_FROM, PHOTO, type Point, type Spot } from "./levels";
+import { DRAWING } from "@/styles/drawing";
+import { cameraOf, firstView, into, type Size, type View, viewOf } from "./fit";
+import { fromPlane, PLANE_PER_KM } from "./geo";
+import { corners } from "./labels";
+import {
+  type Group,
+  type Level,
+  levelAt,
+  NAMES_FROM,
+  PHOTO,
+  type Point,
+  type Spot,
+} from "./levels";
 import type { MapTarget, Move } from "./MapCanvas";
-import { FamilyPlaces, familyGroups, MapButtons, PlacingHint } from "./places";
+import { FamilyPlaces, familyGroups, groupNames, MapButtons, PlacingHint } from "./places";
 import { mapStyle, perKmAt, zoomFor } from "./style";
 
-// Malaysia, as the map opens and as F shows it: west, south, east, north.
-const MALAYSIA: [number, number, number, number] = [99.6, 0.85, 119.3, 7.4];
 const ONE_PERSON_PER_KM = 3; // a person found alone is shown at the towns, as on today's map
 // The regions' packs go to zooms 13 and 14, enlarged past them: on to 19, about 0.15 m a
 // pixel, so people a few metres apart stand apart.
@@ -19,6 +29,12 @@ const MOST_ZOOM = 19;
 
 // MapLibre's worker, a file of its own beside the app's pages, as the page's policy allows.
 maplibregl.setWorkerUrl(workerUrl);
+
+/** The size of the map's box. */
+const sized = (element: HTMLElement): Size => ({
+  width: element.clientWidth,
+  height: element.clientHeight,
+});
 
 function Credit({ href, children }: { href: string; children: ReactNode }) {
   return (
@@ -31,9 +47,10 @@ function Credit({ href, children }: { href: string; children: ReactNode }) {
 /**
  * The map drawn by MapLibre from the map's packs: OpenStreetMap's
  * land, water, roads and names as you zoom in, and over them the family as today's map shows
- * it, worked out again for each view. Drag, scroll and pinch as on any map; +, − and F as on the
- * tree. A copy, and a computer without WebGL 2 or the world's pack, keep today's map. With the
- * online extra on, OpenFreeMap's tiles where the packs end, until it can't be reached.
+ * it, worked out again for each view, opening on every place the family is at. Drag,
+ * scroll and pinch as on any map; +, − and F as on the tree. A copy, and a computer without
+ * WebGL 2 or the world's pack, keep today's map. With the online extra on, OpenFreeMap's
+ * tiles where the packs end, until it can't be reached.
  */
 export default function MapLibreCanvas({
   spots,
@@ -76,19 +93,24 @@ export default function MapLibreCanvas({
   // OpenFreeMap out of reach, or the internet: the packs alone, until the map opens again.
   const [unreachable, setUnreachable] = useState(false);
   const drawOnline = online && !unreachable;
+  // Everyone's places, on the plane: the first view, and F's, shows them all.
+  const points = useMemo(() => spots.map((spot) => ({ x: spot.x, y: spot.y })), [spots]);
+  const pointsNow = useRef(points);
+  pointsNow.current = points;
 
-  // Made once; it opens on Malaysia.
+  // Made once; it opens on everyone, wherever they are.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the style follows the regions below
   useEffect(() => {
     const element = box.current;
     if (!element) return;
     let made: maplibregl.Map;
+    const first = cameraOf(firstView(pointsNow.current, sized(element)), sized(element));
     try {
       made = new maplibregl.Map({
         container: element,
         style: mapStyle(window.location.origin, regions, drawOnline),
-        bounds: MALAYSIA,
-        fitBoundsOptions: { padding: 24 },
+        center: first.center,
+        zoom: first.zoom,
         maxZoom: MOST_ZOOM,
         minZoom: 1,
         dragRotate: false,
@@ -153,11 +175,69 @@ export default function MapLibreCanvas({
     return { x: at.x, y: at.y };
   }, []);
 
+  // The family for the zoom: the countries' circles where the states' have no room.
   // biome-ignore lint/correctness/useExhaustiveDependencies: frame stands for the view
-  const groups = useMemo(
-    (): Group[] => (view ? familyGroups(spots, level, toScreen, withNames, spacing, deepest) : []),
+  const shown = useMemo(
+    (): { level: Level; groups: Group[] } =>
+      view
+        ? familyGroups(spots, level, toScreen, withNames, spacing, deepest)
+        : { level, groups: [] },
     [spots, level, withNames, spacing, frame, view, toScreen, deepest],
   );
+  const groups = shown.groups;
+  // Their names, none over another, nor over the map's buttons and credits.
+  const [credits, setCredits] = useState({ width: 0, height: 0 });
+  const creditsBox = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = creditsBox.current;
+    if (!element) return;
+    const measure = () => setCredits({ width: element.offsetWidth, height: element.offsetHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const naming = useMemo(
+    () =>
+      groupNames(
+        groups,
+        shown.level,
+        { withNames, spacing, people, generationOf },
+        corners(size, credits),
+        size,
+      ),
+    [groups, shown.level, withNames, spacing, people, generationOf, size, credits],
+  );
+
+  // A click on a circle zooms in on it. A country's or a state's: to its people, deep enough
+  // that it parts, worked out on the plane as today's map does. Towns too close together:
+  // a little closer, bringing them to the middle.
+  const zoomInto = (group: Group) => {
+    const made = map.current;
+    const element = box.current;
+    if (!made || !element) return;
+    if (shown.level !== "towns") {
+      const screen = sized(element);
+      const middle = made.getCenter();
+      const now = viewOf({ lat: middle.lat, lon: middle.lng }, made.getZoom(), screen);
+      const members = group.members.flatMap((id) => byId.get(id) ?? []);
+      const parted = (then: View) =>
+        !familyGroups(
+          spots,
+          levelAt(then.k * PLANE_PER_KM),
+          (p) => ({ x: p.x * then.k + then.x, y: p.y * then.k + then.y }),
+          false,
+          PHOTO + 4,
+        ).groups.some((other) => other.key === group.key);
+      const camera = cameraOf(into(members, now, screen, parted), screen);
+      glideTo({ ...camera, zoom: Math.min(MOST_ZOOM, camera.zoom) });
+      return;
+    }
+    glideTo({
+      center: made.unproject([group.at.x, group.at.y]),
+      zoom: Math.min(MOST_ZOOM, made.getZoom() + Math.log2(2.5)),
+    });
+  };
 
   const glideTo = useCallback((options: maplibregl.EaseToOptions) => {
     map.current?.easeTo({ ...options, duration: 350 });
@@ -169,20 +249,10 @@ export default function MapLibreCanvas({
     },
     [glideTo],
   );
-  const showMalaysia = useCallback(
-    () => map.current?.fitBounds(MALAYSIA, { padding: 24, duration: 350 }),
-    [],
-  );
-  // A click on a circle zooms in on it, bringing it to the middle.
-  const zoomInto = (group: Group) => {
-    const shown = map.current;
-    if (!shown) return;
-    const more = Math.log2(level === "towns" ? 2.5 : 3);
-    glideTo({
-      center: shown.unproject([group.at.x, group.at.y]),
-      zoom: Math.min(MOST_ZOOM, shown.getZoom() + more),
-    });
-  };
+  const showEveryone = useCallback(() => {
+    const element = box.current;
+    if (element) glideTo(cameraOf(firstView(pointsNow.current, sized(element)), sized(element)));
+  }, [glideTo]);
 
   // Bring people into view: those in a state or town chosen in the list, or someone found.
   const byId = useMemo(() => new Map(spots.map((spot) => [spot.id, spot])), [spots]);
@@ -241,20 +311,19 @@ export default function MapLibreCanvas({
     if (canvas) canvas.style.cursor = placing ? "crosshair" : "";
   }, [placing]);
 
+  // Esc puts away a place being put on the map by hand, when nothing over it, a dialog, is
+  // open, through useEscape.
+  useEscape(onCancelPlace, placing !== null);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && placing) {
-        onCancelPlace();
-        return;
-      }
       if (typing(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "+" || event.key === "=") zoomBy(1.8);
       else if (event.key === "-") zoomBy(1 / 1.8);
-      else if (event.key === "f" || event.key === "F") showMalaysia();
+      else if (event.key === "f" || event.key === "F") showEveryone();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoomBy, showMalaysia, placing, onCancelPlace]);
+  }, [zoomBy, showEveryone]);
 
   return (
     <div
@@ -271,7 +340,7 @@ export default function MapLibreCanvas({
             const [from, to] = [toScreen(move.from), toScreen(move.to)];
             const [dx, dy] = [to.x - from.x, to.y - from.y];
             const bend = { x: (from.x + to.x) / 2 - dy * 0.2, y: (from.y + to.y) / 2 + dx * 0.2 };
-            const colour = colourOf(move.id) ?? "#78716c";
+            const colour = colourOf(move.id) ?? DRAWING.uncoloured;
             return (
               <g key={move.id} opacity={faded && !faded.has(move.id) ? 0.15 : 0.55}>
                 <path
@@ -289,9 +358,9 @@ export default function MapLibreCanvas({
 
       {view && (
         <FamilyPlaces
-          key={`${level}${withNames ? ":names" : ""}`}
+          key={`${shown.level}${withNames ? ":names" : ""}`}
           groups={groups}
-          level={level}
+          level={shown.level}
           size={size}
           withNames={withNames}
           spacing={spacing}
@@ -305,14 +374,18 @@ export default function MapLibreCanvas({
           screenOf={screenOf}
           generationOf={generationOf}
           deepest={deepest}
+          names={naming.names}
         />
       )}
 
       {placing && <PlacingHint placing={placing} />}
 
-      <MapButtons onZoomBy={zoomBy} onShowMalaysia={showMalaysia} />
+      <MapButtons onZoomBy={zoomBy} onShowEveryone={showEveryone} />
       {/* OpenStreetMap's first, and always shown, as its licence asks. */}
-      <div className="absolute right-0 bottom-0 max-w-full rounded-tl bg-white/70 px-1.5 text-right text-[10px] text-stone-600">
+      <div
+        ref={creditsBox}
+        className="absolute right-0 bottom-0 max-w-full rounded-tl bg-card/70 px-1.5 text-right text-xs text-muted-foreground"
+      >
         © <Credit href="https://www.openstreetmap.org/copyright">OpenStreetMap</Credit> ·{" "}
         <Credit href="https://protomaps.com/">Protomaps</Credit> · Places ©{" "}
         <Credit href="https://www.geonames.org/">GeoNames</Credit> · borders:{" "}

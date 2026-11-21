@@ -1,7 +1,7 @@
 import { LockIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { downloadExport, useBackups, useMakeExport, useMoreExports } from "@/api/queries";
+import { downloadExport, useMakeExport } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -23,8 +23,7 @@ const SHORTEST_PASSWORD = 10; // a copy can be tried offline, guess after guess
 /**
  * Export → View-only copy: the app with the family inside, as one .html file to
  * give to relatives. It opens in any browser, needs nothing installed, and changes nothing.
- * Its Export offers the tree's picture and the import template; the full archive among its
- * exports only where Export offers the archive.
+ * Its Export offers the tree's picture and the import template.
  */
 export function CopyDialog({
   open,
@@ -37,15 +36,11 @@ export function CopyDialog({
   const [hideLiving, setHideLiving] = useState(false);
   const [locked, setLocked] = useState(false);
   const [password, setPassword] = useState("");
-  const [archive, setArchive] = useState(true);
   const make = useMakeExport();
-  const more = useMoreExports();
-  const latest = useBackups().data?.backups[0];
   const passwordProblem =
     locked && password.length < SHORTEST_PASSWORD
       ? `At least ${SHORTEST_PASSWORD} characters.`
       : null;
-  const withArchive = more && archive && !hideLiving;
 
   function makeCopy() {
     make.mutate(
@@ -54,7 +49,7 @@ export function CopyDialog({
         title: title.trim(),
         hide_living: hideLiving,
         password: locked ? password : null,
-        archive: withArchive,
+        archive: false, // the full archive is a backup's, never a copy's
         addresses: false, // the copy's GEDCOM and spreadsheet: addresses only in its pages
       },
       {
@@ -96,7 +91,7 @@ export function CopyDialog({
               placeholder="e.g. Keluarga Contoh"
               onChange={(event) => setTitle(event.target.value)}
             />
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-faint">
               Shown at the top of the copy, and in its file name.
             </p>
           </div>
@@ -118,7 +113,7 @@ export function CopyDialog({
                 <RadioGroupItem value="hide" id="copy-hide" className="mt-0.5" />
                 <Label htmlFor="copy-hide" className="block font-normal">
                   Hide their details: day and month of birth, places, notes and life stories.
-                  <span className="block text-xs text-stone-500">
+                  <span className="block text-xs text-faint">
                     Their names, photos, birth years and links stay. For copies that go beyond close
                     family.
                   </span>
@@ -148,9 +143,7 @@ export function CopyDialog({
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
-                <p
-                  className={passwordProblem ? "text-xs text-amber-700" : "text-xs text-stone-500"}
-                >
+                <p className={passwordProblem ? "text-xs text-warning" : "text-xs text-faint"}>
                   {passwordProblem ??
                     "Tell them the password another way, e.g. by phone. It can't be recovered: if it's forgotten, make a new copy."}
                 </p>
@@ -158,27 +151,7 @@ export function CopyDialog({
             )}
           </div>
 
-          {more && (
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="copy-archive"
-                className="mt-0.5"
-                checked={withArchive}
-                disabled={hideLiving}
-                onCheckedChange={(checked) => setArchive(checked === true)}
-              />
-              <Label htmlFor="copy-archive" className="block font-normal">
-                Include the full archive in the copy's Export
-                <span className="block text-xs text-stone-500">
-                  {hideLiving
-                    ? "Not with living people's details hidden: the archive holds everything."
-                    : `Everything, photos included${latest ? `: about ${fileSize(latest.size)}, like your latest backup` : ""}.`}
-                </span>
-              </Label>
-            </div>
-          )}
-
-          <p className="rounded-md bg-stone-50 px-3 py-2 text-xs text-stone-600">
+          <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
             A copy shows the family as it is today. Once it's sent it can't be changed or taken
             back: to update someone, send them a new one.
           </p>

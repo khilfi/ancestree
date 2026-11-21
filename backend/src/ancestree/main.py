@@ -29,6 +29,7 @@ from ancestree.api import (
     system,
     trash,
 )
+from ancestree.api import samples as sample_pages
 from ancestree.config import Settings, get_settings
 from ancestree.db import connect
 from ancestree.exchange.restore import ArchiveError, restore_archive
@@ -65,10 +66,12 @@ def create_app(
     *,
     on_round: Callable[[FamilyFolder], None] | None = None,
     docs: bool = True,
+    samples: bool = True,
 ) -> FastAPI:
     """Build the app. Settings are read at startup unless given (tests pass their own).
     `on_round`: told after each round with the family folder, as the desktop app's engine is
-    (0.4.0). `docs`: the API's own pages (/docs, /redoc, /openapi.json), for development."""
+    (0.4.0). `docs`: the API's own pages (/docs, /redoc, /openapi.json), for development.
+    `samples`: the test pages' made-up families (/api/sample/…), never in a release."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -223,6 +226,9 @@ def create_app(
         map_packs,
     ):
         app.include_router(module.router, prefix="/api")
+    # The test pages' families: where the app is run from the code alone.
+    if samples:
+        app.include_router(sample_pages.router, prefix="/api")
 
     async def not_found(request: Request, error: Exception) -> JSONResponse:
         return _error(status.HTTP_404_NOT_FOUND, "not_found", str(error))

@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { ApiError } from "@/api/errors";
+import { ApiError, inWords } from "@/api/errors";
 import { useAddRelative, useLink, useSearchPeople } from "@/api/queries";
 import type { PersonDetail, PersonSummary, Relation, SpouseStatus } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -32,12 +31,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ACTION_MS, showError } from "@/lib/notify";
+import { showError } from "@/lib/notify";
 import { lifeYears } from "@/lib/people";
 import { z } from "@/lib/schema";
 import { useDebounced } from "@/lib/useDebounced";
 import { DatePicker, dateInput, datePartsSchema, NO_DATE } from "./DatePicker";
 import { KindSelect } from "./KindSelect";
+import { useDialogDiscard } from "./useDiscardGuard";
 import { useFeedback } from "./useFeedback";
 
 const NONE = "__none__"; // Select items can't have an empty value
@@ -115,10 +115,21 @@ type Props = {
   onOpenPerson: (id: string) => void;
 };
 
-/** Add a relative: someone new, created already linked, or someone already in the tree. */
+/** Each tab's own: Cancel, and whether anything has been typed in it yet. */
+type Asking = { onCancel: () => void; onTyped: (typed: boolean) => void };
+
+/**
+ * Add a relative: someone new, created already linked, or someone already in the tree. What's
+ * typed isn't thrown away without the person form's question: Cancel, Esc and × ask
+ * "Discard your changes?" first once anything is typed in the tab shown, and close at once when
+ * nothing is.
+ */
 export function AddRelativeDialog({ person, relation, onClose, onOpenPerson }: Props) {
+  const [typed, setTyped] = useState(false);
+  const discard = useDialogDiscard(() => typed, onClose);
+  const asking: Asking = { onCancel: discard.cancel, onTyped: setTyped };
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && discard.cancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -137,6 +148,7 @@ export function AddRelativeDialog({ person, relation, onClose, onOpenPerson }: P
               relation={relation}
               onClose={onClose}
               onOpenPerson={onOpenPerson}
+              {...asking}
             />
           </TabsContent>
           <TabsContent value="existing" className="pt-2">
@@ -145,12 +157,20 @@ export function AddRelativeDialog({ person, relation, onClose, onOpenPerson }: P
               relation={relation}
               onClose={onClose}
               onOpenPerson={onOpenPerson}
+              {...asking}
             />
           </TabsContent>
         </Tabs>
       </DialogContent>
+      {discard.question}
     </Dialog>
   );
+}
+
+/** Says whether anything is typed in a tab, as it changes, and nothing once it's gone. */
+function useTyped(typed: boolean, onTyped: (typed: boolean) => void): void {
+  useEffect(() => onTyped(typed), [typed, onTyped]);
+  useEffect(() => () => onTyped(false), [onTyped]);
 }
 
 const newSchema = z.object({
@@ -162,22 +182,40 @@ const newSchema = z.object({
 });
 type NewValues = z.infer<typeof newSchema>;
 
-function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
+const OPPOSITE = { male: "female", female: "male", unknown: "unknown" } as const;
+
+function NewRelative({
+  person,
+  relation,
+  onClose,
+  onOpenPerson,
+  onCancel,
+  onTyped,
+}: Props & Asking) {
   const add = useAddRelative(person.id);
   const feedback = useFeedback();
-  const opposite = { male: "female", female: "male", unknown: "unknown" } as const;
   const form = useForm<NewValues>({
     resolver: zodResolver(newSchema),
     defaultValues: {
       full_name: "",
-      gender: relation === "spouse" ? opposite[person.gender] : "unknown",
+      gender: relation === "spouse" ? OPPOSITE[person.gender] : "unknown",
       birth_date: NO_DATE,
       kind: "biological",
       other_parent: likelyOtherParent(person),
     },
   });
   const { register, control, formState } = form;
-  const { errors } = formState;
+  const { errors, isDirty } = formState;
+  // Typed into, or not: the form emptied by Add and add another is as it was.
+  useTyped(isDirty, onTyped);
+  // Add and add another: the form empties for the next, and stays open, the name ready.
+  const another = useRef(false);
+  const { ref: nameRef, ...nameField } = register("full_name");
+  const nameBox = useRef<HTMLTextAreaElement | null>(null);
+  const [next, setNext] = useState(0); // how many added so far, one after another
+  useEffect(() => {
+    if (next > 0) nameBox.current?.focus();
+  }, [next]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -192,12 +230,28 @@ function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
         other_parent:
           relation === "child" && values.other_parent !== NONE ? values.other_parent : null,
       });
-      feedback(added);
-      toast.success(`Added ${added.person.full_name}.`, {
-        duration: ACTION_MS,
+      feedback(`Added ${added.person.full_name}.`, added, {
         action: { label: "Open", onClick: () => onOpenPerson(added.person.id) },
       });
-      onClose();
+      if (!another.current) {
+        onClose();
+        return;
+      }
+      // The next: a father's often followed by a mother, and the children by the same other
+      // parent, of the same kind.
+      form.reset({
+        full_name: "",
+        gender:
+          relation === "spouse"
+            ? OPPOSITE[person.gender]
+            : relation === "parent"
+              ? OPPOSITE[values.gender]
+              : "unknown",
+        birth_date: NO_DATE,
+        kind: values.kind,
+        other_parent: values.other_parent,
+      });
+      setNext((count) => count + 1);
     } catch (error) {
       const fields = error instanceof ApiError ? Object.entries(error.fieldErrors) : [];
       const own = fields.filter(
@@ -211,10 +265,25 @@ function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
   });
 
   return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
+    <form
+      onSubmit={(event) => {
+        another.current = false; // Enter, or Add
+        void submit(event);
+      }}
+      className="space-y-4"
+      noValidate
+    >
       <Field id="relative_name" label="Full name">
-        <GrowingText id="relative_name" autoFocus {...register("full_name")} />
-        {errors.full_name && <p className="text-xs text-red-600">{errors.full_name.message}</p>}
+        <GrowingText
+          id="relative_name"
+          autoFocus
+          ref={(element) => {
+            nameRef(element);
+            nameBox.current = element;
+          }}
+          {...nameField}
+        />
+        {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field id="relative_gender" label="Gender">
@@ -273,10 +342,22 @@ function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
           />
         </Field>
       )}
-      <p className="text-xs text-stone-500">Everything else can be filled in later.</p>
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>
+      <p className="text-xs text-faint">Everything else can be filled in later.</p>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
+        </Button>
+        {/* Not a submit button, so Enter is still Add. */}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={add.isPending}
+          onClick={() => {
+            another.current = true;
+            void submit();
+          }}
+        >
+          Add and add another
         </Button>
         <Button type="submit" disabled={add.isPending}>
           Add
@@ -288,7 +369,7 @@ function NewRelative({ person, relation, onClose, onOpenPerson }: Props) {
 
 type Candidate = { id: string; full_name: string; parent_of: string };
 
-function ExistingRelative({ person, relation, onClose }: Props) {
+function ExistingRelative({ person, relation, onClose, onCancel, onTyped }: Props & Asking) {
   const [text, setText] = useState("");
   const results = useSearchPeople(useDebounced(text.trim(), 200));
   const [chosen, setChosen] = useState<PersonSummary | null>(null);
@@ -300,6 +381,8 @@ function ExistingRelative({ person, relation, onClose }: Props) {
   const link = useLink();
   const feedback = useFeedback();
   const people = (results.data ?? []).filter((found) => found.id !== person.id);
+  // Someone chosen is a link begun; words in the search alone are a search.
+  useTyped(chosen !== null, onTyped);
 
   function choose(next: PersonSummary | null) {
     setChosen(next);
@@ -318,10 +401,12 @@ function ExistingRelative({ person, relation, onClose }: Props) {
         status,
         shared_parents: candidates ? shared : null,
       });
-      feedback(result);
+      // Both links in one note, what went wrong with the second too.
+      const said = [result];
+      const warnings: string[] = [];
       if (relation === "child" && otherParent !== NONE && otherParent !== chosen.id) {
         try {
-          feedback(
+          said.push(
             await link.mutateAsync({
               person_a: chosen.id,
               person_b: otherParent,
@@ -331,10 +416,12 @@ function ExistingRelative({ person, relation, onClose }: Props) {
             }),
           );
         } catch (error) {
-          if (!(error instanceof ApiError && error.code === "already_linked")) showError(error);
+          if (!(error instanceof ApiError && error.code === "already_linked")) {
+            warnings.push(inWords(error));
+          }
         }
       }
-      toast.success(`Linked ${chosen.full_name}.`);
+      feedback(`Linked ${chosen.full_name}.`, said, { warnings });
       onClose();
     } catch (error) {
       if (error instanceof ApiError && error.code === "choose_shared_parents") {
@@ -363,7 +450,7 @@ function ExistingRelative({ person, relation, onClose }: Props) {
             <CommandItem key={found.id} value={found.id} onSelect={() => choose(found)}>
               <PersonAvatar person={found} size="sm" />
               <span className="min-w-0 flex-1 truncate">{found.full_name}</span>
-              <span className="text-xs text-stone-500">{lifeYears(found)}</span>
+              <span className="text-xs text-faint">{lifeYears(found)}</span>
             </CommandItem>
           ))}
         </CommandList>
@@ -378,7 +465,7 @@ function ExistingRelative({ person, relation, onClose }: Props) {
         <PersonAvatar person={chosen} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{chosen.full_name}</div>
-          <div className="text-xs text-stone-500">{lifeYears(chosen)}</div>
+          <div className="text-xs text-faint">{lifeYears(chosen)}</div>
         </div>
         <Button variant="ghost" size="sm" onClick={() => choose(null)}>
           Change
@@ -410,7 +497,7 @@ function ExistingRelative({ person, relation, onClose }: Props) {
         </Field>
       )}
       {candidates && (
-        <fieldset className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <fieldset className="space-y-2 rounded-lg border border-warning-border bg-warning-soft p-3">
           <legend className="px-1 text-sm font-medium">Which parents do they share?</legend>
           {candidates.map((candidate) => (
             <div key={candidate.id} className="flex items-center gap-2">
@@ -427,7 +514,7 @@ function ExistingRelative({ person, relation, onClose }: Props) {
               />
               <Label htmlFor={`shared-${candidate.id}`} className="font-normal">
                 {candidate.full_name}
-                <span className="text-stone-500">· parent of {nameOf(candidate.parent_of)}</span>
+                <span className="text-faint">· parent of {nameOf(candidate.parent_of)}</span>
               </Label>
             </div>
           ))}
@@ -435,7 +522,7 @@ function ExistingRelative({ person, relation, onClose }: Props) {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button

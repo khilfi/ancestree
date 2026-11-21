@@ -74,13 +74,13 @@ function SaveBackups({ removing }: { removing: Removing }) {
   const found = (places.data ?? []).filter((place) => place.path !== removing.documents);
   return (
     <div className="space-y-2">
-      <p className="text-stone-600">
+      <p className="text-muted-foreground">
         {backups === 0
           ? "There are no backups on this computer to save."
-          : `First, you can copy every family's backups (${plural(backups, "backup")}) to a USB stick, Documents or any other folder: each family's into a folder of its name, in ${removing.kept}${binned ? `; those of a family in AncesTree's bin into one of its name and "(removed)"` : ""}.`}
+          : `First, you can copy every family's backups (${plural(backups, "backup")}) to a USB stick, Documents or any other folder: each family's into a folder of its name, in ${removing.kept}${binned ? `; those of a family in the Trash into one of its name and "(removed)"` : ""}.`}
       </p>
       {save.data && (
-        <p role="status" className="text-emerald-700">
+        <p role="status" className="text-success">
           Saved: {plural(save.data.backups, "backup")} of{" "}
           {plural(save.data.families, "family", "families")}, in{" "}
           <code className="break-all">{save.data.folder}</code>.
@@ -94,7 +94,7 @@ function SaveBackups({ removing }: { removing: Removing }) {
         )
       ) : (
         <form
-          className="space-y-2 rounded-lg border border-stone-200 p-3"
+          className="space-y-2 rounded-lg border border-border p-3"
           onSubmit={(event) => {
             event.preventDefault();
             save.mutate(folder, { onError: showError, onSuccess: () => setChoosing(false) });
@@ -105,7 +105,7 @@ function SaveBackups({ removing }: { removing: Removing }) {
               <div key={place.path} className="flex items-center gap-2">
                 <RadioGroupItem value={place.path} id={`save-${place.path}`} />
                 <Label htmlFor={`save-${place.path}`} className="font-normal">
-                  {place.name} <span className="text-xs text-stone-500">· {place.path}</span>
+                  {place.name} <span className="text-xs text-faint">· {place.path}</span>
                 </Label>
               </div>
             ))}
@@ -150,11 +150,11 @@ function KeeperTicks({
   const ownClient = keptOpen && status?.setup === "keeper" && !status.project_invited;
   const saveClient = () => saveClientFile("Keep it with your recovery code.").catch(showError);
   return (
-    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-      <p className="font-medium text-amber-900">
+    <div className="space-y-2 rounded-lg border border-warning-border bg-warning-soft p-3">
+      <p className="font-medium text-warning-soft-foreground">
         This computer keeps {listed(kept.map((family) => family.name))}.
       </p>
-      <p className="text-stone-700">
+      <p className="text-foreground">
         If {kept.length === 1 ? "its family goes" : "their families go"}, keeping{" "}
         {kept.length === 1 ? "the family" : "each"} again, on this computer or another, needs three
         things. Tick each one you have:
@@ -176,7 +176,7 @@ function KeeperTicks({
           )}
         </div>
       ))}
-      <p className="text-stone-700">
+      <p className="text-foreground">
         Or hand the family to someone else first: another of the family's computers keeps it, and
         this one can go.
       </p>
@@ -185,7 +185,7 @@ function KeeperTicks({
           <Link to="/settings/family#family-folder">Hand the family to someone else…</Link>
         </Button>
       ) : (
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-faint">
           Open {listed(kept.map((family) => family.name))} first, then hand it over in Settings →
           You and your family → Family folder.
         </p>
@@ -219,7 +219,7 @@ function RelativeSteps() {
           )}
         </div>
       )}
-      <p className="text-stone-600">
+      <p className="text-muted-foreground">
         Ask your keeper to remove this computer from the family, or leave the family folder first.
       </p>
       {status.may_leave && <Leave keeper={false} />}
@@ -248,7 +248,7 @@ function RemoveDialog({ onClose }: { onClose: () => void }) {
           </DialogDescription>
         </DialogHeader>
         {!removing || !what ? (
-          <p className="text-sm text-stone-500">…</p>
+          <p className="text-sm text-faint">…</p>
         ) : remove.isSuccess ? (
           <p role="status" className="text-sm">
             {removing.system === "windows"
@@ -264,7 +264,7 @@ function RemoveDialog({ onClose }: { onClose: () => void }) {
                 {names.length === 1 ? "its" : "their"} people, photos, life stories, settings and
                 backups
                 {binned.length > 0 &&
-                  `; and ${listed(binned.map((family) => family.name))}, in AncesTree's bin`}
+                  `; and ${listed(binned.map((family) => family.name))}, in the Trash`}
                 .
               </li>
               <li>
@@ -284,7 +284,7 @@ function RemoveDialog({ onClose }: { onClose: () => void }) {
               />
             )}
             <RelativeSteps />
-            <div className="space-y-1.5 text-stone-600">
+            <div className="space-y-1.5 text-muted-foreground">
               <p>
                 <strong>Remove AncesTree and its families:</strong> {what.remove}
               </p>
@@ -292,13 +292,13 @@ function RemoveDialog({ onClose }: { onClose: () => void }) {
                 <strong>Keep the families on this computer:</strong> {what.keep}
               </p>
               {!installed && (
-                <p role="status" className="font-medium text-amber-800">
+                <p role="status" className="font-medium text-warning">
                   This AncesTree runs from its code, for trying things out: removing it does nothing
                   here.
                 </p>
               )}
               {keeper && installed && !ticked.every(Boolean) && (
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-faint">
                   Tick the three things above for the families to go too.
                 </p>
               )}
@@ -338,7 +338,7 @@ export function RemoveAncesTree() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <p className="max-w-xl text-xs text-stone-500">
+      <p className="max-w-xl text-xs text-faint">
         Takes AncesTree off this computer, with the backups safe. The family folder in Google Drive,
         and the family's other computers, stay as they are.
       </p>

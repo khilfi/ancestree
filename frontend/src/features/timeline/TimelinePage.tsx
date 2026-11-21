@@ -1,30 +1,34 @@
 import { type ReactNode, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useGraph, useSampleGraph } from "@/api/queries";
-import { StartAdvice } from "@/app/StartAdvice";
+import { CouldNotLoad } from "@/app/StartAdvice";
+import { LoadingView } from "@/components/Loading";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { PersonPanel } from "@/features/person/PersonPanel";
+import { usePanelWidth } from "@/features/person/panelWidth";
 import { useMoveToTrash } from "@/features/person/useMoveToTrash";
 import { readView, withView, writeView } from "@/features/tree/filters";
 import { useNarrow } from "@/lib/media";
+import { sampleSize } from "@/lib/samples";
 import { Timeline } from "./Timeline";
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center p-8 text-center text-stone-500">
+    <div className="flex h-full items-center justify-center p-8 text-center text-faint">
       <div className="max-w-md space-y-2">{children}</div>
     </div>
   );
 }
 
 /** The timeline, with the same side panel as the tree. `?sample=2000` shows a made-up
- *  family instead, to try it at size; nothing is stored. The tree's filters apply here too:
- *  they're in the address. */
+ *  family instead, to try it at size, in a development build alone; nothing is stored.
+ *  The tree's filters apply here too: they're in the address. */
 export function TimelinePage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const narrow = useNarrow();
-  const sample = Math.min(5000, Math.max(0, Number(params.get("sample")) || 0));
+  const width = usePanelWidth(); // the panel as wide as it was last
+  const sample = sampleSize(params);
   const real = useGraph(sample === 0);
   const made = useSampleGraph(sample || 10, sample > 0);
   const graph = sample ? made : real;
@@ -49,20 +53,17 @@ export function TimelinePage() {
 
   let content: ReactNode;
   if (graph.isPending) {
-    content = <Message>Loading the family…</Message>;
+    content = <LoadingView label="Loading the family…" view="timeline" />;
   } else if (graph.isError) {
     content = (
       <Message>
-        <p className="font-medium text-stone-700">Could not load the family.</p>
-        <p className="text-sm">
-          <StartAdvice />
-        </p>
+        <CouldNotLoad what="the family" error={graph.error} onRetry={() => void graph.refetch()} />
       </Message>
     );
   } else if (graph.data.people.length === 0) {
     content = (
       <Message>
-        <p className="font-medium text-stone-700">No one here yet.</p>
+        <p className="font-medium text-foreground">No one here yet.</p>
         <p className="text-sm">Add people on the tree; anyone with a birth year appears here.</p>
       </Message>
     );
@@ -98,19 +99,19 @@ export function TimelinePage() {
     return (
       <div className="relative h-full">
         {content}
-        {panel && <div className="absolute inset-0 z-20 bg-white">{panel}</div>}
+        {panel && <div className="absolute inset-0 z-20 bg-card">{panel}</div>}
       </div>
     );
   }
   return (
-    <ResizablePanelGroup className="h-full">
+    <ResizablePanelGroup className="h-full" {...width.group}>
       <ResizablePanel id="timeline" minSize="30">
         {content}
       </ResizablePanel>
       {panel && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel id="person" defaultSize={440} minSize={340} maxSize="60">
+          <ResizablePanel id="person" {...width.panel}>
             {panel}
           </ResizablePanel>
         </>

@@ -136,6 +136,33 @@ def date_from_props(prefix: str, props: Mapping[str, Any]) -> PartialDate | None
     return PartialDate.model_validate({k: v for k, v in values.items() if v is not None})
 
 
+def date_from_row(row: Mapping[str, Any], prefix: str) -> PartialDate | None:
+    """A date from flattened properties ("birth_year", "birth_month"...), qualifier and all.
+    Whatever doesn't fit is dropped rather than failing: a day, then the month, then the
+    qualifier. No year, no date."""
+    year = row.get(f"{prefix}_year")
+    if year is None:
+        return None
+    full = {
+        "year": year,
+        "month": row.get(f"{prefix}_month"),
+        "day": row.get(f"{prefix}_day"),
+        "qualifier": row.get(f"{prefix}_qualifier") or "exact",
+        "year_to": row.get(f"{prefix}_year_to"),
+    }
+    for attempt in (
+        full,
+        full | {"day": None},
+        full | {"day": None, "month": None},
+        {"year": year},
+    ):
+        try:
+            return PartialDate.model_validate(attempt)
+        except ValidationError:
+            continue
+    return None
+
+
 def place_from(prefix: str, props: Mapping[str, Any]) -> Place | None:
     values = {field: props.get(f"{prefix}_{field}") for field in _PLACE_FIELDS}
     if all(value is None for value in values.values()):

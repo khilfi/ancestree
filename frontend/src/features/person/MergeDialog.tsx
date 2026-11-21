@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useMergePeople, useMergePreview, useSearchPeople } from "@/api/queries";
 import type { MergePreview, PersonDetail } from "@/api/types";
+import { Failed } from "@/components/Failed";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ function Files({ preview }: { preview: MergePreview }) {
   ].filter(Boolean);
   if (notes.length === 0) return null;
   return (
-    <ul className="list-disc space-y-0.5 pl-5 text-sm text-stone-600">
+    <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
       {notes.map((note) => (
         <li key={String(note)}>{note}</li>
       ))}
@@ -52,16 +53,16 @@ function Preview({ preview }: { preview: MergePreview }) {
           <ul className="space-y-0.5">
             {preview.details.map((detail) => (
               <li key={detail.label}>
-                <span className="text-stone-500">{detail.label}: </span>
+                <span className="text-faint">{detail.label}: </span>
                 {detail.taken ? (
                   <>
-                    <strong>{detail.other}</strong> <span className="text-stone-500">(theirs)</span>
+                    <strong>{detail.other}</strong> <span className="text-faint">(theirs)</span>
                   </>
                 ) : (
                   <>
                     {detail.keep}
                     {detail.keep !== detail.other && (
-                      <span className="text-stone-500"> stays; theirs was {detail.other}</span>
+                      <span className="text-faint"> stays; theirs was {detail.other}</span>
                     )}
                   </>
                 )}
@@ -77,7 +78,7 @@ function Preview({ preview }: { preview: MergePreview }) {
             {preview.links.map((item) => (
               <li key={item.description}>
                 {item.description}{" "}
-                <span className={item.outcome === "left_out" ? "text-amber-700" : "text-stone-500"}>
+                <span className={item.outcome === "left_out" ? "text-warning" : "text-faint"}>
                   {OUTCOMES[item.outcome]}
                   {item.why ? `: ${item.why}` : ""}
                 </span>
@@ -181,30 +182,30 @@ export function MergeDialog({
                   <button
                     type="button"
                     onClick={() => setOther(found.id)}
-                    className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-stone-100"
+                    className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-muted"
                   >
                     <PersonAvatar person={found} size="sm" />
                     <span className="min-w-0 flex-1 truncate">
                       {found.full_name}
-                      {found.nickname && (
-                        <span className="text-stone-500"> “{found.nickname}”</span>
-                      )}
+                      {found.nickname && <span className="text-faint"> “{found.nickname}”</span>}
                     </span>
-                    <span className="text-xs text-stone-500">{lifeYears(found)}</span>
+                    <span className="text-xs text-faint">{lifeYears(found)}</span>
                   </button>
                 </li>
               ))}
               {text.trim() && results.isFetched && people.length === 0 && (
-                <li className="px-2 py-1.5 text-sm text-stone-500">No one else by that name.</li>
+                <li className="px-2 py-1.5 text-sm text-faint">No one else by that name.</li>
               )}
             </ul>
           </>
         ) : preview.isError ? (
-          <p role="alert" className="text-sm text-red-600">
-            {preview.error.message}
-          </p>
+          <Failed
+            error={preview.error}
+            onRetry={() => void preview.refetch()}
+            className="text-sm text-destructive"
+          />
         ) : !preview.data ? (
-          <p className="text-sm text-stone-500">Working out what would change…</p>
+          <p className="text-sm text-faint">Working out what would change…</p>
         ) : (
           <Preview preview={preview.data} />
         )}

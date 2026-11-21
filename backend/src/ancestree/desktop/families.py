@@ -251,7 +251,7 @@ class Families:
         """A removed family back among the others, in a folder of its own."""
         family = self._removed(family_id)
         if family is None:
-            raise FamiliesError("no_such_family", "There's no such family in AncesTree's bin.")
+            raise FamiliesError("no_such_family", "There's no such family in the Trash.")
         target = self.root / "families" / family.id
         if target.exists():
             raise FamiliesError("family_here", "That family's folder is in use already.")

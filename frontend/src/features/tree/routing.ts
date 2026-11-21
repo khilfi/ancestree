@@ -3,7 +3,9 @@ import { type ChildEdgeData, type ChildFlowEdge, childPath } from "./edges";
 import {
   cornerEnds,
   midpoint,
+  NAME_BOX,
   NODE_WIDTH,
+  nameBox,
   PHOTO,
   pathPoints,
   ROUNDING,
@@ -26,14 +28,17 @@ import type { TreeEdge } from "./toFlow";
  * The search (A*) runs over a grid of small cells in the tree's own coordinates. A cell is
  * closed to a link where it's too near a photo not its own, and costs more where it's nearer
  * one than half its width, or where another line runs: near the link's own people, lines that
- * meet them don't count, as they meet it there anyway. A link too long to search for whole,
- * as on a big family's outer rings, keeps to its straight line, and goes around the photos in
- * its way. Few links leave their family, so it's quick.
+ * meet them don't count, as they meet it there anyway. A cell under someone's name costs more
+ * too, their own people's included, so a link goes around a name where it can, and
+ * reaches its child from the side or above rather than up through their name. A link too long
+ * to search for whole, as on a big family's outer rings, keeps to its straight line, and goes
+ * around the photos in its way. Few links leave their family, so it's quick.
  */
 
 const CELL = 16;
 const HARD = 10; // in a tight gap, a link still keeps this far from a photo's rim
 const CLOSE = 2 * CELL; // what a cell nearer a photo than its half-width costs, in pixels of way
+const NAMED = 3 * CELL; // what a cell under someone's name costs
 const CROSS = 16 * CELL; // what a cell another line runs through costs
 const MARGINS = [480, 1600]; // how far a route may stray beyond the box around its ends, in turn
 const LIMIT = 40_000; // cells in a search's box, at most: a longer link is routed by stretches
@@ -55,8 +60,10 @@ const distance = (a: Point, b: Point) => hypot(a.x - b.x, a.y - b.y);
 const cellOf = (value: number) => Math.floor(value / CELL);
 const middle = (column: number) => (column + 0.5) * CELL;
 
-// A cell near photos counts, in three fields, those that close it, those it's nearer than half
-// a photo's width, and those whose clearance it might be within: each up to 15.
+// A cell near photos counts, in four fields, the names it's under, the photos that close it,
+// those it's nearer than half a photo's width, and those whose clearance it might be within:
+// each up to 15.
+const NAME = 4096;
 const SHUT = 256;
 const NEAR = 16;
 const ABOUT = 1;
@@ -120,15 +127,17 @@ class Counts {
   }
 }
 
-type Photo = { id: string; centre: Point; radius: number };
+type Photo = { id: string; centre: Point; radius: number; named: boolean };
 
-/** A photo's centre and radius, from its node: where links meet it. */
+/** A photo's centre and radius, from its node: where links meet it; and whether a name stands
+ *  under it (an unknown parent has none). */
 function photoOf(node: PersonFlowNode): Photo {
   const radius = (node.type === "unknown" ? SMALL_PHOTO : PHOTO) / 2;
   return {
     id: node.id,
     centre: { x: node.position.x + NODE_WIDTH / 2, y: node.position.y + radius },
     radius,
+    named: node.type !== "unknown",
   };
 }
 
@@ -486,12 +495,16 @@ export function routeLinks(graph: Graph, nodes: PersonFlowNode[], edges: TreeEdg
   const near = new Counts();
   const counted = new Set<number>();
   // A cell might be within a photo's clearance when its middle is within the clearance and
-  // half a cell's diagonal.
+  // half a cell's diagonal; it's under a name when it touches the name's box.
   const slack = (CELL * Math.SQRT2) / 2;
-  const farthest = PHOTO + slack;
+  const [nameAcross, nameBelow] = [
+    NAME_BOX.across + CELL / 2,
+    PHOTO / 2 + NAME_BOX.below + NAME_BOX.down + CELL / 2,
+  ];
+  const farthest = Math.max(PHOTO, hypot(nameAcross, nameBelow)) + slack;
   let lastNear = -1;
-  /** What's near a cell: the photos that close it, that it's nearer than half their width,
-   *  and whose clearance it might be within, in their fields. */
+  /** What's near a cell: the names it's under, the photos that close it, that it's nearer than
+   *  half their width, and whose clearance it might be within, in their fields. */
   const nearAt = (x: number, y: number) => {
     const square = squareOf(x, y);
     if (square !== lastNear && !counted.has(square)) {
@@ -511,18 +524,35 @@ export function routeLinks(graph: Graph, nodes: PersonFlowNode[], edges: TreeEdg
           by++
         ) {
           for (const index of buckets.get((bx + FAR) * 2 * FAR + by + FAR) ?? []) {
-            const { centre, radius } = photos[index] ?? { centre: { x: 0, y: 0 }, radius: 0 };
+            const photo = photos[index];
+            if (!photo) continue;
+            const { centre, radius, named } = photo;
             const about = 2 * radius + slack;
-            const [fromX, toX] = [cellOf(centre.x - about), cellOf(centre.x + about)];
-            const [fromY, toY] = [cellOf(centre.y - about), cellOf(centre.y + about)];
+            // Its name's box, grown by half a cell: the cells that touch it.
+            const [nameLeft, nameTop, nameRight, nameBottom] = nameBox(centre);
+            const under = (cx: number, cy: number) =>
+              named &&
+              middle(cx) > nameLeft - CELL / 2 &&
+              middle(cx) < nameRight + CELL / 2 &&
+              middle(cy) > nameTop - CELL / 2 &&
+              middle(cy) < nameBottom + CELL / 2;
+            const reach = named ? Math.max(about, nameAcross) : about;
+            const [fromX, toX] = [cellOf(centre.x - reach), cellOf(centre.x + reach)];
+            const [fromY, toY] = [
+              cellOf(centre.y - about),
+              cellOf(centre.y + (named ? Math.max(about, nameBelow) : about)),
+            ];
             for (let cx = Math.max(fromX, left); cx <= Math.min(toX, right); cx++) {
               for (let cy = Math.max(fromY, top); cy <= Math.min(toY, bottom); cy++) {
                 const away = hypot(middle(cx) - centre.x, middle(cy) - centre.y);
-                if (away > about) continue;
+                const inName = under(cx, cy);
+                if (away > about && !inName) continue;
                 const now = near.get(cx, cy);
-                let add = field(now, ABOUT) < 15 ? ABOUT : 0;
+                let add = 0;
+                if (away <= about && field(now, ABOUT) < 15) add += ABOUT;
                 if (away <= 2 * radius && field(now, NEAR) < 15) add += NEAR;
                 if (away < radius + HARD && field(now, SHUT) < 15) add += SHUT;
+                if (inName && field(now, NAME) < 15) add += NAME;
                 near.set(cx, cy, now + add);
               }
             }
@@ -669,12 +699,13 @@ export function routeLinks(graph: Graph, nodes: PersonFlowNode[], edges: TreeEdg
         }
         if (shut > 0) return CLOSED;
         if (close > 0) cost = CLOSE;
+        if (field(packed, NAME)) cost += NAMED;
       }
       return foreign(x, y) ? cost + CROSS : cost;
     };
     /** A way pulled taut: each straight stretch half a photo's width clear of every photo not
-     *  its own (or no nearer than the way itself went, in a tight gap), and across no line the
-     *  way didn't cross already. */
+     *  its own (or no nearer than the way itself went, in a tight gap), and across no line or
+     *  name the way didn't cross already. */
     const pull = (way: Point[]): Point[] => {
       const onWay = new Counts();
       const kept = new Map<number, number>();
@@ -701,7 +732,10 @@ export function routeLinks(graph: Graph, nodes: PersonFlowNode[], edges: TreeEdg
         const measured = new Set<number>();
         return walk(a, b, (x, y) => {
           if (!onWay.get(x, y) && foreign(x, y)) return false;
-          if (!field(nearAt(x, y), ABOUT)) return true;
+          const packed = nearAt(x, y);
+          // Under a name only where the way itself went.
+          if (!onWay.get(x, y) && field(packed, NAME)) return false;
+          if (!field(packed, ABOUT)) return true;
           return photosNear({ x: middle(x), y: middle(y) }, (index) => {
             const photo = photos[index];
             if (!photo || measured.has(index) || own.has(photo.id)) return true;

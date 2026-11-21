@@ -173,11 +173,20 @@ describe("a view-only copy", () => {
     const chosen = await ask("/api/settings", "PUT", {
       centre: null,
       colours: "branch",
-      married_in: "discs",
+      married_in: "tucked",
     });
-    expect(chosen.json.married_in).toBe("discs");
-    expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("discs");
-    expect((await ask("/api/settings")).json.married_in).toBe("discs");
+    expect(chosen.json.married_in).toBe("tucked");
+    expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("tucked");
+    expect((await ask("/api/settings")).json.married_in).toBe("tucked");
+  });
+
+  it("places them as fans where an earlier copy of the family chose a retired way", async () => {
+    // Discs and Settled fans retired: kept in the viewer's browser by a copy before 0.9.0.
+    for (const retired of ["discs", "settled"]) {
+      await ask("/api/settings", "PUT", { centre: null, colours: "branch", married_in: retired });
+      expect((await ask("/api/settings")).json.married_in).toBe("fans");
+      expect(JSON.parse(stored.get(`ancestree-copy:${HASSAN}`) ?? "{}").married_in).toBe("fans");
+    }
   });
 
   it("changes nothing in the family", async () => {

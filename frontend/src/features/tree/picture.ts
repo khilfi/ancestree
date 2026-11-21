@@ -8,12 +8,13 @@
 import geistUrl from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 import { avatarAddress } from "@/api/addresses";
 import { initials } from "@/lib/people";
+import { DRAWING, PICTURE } from "@/styles/drawing";
 import { RING_LABEL, RING_LINE, ringStroke } from "./colours";
 import { type ChildEdgeData, childPath, type SpouseEdgeData } from "./edges";
 import { midpoint, NODE_HEIGHT, NODE_WIDTH, PHOTO, rim, SMALL_PHOTO } from "./geometry";
 import type { Guide } from "./layouts";
 import type { PersonFlowNode } from "./PersonNode";
-import { ARC_LABEL, type Point, polar, type RingLayout } from "./rings";
+import { ARC_LABEL, type Point, polar, type RingLayout, ringText } from "./rings";
 import type { TreeEdge } from "./toFlow";
 
 export type TreeSnapshot = {
@@ -32,23 +33,24 @@ export type Measure = (text: string, font: string) => number;
 
 const FAMILY = "Geist Variable";
 const MARGIN = 48;
-const LINE = "#a8a29e";
+const LINE = DRAWING.line;
 const COLOURS = {
   ring: RING_LINE,
   label: RING_LABEL,
-  name: "#292524",
-  years: "#78716c",
-  border: "#d6d3d1",
-  initials: "#57534e",
-  initialsBackground: "#f5f5f4",
-  marriage: "#78716c",
-  pair: "#d6d3d1",
-  amber: "#fcd34d",
-  amberText: "#92400e",
-  amberBackground: "#fffbeb",
+  name: PICTURE.name,
+  years: PICTURE.years,
+  border: DRAWING.pair,
+  initials: PICTURE.initials,
+  initialsBackground: PICTURE.initialsBackground,
+  marriage: DRAWING.marriage,
+  pair: DRAWING.pair,
+  amber: PICTURE.tray,
+  amberText: PICTURE.trayText,
+  amberBackground: PICTURE.trayBackground,
 };
 const DASH = { blood: null, care: "7 5", loose: "2 5" } as const;
 const NAME_FONT = `500 12px ${FAMILY}`;
+const YEARS_FONT = `400 12px ${FAMILY}`;
 
 function xml(text: string): string {
   return text
@@ -128,10 +130,12 @@ export function drawTree(
         arcPoint(ring, from + ((to - from) * i) / 16),
       );
       const label = arcPoint(ring, from - ARC_LABEL / ring.radius);
+      const text = ringText(ring);
+      const half = text ? measure(text, YEARS_FONT) / 2 + 4 : 0;
       boxes.push({
-        x1: Math.min(...along.map((p) => p.x), label.x - 48) - 8,
+        x1: Math.min(...along.map((p) => p.x), label.x - half) - 8,
         y1: Math.min(...along.map((p) => p.y), label.y - 12) - 8,
-        x2: Math.max(...along.map((p) => p.x), label.x + 48) + 8,
+        x2: Math.max(...along.map((p) => p.x), label.x + half) + 8,
         y2: Math.max(...along.map((p) => p.y), label.y + 12) + 8,
       });
       continue;
@@ -166,11 +170,11 @@ export function drawTree(
     "<defs>",
     `<marker id="arrow" viewBox="-10 -10 20 20" markerWidth="14" markerHeight="14" refX="0" refY="0" orient="auto-start-reverse"><polyline points="-5,-4 0,0 -5,4 -5,-4" fill="${LINE}" stroke="${LINE}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></marker>`,
     "</defs>",
-    `<rect x="${n(left)}" y="${n(top)}" width="${width}" height="${height}" fill="#ffffff"/>`,
+    `<rect x="${n(left)}" y="${n(top)}" width="${width}" height="${height}" fill="${DRAWING.paper}"/>`,
   ];
 
-  // Rings and their generation labels, behind everyone: a married-in family's too, in the
-  // tree's own generations.
+  // Rings and their labels, behind everyone: a married-in family's too, tinted in the tree's
+  // own generations, each saying what the tree says (`ringText`).
   const tinted = snapshot.tinted ?? false;
   for (const ring of snapshot.rings) {
     const stroke = ringStroke(ring.generation, tinted);
@@ -187,20 +191,22 @@ export function drawTree(
     );
   }
   for (const ring of snapshot.rings) {
-    const text = `Generation ${ring.generation}`;
-    const textWidth = measure(text, `400 11px ${FAMILY}`);
+    // Each generation once; a married-in family's oldest arc named for its couple.
+    const text = ringText(ring);
+    if (!text) continue;
+    const textWidth = measure(text, YEARS_FONT);
     // A circle's label sits above it; an arc's just before its start, where nobody sits.
     const label = ring.span ? arcPoint(ring, ring.span.from - ARC_LABEL / ring.radius) : null;
     const [x, y] = label ? [label.x, label.y + 4] : [ring.x, ring.y - ring.radius - 10];
     out.push(
-      `<rect x="${n(x - textWidth / 2 - 4)}" y="${n(y - 12)}" width="${n(textWidth + 8)}" height="16" rx="4" fill="#fafaf9" fill-opacity="0.8"/>`,
-      `<text x="${n(x)}" y="${n(y)}" text-anchor="middle" font-size="11" fill="${COLOURS.label}">${xml(text)}</text>`,
+      `<rect x="${n(x - textWidth / 2 - 4)}" y="${n(y - 12)}" width="${n(textWidth + 8)}" height="16" rx="4" fill="${PICTURE.labelBackground}" fill-opacity="0.8"/>`,
+      `<text x="${n(x)}" y="${n(y)}" text-anchor="middle" font-size="12" fill="${COLOURS.label}">${xml(text)}</text>`,
     );
   }
   // The other layouts' rows and bands, also behind everyone.
   for (const guide of snapshot.guides ?? []) {
     const label = (x: number, y: number, text: string, anchor = "middle") =>
-      `<text x="${n(x)}" y="${n(y)}" text-anchor="${anchor}" font-size="11" fill="${COLOURS.label}">${xml(text)}</text>`;
+      `<text x="${n(x)}" y="${n(y)}" text-anchor="${anchor}" font-size="12" fill="${COLOURS.label}">${xml(text)}</text>`;
     if (guide.kind === "row") {
       out.push(
         `<line x1="${n(guide.x1)}" y1="${n(guide.y)}" x2="${n(guide.x2)}" y2="${n(guide.y)}" stroke="${ringStroke(guide.generation, tinted)}" stroke-width="1.5"/>`,
@@ -278,7 +284,7 @@ export function drawTree(
     const { person, years, colour, folds } = node.data;
     if (unknown(node)) {
       out.push(
-        `<circle cx="${n(c.x)}" cy="${n(c.y)}" r="15" fill="#ffffff" stroke="${COLOURS.border}" stroke-width="2" stroke-dasharray="3 2"/>`,
+        `<circle cx="${n(c.x)}" cy="${n(c.y)}" r="15" fill="${DRAWING.paper}" stroke="${COLOURS.border}" stroke-width="2" stroke-dasharray="3 2"/>`,
         `<text x="${n(c.x)}" y="${n(c.y + 4)}" text-anchor="middle" font-size="12" fill="${COLOURS.label}">?</text>`,
       );
       return;
@@ -300,6 +306,15 @@ export function drawTree(
     );
     const lines = wrapName(person.full_name, NODE_WIDTH, measure);
     const top = node.position.y + PHOTO + 6;
+    // On a soft background, as on the tree: the lines pass behind the name and years.
+    const wide = Math.max(
+      ...lines.map((text) => measure(text, NAME_FONT)),
+      years ? measure(years, YEARS_FONT) : 0,
+    );
+    const high = (lines.length + (years ? 1 : 0)) * 15 + 3;
+    out.push(
+      `<rect x="${n(c.x - wide / 2 - 4)}" y="${n(top - 1)}" width="${n(wide + 8)}" height="${n(high)}" rx="5" fill="${DRAWING.paper}" fill-opacity="0.9"/>`,
+    );
     lines.forEach((text, line) => {
       out.push(
         `<text x="${n(c.x)}" y="${n(top + 11.5 + line * 15)}" text-anchor="middle" font-size="12" font-weight="500" fill="${COLOURS.name}">${xml(text)}</text>`,
@@ -307,18 +322,18 @@ export function drawTree(
     });
     if (years) {
       out.push(
-        `<text x="${n(c.x)}" y="${n(top + lines.length * 15 + 12.5)}" text-anchor="middle" font-size="11" fill="${COLOURS.years}">${xml(years)}</text>`,
+        `<text x="${n(c.x)}" y="${n(top + lines.length * 15 + 12.5)}" text-anchor="middle" font-size="12" fill="${COLOURS.years}">${xml(years)}</text>`,
       );
     }
     folds
       .filter((fold) => !fold.open)
       .forEach((fold, row) => {
         const label = `+${fold.size}`;
-        const textWidth = measure(label, `600 11px ${FAMILY}`);
+        const textWidth = measure(label, `600 12px ${FAMILY}`);
         const [x, y] = [node.position.x + 86, node.position.y + 36 + row * 24];
         out.push(
           `<rect x="${n(x)}" y="${n(y)}" width="${n(textWidth + 12)}" height="20" rx="10" fill="${COLOURS.amberBackground}" stroke="${COLOURS.amber}"/>`,
-          `<text x="${n(x + 6)}" y="${n(y + 14)}" font-size="11" font-weight="600" fill="${COLOURS.amberText}">${label}</text>`,
+          `<text x="${n(x + 6)}" y="${n(y + 14)}" font-size="12" font-weight="600" fill="${COLOURS.amberText}">${label}</text>`,
         );
       });
   });

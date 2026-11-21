@@ -9,71 +9,47 @@ import {
   useState,
 } from "react";
 import type { GraphPerson, MapTown } from "@/api/types";
+import { useEscape } from "@/lib/escape";
 import { typing } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
-import { BASE, BORDERS, DISTRICT_NAMES, fromPlane, onPlane, PLANE_PER_KM } from "./geo";
-import { BIG_TOWN, type Box, type Label, type Placed, placeLabels, roomFor } from "./labels";
+import { DRAWING } from "@/styles/drawing";
+import { AROUND_FEW, firstView, fitted, into, MAX_K, MIN_K, type View } from "./fit";
+import { BORDERS, DISTRICT_NAMES, fromPlane, onPlane, PLANE_PER_KM } from "./geo";
+import { BIG_TOWN, corners, type Label, type Placed, placeLabels, roomFor } from "./labels";
 import {
-  bubbleRadius,
-  DEEPEST_PER_KM,
-  flowerRadius,
   type Group,
+  type Level,
   levelAt,
-  MOST,
   NAMES_FROM,
   PHOTO,
   type Point,
   type Spot,
 } from "./levels";
-import { FamilyPlaces, familyGroups, MapButtons, PlacingHint } from "./places";
+import { FamilyPlaces, familyGroups, groupNames, MapButtons, PlacingHint } from "./places";
+
+/** Where a point of the plane is on screen, in a view. */
+const toScreenAt = (view: View) => (p: Point) => ({
+  x: p.x * view.k + view.x,
+  y: p.y * view.k + view.y,
+});
 
 /** Someone who moved: from where they were born to where they live, on the plane. */
 export type Move = { id: string; from: Point; to: Point };
 /** Bring these people into view; a new `nonce` asks again. */
 export type MapTarget = { ids: string[]; nonce: number };
-type View = { k: number; x: number; y: number }; // screen = plane × k + (x, y)
 
-const MIN_K = 0.04; // the whole world
-// As deep as MapLibre's zoom 19: a child a few metres from their parents stands apart.
-const MAX_K = DEEPEST_PER_KM / PLANE_PER_KM;
-const SEA = "#eef4f7";
-const LAND = "#f5f5f4";
-// The corners the map's own buttons and credits take, which no name on the map covers.
-const BUTTONS = { width: 48, height: 112 };
-const CREDITS = { width: 290, height: 22 };
-
-function framed(
-  box: { x0: number; y0: number; x1: number; y1: number },
-  size: { width: number; height: number },
-  padding: number,
-  most = MAX_K,
-): View {
-  const width = Math.max(box.x1 - box.x0, 1e-6);
-  const height = Math.max(box.y1 - box.y0, 1e-6);
-  const k = Math.min(
-    most,
-    Math.max(
-      MIN_K,
-      Math.min((size.width - 2 * padding) / width, (size.height - 2 * padding) / height),
-    ),
-  );
-  return {
-    k,
-    x: size.width / 2 - k * (box.x0 + width / 2),
-    y: size.height / 2 - k * (box.y0 + height / 2),
-  };
-}
-
-const MALAYSIA = { x0: 20, y0: 20, x1: BASE.width - 20, y1: BASE.height - 20 };
-// A person found alone is shown at the towns: about three screen pixels a kilometre.
-const ONE_PERSON_K = 3 / PLANE_PER_KM;
+const SEA = DRAWING.sea;
+const LAND = DRAWING.land;
+// The map's credits, in the corner no name on the map covers: their words at 12 px.
+const CREDITS = { width: 350, height: 24 };
 
 /**
  * The map: the borders, drawn once and scaled, and over them the
  * people for the zoom: a circle for each country or state with how many are there, then each
  * town's people as their photos, as on the tree and the timeline. From a state's zoom, the
- * districts and the towns around the family's places are named too. Scroll or pinch to
- * zoom, drag to move; +, − and F as on the tree.
+ * districts and the towns around the family's places are named too. It opens on every
+ * place the family is at. Scroll or pinch to zoom, drag to move; +, − and F as on the
+ * tree.
  */
 export function MapCanvas({
   spots,
@@ -135,10 +111,11 @@ export function MapCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // It opens on Malaysia.
+  // It opens on everyone, wherever they are; on Malaysia while no one is placed.
+  const points = useMemo(() => spots.map((spot) => ({ x: spot.x, y: spot.y })), [spots]);
   useEffect(() => {
-    if (!view && size.width > 0) setView(framed(MALAYSIA, size, 24));
-  }, [view, size]);
+    if (!view && size.width > 0) setView(firstView(points, size));
+  }, [view, size, points]);
 
   const glide = useCallback((to: View) => {
     const from = current.current;
@@ -164,7 +141,7 @@ export function MapCanvas({
     return { k, x: at.x - (at.x - now.x) * real, y: at.y - (at.y - now.y) * real };
   }, []);
 
-  const showMalaysia = useCallback(() => glide(framed(MALAYSIA, size, 24)), [glide, size]);
+  const showEveryone = useCallback(() => glide(firstView(points, size)), [glide, points, size]);
   const zoomBy = useCallback(
     (factor: number) => {
       const now = current.current;
@@ -181,25 +158,7 @@ export function MapCanvas({
     const found = target.ids.map((id) => byId.get(id)).filter((spot): spot is Spot => !!spot);
     if (!found.length) return;
     lastTarget.current = target.nonce;
-    const xs = found.map((spot) => spot.x);
-    const ys = found.map((spot) => spot.y);
-    const bounds = {
-      x0: Math.min(...xs),
-      y0: Math.min(...ys),
-      x1: Math.max(...xs),
-      y1: Math.max(...ys),
-    };
-    const alone = bounds.x1 - bounds.x0 < 1 && bounds.y1 - bounds.y0 < 1;
-    glide(
-      alone
-        ? framed(
-            { x0: bounds.x0 - 1, y0: bounds.y0 - 1, x1: bounds.x0 + 1, y1: bounds.y0 + 1 },
-            size,
-            0,
-            ONE_PERSON_K,
-          )
-        : framed(bounds, size, 90),
-    );
+    glide(fitted(found, size, AROUND_FEW));
   }, [target, byId, size, glide]);
 
   // Scroll zooms around the pointer, as on the tree.
@@ -217,20 +176,19 @@ export function MapCanvas({
     return () => element.removeEventListener("wheel", onWheel);
   }, [zoomAround]);
 
+  // Esc puts away a place being put on the map by hand, when nothing over it, a dialog, is
+  // open, through useEscape.
+  useEscape(onCancelPlace, placing !== null);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && placing) {
-        onCancelPlace();
-        return;
-      }
       if (typing(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "+" || event.key === "=") zoomBy(1.8);
       else if (event.key === "-") zoomBy(1 / 1.8);
-      else if (event.key === "f" || event.key === "F") showMalaysia();
+      else if (event.key === "f" || event.key === "F") showEveryone();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoomBy, showMalaysia, placing, onCancelPlace]);
+  }, [zoomBy, showEveryone]);
 
   // Drag to move, pinch to zoom around the point between the fingers (as on the timeline).
   const drag = useRef<{ x: number; y: number; view: View; moved: boolean } | null>(null);
@@ -302,11 +260,24 @@ export function MapCanvas({
   const spacing = withNames ? PHOTO + 30 : PHOTO + 4;
   const deepest = (view?.k ?? 0) >= MAX_K * 0.99;
 
-  const groups = useMemo((): Group[] => {
-    if (!view) return [];
-    const toScreen = (p: Point) => ({ x: p.x * view.k + view.x, y: p.y * view.k + view.y });
-    return familyGroups(spots, level, toScreen, withNames, spacing, deepest);
+  // The family for the zoom: the countries' circles where the states' have no room.
+  const shown = useMemo((): { level: Level; groups: Group[] } => {
+    if (!view) return { level, groups: [] };
+    return familyGroups(spots, level, toScreenAt(view), withNames, spacing, deepest);
   }, [spots, level, view, withNames, spacing, deepest]);
+  const groups = shown.groups;
+  // Their names, none over another, nor over the map's buttons and credits.
+  const naming = useMemo(
+    () =>
+      groupNames(
+        groups,
+        shown.level,
+        { withNames, spacing, people, generationOf },
+        corners(size, CREDITS),
+        size,
+      ),
+    [groups, shown.level, withNames, spacing, people, generationOf, size],
+  );
 
   // The towns around the family's places, on the plane once.
   const named = useMemo(
@@ -320,7 +291,7 @@ export function MapCanvas({
   // The names besides the family's, from a state's zoom: each district with room for its
   // name, first, as there are few and they give the land its shape; then the bigger towns
   // around the family's places; closer, the kampungs too. None covers another, nor the
-  // family's photos and circles.
+  // family's photos, circles and their names.
   const labels = useMemo((): Placed[] => {
     if (!view || level !== "towns") return [];
     const toScreen = (x: number, y: number) => ({ x: x * view.k + view.x, y: y * view.k + view.y });
@@ -349,29 +320,29 @@ export function MapCanvas({
           : [],
       ),
     ];
-    const taken = groups.map((group): Box => {
-      const photos = withNames ? group.members.length : Math.min(group.members.length, MOST);
-      const reach =
-        group.towns > 1
-          ? bubbleRadius(group.members.length)
-          : flowerRadius(photos, spacing) + (withNames ? 14 : 0);
-      const half = Math.max(reach, group.label.length * 3.5 + 6);
-      const { x, y } = group.at;
-      return { x0: x - half, y0: y - reach, x1: x + half, y1: y + reach + 24 };
-    });
-    const { width, height } = size;
-    taken.push(
-      { x0: 0, y0: height - BUTTONS.height, x1: BUTTONS.width, y1: height },
-      { x0: width - CREDITS.width, y0: height - CREDITS.height, x1: width, y1: height },
-    );
-    return placeLabels(wanted, taken, size);
-  }, [named, view, level, perKm, groups, withNames, spacing, size]);
+    return placeLabels(wanted, naming.taken, size);
+  }, [named, view, level, perKm, naming, size]);
 
-  // A click on a circle zooms in on it, bringing it to the middle.
+  // A click on a circle zooms in on it. A country's or a state's: to its people, deep enough
+  // that it parts into its states or towns, at any size of window. Towns too close
+  // together, or a town's "+8": a little closer, bringing it to the middle.
   const zoomInto = (group: Group) => {
     const now = current.current;
     if (!now) return;
-    const k = Math.min(MAX_K, now.k * (level === "towns" ? 2.5 : 3));
+    if (shown.level !== "towns") {
+      const members = group.members.flatMap((id) => byId.get(id) ?? []);
+      const parted = (then: View) =>
+        !familyGroups(
+          spots,
+          levelAt(then.k * PLANE_PER_KM),
+          toScreenAt(then),
+          false,
+          PHOTO + 4,
+        ).groups.some((other) => other.key === group.key);
+      glide(into(members, now, size, parted));
+      return;
+    }
+    const k = Math.min(MAX_K, now.k * 2.5);
     const [px, py] = [(group.at.x - now.x) / now.k, (group.at.y - now.y) / now.k];
     glide({ k, x: size.width / 2 - k * px, y: size.height / 2 - k * py });
   };
@@ -385,7 +356,7 @@ export function MapCanvas({
             key={shape.name}
             d={shape.d}
             fill={LAND}
-            stroke="#ffffff"
+            stroke={DRAWING.paper}
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
           />
@@ -394,8 +365,8 @@ export function MapCanvas({
           <path
             key={shape.name}
             d={shape.d}
-            fill="#ffffff"
-            stroke="#d6d3d1"
+            fill={DRAWING.paper}
+            stroke={DRAWING.coast}
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
           />
@@ -404,7 +375,7 @@ export function MapCanvas({
         <path
           d={BORDERS.provinces}
           fill="none"
-          stroke="#d6d3d1"
+          stroke={DRAWING.coast}
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
@@ -419,7 +390,7 @@ export function MapCanvas({
       <path
         d={BORDERS.districts}
         fill="none"
-        stroke="#d6d3d1"
+        stroke={DRAWING.coast}
         strokeWidth={0.75}
         strokeDasharray="3 3"
         vectorEffect="non-scaling-stroke"
@@ -435,7 +406,7 @@ export function MapCanvas({
           x: (move.from.x + move.to.x) / 2 - dy * 0.2,
           y: (move.from.y + move.to.y) / 2 + dx * 0.2,
         };
-        const colour = colourOf(move.id) ?? "#78716c";
+        const colour = colourOf(move.id) ?? DRAWING.uncoloured;
         return (
           <g key={move.id} opacity={faded && !faded.has(move.id) ? 0.15 : 0.55}>
             <path
@@ -492,7 +463,7 @@ export function MapCanvas({
             label.kind === "district" ? (
               <span
                 key={label.key}
-                className="absolute -translate-x-1/2 -translate-y-1/2 text-[10px] whitespace-nowrap text-stone-400 italic"
+                className="absolute -translate-x-1/2 -translate-y-1/2 text-xs whitespace-nowrap text-faint italic"
                 style={{ left: label.at.x, top: label.at.y }}
               >
                 {label.text}
@@ -501,14 +472,12 @@ export function MapCanvas({
               <span
                 key={label.key}
                 className={cn(
-                  "absolute flex -translate-y-1/2 items-center gap-1 whitespace-nowrap [text-shadow:0_0_2px_#fff,0_0_2px_#fff]",
-                  label.kind === "town"
-                    ? "text-[11px] text-stone-600"
-                    : "text-[10px] text-stone-500",
+                  "absolute flex -translate-y-1/2 items-center gap-1 whitespace-nowrap [text-shadow:0_0_2px_var(--card),0_0_2px_var(--card)]",
+                  label.kind === "town" ? "text-xs text-muted-foreground" : "text-xs text-faint",
                 )}
                 style={{ left: label.at.x - 2.5, top: label.at.y }}
               >
-                <span className="size-[5px] shrink-0 rounded-full bg-stone-500" />
+                <span className="size-[5px] shrink-0 rounded-full bg-faint" />
                 {label.text}
               </span>
             ),
@@ -517,9 +486,9 @@ export function MapCanvas({
       )}
 
       <FamilyPlaces
-        key={`${level}${withNames ? ":names" : ""}`}
+        key={`${shown.level}${withNames ? ":names" : ""}`}
         groups={groups}
-        level={level}
+        level={shown.level}
         size={size}
         withNames={withNames}
         spacing={spacing}
@@ -536,12 +505,13 @@ export function MapCanvas({
         }}
         generationOf={generationOf}
         deepest={deepest}
+        names={naming.names}
       />
 
       {placing && <PlacingHint placing={placing} />}
 
-      <MapButtons onZoomBy={zoomBy} onShowMalaysia={showMalaysia} />
-      <div className="absolute right-2 bottom-1 text-[10px] text-stone-500">
+      <MapButtons onZoomBy={zoomBy} onShowEveryone={showEveryone} />
+      <div className="absolute right-0 bottom-0 rounded-tl bg-card/80 px-1.5 text-xs text-faint">
         Places ©{" "}
         <a
           href="https://www.geonames.org/"

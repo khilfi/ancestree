@@ -13,7 +13,7 @@ import { RemoveAncesTree } from "./RemoveAncesTree";
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <dt className="text-stone-500">{label}</dt>
+      <dt className="text-faint">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </>
   );
@@ -21,7 +21,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function Site({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="text-sky-700 hover:underline">
+    <a href={href} target="_blank" rel="noreferrer" className="text-link hover:underline">
       {children}
     </a>
   );
@@ -31,7 +31,7 @@ function Folder({ path, note }: { path: string | undefined; note: string }) {
   return (
     <>
       <code className="break-all">{path ?? "…"}</code>
-      <div className="text-xs text-stone-500">{note}</div>
+      <div className="text-xs text-faint">{note}</div>
     </>
   );
 }
@@ -55,9 +55,9 @@ function Updates({ update, engine }: { update: DesktopUpdate; engine?: string })
   return (
     <>
       Version {update.current}
-      {engine && <span className="text-stone-500"> · its engine {engine}</span>}
+      {engine && <span className="text-faint"> · its engine {engine}</span>}
       {engine && engine !== update.current && (
-        <p className="mt-1 max-w-xl text-xs text-amber-800">
+        <p className="mt-1 max-w-xl text-xs text-warning">
           The app and its engine should be of the same version. Quit AncesTree from its icon by the
           clock, and open it again; if it stays, install AncesTree again from its page.
         </p>
@@ -73,7 +73,7 @@ function Updates({ update, engine }: { update: DesktopUpdate; engine?: string })
           </Button>
         )}
         {status && (
-          <span role="status" className="text-xs text-stone-500">
+          <span role="status" className="text-xs text-faint">
             {status}
           </span>
         )}
@@ -98,10 +98,10 @@ export function AboutSection() {
   else if (up) status = `Connected · schema v${about.schema_version ?? 0}`;
 
   return (
-    <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
       <div className="space-y-1">
         <h2 className="font-semibold">About</h2>
-        <p className="max-w-2xl text-sm text-stone-500">
+        <p className="max-w-2xl text-sm text-faint">
           AncesTree runs only on this computer. This is what it's connected to, and where it keeps
           your family's files.
         </p>
@@ -113,16 +113,16 @@ export function AboutSection() {
             <span
               className={cn(
                 "size-2 rounded-full",
-                up ? "bg-emerald-500" : down ? "bg-red-500" : "bg-stone-300",
+                up ? "bg-success" : down ? "bg-destructive" : "bg-input",
               )}
             />
-            <span className={down ? "font-medium text-red-700" : undefined}>{status}</span>
+            <span className={down ? "font-medium text-destructive" : undefined}>{status}</span>
           </span>
           {about?.database_version && (
-            <div className="text-xs text-stone-500">{about.database_version.replace("/", " ")}</div>
+            <div className="text-xs text-faint">{about.database_version.replace("/", " ")}</div>
           )}
           {down && (
-            <p className="mt-2 max-w-xl text-xs text-stone-600">
+            <p className="mt-2 max-w-xl text-xs text-muted-foreground">
               {desktop ? (
                 <>Quit AncesTree from its icon by the clock, then open it again.</>
               ) : (
@@ -181,7 +181,7 @@ export function AboutSection() {
               4.0).
             </li>
           </ul>
-          <div className="mt-1.5 text-xs text-stone-500">
+          <div className="mt-1.5 text-xs text-faint">
             The packs are fetched once and kept, and the rest comes with the app, so the map looks
             nothing up online as you use it, unless you choose online detail.
           </div>

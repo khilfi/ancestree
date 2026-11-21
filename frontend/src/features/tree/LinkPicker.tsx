@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { ApiError } from "@/api/errors";
 import { useKinds, useLink } from "@/api/queries";
 import type { GraphPerson, Relation } from "@/api/types";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useFeedback } from "@/features/person/useFeedback";
-import { showError } from "@/lib/notify";
+import { offerTryAgain } from "@/lib/notify";
 import { relationWord } from "@/lib/people";
 import { FloatingCard } from "./FloatingCard";
 import type { Point } from "./rings";
@@ -73,8 +72,7 @@ export function LinkPicker({
       },
       {
         onSuccess: (result) => {
-          feedback(result);
-          toast.success(`${a} is now ${b}'s ${choice.word.toLowerCase()}.`);
+          feedback(`${a} is now ${b}'s ${choice.word.toLowerCase()}.`, result);
           onClose();
         },
         onError: (error) => {
@@ -85,7 +83,7 @@ export function LinkPicker({
             setAsking({ choice, candidates });
             return;
           }
-          showError(error);
+          offerTryAgain(error, () => choose(choice, sharedParents));
         },
       },
     );
@@ -94,13 +92,20 @@ export function LinkPicker({
   if (asking) {
     const nameOf = (id: string) => (id === source.id ? a : b);
     return (
-      <FloatingCard at={at} bounds={bounds}>
+      <FloatingCard
+        at={at}
+        bounds={bounds}
+        label={`Which parents do ${a} and ${b} share?`}
+        onClose={onClose}
+      >
         <p className="font-medium">
           Which parents do {a} and {b} share?
         </p>
-        {asking.candidates.map((candidate) => (
+        {asking.candidates.map((candidate, index) => (
           <div key={candidate.id} className="flex items-center gap-2">
             <Checkbox
+              // The choice that asked is gone: the focus comes here.
+              autoFocus={index === 0}
               id={`share-${candidate.id}`}
               checked={shared.includes(candidate.id)}
               onCheckedChange={(on) =>
@@ -111,7 +116,7 @@ export function LinkPicker({
             />
             <Label htmlFor={`share-${candidate.id}`} className="font-normal">
               {candidate.full_name}
-              <span className="text-stone-500">· parent of {nameOf(candidate.parent_of)}</span>
+              <span className="text-faint">· parent of {nameOf(candidate.parent_of)}</span>
             </Label>
           </div>
         ))}
@@ -133,14 +138,16 @@ export function LinkPicker({
 
   const sentence = (choice: Choice) => `${a} is ${b}'s ${choice.word.toLowerCase()}`;
   return (
-    <FloatingCard at={at} bounds={bounds}>
+    <FloatingCard at={at} bounds={bounds} label={`Link ${a} and ${b}`} onClose={onClose}>
       <p className="font-medium">
         {a} is {b}'s …
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {[...choices, ...(more ? others : [])].map((choice) => (
+        {[...choices, ...(more ? others : [])].map((choice, index) => (
           <Button
             key={`${choice.relation}:${choice.kind}`}
+            // More… is gone once clicked: the focus goes to the first of the rest.
+            autoFocus={index === choices.length}
             variant="outline"
             size="sm"
             disabled={link.isPending}
@@ -157,7 +164,7 @@ export function LinkPicker({
           </Button>
         )}
       </div>
-      <p className="min-h-4 text-xs text-stone-500">
+      <p className="min-h-4 text-xs text-faint">
         {hovered ? `“${sentence(hovered)}”` : "Esc cancels"}
       </p>
     </FloatingCard>

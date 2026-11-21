@@ -53,7 +53,7 @@ export function WhatPeopleSay({ person, said }: { person: PersonDetail; said: Sa
         What people say about {person.full_name}
       </h2>
       {said.length === 0 && (
-        <p className="life-story-tools text-sm text-stone-500">
+        <p className="life-story-tools text-sm text-faint">
           No one has written about them yet. Add what you remember of them, in your own words.
         </p>
       )}
@@ -130,15 +130,15 @@ function SaidWords({
     );
   }
   return (
-    <figure className="border-l-4 border-sky-300 pl-4">
-      <blockquote className="space-y-2 font-serif text-lg leading-relaxed text-stone-900">
+    <figure className="border-l-4 border-highlight-border pl-4">
+      <blockquote className="space-y-2 font-serif text-lg leading-relaxed text-foreground">
         {paragraphs(said.text).map((paragraph) => (
           <p key={paragraph.id} className="whitespace-pre-line">
             {paragraph.text}
           </p>
         ))}
       </blockquote>
-      <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
+      <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-faint">
         <span>— {saidBy(said)}</span>
         {(mine || takeOut) && !asking && (
           <span className="life-story-tools flex gap-1">
@@ -153,7 +153,7 @@ function SaidWords({
           </span>
         )}
         {asking && (
-          <span className="life-story-tools flex items-center gap-1 text-stone-700">
+          <span className="life-story-tools flex items-center gap-1 text-foreground">
             {mine ? "Take back your words?" : `Take out ${said.writer || "their"}'s words?`}
             <Button
               variant="destructive"
@@ -202,7 +202,7 @@ function WordsForm({
         maxLength={20_000}
         autoFocus
       />
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-faint">
         Signed with your name under <strong>Me</strong>, or this computer's name if you haven't
         chosen yourself there, and today's date. On a relative's computer, they go to the family's
         keeper first.

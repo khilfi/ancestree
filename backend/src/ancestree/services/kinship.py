@@ -29,8 +29,9 @@ from ancestree.kinship.finder import Relation, Statement, relate
 from ancestree.kinship.terms import LANGUAGES, TermBook, Titles
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo.graph import read_family
+from ancestree.repo.mapping import date_from_row
 from ancestree.services.context import Context, NotFoundError
-from ancestree.services.graph import birth_from_row, date_from_row
+from ancestree.services.graph import birth_from_row
 from ancestree.storage.settings import read_kinship_settings, write_kinship_settings
 
 UNKNOWN_PARENT = "Unknown parent"

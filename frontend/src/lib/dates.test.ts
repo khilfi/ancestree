@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import examples from "./date-readings.json";
-import { ageOf, type DateLike, daysInMonth, describeDate, yearOf, yearsBetween } from "./dates";
+import {
+  ageOf,
+  type DateLike,
+  daysInMonth,
+  describeDate,
+  readDate,
+  sayDate,
+  yearOf,
+  yearsBetween,
+} from "./dates";
+import typed from "./typed-dates.json";
 
 const TODAY = new Date(2026, 8, 27); // 27 September 2026
 
@@ -8,6 +18,95 @@ describe("describeDate", () => {
   // The same examples as the server's test: the picker's reading matches what's saved.
   it.each(examples)("reads $reading as the server does", ({ date, reading }) => {
     expect(describeDate(date as DateLike)).toBe(reading);
+  });
+});
+
+describe("readDate", () => {
+  // The same examples as the server's test: what the form says it understood is what the server
+  // reads, and both refuse the same dates in the same words.
+  it.each(typed)("reads $text as the server does", (example) => {
+    const read = readDate(example.text);
+    if ("problem" in example) {
+      expect(read).toEqual({ problem: example.problem });
+      return;
+    }
+    if (!("date" in read)) throw new Error(`refused: ${read.problem}`);
+    expect(read.date ? describeDate(read.date) : null).toBe(example.reading);
+  });
+
+  it("reads the plan's six forms, the day first", () => {
+    const said = (text: string) => {
+      const read = readDate(text);
+      return "date" in read && read.date ? describeDate(read.date) : read;
+    };
+    expect(said("12/3/1950")).toBe("12 March 1950");
+    expect(said("March 1950")).toBe("March 1950");
+    expect(said("about 1950")).toBe("about 1950");
+    expect(said("before 1960")).toBe("before 1960");
+    expect(said("1950–1955")).toBe("between 1950 and 1955");
+    expect(said("kira-kira 1950")).toBe("about 1950");
+  });
+
+  it("gives the parts, with nothing it wasn't told", () => {
+    expect(readDate("12/3/1950")).toEqual({
+      date: {
+        qualifier: "exact",
+        year: 1950,
+        month: 3,
+        day: 12,
+        year_to: null,
+        original_text: null,
+      },
+    });
+    expect(readDate("1950s")).toEqual({
+      date: {
+        qualifier: "between",
+        year: 1950,
+        year_to: 1959,
+        month: null,
+        day: null,
+        original_text: null,
+      },
+    });
+  });
+});
+
+describe("sayDate", () => {
+  it("says a date as it's typed", () => {
+    expect(sayDate({ year: 1950, month: 3, day: 12 })).toBe("12/3/1950");
+    expect(sayDate({ year: 1950, month: 3 })).toBe("March 1950");
+    expect(sayDate({ year: 1950, qualifier: "about" })).toBe("about 1950");
+    expect(sayDate({ year: 1960, qualifier: "before" })).toBe("before 1960");
+    expect(sayDate({ year: 1950, year_to: 1955, qualifier: "between" })).toBe("1950–1955");
+    expect(sayDate({ original_text: "zaman Jepun" })).toBe("");
+    expect(sayDate({ year: 650 })).toBe("0650");
+  });
+
+  it("is read back as the same date, every precision and qualifier", () => {
+    const qualifiers = ["exact", "about", "before", "after"] as const;
+    for (const year of [1, 650, 1700, 1900, 1950, 2000, 2026, 9999]) {
+      for (const qualifier of qualifiers) {
+        const dates: DateLike[] = [{ year, qualifier }];
+        for (let month = 1; month <= 12; month += 1) {
+          dates.push({ year, month, qualifier });
+          for (const day of [1, 15, daysInMonth(month, year)]) {
+            dates.push({ year, month, day, qualifier });
+          }
+        }
+        for (const date of dates) {
+          const read = readDate(sayDate(date));
+          expect("date" in read && read.date).toMatchObject({
+            month: null,
+            day: null,
+            ...date,
+          });
+        }
+      }
+      const between = { year, year_to: Math.min(9999, year + 5), qualifier: "between" as const };
+      expect("date" in readDate(sayDate(between)) && readDate(sayDate(between))).toMatchObject({
+        date: between,
+      });
+    }
   });
 });
 

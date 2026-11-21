@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { useMapPacks } from "@/api/mapPacks";
 import {
   useChildrenOrder,
-  useDeathPlaces,
   useFamilyFacts,
   useFamilyMap,
   useFillIn,
@@ -33,6 +32,8 @@ import type {
   Place,
 } from "@/api/types";
 import { CanEdit } from "@/app/copy";
+import { Failed } from "@/components/Failed";
+import { Hint } from "@/components/Hint";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { GrowingText } from "@/components/ui/growing-text";
@@ -107,7 +108,7 @@ function Section({
 }) {
   const [open, setOpen] = useState(count > 0);
   return (
-    <section className="rounded-xl border border-stone-200 bg-white">
+    <section className="rounded-xl border border-border bg-card">
       <header className="flex items-center gap-2 px-4 py-3">
         <button
           type="button"
@@ -119,21 +120,23 @@ function Section({
           <h2 className="font-semibold">{title}</h2>
           <span
             className={
-              count ? "rounded-full bg-amber-100 px-2 text-xs text-amber-900" : "text-emerald-700"
+              count
+                ? "rounded-full bg-warning-tint px-2 text-xs text-warning-soft-foreground"
+                : "text-success"
             }
           >
             {count ? count : <CheckIcon className="size-4" aria-label="none" />}
           </span>
         </button>
         {show && count > 0 && (
-          <Link to={show} className="text-xs text-sky-700 hover:underline">
+          <Link to={show} className="text-xs text-link hover:underline">
             {showing}
           </Link>
         )}
       </header>
       {open && (
-        <div className="border-t border-stone-100 px-4 py-2">
-          {count === 0 ? <p className="py-1 text-sm text-stone-500">{done}</p> : children}
+        <div className="border-t border-border px-4 py-2">
+          {count === 0 ? <p className="py-1 text-sm text-faint">{done}</p> : children}
         </div>
       )}
     </section>
@@ -146,12 +149,12 @@ function Rows<T>({ items, row }: { items: T[]; row: (item: T) => ReactNode }) {
   const shown = all ? items : items.slice(0, FIRST);
   return (
     <>
-      <ul className="divide-y divide-stone-100">{shown.map(row)}</ul>
+      <ul className="divide-y divide-border">{shown.map(row)}</ul>
       {items.length > FIRST && (
         <button
           type="button"
           onClick={() => setAll((now) => !now)}
-          className="py-2 text-sm text-sky-700 hover:underline"
+          className="py-2 text-sm text-link hover:underline"
         >
           {all ? "Show fewer" : `Show all ${items.length}`}
         </button>
@@ -167,7 +170,7 @@ function Who({ person, about }: { person: GraphPerson; about: string }) {
       <PersonAvatar person={person} size="sm" />
       <div className="min-w-0">
         <div className="truncate font-medium">{person.full_name}</div>
-        <div className="truncate text-xs text-stone-500">
+        <div className="truncate text-xs text-faint">
           {[years, about].filter(Boolean).join(" · ")}
         </div>
       </div>
@@ -264,7 +267,7 @@ function OrderGroup({ parents, kids }: { parents: FactPerson[]; kids: FactPerson
       <ol className="space-y-1 pl-2">
         {order.map((child, index) => (
           <li key={child.id} className="flex items-center gap-2 text-sm">
-            <span className="w-5 text-right text-stone-500 tabular-nums">{index + 1}</span>
+            <span className="w-5 text-right text-faint tabular-nums">{index + 1}</span>
             <span className="min-w-0 flex-1 truncate">{child.name}</span>
             <Button
               variant="ghost"
@@ -403,7 +406,7 @@ function UnknownRow({ id, kids }: { id: string; kids: GraphPerson[] }) {
     );
   return (
     <li className="flex flex-wrap items-center gap-2 py-2">
-      <span className="flex size-8 items-center justify-center rounded-full border-2 border-dashed border-stone-300 text-stone-400">
+      <span className="flex size-8 items-center justify-center rounded-full border-2 border-dashed border-input text-faint">
         ?
       </span>
       <span className="min-w-0 flex-1 text-sm">
@@ -426,14 +429,11 @@ function UnknownRow({ id, kids }: { id: string; kids: GraphPerson[] }) {
         Fill in
       </Button>
       {first && (
-        <Button asChild variant="ghost" size="sm">
-          <Link
-            to={`/tree?person=${first.id}&focus=1`}
-            title="Or choose someone already in the tree"
-          >
-            On the tree
-          </Link>
-        </Button>
+        <Hint label="Or choose someone already in the tree">
+          <Button asChild variant="ghost" size="sm">
+            <Link to={`/tree?person=${first.id}&focus=1`}>On the tree</Link>
+          </Button>
+        </Hint>
       )}
     </li>
   );
@@ -529,9 +529,9 @@ function ExactRow({
         <Open id={person.id} />
       </div>
       {open && located.lat != null && located.lon != null && (
-        <div className="space-y-1 pl-10 text-xs text-stone-500">
+        <div className="space-y-1 pl-10 text-xs text-faint">
           {webgl2 && world?.installed && SmallMap ? (
-            <Suspense fallback={<div className="h-56 animate-pulse rounded-lg bg-stone-100" />}>
+            <Suspense fallback={<div className="h-56 animate-pulse rounded-lg bg-muted" />}>
               <SmallMap
                 pin={{ lat: located.lat, lon: located.lon }}
                 around={{ lat: located.lat, lon: located.lon, zoom: 13 }}
@@ -664,7 +664,7 @@ function ImportNote() {
   });
   const things = last.left_out.length === 1 ? "1 thing" : `${last.left_out.length} things`;
   return (
-    <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+    <p className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-soft-foreground">
       Your import of {day} ({last.file_name}) left out {things}.{" "}
       <Link to="/settings/import" className="font-medium underline">
         See them
@@ -674,15 +674,15 @@ function ImportNote() {
 }
 
 /**
- * Settings → What's missing: what the family's record doesn't say yet, each gap
- * with a quick fix. Every fix is one Undo step, and the list shrinks as you go. Nothing is
- * guessed: genders aren't suggested from bin or binti (your decision of 27 Sep 2026).
+ * What's missing, Family facts' second tab since 0.9.0, no longer Settings':
+ * what the family's record doesn't say yet, each gap with a quick fix. Every fix is one Undo
+ * step, and the list shrinks as you go. Nothing is guessed: genders aren't suggested from bin
+ * or binti (your decision of 27 Sep 2026).
  */
 export function MissingSection() {
   const graph = useGraph();
   const facts = useFamilyFacts(true);
   const map = useFamilyMap();
-  const deathPlaces = useDeathPlaces(); // its section, only while it's shown
   const data = graph.data;
   const lives = map.data;
   const lists = useMemo(() => {
@@ -729,22 +729,30 @@ export function MissingSection() {
     };
   }, [data, lives]);
 
-  if (graph.isError) return <p className="text-sm text-red-600">{graph.error.message}</p>;
+  if (graph.isError) {
+    return (
+      <Failed
+        error={graph.error}
+        onRetry={() => void graph.refetch()}
+        className="text-sm text-destructive"
+      />
+    );
+  }
   if (graph.isPending || !lists) {
-    return <p className="text-sm text-stone-500">Looking for what's missing…</p>;
+    return <p className="text-sm text-faint">Looking for what's missing…</p>;
   }
 
   const orders = facts.data?.to_fill_in.no_birth_order ?? [];
   const total = lists.real.length;
   return (
     <div className="space-y-4">
-      <section className="space-y-1 rounded-xl border border-stone-200 bg-white p-5">
+      <section className="space-y-1 rounded-xl border border-border bg-card p-5">
         <h2 className="font-semibold">What's missing</h2>
-        <p className="max-w-2xl text-sm text-stone-500">
+        <p className="max-w-2xl text-sm text-faint">
           What your family's record doesn't say yet, each with a quick way to fill it in. Every fix
           can be undone, and nothing is guessed.
         </p>
-        <p className="text-sm text-stone-700">
+        <p className="text-sm text-foreground">
           Genders {share(total - lists.gender.length, total)} · birth years{" "}
           {share(total - lists.birth.length, total)} · photos{" "}
           {share(total - lists.photo.length, total)}
@@ -757,12 +765,12 @@ export function MissingSection() {
 
       {lists.loops.length > 0 && (
         <Section title="A loop of parents" count={lists.loops.length} done="">
-          <p className="py-1 text-sm text-stone-500">
+          <p className="py-1 text-sm text-faint">
             Someone is recorded as their own ancestor, so one of these links is wrong. The tree is
             drawn without the newest of them, the likeliest mistake: take it out here, or open them
             and put it right.
           </p>
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-border">
             {lists.loops.map((loop) => (
               <LoopRow key={loop.link} loop={loop} byId={lists.byId} />
             ))}
@@ -772,12 +780,12 @@ export function MissingSection() {
 
       {lists.crowded.length > 0 && (
         <Section title="A child with three birth parents" count={lists.crowded.length} done="">
-          <p className="py-1 text-sm text-stone-500">
+          <p className="py-1 text-sm text-faint">
             No one has more than two birth parents, so one of these links is wrong. The newest is
             the likeliest mistake: take it out here, or open them and change its kind, to adoptive,
             say.
           </p>
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-border">
             {lists.crowded.map((found) => (
               <BirthParentsRow key={found.link} found={found} byId={lists.byId} />
             ))}
@@ -818,7 +826,7 @@ export function MissingSection() {
         count={orders.length}
         done="Every family's children are in order."
       >
-        <ul className="divide-y divide-stone-100">
+        <ul className="divide-y divide-border">
           {orders.map((group) => (
             <OrderGroup
               key={group.children.map((c) => c.id).join()}
@@ -882,21 +890,6 @@ export function MissingSection() {
         />
       </Section>
 
-      {deathPlaces && (
-        <Section
-          title="Living, with a place of death"
-          count={lists.mixed.death.length}
-          done="No one living has a place of death."
-        >
-          <Rows
-            items={lists.mixed.death}
-            row={(mixed) => (
-              <MovedRow key={mixed.person.id} {...mixed} about={lists.about(mixed.person.id)} />
-            )}
-          />
-        </Section>
-      )}
-
       <Section
         title="Not confirmed on the map"
         count={lists.exactly.length + lists.mixed.birth.length}
@@ -942,7 +935,7 @@ export function MissingSection() {
         count={lists.twice.length}
         done="No one seems to be in the tree twice."
       >
-        <p className="py-1 text-sm text-stone-500">
+        <p className="py-1 text-sm text-faint">
           The same name, and birth years close or not known. If two are one person, Same person as…
           makes them one, and Undo takes it back.
         </p>

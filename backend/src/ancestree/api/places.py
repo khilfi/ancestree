@@ -77,12 +77,6 @@ async def look_up_place(asked: LookupAsked, request: Request) -> PlaceSuggestion
         ) from error
 
 
-@router.get("/sample/map")
-async def get_sample_map(people: Annotated[int, Query(ge=10, le=5000)] = 2000) -> FamilyMap:
-    """The made-up family on the map, spread over real towns. Nothing is stored."""
-    return await asyncio.to_thread(places_service.sample_map, people)
-
-
 @router.put("/places/pins")
 async def put_pin(ctx: Ctx, history: Hist, pin: Pin) -> MapPins:
     """Put a place the gazetteer doesn't know on the map, or move its pin. One Undo step."""

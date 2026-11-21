@@ -40,6 +40,16 @@ export const PIN = {
 
 export type Level = "countries" | "states" | "towns";
 
+// Countries without states: GeoNames divides Brunei into its four districts, but no one
+// says them as states. The backend names each country so (places/names.py).
+const STATELESS = new Set(["Singapore", "Brunei"]);
+
+/** A place's state as the map counts it: none in a country without states, such as Singapore
+ *  or Brunei, so its towns are listed under it and its people are one circle. */
+export function stateOf(country: string, state: string | null | undefined): string | null {
+  return STATELESS.has(country) ? null : (state ?? null);
+}
+
 // Screen pixels per kilometre at which the map changes what it shows.
 export const STATES_FROM = 0.05; // Malaysia about 100 px across: countries below this
 export const TOWNS_FROM = 1.2; // a state about 200 px across: towns from here
@@ -222,6 +232,22 @@ export function separate(groups: Group[], radius: (group: Group) => number): Gro
     if (!moved) break;
   }
   return groups.map((group, index) => ({ ...group, at: at[index] ?? group.at }));
+}
+
+/**
+ * Whether circles pushed apart (`separate`) had to move too far to still say where they are:
+ * any of them more than its own width from its place. The states of a country shown
+ * small are then the country's one circle instead, until there's room for them.
+ */
+export function crowded(
+  before: readonly Group[],
+  after: readonly Group[],
+  radius: (group: Group) => number,
+): boolean {
+  return after.some((group, index) => {
+    const was = before[index]?.at ?? group.at;
+    return Math.hypot(group.at.x - was.x, group.at.y - was.y) > 2 * radius(group);
+  });
 }
 
 /**

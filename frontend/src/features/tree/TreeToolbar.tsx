@@ -1,4 +1,13 @@
-import { ArrowLeftIcon, ArrowRightIcon, FoldVerticalIcon, UnfoldVerticalIcon } from "lucide-react";
+import { useReactFlow } from "@xyflow/react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  FoldVerticalIcon,
+  MaximizeIcon,
+  MinusIcon,
+  PlusIcon,
+  UnfoldVerticalIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   TREE_DEFAULTS,
@@ -9,6 +18,7 @@ import {
 } from "@/api/queries";
 import type { Graph, TreeSettings } from "@/api/types";
 import { useCanEdit } from "@/app/copy";
+import { Hint } from "@/components/Hint";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TOOL_SELECT, ViewToolbar } from "@/components/ViewToolbar";
 import { ClosenessKey } from "@/features/me/ClosenessKey";
 import { useMeId } from "@/features/me/useMeId";
 import { showError, UNDO_MS } from "@/lib/notify";
@@ -24,6 +35,7 @@ import { FamiliesMenu } from "./FamiliesMenu";
 import { FilterChips, FilterMenu } from "./FilterMenu";
 import { drawnFrom, type TreeView } from "./filters";
 import { DepthStepper, LayoutMenu } from "./LayoutMenu";
+import { type Tool, ToolsThatFit } from "./ToolsThatFit";
 import { shortName } from "./words";
 
 /** Back and Forward through those an hourglass or fan chart was drawn from: whom each
@@ -33,8 +45,10 @@ export type Steps = { back: string | null; forward: string | null; onStep: (by: 
 /**
  * The tree's own toolbar: the Layout menu (with Tidy up, which was Rearrange),
  * the Filter menu, how people are coloured, folding every married-in family at once (
- * D19), and the families, with who is at the centre. The active filters show as chips
- * underneath.
+ * D19), and the families, with who is at the centre; at its end, zooming and Show
+ * everyone. Above the canvas, in one line, what doesn't fit in its ⋯ menu. The active
+ * filters show as chips underneath, and the key to closeness when people are coloured by it, as
+ * the timeline's and the map's do.
  */
 export function TreeToolbar({
   graph,
@@ -66,8 +80,8 @@ export function TreeToolbar({
   const settings = useTreeSettings();
   const save = useSaveTreeSettings();
   const me = useMeId();
-  // A view-only copy: its viewer's own colours, but no tidying. A copy to edit tidies
-  // up when it allows changes.
+  // A view-only copy: its viewer's own colours, but no tidying; nor on a computer that
+  // only receives the family.
   const canTidy = useCanEdit();
   const clear = useClearPositions();
   const restore = useSavePositions();
@@ -106,109 +120,145 @@ export function TreeToolbar({
     });
   }
 
-  return (
-    <div className="pointer-events-none absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1.5">
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg border border-stone-200 bg-white/95 px-2 py-1.5 text-xs text-stone-600 shadow-sm">
-        {onView && (
-          <>
-            <LayoutMenu
-              view={view}
-              onView={onView}
-              focusName={focusName}
-              onTidyUp={
-                !readOnly && canTidy && view.layout === "rings" && !clear.isPending
-                  ? tidyUp
-                  : undefined
-              }
-              married={current.married_in}
-              onMarried={
-                readOnly
-                  ? undefined
-                  : (way) => save.mutate({ ...current, married_in: way }, { onError: showError })
-              }
-            />
-            <DepthStepper view={view} onView={onView} />
-            {steps && drawnFrom(view.layout) && (
-              <span className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={!steps.back}
-                  onClick={() => steps.onStep(-1)}
-                  title={steps.back ? `Back to ${nameOf(steps.back)}` : undefined}
-                >
-                  <ArrowLeftIcon />
-                  Back
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={!steps.forward}
-                  onClick={() => steps.onStep(1)}
-                  title={steps.forward ? `Forward to ${nameOf(steps.forward)}` : undefined}
-                >
-                  Forward
-                  <ArrowRightIcon />
-                </Button>
-              </span>
-            )}
-            <FilterMenu
-              graph={graph}
-              filter={view.filter}
-              onChange={(filter) => onView({ ...view, filter })}
-              selectedId={focus}
-            />
-          </>
-        )}
-        {!readOnly && (
-          <Select
-            value={current.colours}
-            onValueChange={(colours) =>
-              save.mutate(
-                { ...current, colours: colours as TreeSettings["colours"] },
-                { onError: showError },
-              )
-            }
-          >
-            <SelectTrigger size="sm" className="h-6 text-xs" aria-label="Colour the people by">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="branch">Colour by branch</SelectItem>
-              <SelectItem value="generation">Colour by generation</SelectItem>
-              <SelectItem value="closeness">Colour by closeness to me</SelectItem>
-              <SelectItem value="off">No colours</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        {families.all > 0 && (
-          // It says what it will do: unfold while any family is folded away.
+  // In their order along the line; what doesn't fit goes into ⋯ from the end.
+  const tools: Tool[] = [];
+  if (onView) {
+    tools.push({
+      key: "layout",
+      tool: (
+        <LayoutMenu
+          view={view}
+          onView={onView}
+          focusName={focusName}
+          onTidyUp={
+            !readOnly && canTidy && view.layout === "rings" && !clear.isPending ? tidyUp : undefined
+          }
+          married={current.married_in}
+          onMarried={
+            readOnly
+              ? undefined
+              : (way) => save.mutate({ ...current, married_in: way }, { onError: showError })
+          }
+        />
+      ),
+    });
+    if (view.layout === "hourglass" || view.layout === "fan") {
+      tools.push({ key: "depth", tool: <DepthStepper view={view} onView={onView} /> });
+    }
+    if (steps && drawnFrom(view.layout)) {
+      tools.push({
+        key: "steps",
+        tool: (
+          <span className="flex items-center gap-1">
+            <Hint label={steps.back ? `Back to ${nameOf(steps.back)}` : undefined}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!steps.back}
+                onClick={() => steps.onStep(-1)}
+              >
+                <ArrowLeftIcon />
+                Back
+              </Button>
+            </Hint>
+            <Hint label={steps.forward ? `Forward to ${nameOf(steps.forward)}` : undefined}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!steps.forward}
+                onClick={() => steps.onStep(1)}
+              >
+                Forward
+                <ArrowRightIcon />
+              </Button>
+            </Hint>
+          </span>
+        ),
+      });
+    }
+    tools.push({
+      key: "filter",
+      tool: (
+        <FilterMenu
+          graph={graph}
+          filter={view.filter}
+          onChange={(filter) => onView({ ...view, filter })}
+          selectedId={focus}
+        />
+      ),
+    });
+  }
+  if (!readOnly) {
+    tools.push({
+      key: "colours",
+      tool: (
+        <Select
+          value={current.colours}
+          onValueChange={(colours) =>
+            save.mutate(
+              { ...current, colours: colours as TreeSettings["colours"] },
+              { onError: showError },
+            )
+          }
+        >
+          <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Colour the people by">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="branch">Colour by branch</SelectItem>
+            <SelectItem value="generation">Colour by generation</SelectItem>
+            <SelectItem value="closeness">Colour by closeness to me</SelectItem>
+            <SelectItem value="off">No colours</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    });
+  }
+  if (families.all > 0) {
+    tools.push({
+      key: "fold",
+      tool: (
+        // It says what it will do: unfold while any family is folded away.
+        <Hint
+          label={
+            families.folded > 0
+              ? `${families.big ? "A family this big opens folded, to keep it quick. " : ""}` +
+                `Show every married-in family (${families.folded} folded away)`
+              : "Fold every married-in family away"
+          }
+        >
           <Button
             variant="outline"
-            size="xs"
+            size="sm"
             onClick={() => onFoldAll(families.folded > 0 ? "open" : "folded")}
-            title={
-              families.folded > 0
-                ? `${families.big ? "A family this big opens folded, to keep it quick. " : ""}` +
-                  `Show every married-in family (${families.folded} folded away)`
-                : "Fold every married-in family away"
-            }
           >
             {families.folded > 0 ? <UnfoldVerticalIcon /> : <FoldVerticalIcon />}
             {families.folded > 0 ? "Unfold all" : "Fold all"}
           </Button>
-        )}
-        {!readOnly && centre && view.layout !== "hourglass" && view.layout !== "fan" && (
-          <FamiliesMenu graph={graph} onShow={onShowFamily} onHighlight={onHighlight} />
-        )}
-      </div>
+        </Hint>
+      ),
+    });
+  }
+  if (!readOnly && centre && view.layout !== "hourglass" && view.layout !== "fan") {
+    tools.push({
+      key: "centre",
+      tool: <FamiliesMenu graph={graph} onShow={onShowFamily} onHighlight={onHighlight} />,
+    });
+  }
+
+  return (
+    <>
+      <ViewToolbar label="The tree's tools" className="@container flex-nowrap">
+        <ToolsThatFit tools={tools} />
+        <Zoom />
+      </ViewToolbar>
       {!readOnly && current.colours === "closeness" && (
-        <div className="pointer-events-auto rounded-lg bg-white/90 px-2 py-1">
+        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5">
           <ClosenessKey chosen={me !== null} />
         </div>
       )}
       {onView && (
-        <div className="pointer-events-auto rounded-lg bg-white/90 px-1 empty:hidden">
+        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
           <FilterChips
             graph={graph}
             filter={view.filter}
@@ -217,6 +267,43 @@ export function TreeToolbar({
           />
         </div>
       )}
+    </>
+  );
+}
+
+/** Zooming, and **Show everyone**, always at the toolbar's end, as the timeline's are. */
+function Zoom() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <Hint label="Zoom out (−)">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Zoom out"
+          onClick={() => zoomOut({ duration: 200 })}
+        >
+          <MinusIcon />
+        </Button>
+      </Hint>
+      <Hint label="Zoom in (+)">
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Zoom in"
+          onClick={() => zoomIn({ duration: 200 })}
+        >
+          <PlusIcon />
+        </Button>
+      </Hint>
+      <Hint label="Show the whole tree (F)">
+        <Button variant="outline" size="sm" onClick={() => fitView({ duration: 400 })}>
+          <MaximizeIcon />
+          {/* Its words only where the toolbar has room, so the layout keeps its place at the
+              start; its name stays for the keyboard and the hint. */}
+          <span className="@max-xl:sr-only">Show everyone</span>
+        </Button>
+      </Hint>
     </div>
   );
 }

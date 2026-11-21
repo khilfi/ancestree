@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { useFillIn, useSearchPeople } from "@/api/queries";
 import type { Gender, GraphPerson, RelativeAdded } from "@/api/types";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -57,15 +56,20 @@ export function UnknownParentCard({
 
   const done = {
     onSuccess: (added: RelativeAdded) => {
-      feedback(added);
-      toast.success(`${added.person.full_name} is now the parent of ${names}.`);
+      feedback(`${added.person.full_name} is now the parent of ${names}.`, added);
       onClose();
     },
     onError: showError,
   };
 
   return (
-    <FloatingCard at={at} bounds={bounds} width={320}>
+    <FloatingCard
+      at={at}
+      bounds={bounds}
+      width={320}
+      label={`An unknown parent of ${names}`}
+      onClose={onClose}
+    >
       <p className="font-medium">An unknown parent of {names}</p>
       {mode === "menu" && (
         <div className="flex flex-wrap gap-2">
@@ -126,7 +130,7 @@ export function UnknownParentCard({
               >
                 <PersonAvatar person={found} size="sm" />
                 <span className="min-w-0 flex-1 truncate">{found.full_name}</span>
-                <span className="text-xs text-stone-500">{lifeYears(found)}</span>
+                <span className="text-xs text-faint">{lifeYears(found)}</span>
               </CommandItem>
             ))}
           </CommandList>

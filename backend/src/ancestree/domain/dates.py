@@ -7,8 +7,11 @@ Day before month, as written in Malaysia:
     c. 1950 · about 1950 · before 1900 · after 1900 · 1910-1915 · between 1910 and 1915
     1950s, the decade from 1950 to 1959
 
-Malay month names and words work too: Mac, Ogos, Disember; sekitar, sebelum, selepas,
-antara 1910 dan 1915, tahun 1950-an.
+Malay month names and words work too: Mac, Ogos, Disember; sekitar, kira-kira, sebelum,
+selepas, antara 1910 dan 1915, tahun 1950-an.
+
+The person form reads a typed date in the browser the same way (frontend/src/lib/dates.ts,
+`readDate`): both are tested on the examples in typed-dates.json, beside it, word for word.
 """
 
 import calendar
@@ -103,9 +106,10 @@ def parse_partial_date(text: str | None) -> PartialDate | None:
 
     for pattern in _RANGES:
         if match := pattern.match(cleaned):
-            return _build(
-                year=int(match["a"]), year_to=int(match["b"]), qualifier=DateQualifier.BETWEEN
-            )
+            first, last = int(match["a"]), int(match["b"])
+            if last < first:
+                raise DateParseError("The second year can't be before the first.")
+            return _build(year=first, year_to=last, qualifier=DateQualifier.BETWEEN)
     if match := _DECADE.match(cleaned):
         start = int(match["decade"])
         return _build(year=start, year_to=start + 9, qualifier=DateQualifier.BETWEEN)
@@ -128,7 +132,7 @@ def parse_partial_date(text: str | None) -> PartialDate | None:
     if _TWO_DIGIT_YEAR.search(cleaned):
         raise DateParseError(f"Use a 4-digit year in '{text.strip()}', e.g. 12/3/1950.")
     raise DateParseError(
-        f"Couldn't read '{text.strip()}' as a date. Try 1950, 3/1950, 12/3/1950 or c. 1950."
+        f"Couldn't read '{text.strip()}' as a date. Try 12/3/1950, March 1950, 1950 or about 1950."
     )
 
 

@@ -30,7 +30,7 @@ function start(snapshot: CopySnapshot) {
 
 function broken(message: string) {
   root.render(
-    <div className="flex h-full items-center justify-center p-8 text-center text-stone-600">
+    <div className="flex h-full items-center justify-center p-8 text-center text-muted-foreground">
       <p className="max-w-md">{message}</p>
     </div>,
   );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Graph, GraphLink, GraphPerson, LayoutUnit, Seat } from "@/api/types";
 import { type ChildEdgeData, childPath } from "./edges";
-import { PHOTO, pathPoints, roundedPath } from "./geometry";
+import { nameBox, PHOTO, pathPoints, roundedPath } from "./geometry";
 import { allFamilies, ringLayout, WAYS, type Way } from "./placing";
 import type { Point, RingLayout } from "./rings";
 import { routable, routeLinks } from "./routing";
@@ -186,6 +186,60 @@ describe("a link between families, placed by hand", () => {
       routes: new Map([["family:s", route ?? []]]),
     });
     expect(routeOf(again.edges)).toBe(route);
+  });
+});
+
+/** Whether a line passes under the name of anyone not its own, as the canvas draws names
+ *  (D95): the points along it, a few pixels apart, inside a name's box. */
+function underNames(line: { own: Set<string>; points: Point[] }, layout: RingLayout): string[] {
+  const under = new Set<string>();
+  for (const [id, centre] of layout.points) {
+    if (line.own.has(id)) continue;
+    const [left, top, right, bottom] = nameBox(centre);
+    for (let index = 0; index + 1 < line.points.length; index++) {
+      const [a, b] = [line.points[index], line.points[index + 1]];
+      if (!a || !b) continue;
+      const steps = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 4);
+      for (let step = 0; step <= steps; step++) {
+        const [x, y] = [a.x + ((b.x - a.x) * step) / steps, a.y + ((b.y - a.y) * step) / steps];
+        if (x > left && x < right && y > top && y < bottom) under.add(id);
+      }
+    }
+  }
+  return [...under];
+}
+
+describe("a link between families, past someone's name", () => {
+  // As above, with O a little higher: a straight line from P and Q to S clears O's photo, but
+  // runs through the name under it.
+  const seats: Record<string, Seat> = {
+    p: seat("cluster:s"),
+    q: seat("cluster:s", 1, { partner_of: "p" }),
+    s: seat("main:0", 2),
+    o: seat("main:0", 2),
+  };
+  const links = [link("spouse", "p", "q"), link("parent", "p", "s"), link("parent", "q", "s")];
+  const { graph, layout } = placed(seats, links, {
+    p: { x: -600, y: 0 },
+    q: { x: -464, y: 0 },
+    o: { x: 0, y: -60 },
+    s: { x: 640, y: 0 },
+  });
+
+  it("goes around the name, still clear of every photo", () => {
+    const straight = {
+      own: new Set(["p", "q", "s"]),
+      points: [
+        { x: -532, y: 0 },
+        { x: 640, y: 0 },
+      ],
+    };
+    expect(underNames(straight, layout)).toEqual(["o"]);
+    const { lines } = routedLines(graph, layout);
+    expect(lines).toHaveLength(1);
+    const [routed] = lines;
+    expect(routed && underNames(routed, layout)).toEqual([]);
+    expect(routed && nearestPhoto(routed, layout)).toBeGreaterThan(0);
   });
 });
 

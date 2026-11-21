@@ -396,6 +396,8 @@ async def family_snapshot(
                     death_year=p.death_year,
                     photo_version=p.photo_version,
                     placeholder=p.placeholder,
+                    born=p.born,
+                    died=p.died,
                 )
             )
             for p in graph.people

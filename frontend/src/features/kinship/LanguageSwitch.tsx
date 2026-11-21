@@ -1,5 +1,6 @@
 import { useKinshipSettings, useSaveKinshipSettings } from "@/api/queries";
 import type { KinshipLanguage } from "@/api/types";
+import { Hint } from "@/components/Hint";
 import { showError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +15,9 @@ export const LANGUAGE_NAMES: Record<KinshipLanguage, string> = {
 
 const SHORT: Record<KinshipLanguage, string> = { en: "English", ms: "Melayu", jv: "Jawa" };
 
-/** English · Melayu · Jawa: the language of the kinship words. The choice is
- *  saved, so the answers, the Relatives tab and the dictionary all follow it. */
+/** English · Melayu · Jawa: the language of the kinship words, set where they're
+ *  seen, in the relationship finder's answer and the dictionary, and there alone.
+ *  The choice is saved, so the answers, the Relatives tab and the dictionary all follow it. */
 export function LanguageSwitch({ className }: { className?: string }) {
   const settings = useKinshipSettings();
   const save = useSaveKinshipSettings();
@@ -24,29 +26,29 @@ export function LanguageSwitch({ className }: { className?: string }) {
   return (
     <fieldset
       aria-label="Language of kinship words"
-      className={cn("inline-flex gap-0.5 rounded-lg bg-stone-100 p-0.5", className)}
+      className={cn("inline-flex gap-0.5 rounded-lg bg-muted p-0.5", className)}
     >
       {KINSHIP_LANGUAGES.map((code) => (
-        <button
-          key={code}
-          type="button"
-          aria-pressed={language === code}
-          disabled={!settings.data}
-          title={`Kinship words in ${LANGUAGE_NAMES[code]}`}
-          onClick={() => {
-            if (settings.data && language !== code) {
-              save.mutate({ ...settings.data, language: code }, { onError: showError });
-            }
-          }}
-          className={cn(
-            "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-            language === code
-              ? "bg-white text-stone-900 shadow-sm"
-              : "text-stone-600 hover:text-stone-900",
-          )}
-        >
-          {SHORT[code]}
-        </button>
+        <Hint key={code} label={`Kinship words in ${LANGUAGE_NAMES[code]}`}>
+          <button
+            type="button"
+            aria-pressed={language === code}
+            disabled={!settings.data}
+            onClick={() => {
+              if (settings.data && language !== code) {
+                save.mutate({ ...settings.data, language: code }, { onError: showError });
+              }
+            }}
+            className={cn(
+              "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+              language === code
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {SHORT[code]}
+          </button>
+        </Hint>
       ))}
     </fieldset>
   );

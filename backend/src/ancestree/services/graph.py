@@ -5,7 +5,6 @@ from typing import Any
 from uuid import UUID
 
 from neo4j import AsyncDriver, RoutingControl
-from pydantic import ValidationError
 
 from ancestree.domain.graph import (
     BirthParents,
@@ -22,6 +21,7 @@ from ancestree.domain.person import Gender, PartialDate
 from ancestree.domain.relationship import BIOLOGICAL
 from ancestree.lineage import seating
 from ancestree.repo.graph import PERSON_FIELDS, read_family
+from ancestree.repo.mapping import date_from_row
 from ancestree.services.detail import living_from
 
 LAYOUT_SEATS = 60_000  # the most seats a view-only copy carries for other centres
@@ -230,33 +230,6 @@ def build_graph(
             ],
         ),
     )
-
-
-def date_from_row(row: Mapping[str, Any], prefix: str) -> PartialDate | None:
-    """A date from flattened properties ("birth_year", "birth_month"...), qualifier and all.
-    Whatever doesn't fit is dropped rather than failing: a day, then the month, then the
-    qualifier. No year, no date."""
-    year = row.get(f"{prefix}_year")
-    if year is None:
-        return None
-    full = {
-        "year": year,
-        "month": row.get(f"{prefix}_month"),
-        "day": row.get(f"{prefix}_day"),
-        "qualifier": row.get(f"{prefix}_qualifier") or "exact",
-        "year_to": row.get(f"{prefix}_year_to"),
-    }
-    for attempt in (
-        full,
-        full | {"day": None},
-        full | {"day": None, "month": None},
-        {"year": year},
-    ):
-        try:
-            return PartialDate.model_validate(attempt)
-        except ValidationError:
-            continue
-    return None
 
 
 def birth_from_row(row: Mapping[str, Any]) -> PartialDate | None:

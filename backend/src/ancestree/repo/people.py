@@ -258,8 +258,10 @@ async def searchable(tx: Tx) -> list[dict[str, Any]]:
     result = await tx.run(
         """
         MATCH (p:Person) WHERE NOT coalesce(p.placeholder, false)
-        RETURN p {.id, .full_name, .nickname, .gender, .birth_year, .death_year,
-                  .photo_version, .has_photo, .placeholder} AS person
+        RETURN p {.id, .full_name, .nickname, .gender, .photo_version, .has_photo, .placeholder,
+                  .birth_year, .birth_month, .birth_day, .birth_qualifier, .birth_year_to,
+                  .death_year, .death_month, .death_day, .death_qualifier, .death_year_to}
+               AS person
         """
     )
     return [dict(row["person"]) for row in await result.data()]

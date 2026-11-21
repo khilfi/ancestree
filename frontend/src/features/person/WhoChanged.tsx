@@ -31,8 +31,8 @@ export function WhoChanged({ personId }: { personId: string }) {
   const lines = journal.data ?? [];
   if (lines.length === 0) return null;
   return (
-    <section aria-label="Who changed this" className="space-y-1 text-xs text-stone-500">
-      <h3 className="font-medium text-stone-600">Who changed this</h3>
+    <section aria-label="Who changed this" className="space-y-1 text-xs text-faint">
+      <h3 className="font-medium text-muted-foreground">Who changed this</h3>
       <ul className="space-y-0.5">
         {(all ? lines : lines.slice(0, 1)).map((line) => (
           <li key={`${line.at}-${line.what}-${line.by}`}>{said(line)}</li>
@@ -41,7 +41,7 @@ export function WhoChanged({ personId }: { personId: string }) {
       {lines.length > 1 && (
         <button
           type="button"
-          className="text-sky-700 hover:underline"
+          className="text-link hover:underline"
           onClick={() => setAll((now) => !now)}
         >
           {all ? "Only the last" : `All ${lines.length} changes`}

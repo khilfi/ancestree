@@ -42,9 +42,10 @@ from ancestree.kinship.terms import TermBook
 from ancestree.lineage.birth_order import Sibling, order_siblings
 from ancestree.repo import kinds as kinds_repo
 from ancestree.repo.graph import read_family
+from ancestree.repo.mapping import date_from_row
 from ancestree.services.context import Context
 from ancestree.services.detail import living_from
-from ancestree.services.graph import birth_region, build_graph, date_from_row
+from ancestree.services.graph import birth_region, build_graph
 from ancestree.services.kinship import family_from_rows
 from ancestree.storage.settings import read_tree_settings
 

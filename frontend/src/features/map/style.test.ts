@@ -173,6 +173,34 @@ describe("the map's style", () => {
       ),
     ).toEqual(["Malaysia"]);
   });
+
+  it("writes no name under 12 px, at any zoom", () => {
+    // Every size a label can take: a number, or what a step, an interpolation, a match or a
+    // case gives. Anything else fails, to be read here first.
+    const sizes = (size: unknown): number[] => {
+      if (typeof size === "number") return [size];
+      if (!Array.isArray(size)) return [Number.NaN];
+      const [kind, ...rest] = size;
+      const picked: Record<string, (part: unknown, at: number) => boolean> = {
+        interpolate: (_, at) => at >= 3 && at % 2 === 1,
+        step: (_, at) => at >= 1 && at % 2 === 1,
+        match: (_, at) => (at >= 2 && at % 2 === 0) || at === rest.length - 1,
+        case: (_, at) => at % 2 === 1 || at === rest.length - 1,
+      };
+      const given = picked[String(kind)];
+      return given ? rest.filter(given).flatMap(sizes) : [Number.NaN];
+    };
+    const labels = [...layers, ...mapStyle(ORIGIN, [malaysia], true).layers].filter(
+      (layer) => layer.type === "symbol",
+    );
+    expect(labels.length).toBeGreaterThan(5);
+    for (const layer of labels) {
+      const size = (layer.layout as { "text-size"?: unknown } | undefined)?.["text-size"];
+      for (const each of sizes(size ?? 16)) {
+        expect(each, layer.id).toBeGreaterThanOrEqual(12); // MapLibre's own is 16
+      }
+    }
+  });
 });
 
 describe("a label from OpenFreeMap's tiles", () => {

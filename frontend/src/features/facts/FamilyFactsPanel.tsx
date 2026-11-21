@@ -1,12 +1,18 @@
 import { ChevronDownIcon, ChevronRightIcon, RouteIcon, XIcon } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { lazy, type ReactNode, Suspense, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { useFamilyFacts } from "@/api/queries";
 import type { FactPerson, FamilyFacts, NameCount } from "@/api/types";
 import { InAppOnly, useCopy } from "@/app/copy";
+import { Failed } from "@/components/Failed";
+import { Hint } from "@/components/Hint";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NO_FILTER, readView, type TreeFilter, withView, writeView } from "@/features/tree/filters";
+import { useEscape } from "@/lib/escape";
+import type { FactsTab } from "@/lib/familyFacts";
+import { useTakeFocus } from "@/lib/focus";
 import { cn } from "@/lib/utils";
 
 function plural(count: number, noun: string, many = `${noun}s`): string {
@@ -43,14 +49,15 @@ function useOpen() {
 /** A count that opens the view filtered to whom it counts. */
 function Shown({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Show them on the tree or the timeline"
-      className="text-sky-800 underline-offset-2 hover:underline"
-    >
-      {children}
-    </button>
+    <Hint label="Show them on the tree or the timeline">
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-link underline-offset-2 hover:underline"
+      >
+        {children}
+      </button>
+    </Hint>
   );
 }
 
@@ -59,7 +66,7 @@ function Name({ person, onOpen }: { person: FactPerson; onOpen: (id: string) => 
     <button
       type="button"
       onClick={() => onOpen(person.id)}
-      className="font-medium text-sky-800 underline-offset-2 hover:underline"
+      className="font-medium text-link underline-offset-2 hover:underline"
     >
       {person.name}
     </button>
@@ -82,8 +89,8 @@ function Names({ people, onOpen }: { people: FactPerson[]; onOpen: (id: string) 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[8.5rem_1fr] gap-3 py-2">
-      <dt className="text-stone-500">{label}</dt>
-      <dd className="min-w-0 text-stone-900">{children}</dd>
+      <dt className="text-faint">{label}</dt>
+      <dd className="min-w-0 text-foreground">{children}</dd>
     </div>
   );
 }
@@ -111,7 +118,7 @@ function Counted({
             onClick={() => setShown(item.name === shown ? null : item.name)}
             className={cn(
               "rounded px-1 underline-offset-2 hover:underline",
-              item.name === shown && "bg-sky-50 text-sky-900",
+              item.name === shown && "bg-highlight-soft text-highlight-soft-foreground",
             )}
           >
             {item.name} ({item.people.length})
@@ -119,7 +126,7 @@ function Counted({
         ))}
       </div>
       {open && (
-        <p className="text-xs text-stone-600">
+        <p className="text-xs text-muted-foreground">
           <Names people={open.people} onOpen={onOpen} />
           {onShow && (
             <>
@@ -154,27 +161,27 @@ function Bars({
       style={{ gridTemplateColumns: `repeat(${bars.length}, minmax(0, 1.5rem))` }}
     >
       {bars.map((bar) => (
-        <button
-          key={bar.key}
-          type="button"
-          disabled={!onPick || bar.count === 0}
-          onClick={() => onPick?.(bar.key)}
-          className="group flex min-w-0 flex-col items-center gap-0.5 disabled:cursor-default"
-          title={onPick && bar.count ? `${bar.title}: show them` : bar.title}
-        >
-          <span className="text-[10px] text-stone-500 tabular-nums">{bar.count || ""}</span>
-          <span
-            className="w-full max-w-5 rounded-sm bg-amber-300 group-enabled:group-hover:bg-amber-400"
-            style={{ height: `${Math.max(2, Math.round((bar.count / most) * 40))}px` }}
-          />
-          <span className="text-[10px] whitespace-nowrap text-stone-500">{bar.label}</span>
-        </button>
+        <Hint key={bar.key} label={onPick && bar.count ? `${bar.title}: show them` : bar.title}>
+          <button
+            type="button"
+            disabled={!onPick || bar.count === 0}
+            onClick={() => onPick?.(bar.key)}
+            className="group flex min-w-0 flex-col items-center gap-0.5 disabled:cursor-default"
+          >
+            <span className="text-xs text-faint tabular-nums">{bar.count || ""}</span>
+            <span
+              className="w-full max-w-5 rounded-sm bg-facts-bar group-enabled:group-hover:bg-facts-bar-pointed"
+              style={{ height: `${Math.max(2, Math.round((bar.count / most) * 40))}px` }}
+            />
+            <span className="text-xs whitespace-nowrap text-faint">{bar.label}</span>
+          </button>
+        </Hint>
       ))}
     </fieldset>
   );
 }
 
-function Facts({ facts }: { facts: FamilyFacts }) {
+function Facts({ facts, onFillIn }: { facts: FamilyFacts; onFillIn: () => void }) {
   const open = useOpen();
   const person = open.person;
   const [missing, setMissing] = useState(false);
@@ -187,8 +194,8 @@ function Facts({ facts }: { facts: FamilyFacts }) {
     toFill.no_gender.length + toFill.no_birth_year.length + toFill.no_birth_order.length;
 
   return (
-    <dl className="divide-y divide-stone-100 text-sm">
-      <div className="pb-3 text-stone-800">
+    <dl className="divide-y divide-border text-sm">
+      <div className="pb-3 text-foreground">
         <span className="font-semibold">{plural(counts.people, "person", "people")}</span>
         {" · "}
         {plural(counts.links, "link")}
@@ -288,9 +295,7 @@ function Facts({ facts }: { facts: FamilyFacts }) {
                 <Name person={couple.a} onOpen={person} /> &amp;{" "}
                 <Name person={couple.b} onOpen={person} />
                 {couple.term && (
-                  <span className="text-stone-500">
-                    , {couple.term.replace("cousin", "cousins")}
-                  </span>
+                  <span className="text-faint">, {couple.term.replace("cousin", "cousins")}</span>
                 )}{" "}
                 <PathButton onClick={() => open.path(couple.a.id, couple.b.id)} />
               </div>
@@ -322,13 +327,13 @@ function Facts({ facts }: { facts: FamilyFacts }) {
               count: d.people,
             }))}
           />
-          <p className="text-[11px] text-stone-500">
+          <p className="text-xs text-faint">
             The {facts.decades[0]?.decade}s to the {facts.decades.at(-1)?.decade}s
           </p>
         </Row>
       )}
       <Row label={`This month (${facts.month})`}>
-        {facts.this_month.length === 0 && <span className="text-stone-500">Nothing recorded</span>}
+        {facts.this_month.length === 0 && <span className="text-faint">Nothing recorded</span>}
         {birthdays.length > 0 && (
           <div>
             Birthdays:{" "}
@@ -386,7 +391,7 @@ function Facts({ facts }: { facts: FamilyFacts }) {
               type="button"
               aria-expanded={missing}
               onClick={() => setMissing((now) => !now)}
-              className="inline-flex items-center gap-0.5 text-sky-700 hover:underline"
+              className="inline-flex items-center gap-0.5 text-link hover:underline"
             >
               {missing ? (
                 <ChevronDownIcon className="size-3.5" />
@@ -395,29 +400,29 @@ function Facts({ facts }: { facts: FamilyFacts }) {
               )}
               {missing ? "Hide them" : "Show them"}
             </button>
-            {/* Settings → What's missing: a quick fix for each. */}
+            {/* What's missing, beside these facts: a quick fix for each. */}
             <InAppOnly>
-              <Link to="/settings/missing" className="ml-3 text-sky-700 hover:underline">
+              <button type="button" onClick={onFillIn} className="ml-3 text-link hover:underline">
                 Fill them in…
-              </Link>
+              </button>
             </InAppOnly>
             {missing && (
-              <div className="space-y-2 text-xs text-stone-700">
+              <div className="space-y-2 text-xs text-foreground">
                 {toFill.no_gender.length > 0 && (
                   <p>
-                    <span className="text-stone-500">Without a gender: </span>
+                    <span className="text-faint">Without a gender: </span>
                     <Names people={toFill.no_gender} onOpen={person} />
                   </p>
                 )}
                 {toFill.no_birth_year.length > 0 && (
                   <p>
-                    <span className="text-stone-500">Without a birth year: </span>
+                    <span className="text-faint">Without a birth year: </span>
                     <Names people={toFill.no_birth_year} onOpen={person} />
                   </p>
                 )}
                 {toFill.no_birth_order.map((group) => (
                   <p key={group.children.map((c) => c.id).join()}>
-                    <span className="text-stone-500">
+                    <span className="text-faint">
                       Order not known among the children of{" "}
                       {group.parents.map((p) => p.name).join(" & ") || "unknown parents"}:{" "}
                     </span>
@@ -433,12 +438,22 @@ function Facts({ facts }: { facts: FamilyFacts }) {
   );
 }
 
+function Loading() {
+  return (
+    <div className="space-y-2">
+      <Skeleton className="h-5 w-4/5" />
+      <Skeleton className="h-4 w-3/5" />
+      <Skeleton className="h-4 w-2/3" />
+    </div>
+  );
+}
+
 function PathButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="ml-1 inline-flex items-center gap-0.5 text-xs text-amber-700 hover:underline"
+      className="ml-1 inline-flex items-center gap-0.5 text-xs text-kin hover:underline"
     >
       <RouteIcon className="size-3" />
       Show the path
@@ -446,36 +461,54 @@ function PathButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+// What's missing, Settings' until 0.9.0: a chunk of its own, and never in a copy.
+const Missing =
+  import.meta.env.MODE === "viewer"
+    ? null
+    : lazy(() =>
+        import("@/features/settings/MissingSection").then((module) => ({
+          default: module.MissingSection,
+        })),
+      );
+
 /**
- * Family at a glance: facts about the whole family, from the ⓘ beside the app's
- * name. It slides in from the left, over the tree or the timeline; the person panel keeps the
- * right. Esc closes it.
+ * Family facts: facts about the whole family, from the ⓘ beside the family's
+ * name; and What's missing, with a quick fix for each gap, as its second tab, in the
+ * app itself. It slides in from the left, over the tree or the timeline, wider for What's
+ * missing; the person panel keeps the right. It takes the focus as it opens, and Esc closes it
+ * when nothing opened after it is still open, a dialog over it closing first.
  */
-export function FamilyFactsPanel({ onClose }: { onClose: () => void }) {
+export function FamilyFactsPanel({
+  tab,
+  onTab,
+  onClose,
+}: {
+  tab: FactsTab;
+  onTab: (tab: FactsTab) => void;
+  onClose: () => void;
+}) {
   const facts = useFamilyFacts(true);
   const copy = useCopy(); // facts as they were when the copy was made
-
-  useEffect(() => {
-    // Before the tree's own Escape, which would stop finding a relationship.
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
+  const shown = copy || !Missing ? "facts" : tab;
+  const own = useRef<HTMLElement>(null);
+  useTakeFocus(own);
+  useEscape(onClose);
 
   return (
     <aside
-      aria-label="Family at a glance"
-      className="absolute inset-y-0 left-0 z-30 flex w-[26rem] max-w-full flex-col border-r border-stone-200 bg-white shadow-xl"
+      ref={own}
+      tabIndex={-1}
+      aria-label="Family facts"
+      className={cn(
+        "absolute inset-y-0 left-0 z-30 flex w-[26rem] max-w-full flex-col border-r border-border bg-card shadow-xl outline-none",
+        shown === "missing" && "w-[40rem]",
+      )}
     >
-      <header className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <h2 className="text-base font-semibold">Family at a glance</h2>
+          <h2 className="text-base font-semibold">Family facts</h2>
           {copy && (
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-faint">
               As on{" "}
               {new Date(copy.made_at).toLocaleDateString("en-GB", {
                 day: "numeric",
@@ -490,17 +523,38 @@ export function FamilyFactsPanel({ onClose }: { onClose: () => void }) {
           <XIcon />
         </Button>
       </header>
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {facts.isPending && (
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-4/5" />
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
+      <Tabs
+        value={shown}
+        onValueChange={(next) => onTab(next as FactsTab)}
+        className="min-h-0 flex-1 gap-0"
+      >
+        {Missing && (
+          <InAppOnly>
+            <TabsList className="mx-4 mt-3">
+              <TabsTrigger value="facts">Facts</TabsTrigger>
+              <TabsTrigger value="missing">What's missing</TabsTrigger>
+            </TabsList>
+          </InAppOnly>
         )}
-        {facts.isError && <p className="text-sm text-red-600">{facts.error.message}</p>}
-        {facts.data && <Facts facts={facts.data} />}
-      </div>
+        <TabsContent value="facts" className="relative min-h-0 overflow-y-auto px-4 py-3">
+          {facts.isPending && <Loading />}
+          {facts.isError && (
+            <Failed
+              error={facts.error}
+              onRetry={() => void facts.refetch()}
+              className="text-sm text-destructive"
+            />
+          )}
+          {facts.data && <Facts facts={facts.data} onFillIn={() => onTab("missing")} />}
+        </TabsContent>
+        {Missing && (
+          <TabsContent value="missing" className="relative min-h-0 overflow-y-auto px-4 py-3">
+            <Suspense fallback={<Loading />}>
+              <Missing />
+            </Suspense>
+          </TabsContent>
+        )}
+      </Tabs>
     </aside>
   );
 }

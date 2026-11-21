@@ -12,6 +12,8 @@ import {
   useRestoreBackup,
 } from "@/api/queries";
 import type { Backup, BackupsBinned } from "@/api/types";
+import { Failed } from "@/components/Failed";
+import { Hint } from "@/components/Hint";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -164,11 +166,11 @@ export function BackupsSection() {
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="font-semibold">Backups</h2>
-          <p className="max-w-2xl text-sm text-stone-500">
+          <p className="max-w-2xl text-sm text-faint">
             A backup holds everything: people, links, photos, stories and settings.{" "}
             {daily
               ? "AncesTree makes one each day while it runs, and you can make one whenever you like."
@@ -181,14 +183,14 @@ export function BackupsSection() {
             )}
           </p>
           {daily && (
-            <p className="max-w-2xl text-sm font-medium text-stone-700">
+            <p className="max-w-2xl text-sm font-medium text-foreground">
               Backups are kept for 3 months. To keep one longer, download it.{" "}
-              <span className="font-normal text-stone-500">
+              <span className="font-normal text-faint">
                 Older ones go to the {backups.data?.bin || "bin"}, but the newest 3 always stay.
               </span>
             </p>
           )}
-          {went && <p className="max-w-2xl text-sm text-stone-500">{went}</p>}
+          {went && <p className="max-w-2xl text-sm text-faint">{went}</p>}
           <HowDoesThisWork at="backups" />
         </div>
         <div className="flex shrink-0 gap-2">
@@ -217,22 +219,32 @@ export function BackupsSection() {
       <ElsewherePanel elsewhere={backups.data?.elsewhere} />
 
       {stayed && (
-        <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p
+          role="alert"
+          className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-soft-foreground"
+        >
           {stayed}
         </p>
       )}
 
       {backups.data?.reachable === false && (
-        <p role="alert" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p
+          role="alert"
+          className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-soft-foreground"
+        >
           The backup folder <code className="break-all">{folder}</code> can't be reached. Is its
           disk connected? Backups can't be made or added until it is.
         </p>
       )}
 
       {backups.isError ? (
-        <p className="text-sm text-red-600">{backups.error.message}</p>
+        <Failed
+          error={backups.error}
+          onRetry={() => void backups.refetch()}
+          className="text-sm text-destructive"
+        />
       ) : list.length === 0 ? (
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-faint">
           {backups.isPending ? "Looking for backups…" : "No backups yet."}
         </p>
       ) : (
@@ -257,7 +269,7 @@ export function BackupsSection() {
                     {when(backup.made_at)}
                     {backup.automatic && <Badge variant="secondary">Automatic</Badge>}
                   </div>
-                  <div className="text-xs break-all text-stone-500">
+                  <div className="text-xs break-all text-faint">
                     {backup.name}
                     {backup.folder !== folder && ` · in ${backup.folder}`}
                     {backup.family_id &&
@@ -278,16 +290,17 @@ export function BackupsSection() {
                   >
                     <DownloadIcon />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={check.isPending}
-                    onClick={() => checkBackup(backup)}
-                    aria-label={`Check the backup from ${when(backup.made_at)}`}
-                    title="Check it: every file against its checksum, restoring nothing"
-                  >
-                    <CheckCheckIcon />
-                  </Button>
+                  <Hint label={"Check it: every file against its checksum, restoring nothing"}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={check.isPending}
+                      onClick={() => checkBackup(backup)}
+                      aria-label={`Check the backup from ${when(backup.made_at)}`}
+                    >
+                      <CheckCheckIcon />
+                    </Button>
+                  </Hint>
                   <Button
                     variant="ghost"
                     size="sm"

@@ -70,7 +70,7 @@ function Section({
   return (
     <section className="space-y-1">
       <div className="flex min-h-6 items-center justify-between">
-        <h3 className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{title}</h3>
+        <h3 className="text-xs font-semibold tracking-wide text-faint uppercase">{title}</h3>
         <CanEdit>
           <Button variant="ghost" size="xs" onClick={onAdd}>
             <PlusIcon />
@@ -84,7 +84,7 @@ function Section({
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-1 text-sm text-stone-400">{children}</p>;
+  return <p className="py-1 text-sm text-faint">{children}</p>;
 }
 
 function RelativeRow({
@@ -109,10 +109,10 @@ function RelativeRow({
     <>
       <PersonAvatar person={relative} size="sm" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium text-stone-900">
+        <span className="block truncate font-medium text-foreground">
           {relative.placeholder ? "Unknown parent" : relative.full_name}
         </span>
-        <span className="block truncate text-xs text-stone-500">{details}</span>
+        <span className="block truncate text-xs text-faint">{details}</span>
       </span>
     </>
   );
@@ -120,7 +120,7 @@ function RelativeRow({
     <li
       ref={ref}
       style={style}
-      className={cn("group flex items-center gap-1 rounded-lg hover:bg-stone-50", className)}
+      className={cn("group flex items-center gap-1 rounded-lg hover:bg-muted/50", className)}
     >
       {handle}
       {relative.placeholder ? (
@@ -172,10 +172,7 @@ function LinkMenu({
     update.mutate(
       { id: linkId, body },
       {
-        onSuccess: (result) => {
-          feedback(result);
-          toast.success("Link updated.");
-        },
+        onSuccess: (result) => feedback("Link updated.", result),
         onError: showError,
       },
     );
@@ -274,7 +271,7 @@ function SortableChild({
         transform: CSS.Transform.toString(sortable.transform),
         transition: sortable.transition,
       }}
-      className={cn(sortable.isDragging && "relative z-10 bg-white shadow-md")}
+      className={cn(sortable.isDragging && "relative z-10 bg-card shadow-md")}
       relative={child}
       onOpen={onOpen}
       actions={<LinkMenu person={person} relative={child} type="parent" />}
@@ -285,7 +282,7 @@ function SortableChild({
           {...sortable.attributes}
           {...sortable.listeners}
           aria-label={`Move ${child.full_name} in the birth order`}
-          className="cursor-grab touch-none rounded p-1 text-stone-300 hover:text-stone-600 active:cursor-grabbing"
+          className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted-foreground active:cursor-grabbing"
         >
           <GripVerticalIcon className="size-4" />
         </button>
@@ -340,9 +337,9 @@ function ChildGroupList({
 
   return (
     <div className="space-y-1">
-      {showHeading && <p className="pt-1 text-xs text-stone-500">{heading}</p>}
+      {showHeading && <p className="pt-1 text-xs text-faint">{heading}</p>}
       {uncertain && (
-        <p className="text-xs text-amber-700">
+        <p className="text-xs text-warning">
           The birth order isn't certain.
           {canEdit && " Drag the children into order, eldest first."}
         </p>
@@ -434,7 +431,7 @@ export function RelativesTab({
                 <RelativeRow key={sibling.id} relative={sibling} onOpen={onOpen} />
               ))}
             </ul>
-            <p className="text-xs text-stone-400">
+            <p className="text-xs text-faint">
               Brothers and sisters are linked through their parents.
             </p>
           </>

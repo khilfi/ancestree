@@ -45,18 +45,18 @@ export function SourcesList({
   }
 
   return (
-    <section aria-labelledby="sources-heading" className="space-y-2 border-t border-stone-200 pt-4">
-      <h3 id="sources-heading" className="text-sm font-semibold text-stone-800">
+    <section aria-labelledby="sources-heading" className="space-y-2 border-t border-border pt-4">
+      <h3 id="sources-heading" className="text-sm font-semibold text-foreground">
         Sources
       </h3>
-      <p className="text-xs text-stone-500">
+      <p className="text-xs text-faint">
         Where this came from: a birth certificate, a talk with Nenek, an old letter.
       </p>
       {sources.length > 0 && (
         <ol className="space-y-1.5">
           {sources.map((source, index) => (
             <li key={source.id} className="flex items-center gap-1">
-              <span className="w-5 shrink-0 text-right text-xs text-stone-400 tabular-nums">
+              <span className="w-5 shrink-0 text-right text-xs text-faint tabular-nums">
                 {index + 1}.
               </span>
               <Input

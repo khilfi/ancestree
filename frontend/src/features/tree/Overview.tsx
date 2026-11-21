@@ -1,24 +1,58 @@
 import { Panel, useReactFlow, useStore } from "@xyflow/react";
-import { memo, type PointerEvent, useMemo } from "react";
+import { MapIcon, XIcon } from "lucide-react";
+import { memo, type PointerEvent, useMemo, useState } from "react";
+import { Hint } from "@/components/Hint";
+import { Button } from "@/components/ui/button";
+import { DRAWING } from "@/styles/drawing";
 import { NODE_WIDTH, PHOTO, SMALL_PHOTO } from "./geometry";
 import type { PersonFlowNode } from "./PersonNode";
 
-const WIDTH = 200;
-const HEIGHT = 150;
+const WIDTH = 160;
+const HEIGHT = 120;
+// Drawn only on a canvas this big at least: on a narrow one, as when the panel opens beside the
+// tree in a small window, it would cover too much of it.
+const ROOM = { width: 640, height: 400 };
+const HIDDEN = "ancestree:tree-overview-hidden";
 
 type Box = { x: number; y: number; w: number; h: number };
 type Dots = { colour: string; path: string }[];
+
+function hiddenHere(): boolean {
+  try {
+    return window.localStorage.getItem(HIDDEN) === "yes";
+  } catch {
+    return false; // private windows and blocked storage: shown
+  }
+}
+
+function keepHidden(hidden: boolean): void {
+  try {
+    if (hidden) window.localStorage.setItem(HIDDEN, "yes");
+    else window.localStorage.removeItem(HIDDEN);
+  } catch {
+    // Not remembered this time; nothing else depends on it.
+  }
+}
 
 /**
  * The minimap. Everyone is a dot in one path per colour, so it costs the same for 90 people
  * as for 2,000 (React Flow's own minimap draws each person separately). The dots stay put
  * while the view moves; only the small viewport box is redrawn. Click or drag to move there.
+ *
+ * Small, at the canvas's bottom left: the panel opens on the right, so it never moves
+ * over the tree as the panel does; and it can be hidden, as this browser remembers.
  */
 export function Overview({ nodes }: { nodes: PersonFlowNode[] }) {
   const { setCenter, getZoom } = useReactFlow();
   const { box, dots, radius } = useMemo(() => overview(nodes), [nodes]);
-  if (nodes.length === 0) return null;
+  const roomy = useStore((s) => s.width >= ROOM.width && s.height >= ROOM.height);
+  const [hidden, setHidden] = useState(hiddenHere);
+  if (nodes.length === 0 || !roomy) return null;
 
+  const hide = (now: boolean) => {
+    setHidden(now);
+    keepHidden(now);
+  };
   const moveTo = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = box.x + ((event.clientX - rect.left) / rect.width) * box.w;
@@ -29,23 +63,50 @@ export function Overview({ nodes }: { nodes: PersonFlowNode[] }) {
   return (
     // On a phone or an upright tablet it would cover much of the tree, and a finger moves round
     // faster anyway.
-    <Panel position="bottom-right" className="!m-3 max-lg:hidden">
-      <div
-        className="relative cursor-pointer overflow-hidden rounded-md border border-stone-200 bg-white/90 shadow-sm"
-        style={{ width: WIDTH, height: HEIGHT }}
-        role="img"
-        aria-label="The whole tree: click or drag to move there"
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          moveTo(event);
-        }}
-        onPointerMove={(event) => {
-          if (event.currentTarget.hasPointerCapture(event.pointerId)) moveTo(event);
-        }}
-      >
-        <DotsLayer box={box} dots={dots} radius={radius} />
-        <ViewportBox box={box} />
-      </div>
+    <Panel position="bottom-left" className="!m-3 max-lg:hidden">
+      {hidden ? (
+        <Hint label="Show the overview of the whole tree">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Show the overview"
+            className="bg-card shadow-sm"
+            onClick={() => hide(false)}
+          >
+            <MapIcon />
+          </Button>
+        </Hint>
+      ) : (
+        <div className="relative">
+          <div
+            className="relative cursor-pointer overflow-hidden rounded-md border border-border bg-card/90 shadow-sm"
+            style={{ width: WIDTH, height: HEIGHT }}
+            role="img"
+            aria-label="The whole tree: click or drag to move there"
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              moveTo(event);
+            }}
+            onPointerMove={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) moveTo(event);
+            }}
+          >
+            <DotsLayer box={box} dots={dots} radius={radius} />
+            <ViewportBox box={box} />
+          </div>
+          <Hint label="Hide the overview">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Hide the overview"
+              className="absolute top-0.5 right-0.5 bg-card/80"
+              onClick={() => hide(true)}
+            >
+              <XIcon />
+            </Button>
+          </Hint>
+        </div>
+      )}
     </Panel>
   );
 }
@@ -58,7 +119,7 @@ function overview(nodes: PersonFlowNode[]): { box: Box; dots: Dots; radius: numb
     const y = Math.round(node.position.y + (node.type === "unknown" ? SMALL_PHOTO : PHOTO) / 2);
     [left, top] = [Math.min(left, x), Math.min(top, y)];
     [right, bottom] = [Math.max(right, x), Math.max(bottom, y)];
-    const colour = node.data.colour ?? "#a8a29e";
+    const colour = node.data.colour ?? DRAWING.line;
     const list = byColour.get(colour);
     if (list) list.push(`M${x} ${y}h0`);
     else byColour.set(colour, [`M${x} ${y}h0`]);
@@ -123,8 +184,9 @@ function ViewportBox({ box }: { box: Box }) {
         y={-ty / zoom}
         width={width / zoom}
         height={height / zoom}
-        fill="rgb(14 165 233 / 0.08)"
-        stroke="#0ea5e9"
+        fill={DRAWING.view}
+        fillOpacity={0.08}
+        stroke={DRAWING.view}
         strokeWidth={(box.w / WIDTH) * 1.5}
       />
     </svg>

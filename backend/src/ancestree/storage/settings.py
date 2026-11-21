@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ancestree.domain.graph import MeSettings, TreeSettings
+from ancestree.domain.graph import RETIRED_WAYS, MeSettings, TreeSettings
 from ancestree.domain.kinship import KinshipSettings
 from ancestree.domain.map import MapPins
 from ancestree.storage.files import write_json
@@ -28,10 +28,19 @@ def _read_all(data_dir: Path) -> dict[str, Any]:
 
 
 def read_tree_settings(data_dir: Path) -> TreeSettings:
+    stored = _read_all(data_dir).get("tree") or {}
+    # A way of placing married-in families that retired: fans instead, and stored
+    # so, so it doesn't change again.
+    retired = isinstance(stored, dict) and stored.get("married_in") in RETIRED_WAYS
+    if retired:
+        stored = stored | {"married_in": "fans"}
     try:
-        return TreeSettings.model_validate(_read_all(data_dir).get("tree") or {})
+        settings = TreeSettings.model_validate(stored)
     except ValidationError:
         return TreeSettings()  # edited by hand into something unusable: the defaults
+    if retired:
+        write_tree_settings(data_dir, settings)
+    return settings
 
 
 def write_tree_settings(data_dir: Path, settings: TreeSettings) -> None:

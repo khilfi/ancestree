@@ -75,10 +75,12 @@ async def test_married_in_families_are_placed_the_way_this_computer_chose(
     )
     await client.post("/api/history/undo")
     assert (await client.get("/api/settings")).json()["married_in"] == "fans"
-    refused = await client.put(
-        "/api/settings", json={"centre": None, "colours": "branch", "married_in": "spiral"}
-    )
-    assert refused.status_code == 422
+    # Two ways since your answer of 19 Nov 2026: Discs and Settled fans retired.
+    for way in ("spiral", "discs", "settled"):
+        refused = await client.put(
+            "/api/settings", json={"centre": None, "colours": "branch", "married_in": way}
+        )
+        assert refused.status_code == 422
 
 
 async def test_two_thousand_people_load_within_a_second(

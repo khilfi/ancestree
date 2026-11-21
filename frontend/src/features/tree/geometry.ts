@@ -12,6 +12,17 @@ export const PHOTO = 56;
 export const SMALL_PHOTO = 32; // an unknown parent's "?"
 export const LINK_HANDLE = { left: NODE_WIDTH / 2 + PHOTO / 2 + 4, size: 20 }; // drag a new link
 
+/** Where someone's name and years stand, on their soft background under the photo: from
+ *  the photo's centre, this far either side, and from just below its rim this far down. A link
+ *  between families keeps clear of it where it can. An unknown parent has none. */
+export const NAME_BOX = { across: NODE_WIDTH / 2 - 8, below: 4, down: 46 };
+
+/** A person's name box, left, top, right and bottom, given their photo's centre. */
+export function nameBox(centre: Point): [number, number, number, number] {
+  const top = centre.y + PHOTO / 2 + NAME_BOX.below;
+  return [centre.x - NAME_BOX.across, top, centre.x + NAME_BOX.across, top + NAME_BOX.down];
+}
+
 export function nodeSize(unknown: boolean): { width: number; height: number } {
   return { width: NODE_WIDTH, height: unknown ? SMALL_PHOTO : NODE_HEIGHT };
 }

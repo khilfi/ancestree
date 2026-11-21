@@ -1,5 +1,6 @@
 import { BookOpenIcon } from "lucide-react";
 import type { CSSProperties } from "react";
+import { Hint } from "@/components/Hint";
 import { openLifeStory } from "@/lib/lifeStory";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,7 @@ export function StoryMark({
 }) {
   if (!person.has_story) return null;
   const look = cn(
-    "nodrag absolute flex size-[18px] items-center justify-center rounded-full bg-amber-500 text-white shadow ring-2 ring-white hover:bg-amber-600 [&_svg]:size-2.5",
+    "nodrag absolute flex size-[18px] items-center justify-center rounded-full bg-story-mark text-story-mark-foreground shadow ring-2 ring-card hover:brightness-90 [&_svg]:size-2.5",
     className,
   );
   const open = (event: { stopPropagation: () => void; preventDefault: () => void }) => {
@@ -32,22 +33,25 @@ export function StoryMark({
   };
   if (inside) {
     return (
-      <span aria-hidden className={look} style={style} title="Life story" onClick={open}>
-        <BookOpenIcon />
-      </span>
+      <Hint label="Life story">
+        <span aria-hidden className={look} style={style} onClick={open}>
+          <BookOpenIcon />
+        </span>
+      </Hint>
     );
   }
   return (
-    <button
-      type="button"
-      className={look}
-      style={style}
-      title="Life story"
-      aria-label={`${person.full_name}'s life story`}
-      onClick={open}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      <BookOpenIcon />
-    </button>
+    <Hint label="Life story">
+      <button
+        type="button"
+        className={look}
+        style={style}
+        aria-label={`${person.full_name}'s life story`}
+        onClick={open}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <BookOpenIcon />
+      </button>
+    </Hint>
   );
 }

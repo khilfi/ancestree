@@ -37,6 +37,10 @@ class PersonSummary(BaseModel):
     death_year: int | None
     photo_version: int | None  # None: no photo
     placeholder: bool
+    # Their dates whole, as the tree's people's are: their short years say how sure each
+    # is, "b. before 1950", where the years alone said "b. 1950".
+    born: PartialDate | None = None
+    died: PartialDate | None = None
 
 
 class Relative(PersonSummary):

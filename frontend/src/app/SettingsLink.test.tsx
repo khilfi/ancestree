@@ -63,4 +63,13 @@ describe("the top bar's Settings", () => {
     expect(link?.getAttribute("aria-label")).toBe("Settings");
     expect(link?.textContent).toBe("Settings");
   });
+
+  it("keeps its classes under its hint", async () => {
+    // A hint's trigger joins its classes as words: a NavLink's className given as a function
+    // came through as the function's own source, so the link lost its look.
+    await show({ setup: "keeper", asking: [], changes: [], answers: [] });
+    const classes = document.querySelector("a")?.className ?? "";
+    expect(classes).toContain("items-center");
+    expect(classes).not.toMatch(/=>|isActive|[(){}"]/);
+  });
 });

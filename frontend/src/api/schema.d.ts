@@ -45,70 +45,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sample/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Sample Graph
-         * @description A generated, fictional family, for trying the canvas at size. Nothing is stored.
-         */
-        get: operations["get_sample_graph"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sample/families": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Sample Families
-         * @description Six made-up families whose married-in families hang off them in hard ways, each seated
-         *     as the tree seats it, for trying ways of placing those families side by side.
-         *     Nothing is stored.
-         */
-        get: operations["get_sample_families"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sample/families/backup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Get Family From Backup
-         * @description The family in a backup archive, seated as the tree seats it, to try the same ways on
-         *     (S7). Read in memory and checked as a restore checks it: nothing is restored or kept.
-         *     Refused (422, "bad_archive") if it isn't a backup that can be read.
-         */
-        post: operations["get_family_from_backup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/layout/positions": {
         parameters: {
             query?: never;
@@ -1918,26 +1854,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sample/map": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Sample Map
-         * @description The made-up family on the map, spread over real towns. Nothing is stored.
-         */
-        get: operations["get_sample_map"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/places/pins": {
         parameters: {
             query?: never;
@@ -2134,6 +2050,90 @@ export interface paths {
         get: operations["get_map_tile"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sample/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sample Graph
+         * @description A generated, fictional family, for trying the canvas at size. Nothing is stored.
+         */
+        get: operations["get_sample_graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sample/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sample Map
+         * @description The made-up family on the map, spread over real towns. Nothing is stored.
+         */
+        get: operations["get_sample_map"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sample/families": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sample Families
+         * @description Six made-up families whose married-in families hang off them in hard ways, each seated
+         *     as the tree seats it, for trying ways of placing those families side by side.
+         *     Nothing is stored.
+         */
+        get: operations["get_sample_families"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sample/families/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Family From Backup
+         * @description The family in a backup archive, seated as the tree seats it, to try the same ways on
+         *     (S7). Read in memory and checked as a restore checks it: nothing is restored or kept.
+         *     Refused (422, "bad_archive") if it isn't a backup that can be read.
+         */
+        post: operations["get_family_from_backup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4422,6 +4422,8 @@ export interface components {
             photo_version: number | null;
             /** Placeholder */
             placeholder: boolean;
+            born?: components["schemas"]["PartialDate"] | null;
+            died?: components["schemas"]["PartialDate"] | null;
         };
         /**
          * PersonYears
@@ -4659,6 +4661,8 @@ export interface components {
             photo_version: number | null;
             /** Placeholder */
             placeholder: boolean;
+            born?: components["schemas"]["PartialDate"] | null;
+            died?: components["schemas"]["PartialDate"] | null;
             /** Label */
             label: string;
             /** Link Id */
@@ -4917,7 +4921,7 @@ export interface components {
              * @default fans
              * @enum {string}
              */
-            married_in: "fans" | "discs" | "settled" | "tucked";
+            married_in: "fans" | "tucked";
         };
         /**
          * TurnDown
@@ -4990,90 +4994,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Graph"];
-                };
-            };
-        };
-    };
-    get_sample_graph: {
-        parameters: {
-            query?: {
-                people?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Graph"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_sample_families: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SampleFamily"][];
-                };
-            };
-        };
-    };
-    get_family_from_backup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_get_family_from_backup"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Graph"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8076,37 +7996,6 @@ export interface operations {
             };
         };
     };
-    get_sample_map: {
-        parameters: {
-            query?: {
-                people?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FamilyMap"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     put_pin: {
         parameters: {
             query?: never;
@@ -8479,6 +8368,121 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sample_graph: {
+        parameters: {
+            query?: {
+                people?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Graph"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sample_map: {
+        parameters: {
+            query?: {
+                people?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamilyMap"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sample_families: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleFamily"][];
+                };
+            };
+        };
+    };
+    get_family_from_backup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_get_family_from_backup"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Graph"];
+                };
             };
             /** @description Validation Error */
             422: {

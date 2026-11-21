@@ -3,19 +3,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useFamilyFolder } from "@/api/familyFolder";
 import { useKinshipSettings, useSaveKinshipSettings } from "@/api/queries";
-import type { KinshipLanguage, KinshipSettings } from "@/api/types";
+import type { KinshipSettings } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { KINSHIP_LANGUAGES, LANGUAGE_NAMES } from "@/features/kinship/LanguageSwitch";
 import { showError } from "@/lib/notify";
-
-const EXAMPLES: Record<KinshipLanguage, string> = {
-  en: "uncle, second cousin, sister-in-law",
-  ms: "pak long, dua pupu, kakak ipar",
-  jv: "pakdhé, mindhoan, mbakyu ipé",
-};
 
 const DEFAULT_TITLES = ["long", "ngah", "lang"];
 const DEFAULT_YOUNGEST = "su";
@@ -33,9 +25,10 @@ function tidy(titles: string[]): string[] {
   return kept;
 }
 
-/** Settings → Kinship → Kinship words: the language of the words for relatives, and
- *  the family's Malay birth-order titles. On a relative's computer the titles are
- *  the family's, set by the keeper: shown, not changed (0.3.1). */
+/** Settings → Kinship → Malay birth-order titles: the family's titles for uncles and
+ *  aunts. The words' language is set where it's seen, in the relationship finder's
+ *  answer and the dictionary. On a relative's computer the titles are the
+ *  family's, set by the keeper: shown, not changed (0.3.1). */
 export function KinshipSection() {
   const settings = useKinshipSettings();
   const save = useSaveKinshipSettings();
@@ -67,44 +60,11 @@ export function KinshipSection() {
   const last = youngest.trim().toLowerCase();
 
   return (
-    <section className="space-y-5 rounded-xl border border-stone-200 bg-white p-5">
-      <div className="space-y-1">
-        <h2 className="font-semibold">Kinship words</h2>
-        <p className="max-w-2xl text-sm text-stone-500">
-          The language of the words for relatives: in the relationship finder's answers, the
-          Relatives tab and the dictionary. Everything else stays in English.
-        </p>
-      </div>
-
-      <RadioGroup
-        value={saved?.language ?? "en"}
-        disabled={!saved}
-        onValueChange={(value) => {
-          const language = value as KinshipLanguage;
-          if (saved && language !== saved.language) {
-            store({ ...saved, language }, `Kinship words are now in ${LANGUAGE_NAMES[language]}.`);
-          }
-        }}
-        className="gap-2"
-      >
-        {KINSHIP_LANGUAGES.map((code) => (
-          <div key={code} className="flex items-center gap-3">
-            <RadioGroupItem value={code} id={`kinship-${code}`} />
-            <Label htmlFor={`kinship-${code}`} className="font-normal">
-              <span className="font-medium">{LANGUAGE_NAMES[code]}</span>
-              <span lang={code} className="text-stone-500">
-                {" "}
-                · {EXAMPLES[code]}
-              </span>
-            </Label>
-          </div>
-        ))}
-      </RadioGroup>
-
-      <div className="space-y-3 border-t border-stone-100 pt-4">
+    <section className="space-y-5 rounded-xl border border-border bg-card p-5">
+      <div className="space-y-3">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Malay birth-order titles</h3>
-          <p className="max-w-2xl text-sm text-stone-500">
+          <h2 className="font-semibold">Malay birth-order titles</h2>
+          <p className="max-w-2xl text-sm text-faint">
             Malay calls uncles and aunts by their own place among their brothers and sisters: Pak
             Long, Mak Ngah, Pak Lang … Pak Su. The titles after the third differ by region and
             family,{" "}
@@ -113,12 +73,16 @@ export function KinshipSection() {
               : "so set your family's here."}{" "}
             A place without a title is Pak Cik or Mak Cik.
           </p>
+          <p className="max-w-2xl text-sm text-faint">
+            The words for relatives are in the language chosen where they're shown: English, Melayu
+            or Jawa, beside how two people are related, and in the dictionary.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-end gap-2">
           {titles.map((title, index) => (
             <div key={ordinal(index + 1)} className="w-24 space-y-1">
-              <Label htmlFor={`title-${index}`} className="text-xs text-stone-500">
+              <Label htmlFor={`title-${index}`} className="text-xs text-faint">
                 {ordinal(index + 1)}
               </Label>
               <Input
@@ -145,7 +109,7 @@ export function KinshipSection() {
             </Button>
           )}
           <div className="ml-4 w-24 space-y-1">
-            <Label htmlFor="title-youngest" className="text-xs text-stone-500">
+            <Label htmlFor="title-youngest" className="text-xs text-faint">
               Youngest
             </Label>
             <Input
@@ -159,7 +123,7 @@ export function KinshipSection() {
           </div>
         </div>
 
-        <p className="text-sm text-stone-600" lang="ms">
+        <p className="text-sm text-muted-foreground" lang="ms">
           {[...preview, last ? `Pak ${last[0]?.toUpperCase()}${last.slice(1)}` : "Pak Cik"].join(
             " · ",
           )}

@@ -1,0 +1,5 @@
+/* Taken out of the journeys' pictures: notes come and go on a timer of their own, so each
+   journey checks a note's words instead. */
+[data-sonner-toaster] {
+  visibility: hidden;
+}

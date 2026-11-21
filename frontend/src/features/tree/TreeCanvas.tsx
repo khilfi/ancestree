@@ -1,18 +1,24 @@
 import {
   Background,
   type Connection,
-  Controls,
   type Edge,
   type NodeChange,
   ReactFlow,
-  type ReactFlowInstance,
-  type Rect,
   useEdgesState,
   useNodesState,
   useReactFlow,
   type Viewport,
 } from "@xyflow/react";
-import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FocusEvent,
+  type MouseEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSavePositions, useTreeSettings } from "@/api/queries";
 import type { Graph, GraphPerson, KinRelation } from "@/api/types";
 import { useCanEdit } from "@/app/copy";
@@ -20,12 +26,16 @@ import { useOfferTreePicture } from "@/features/export/treePicture";
 import { clustersToOpen, glowFor } from "@/features/kinship/glow";
 import { RelatingBar } from "@/features/kinship/RelatingBar";
 import { useMeId } from "@/features/me/useMeId";
+import { useEscape } from "@/lib/escape";
 import { typing } from "@/lib/keyboard";
 import { showError } from "@/lib/notify";
 import { cn } from "@/lib/utils";
+import { DRAWING } from "@/styles/drawing";
+import { AddBeside } from "./AddBeside";
 import { ChildEdge, type ChildEdgeData, PairEdge, SpouseEdge, type SpouseEdgeData } from "./edges";
 import { familyMembers } from "./families";
 import { applyFilter, drawnFrom, NO_FILTER, type TreeView, writeView } from "./filters";
+import { type Around, firstView, readingOrder } from "./firstView";
 import {
   BIG_FAMILY,
   everything,
@@ -38,6 +48,7 @@ import {
   unfolded,
 } from "./folding";
 import { NODE_WIDTH, PHOTO } from "./geometry";
+import { useKeepInView, useNeverEmpty } from "./keepInView";
 import { DEFAULT_DEPTH } from "./LayoutMenu";
 import { type EdgePick, LinkEditor } from "./LinkEditor";
 import { LinkPicker } from "./LinkPicker";
@@ -49,7 +60,7 @@ import {
   ringsArrangement,
 } from "./layouts";
 import { Overview } from "./Overview";
-import { type PersonFlowNode, PersonNode } from "./PersonNode";
+import { cardId, type PersonFlowNode, PersonNode } from "./PersonNode";
 import type { TreeSnapshot } from "./picture";
 import { RingsBackdrop } from "./RingsBackdrop";
 import type { Point } from "./rings";
@@ -73,27 +84,21 @@ const FAR = 0.45;
 const TINY = 0.2;
 type Distance = "near" | "far" | "tiny";
 const distanceAt = (zoom: number): Distance => (zoom < TINY ? "tiny" : zoom < FAR ? "far" : "near");
-const CROWD = 500; // people on screen at once that stay smooth
-const CONNECTION_LINE = { stroke: "#0ea5e9", strokeWidth: 2 };
+const CONNECTION_LINE = { stroke: DRAWING.dragging, strokeWidth: 2 };
+const PRO_OPTIONS = { hideAttribution: true }; // React Flow is MIT; its credit isn't needed
 
-/** A big family opens on its middle, framing about CROWD people: only what's on screen is
- *  drawn, so 2,000 people still open in under a second. Fit shows everyone. */
-function middleView(nodes: PersonFlowNode[], middle: Point, aspect: number): Rect {
-  const reach =
-    nodes
-      .map(({ position }) =>
-        Math.max(
-          Math.abs(position.x + NODE_WIDTH / 2 - middle.x) / aspect,
-          Math.abs(position.y + PHOTO / 2 - middle.y),
-        ),
-      )
-      .sort((a, b) => a - b)[CROWD - 1] ?? 0;
-  return {
-    x: middle.x - reach * aspect,
-    y: middle.y - reach,
-    width: 2 * reach * aspect,
-    height: 2 * reach,
-  };
+/** Someone on the canvas as the keyboard and a screen reader meet them: a button named by
+ *  their full name, described by their card; reached in reading order. */
+function reachable(nodes: PersonFlowNode[]): PersonFlowNode[] {
+  return readingOrder(nodes).map((node) => ({
+    ...node,
+    ariaRole: "button",
+    ariaLabel: node.type === "unknown" ? "Unknown parent" : node.data.person.full_name,
+    domAttributes: {
+      "aria-roledescription": undefined,
+      "aria-describedby": node.type === "unknown" ? undefined : cardId(node.id),
+    },
+  }));
 }
 
 type Pending =
@@ -205,15 +210,26 @@ export function TreeCanvas({
       }),
     [graph, layout, colours, me, hideOthers, kept, leaveCare, routes],
   );
+  const drawn = useMemo(() => reachable(flow.nodes), [flow.nodes]);
   const [nodes, setNodes, onNodesChange] = useNodesState<PersonFlowNode>([]);
   const [edges, setEdges] = useEdgesState<Edge>([]);
   const [distance, setDistance] = useState<Distance>("near");
   const [moving, setMoving] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  useKeepInView(box, selectedId, focusId !== null); // never under their panel
   const { mutate: savePositions } = useSavePositions();
-  const { fitView, fitBounds, zoomIn, zoomOut, setCenter, getZoom, getNode, flowToScreenPosition } =
-    useReactFlow();
+  const {
+    fitView,
+    zoomIn,
+    zoomOut,
+    setCenter,
+    getZoom,
+    getNode,
+    getViewport,
+    setViewport,
+    flowToScreenPosition,
+  } = useReactFlow();
   const people = useMemo(() => new Map(graph.people.map((person) => [person.id, person])), [graph]);
   // Zooming out stops once the whole family fits in a few hundred pixels, however big.
   const minZoom = useMemo(() => {
@@ -222,36 +238,38 @@ export function TreeCanvas({
     const size = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
     return size > 0 ? Math.min(0.03, 400 / size) : 0.03;
   }, [flow.nodes]);
-  const big = flow.nodes.length > CROWD;
-  const middle = big && layout.layout === "rings" ? layout.middles.get("main:0") : undefined;
-  // A big family tree is far wider than any screen: it opens on its oldest generations, at a
-  // size you can read, rather than as a thin line (Fit still shows everyone).
-  const top =
-    big && layout.layout === "tree"
-      ? layout.points.get(graph.layout.units[0]?.centre[0] ?? "")
-      : undefined;
-  const start = useCallback(
-    (instance: Pick<ReactFlowInstance<PersonFlowNode, Edge>, "fitBounds" | "setCenter">) => {
-      if (middle) {
-        const aspect = (box.current?.clientWidth || 800) / (box.current?.clientHeight || 600);
-        instance.fitBounds(middleView(flow.nodes, middle, aspect), { padding: 0.02 });
-        return true;
-      }
-      if (top) {
-        const height = box.current?.clientHeight || 600;
-        instance.setCenter(top.x, top.y + height * 0.7, { zoom: 0.7, duration: 400 });
-        return true;
-      }
-      return false;
+  // The first view: names that can be read, around the family at the centre on the rings,
+  // its oldest generations at the top of a family tree, or whom a chart is drawn from; the whole
+  // family where it can be read so. Only what's on screen is drawn, so 2,000 people open as
+  // quickly as 60. Show everyone, and F, frame the whole family.
+  const opensAround = useMemo((): Around | null => {
+    if (layout.layout === "rings") {
+      const middle = layout.middles.get(graph.layout.units[0]?.id ?? "");
+      return middle ? { point: middle, at: "middle" } : null;
+    }
+    if (layout.layout === "tree") {
+      const top = layout.points.get(graph.layout.units[0]?.centre[0] ?? "");
+      return top ? { point: top, at: "top" } : null;
+    }
+    const focused = layout.focus ? layout.points.get(layout.focus) : undefined;
+    return focused ? { point: focused, at: "middle" } : null;
+  }, [layout, graph]);
+  const showFirst = useCallback(
+    (duration: number) => {
+      const size = { width: box.current?.clientWidth ?? 0, height: box.current?.clientHeight ?? 0 };
+      // Whoever a filter hides isn't among the nodes.
+      const view = firstView(flow.nodes, opensAround, size);
+      if (view) setCenter(view.centre.x, view.centre.y, { zoom: view.zoom, duration });
     },
-    [middle, top, flow.nodes],
+    [flow.nodes, opensAround, setCenter],
   );
-  const onInit = useCallback(
-    (instance: ReactFlowInstance<PersonFlowNode, Edge>) => {
-      start(instance);
-    },
-    [start],
-  );
+  // React Flow calls onInit a moment after it's ready: by then a search's person may have been
+  // flown to (below), which the first view mustn't undo.
+  const flown = useRef(false);
+  const onInit = useCallback(() => {
+    if (!flown.current && !focusId) showFirst(0);
+  }, [showFirst, focusId]);
+  useNeverEmpty(box, nodes, showFirst, focusId !== null); // after Undo of adding someone
 
   // Finding a relationship: the person it starts from pulses while the second is picked;
   // then the path between them glows and everyone else fades.
@@ -291,9 +309,7 @@ export function TreeCanvas({
         : node;
     };
     setNodes(
-      flow.nodes.map((node) =>
-        mark(node.id === selected.current ? { ...node, selected: true } : node),
-      ),
+      drawn.map((node) => mark(node.id === selected.current ? { ...node, selected: true } : node)),
     );
     setEdges(
       flow.edges.map((edge: TreeEdge) =>
@@ -304,10 +320,10 @@ export function TreeCanvas({
             : edge,
       ) as Edge[],
     );
-  }, [flow, glow, pulsing, highlight, setNodes, setEdges]);
+  }, [drawn, flow.edges, glow, pulsing, highlight, setNodes, setEdges]);
 
-  // A new layout, filter, centre or person at the middle of an hourglass: bring it all into
-  // view once it's drawn (the first view is React Flow's own fitting).
+  // A new layout, filter, centre or person at the middle of an hourglass: its first view again,
+  // once it's drawn.
   const centreNow = graph.layout.units[0]?.centre.join("+") ?? "";
   const viewNow = `${layout.layout}|${focus}|${viewKey}|${centreNow}`;
   const lastView = useRef(viewNow);
@@ -323,10 +339,10 @@ export function TreeCanvas({
     // graph arriving one after the other, after an Undo) cancels it and asks again.
     const frame = window.requestAnimationFrame(() => {
       refit.current = false;
-      if (!start({ fitBounds, setCenter })) fitView({ duration: 500, padding: 0.12 });
+      showFirst(500);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [nodes, fitView, fitBounds, setCenter, start]);
+  }, [nodes, showFirst]);
 
   // A new answer: open any folded family on its path, then bring the whole path into view.
   const graphNow = useRef(graph);
@@ -381,6 +397,7 @@ export function TreeCanvas({
   useEffect(() => {
     const node = focusId ? nodes.find((candidate) => candidate.id === focusId) : undefined;
     if (!node) return;
+    flown.current = true;
     setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
       zoom: Math.max(getZoom(), 0.9),
       duration: 600,
@@ -405,19 +422,12 @@ export function TreeCanvas({
     [fixed],
   );
 
-  // Escape closes an open card first; otherwise it ends finding a relationship.
-  const onEscape = useRef(() => {});
-  onEscape.current = () => {
-    if (pending) setPending(null);
-    else if (relating) onStopRelating?.();
-  };
+  // Esc closes what's on top: an open card, or finding a relationship, whichever opened
+  // last, once a menu or a dialog over them has closed. It works even from a card's search box.
+  useEscape(() => setPending(null), pending !== null);
+  useEscape(() => onStopRelating?.(), Boolean(relating));
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      // Escape works even from a card's search box, unless a menu inside it took the key.
-      if (event.key === "Escape") {
-        if (!event.defaultPrevented) onEscape.current();
-        return;
-      }
       if (typing(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.key === "f" || event.key === "F") fitView({ duration: 400 });
       else if (event.key === "+" || event.key === "=") zoomIn({ duration: 200 });
@@ -455,26 +465,73 @@ export function TreeCanvas({
     [fixed, relating, relative],
   );
 
-  const onNodeClick = useCallback(
-    (event: MouseEvent, node: PersonFlowNode) => {
+  // Someone clicked, or reached by Tab and opened with Enter, at a point on screen.
+  const openNode = useCallback(
+    (node: PersonFlowNode, at: Point) => {
       if (relating) {
         // Finding a relationship: a click picks the second person (an unknown parent can't be).
         if (node.type !== "unknown" && node.id !== relating.from) onPick?.(node.id);
         return;
       }
       if (node.type === "unknown") {
-        if (!fixed)
-          setPending({
-            kind: "unknown",
-            id: node.id,
-            at: relative({ x: event.clientX, y: event.clientY }),
-          });
+        if (!fixed) setPending({ kind: "unknown", id: node.id, at: relative(at) });
         return;
       }
       setPending(null);
       onSelect(node.id);
     },
     [fixed, relating, relative, onSelect, onPick],
+  );
+  const onNodeClick = useCallback(
+    (event: MouseEvent, node: PersonFlowNode) =>
+      openNode(node, { x: event.clientX, y: event.clientY }),
+    [openNode],
+  );
+  // Enter, or Space, on someone opens them, as a click does; at their photo.
+  const onKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const element = event.target as HTMLElement;
+      if (!element.classList.contains("react-flow__node")) return;
+      const node = getNode(element.dataset.id ?? "") as PersonFlowNode | undefined;
+      if (!node) return;
+      event.preventDefault();
+      const rect = element.getBoundingClientRect();
+      openNode(node, { x: rect.left + rect.width / 2, y: rect.top + (PHOTO / 2) * getZoom() });
+    },
+    [getNode, getZoom, openNode],
+  );
+  // Someone the keyboard reaches is brought into view with their card, as a page scrolls to
+  // what has the focus: only as far as it takes.
+  const onFocus = useCallback(
+    (event: FocusEvent<HTMLDivElement>) => {
+      const element = event.target as HTMLElement;
+      const canvas = box.current?.getBoundingClientRect();
+      if (!canvas || !element.classList.contains("react-flow__node")) return;
+      if (!element.matches(":focus-visible")) return;
+      const seen = [element, element.querySelector(".person-card")]
+        .map((each) => each?.getBoundingClientRect())
+        .filter((rect): rect is DOMRect => !!rect && rect.width > 0);
+      const [left, right] = [
+        Math.min(...seen.map((rect) => rect.left)),
+        Math.max(...seen.map((rect) => rect.right)),
+      ];
+      const [top, bottom] = [
+        Math.min(...seen.map((rect) => rect.top)),
+        Math.max(...seen.map((rect) => rect.bottom)),
+      ];
+      const room = 8;
+      const by = (low: number, high: number, from: number, to: number) =>
+        low < from + room ? from + room - low : high > to - room ? to - room - high : 0;
+      const [dx, dy] = [
+        by(left, right, canvas.left, canvas.right),
+        by(top, bottom, canvas.top, canvas.bottom),
+      ];
+      if (!dx && !dy) return;
+      const { x, y, zoom } = getViewport();
+      void setViewport({ x: x + dx, y: y + dy, zoom }, { duration: 200 });
+    },
+    [getViewport, setViewport],
   );
 
   // In an hourglass or fan chart, a double-click draws it from them; a click only opens
@@ -556,113 +613,124 @@ export function TreeCanvas({
       .flatMap((link) => people.get(link.target) ?? []);
 
   return (
-    <div
-      ref={box}
-      className={cn(
-        "relative h-full",
-        distance !== "near" && "tree-far",
-        distance === "tiny" && "tree-tiny",
-        moving && "tree-moving",
-        relating && "tree-kin",
-        glow && "tree-kin-result",
+    // The toolbar above the canvas, not over it; while finding a relationship, what to do
+    // next in its place.
+    <div className="flex h-full flex-col">
+      {relating ? (
+        <RelatingBar
+          name={shortName(people.get(relating.from) ?? { full_name: "", nickname: null })}
+          picking={relating.picking}
+          onDone={() => onStopRelating?.()}
+        />
+      ) : (
+        <TreeToolbar
+          graph={graph}
+          readOnly={readOnly}
+          view={view}
+          onView={onView}
+          focus={around}
+          steps={steps}
+          shown={kept}
+          onRearranged={() => {
+            setMoving(true);
+            window.setTimeout(() => setMoving(false), 700);
+          }}
+          families={{
+            all: layout.layout === "rings" || layout.layout === "tree" ? clusters.length : 0,
+            folded: clusters.length - open.size,
+            big: graph.people.length > BIG_FAMILY,
+          }}
+          onFoldAll={(mode) => setFolding(everything(mode))}
+          onShowFamily={showFamily}
+          onHighlight={setHighlight}
+        />
       )}
-    >
-      <TreeActionsContext.Provider value={actions}>
-        <ReactFlow<PersonFlowNode, Edge>
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onChange}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          // A double-click on someone draws an hourglass or fan from them, not a zoom.
-          zoomOnDoubleClick={!drawnFrom(view.layout)}
-          onEdgeClick={onEdgeClick}
-          onPaneClick={onPaneClick}
-          onConnect={onConnect}
-          isValidConnection={isValidConnection}
-          onNodeDragStop={onNodeDragStop}
-          onMove={onMove}
-          // The made-up sample: moves aren't saved. A view-only copy: nothing moves at all.
-          nodesDraggable={canEdit}
-          nodesConnectable={!fixed}
-          elementsSelectable={false}
-          onlyRenderVisibleElements
-          connectionRadius={40}
-          connectionLineStyle={CONNECTION_LINE}
-          fitView={!middle && !top}
-          onInit={onInit}
-          minZoom={minZoom}
-          maxZoom={2}
-        >
-          <RingsBackdrop
-            rings={layout.rings}
-            tray={layout.tray}
-            guides={layout.guides}
-            tinted={colours === "generation"}
-          />
-          <Background gap={32} color="#e7e5e4" />
-          <Controls showInteractive={false} />
-          <Overview nodes={flow.nodes} />
-        </ReactFlow>
-        {relating ? (
-          <RelatingBar
-            name={shortName(people.get(relating.from) ?? { full_name: "", nickname: null })}
-            picking={relating.picking}
-            onDone={() => onStopRelating?.()}
-          />
-        ) : (
-          <TreeToolbar
-            graph={graph}
-            readOnly={readOnly}
-            view={view}
-            onView={onView}
-            focus={around}
-            steps={steps}
-            shown={kept}
-            onRearranged={() => {
-              setMoving(true);
-              window.setTimeout(() => setMoving(false), 700);
-            }}
-            families={{
-              all: layout.layout === "rings" || layout.layout === "tree" ? clusters.length : 0,
-              folded: clusters.length - open.size,
-              big: graph.people.length > BIG_FAMILY,
-            }}
-            onFoldAll={(mode) => setFolding(everything(mode))}
-            onShowFamily={showFamily}
-            onHighlight={setHighlight}
-          />
+      <div
+        ref={box}
+        className={cn(
+          "relative min-h-0 flex-1",
+          distance !== "near" && "tree-far",
+          distance === "tiny" && "tree-tiny",
+          moving && "tree-moving",
+          relating && "tree-kin",
+          glow && "tree-kin-result",
         )}
-        {pending?.kind === "link" && (
-          <LinkPicker
-            source={pending.source}
-            target={pending.target}
-            at={pending.at}
-            bounds={bounds}
-            onClose={() => setPending(null)}
-          />
-        )}
-        {pending?.kind === "edit" && (
-          <LinkEditor
-            pick={pending.pick}
-            people={people}
-            at={pending.at}
-            bounds={bounds}
-            onClose={() => setPending(null)}
-          />
-        )}
-        {pending?.kind === "unknown" && (
-          <UnknownParentCard
-            id={pending.id}
-            kids={unknownChildren(pending.id)}
-            at={pending.at}
-            bounds={bounds}
-            onClose={() => setPending(null)}
-          />
-        )}
-      </TreeActionsContext.Provider>
+      >
+        <TreeActionsContext.Provider value={actions}>
+          <ReactFlow<PersonFlowNode, Edge>
+            aria-label="The family tree"
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onChange}
+            onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onKeyDown={onKeyDown}
+            onFocus={onFocus}
+            // A double-click on someone draws an hourglass or fan from them, not a zoom.
+            zoomOnDoubleClick={!drawnFrom(view.layout)}
+            onEdgeClick={onEdgeClick}
+            onPaneClick={onPaneClick}
+            onConnect={onConnect}
+            isValidConnection={isValidConnection}
+            onNodeDragStop={onNodeDragStop}
+            onMove={onMove}
+            // The made-up sample: moves aren't saved. A view-only copy: nothing moves at all.
+            nodesDraggable={canEdit}
+            nodesConnectable={!fixed}
+            elementsSelectable={false}
+            // People are Tab stops, opened with Enter (above); the lines aren't, and React Flow's
+            // own keys (select, then move with the arrows) are off: moves are made by dragging.
+            edgesFocusable={false}
+            disableKeyboardA11y
+            onlyRenderVisibleElements
+            connectionRadius={40}
+            connectionLineStyle={CONNECTION_LINE}
+            onInit={onInit}
+            minZoom={minZoom}
+            maxZoom={2}
+            proOptions={PRO_OPTIONS}
+          >
+            <RingsBackdrop
+              rings={layout.rings}
+              tray={layout.tray}
+              guides={layout.guides}
+              tinted={colours === "generation"}
+            />
+            <Background gap={32} color={DRAWING.canvasDots} />
+            <Overview nodes={flow.nodes} />
+            <AddBeside personId={fixed || relating ? null : selectedId} onOpen={onSelect} />
+          </ReactFlow>
+          {pending?.kind === "link" && (
+            <LinkPicker
+              source={pending.source}
+              target={pending.target}
+              at={pending.at}
+              bounds={bounds}
+              onClose={() => setPending(null)}
+            />
+          )}
+          {pending?.kind === "edit" && (
+            <LinkEditor
+              pick={pending.pick}
+              people={people}
+              at={pending.at}
+              bounds={bounds}
+              onClose={() => setPending(null)}
+            />
+          )}
+          {pending?.kind === "unknown" && (
+            <UnknownParentCard
+              id={pending.id}
+              kids={unknownChildren(pending.id)}
+              at={pending.at}
+              bounds={bounds}
+              onClose={() => setPending(null)}
+            />
+          )}
+        </TreeActionsContext.Provider>
+      </div>
     </div>
   );
 }

@@ -2,8 +2,9 @@
 /**
  * Settings in fewer places: Kinship, and You and your family, each with its parts
  * headed and listed at the top, each a click away; the old addresses opening the new page at
- * their part; and every Settings link in the app landing on its page, and its part. The
- * engine's answers are made up here.
+ * their part; and every Settings link in the app landing on its page, and its part. One name,
+ * one place: What's missing gone to Family facts, and Me to its menu, their old
+ * addresses leading there; Help a link to the guide. The engine's answers are made up here.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,6 +14,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createMemoryRouter, matchRoutes, type RouteObject, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appRoutes } from "@/app/routes";
+import { useFamilyFactsOpen } from "@/lib/familyFacts";
 import { until } from "@/viewer/looking";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -29,8 +31,17 @@ vi.hoisted(() => {
 });
 
 const SETTINGS = appRoutes[0]?.children?.find((route) => route.path === "settings");
-if (!SETTINGS) throw new Error("no Settings");
-const ROUTES: RouteObject[] = [{ path: "/", children: [SETTINGS] }];
+const MISSING = appRoutes[0]?.children?.find((route) => route.path === "missing");
+if (!SETTINGS || !MISSING) throw new Error("no Settings");
+
+/** The tree, saying which of Family facts' tabs is open, if any. */
+function Tree() {
+  return <p>The tree, Family facts: {useFamilyFactsOpen() ?? "closed"}</p>;
+}
+
+const ROUTES: RouteObject[] = [
+  { path: "/", children: [SETTINGS, MISSING, { path: "tree", element: <Tree /> }] },
+];
 
 const FAMILIES = {
   open: "aaaaaaaaaaaaaaaa",
@@ -125,7 +136,6 @@ describe("Settings in fewer places", () => {
     expect(listed("Settings")).toEqual([
       "Kinship",
       "You and your family",
-      "What's missing",
       "Import",
       "Map",
       "Backups",
@@ -139,29 +149,29 @@ describe("Settings in fewer places", () => {
     answer(true);
     const router = open("/settings/kinship");
     await until("Relationship kinds");
-    expect(listed("On this page")).toEqual(["Kinship words", "Relationship kinds"]);
-    expect([heading("words"), heading("kinds")]).toEqual(["Kinship words", "Relationship kinds"]);
+    expect(listed("On this page")).toEqual(["Malay birth-order titles", "Relationship kinds"]);
+    expect([heading("titles"), heading("kinds")]).toEqual([
+      "Malay birth-order titles",
+      "Relationship kinds",
+    ]);
     expect(router.state.location.hash).toBe("");
     expect(brought).toEqual([]); // opened at its top
   });
 
-  it("shows You and your family's three parts in the desktop app, and two in a browser", async () => {
+  it("shows You and your family's two parts in the desktop app, and one in a browser", async () => {
     answer(true);
     open("/settings/family");
     await until("Add a family…");
-    expect(listed("On this page")).toEqual(["Me", "Families", "Family folder"]);
-    expect([heading("me"), heading("families"), heading("family-folder")]).toEqual([
-      "Me",
-      "Families",
-      "Family folder",
-    ]);
+    expect(listed("On this page")).toEqual(["Families", "Family folder"]);
+    expect([heading("families"), heading("family-folder")]).toEqual(["Families", "Family folder"]);
+    expect(document.getElementById("me")).toBeNull(); // in the Me menu alone
     act(() => root?.unmount());
     document.body.replaceChildren();
 
     answer(false);
     open("/settings/family");
     await until("Family folder");
-    expect(listed("On this page")).toEqual(["Me", "Family folder"]);
+    expect(listed("On this page")).toEqual(["Family folder"]);
     expect(document.getElementById("families")).toBeNull();
   });
 
@@ -180,7 +190,6 @@ describe("Settings in fewer places", () => {
   });
 
   it.each([
-    ["/settings/me", "/settings/family", "me", "Me"],
     ["/settings/families", "/settings/family", "families", "Families"],
     ["/settings/family-folder", "/settings/family", "family-folder", "Family folder"],
     ["/settings/kinds", "/settings/kinship", "kinds", "Relationship kinds"],
@@ -197,6 +206,24 @@ describe("Settings in fewer places", () => {
     expect(heading(part)).toBe(title);
     expect(brought).toContain(part);
   });
+
+  it("opens /settings/me, Me's old address, at the page it was on", async () => {
+    answer(true);
+    const router = open("/settings/me");
+    await until("Add a family…");
+    expect(router.state.location.pathname).toBe("/settings/family");
+    expect(router.state.location.hash).toBe("");
+  });
+
+  it.each(["/settings/missing", "/missing"])(
+    "opens %s, an old address of What's missing, as Family facts' tab",
+    async (old) => {
+      answer(true);
+      const router = open(old);
+      await until("The tree, Family facts: missing");
+      expect(router.state.location.pathname).toBe("/tree");
+    },
+  );
 
   it("leads every Settings link in the app to its page, and its part", async () => {
     const src = join(process.cwd(), "src"); // the tests run in frontend/

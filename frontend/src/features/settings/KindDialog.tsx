@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useDialogDiscard } from "@/features/person/useDiscardGuard";
 import { showError } from "@/lib/notify";
 import { z } from "@/lib/schema";
 
@@ -130,7 +131,7 @@ function LanguageWordFields({
   errors: Partial<Record<LanguageCode, string | undefined>>;
 }) {
   return (
-    <details className="rounded-lg border border-stone-200 px-3 py-2">
+    <details className="rounded-lg border border-border px-3 py-2">
       <summary className="cursor-pointer text-sm font-medium">Malay and Javanese words</summary>
       <div className="mt-3 space-y-4">
         {WORD_LANGUAGES.map(({ code, name, example }) => (
@@ -138,7 +139,7 @@ function LanguageWordFields({
             <legend className="text-sm font-medium">{name}</legend>
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Label htmlFor={`words.${code}.label`} className="text-xs text-stone-500">
+                <Label htmlFor={`words.${code}.label`} className="text-xs text-faint">
                   The kind
                 </Label>
                 <Input
@@ -148,7 +149,7 @@ function LanguageWordFields({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor={`words.${code}.parent`} className="text-xs text-stone-500">
+                <Label htmlFor={`words.${code}.parent`} className="text-xs text-faint">
                   The parent
                 </Label>
                 <Input
@@ -158,7 +159,7 @@ function LanguageWordFields({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor={`words.${code}.child`} className="text-xs text-stone-500">
+                <Label htmlFor={`words.${code}.child`} className="text-xs text-faint">
                   The child
                 </Label>
                 <Input
@@ -169,7 +170,7 @@ function LanguageWordFields({
               </div>
               {(["male", "female"] as const).map((gender) => (
                 <div key={gender} className="col-span-3 grid grid-cols-3 gap-2">
-                  <span className="self-center text-xs text-stone-500">
+                  <span className="self-center text-xs text-faint">
                     {gender === "male" ? "For a man or boy" : "For a woman or girl"}
                   </span>
                   <Input
@@ -186,7 +187,7 @@ function LanguageWordFields({
               ))}
             </div>
             {errors[code] ? (
-              <p className="text-xs text-red-600">{errors[code]}</p>
+              <p className="text-xs text-destructive">{errors[code]}</p>
             ) : (
               <Hint>For example: {example}.</Hint>
             )}
@@ -216,30 +217,33 @@ function WordingFields({
       <div className="grid grid-cols-3 gap-2">
         {(["neutral", "male", "female"] as const).map((gender, index) => (
           <div key={gender} className="space-y-1">
-            <Label htmlFor={`${side}.${gender}`} className="text-xs text-stone-500">
+            <Label htmlFor={`${side}.${gender}`} className="text-xs text-faint">
               {nouns[index]}
             </Label>
             <Input id={`${side}.${gender}`} {...register(`${side}.${gender}`)} />
           </div>
         ))}
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </fieldset>
   );
 }
 
 function Hint({ children }: { children: ReactNode }) {
-  return <p className="text-xs text-stone-500">{children}</p>;
+  return <p className="text-xs text-faint">{children}</p>;
 }
 
-/** Add a relationship kind, or change the wording of one. */
+/** Add a relationship kind, or change the wording of one. What's typed isn't thrown away
+ *  without the person form's question: Cancel, Esc and × ask "Discard your
+ *  changes?" first. */
 export function KindDialog({ kind, onClose }: { kind: KindView | null; onClose: () => void }) {
   const form = useForm<KindValues>({
     resolver: zodResolver(kindSchema),
     defaultValues: values(kind),
   });
   const { register, control, formState } = form;
-  const { errors } = formState;
+  const { errors, isDirty } = formState;
+  const discard = useDialogDiscard(() => isDirty, onClose);
   const create = useCreateKind();
   const update = useUpdateKind();
   const saving = create.isPending || update.isPending;
@@ -275,7 +279,7 @@ export function KindDialog({ kind, onClose }: { kind: KindView | null; onClose: 
   });
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && discard.cancel()}>
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={submit} className="space-y-5" noValidate>
           <DialogHeader>
@@ -289,7 +293,7 @@ export function KindDialog({ kind, onClose }: { kind: KindView | null; onClose: 
           <div className="space-y-1.5">
             <Label htmlFor="kind_label">Name</Label>
             <Input id="kind_label" placeholder="e.g. Foster" autoFocus {...label} />
-            {errors.label && <p className="text-xs text-red-600">{errors.label.message}</p>}
+            {errors.label && <p className="text-xs text-destructive">{errors.label.message}</p>}
           </div>
 
           <WordingFields
@@ -336,7 +340,7 @@ export function KindDialog({ kind, onClose }: { kind: KindView | null; onClose: 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>
+            <Button type="button" variant="ghost" onClick={discard.cancel}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
@@ -345,6 +349,7 @@ export function KindDialog({ kind, onClose }: { kind: KindView | null; onClose: 
           </DialogFooter>
         </form>
       </DialogContent>
+      {discard.question}
     </Dialog>
   );
 }

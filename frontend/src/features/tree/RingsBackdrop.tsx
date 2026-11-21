@@ -2,7 +2,7 @@ import { useStore } from "@xyflow/react";
 import { memo } from "react";
 import { RING_LINE, ringStroke } from "./colours";
 import type { Guide } from "./layouts";
-import { ARC_LABEL, polar, type Ring, type RingLayout } from "./rings";
+import { ARC_LABEL, polar, type Ring, type RingLayout, ringText } from "./rings";
 
 type Props = Pick<RingLayout, "rings" | "tray"> & {
   guides: Guide[];
@@ -75,7 +75,8 @@ function guideLabel(guide: Guide): { x: number; y: number; label: string; start:
 
 /** The rings, their labels and the tray, in the tree's own coordinates. Drawn once: only the
  *  transform around it changes as the view pans and zooms. A married-in family's rings are
- *  drawn and named like the main ones, in the tree's own generations. */
+ *  drawn like the main ones, in the tree's own generations, and say no number: its oldest
+ *  is named for its couple. */
 const Drawing = memo(function Drawing({ rings, tray, guides, tinted = false }: Props) {
   return (
     <>
@@ -120,7 +121,7 @@ const Drawing = memo(function Drawing({ rings, tray, guides, tinted = false }: P
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: as above
             key={`label:${index}`}
-            className="absolute top-0 left-0 px-1 text-[11px] whitespace-nowrap text-stone-500"
+            className="absolute top-0 left-0 px-1 text-xs whitespace-nowrap text-faint"
             style={{
               transform: `translate(${label.x}px, ${label.y}px)${label.start ? "" : " translate(-50%, 0)"}`,
             }}
@@ -129,25 +130,29 @@ const Drawing = memo(function Drawing({ rings, tray, guides, tinted = false }: P
           </div>
         );
       })}
-      {rings.map((ring) => (
-        <div
-          key={`label:${ring.unit}:${ring.generation}`}
-          className="absolute top-0 left-0 px-1 text-[11px] whitespace-nowrap text-stone-500"
-          style={{ transform: ringLabel(ring) }}
-        >
-          Generation {ring.generation}
-        </div>
-      ))}
+      {rings.map((ring) => {
+        // Each generation once; a married-in family's oldest arc named for its couple.
+        const text = ringText(ring);
+        return text ? (
+          <div
+            key={`label:${ring.unit}:${ring.generation}`}
+            className="absolute top-0 left-0 px-1 text-xs whitespace-nowrap text-faint"
+            style={{ transform: ringLabel(ring) }}
+          >
+            {text}
+          </div>
+        ) : null;
+      })}
       {tray && (
         <div
-          className="absolute top-0 left-0 rounded-2xl border-2 border-dashed border-amber-300"
+          className="absolute top-0 left-0 rounded-2xl border-2 border-dashed border-warning-border"
           style={{
             transform: `translate(${tray.x}px, ${tray.y}px)`,
             width: tray.width,
             height: tray.height,
           }}
         >
-          <span className="absolute -top-3 left-4 rounded bg-amber-50 px-2 text-xs font-medium text-amber-800">
+          <span className="absolute -top-3 left-4 rounded bg-warning-soft px-2 text-xs font-medium text-warning-soft-foreground">
             Not linked yet
           </span>
         </div>

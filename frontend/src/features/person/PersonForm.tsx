@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BabyIcon, HouseIcon } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import { Controller, type FieldPath, FormProvider, useForm, useFormContext } from "react-hook-form";
-import { useBlocker } from "react-router";
 import { ApiError } from "@/api/errors";
-import { useCreatePerson, useDeathPlaces, usePeople, useUpdatePerson } from "@/api/queries";
+import { useCreatePerson, usePeople, useUpdatePerson } from "@/api/queries";
 import type { PersonDetail, PersonSaved } from "@/api/types";
+import { Hint } from "@/components/Hint";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,10 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { showError } from "@/lib/notify";
+import { offerTryAgain } from "@/lib/notify";
 import { formatPlace } from "@/lib/people";
 import { DatePicker } from "./DatePicker";
-import { type Copy, type FormPlace, PlaceBlock, type PlaceKey, StoneIcon } from "./PlaceBlock";
+import { type Copy, type FormPlace, PlaceBlock, type PlaceKey } from "./PlaceBlock";
 import {
   formValues,
   type PersonFormValues,
@@ -41,11 +41,12 @@ import {
   toInput,
 } from "./personSchema";
 import { hasPlace, type Mixup, mixup, movedHome, placeLine } from "./places";
+import { useDiscardGuard } from "./useDiscardGuard";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{title}</h3>
+      <h3 className="text-xs font-semibold tracking-wide text-faint uppercase">{title}</h3>
       {children}
     </section>
   );
@@ -66,7 +67,7 @@ function Field({
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -90,8 +91,8 @@ function LivesWith({ person }: { person: PersonDetail }) {
   if (own || dead || person.parents.length === 0) return null;
   const at = person.residence_at_parents;
   return (
-    <div className="space-y-2 rounded-lg border border-stone-200 p-3 text-sm">
-      <p className="text-stone-600">
+    <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+      <p className="text-muted-foreground">
         {at
           ? `With no place of their own, they're shown at ${WHOSE[at.whose]}: ${formatPlace(at.place, at.district)}.`
           : "With no place of their own, they're shown at their parents', once a parent has one."}
@@ -199,8 +200,6 @@ export function PersonForm({
   const toggle = (key: PlaceKey) => setOpened((now) => (now === key ? null : key));
   // A mix-up of places, asked about before saving.
   const [asking, setAsking] = useState<{ values: PersonFormValues; wrong: Mixup } | null>(null);
-  // Where they died: kept, but shown nowhere while the backend's switch is off.
-  const deathPlaces = useDeathPlaces();
   const parentDetails = usePeople(person?.parents.map((parent) => parent.id) ?? []);
   const parents = parentDetails.flatMap((query) => (query.data ? [query.data] : []));
 
@@ -211,25 +210,15 @@ export function PersonForm({
     hasPlace(place) ? [{ label, place }] : [];
   // The death part, only when needed: for someone who has died, or where something of it
   // is filled in already, which is kept as it is, with a word if they're marked living.
+  // A death date being typed counts as one, so the part stays open while it's typed.
+  const deathDated = deathDate.year != null || Boolean(deathDate.typed?.trim());
   const dead =
-    living === "deceased" ||
-    (living === "auto" && (person?.is_living === false || deathDate.year != null));
-  const deathGiven = deathDate.year != null || hasPlace(deathPlace) || burial.trim() !== "";
+    living === "deceased" || (living === "auto" && (person?.is_living === false || deathDated));
+  const deathGiven = deathDated || hasPlace(deathPlace) || burial.trim() !== "";
 
-  // Leaving a half-edited form asks first: inside the app, and when closing the tab.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty &&
-      !done.current &&
-      (currentLocation.pathname !== nextLocation.pathname ||
-        currentLocation.search !== nextLocation.search),
-  );
-  useEffect(() => {
-    if (!isDirty) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
+  // Cancel, Esc and leaving a half-edited form ask first: inside the app, and when
+  // closing the tab.
+  const discard = useDiscardGuard(() => isDirty && !done.current, onCancel);
 
   const save = async (values: PersonFormValues) => {
     try {
@@ -239,7 +228,7 @@ export function PersonForm({
       onSaved(saved);
     } catch (error) {
       const fields = error instanceof ApiError ? Object.entries(error.fieldErrors) : [];
-      if (fields.length === 0) showError(error);
+      if (fields.length === 0) offerTryAgain(error, () => void save(values));
       for (const [field, message] of fields) {
         form.setError(field as FieldPath<PersonFormValues>, { message });
       }
@@ -262,9 +251,23 @@ export function PersonForm({
     await save({ ...asking.values, ...moved });
   };
 
+  // Ctrl+Enter saves from anywhere in the form, a box of notes too.
+  const saveByKey = (event: KeyboardEvent<HTMLFormElement>) => {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey) || saving) return;
+    event.preventDefault();
+    void submit();
+  };
+
   return (
     <FormProvider {...form}>
-      <form onSubmit={submit} className="space-y-6" noValidate>
+      {/* The fields scroll, with Save and Cancel kept in view at the foot, and a field
+          the keyboard reaches scrolled clear of them. */}
+      <form
+        onSubmit={submit}
+        onKeyDown={saveByKey}
+        className="min-h-0 flex-1 scroll-pb-20 space-y-6 overflow-y-auto px-4 pt-2"
+        noValidate
+      >
         <Section title="Name">
           <Field id="full_name" label="Full name" error={errors.full_name?.message}>
             <GrowingText
@@ -371,7 +374,7 @@ export function PersonForm({
         {(dead || deathGiven) && (
           <Section title="Death">
             {!dead && (
-              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="rounded-lg border border-warning-border bg-warning-soft p-3 text-sm text-warning-soft-foreground">
                 They're marked as living, yet something of their death is filled in. Choose Deceased
                 beside their name, or clear it.
               </p>
@@ -391,20 +394,8 @@ export function PersonForm({
                 )}
               />
             </Field>
-            {deathPlaces && (
-              <PlaceBlock
-                name="death_place"
-                title="Where they died"
-                sign={StoneIcon}
-                open={opened === "death_place"}
-                onOpen={() => toggle("death_place")}
-                copies={[
-                  ...copy("Same as where they live", residence),
-                  ...copy("Same as where they were born", birthPlace),
-                ]}
-              />
-            )}
-            <Field id="burial_place" label="Where they rest">
+            {/* "Buried at", as their details say it. */}
+            <Field id="burial_place" label="Buried at">
               <GrowingText
                 id="burial_place"
                 placeholder="e.g. Tanah Perkuburan Islam Kg. Baru"
@@ -420,18 +411,20 @@ export function PersonForm({
           </Field>
         </Section>
 
-        <div className="flex gap-2">
-          <Button type="submit" disabled={saving}>
-            {person ? "Save" : "Add person"}
-          </Button>
-          <Button type="button" variant="ghost" onClick={onCancel}>
+        <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-border bg-card px-4 py-3">
+          <Hint label={person ? "Save (Ctrl+Enter)" : "Add person (Ctrl+Enter)"} side="top">
+            <Button type="submit" disabled={saving}>
+              {person ? "Save" : "Add person"}
+            </Button>
+          </Hint>
+          <Button type="button" variant="ghost" onClick={discard.cancel}>
             Cancel
           </Button>
         </div>
       </form>
 
       {/* A mix-up of places, asked about before it's saved. */}
-      <AlertDialog open={asking !== null}>
+      <AlertDialog open={asking !== null} onOpenChange={(open) => !open && setAsking(null)}>
         {/* Wider than most, for its three answers side by side. */}
         <AlertDialogContent className="data-[size=default]:sm:max-w-md">
           <AlertDialogHeader>
@@ -462,20 +455,7 @@ export function PersonForm({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={blocker.state === "blocked"}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard your changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You've changed this form but haven't saved it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed?.()}>Discard</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {discard.question}
     </FormProvider>
   );
 }

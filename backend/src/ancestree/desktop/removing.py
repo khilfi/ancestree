@@ -9,7 +9,7 @@ again needs (desktop/src-tauri/windows/hooks.nsh).
 The uninstaller can't read the families' list, so AncesTree keeps a small note for it in its
 own folder, `uninstall.ini`: each family's name, the folder its backups are in, the one they go
 to in Documents, whether this computer keeps it, and when its backups were last copied to
-another place, with the warning's sentences ready to show. The families in AncesTree's bin are
+another place, with the warning's sentences ready to show. The families in the Trash are
 in it too, as they can still be put back: theirs go to a folder of their name and "(removed)".
 It's written as Windows' own reading of such a note (GetPrivateProfileString) reads Unicode:
 UTF-16, with its byte-order mark.
@@ -124,7 +124,7 @@ class Here:
     keeper: bool  # this computer keeps its family folder
     copied: datetime | None  # when its backups were last copied to another place, if ever
     folder: str  # its folder's name in AncesTree backups
-    removed: bool = False  # in AncesTree's bin, for under 30 days: it can still be put back
+    removed: bool = False  # in the Trash, for under 30 days: it can still be put back
 
 
 def _read(path: Path) -> dict[str, object]:
@@ -146,7 +146,7 @@ def _when(text: object) -> datetime | None:
 
 
 def families_here(families: Families) -> list[Here]:
-    """Every family on this computer, then those in AncesTree's bin, which can still be put back
+    """Every family on this computer, then those in the Trash, which can still be put back
     and so keep their backups too, in a folder of their name and "(removed)" (the user's answer
     of 19 Nov 2026): where its backups are, whether this computer keeps it, from its family
     folder's own setup.json, and when its backups were last copied elsewhere: by Copies in

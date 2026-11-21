@@ -23,17 +23,17 @@ export function LockScreen({ onOpen }: { onOpen: (password: string) => Promise<v
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-stone-50 p-6">
+    <div className="flex h-full items-center justify-center bg-background p-6">
       <form
         onSubmit={open}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-stone-200 bg-white p-6 shadow-sm"
+        className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm"
       >
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-lg font-semibold">
-            <LockIcon className="size-4 text-stone-500" aria-hidden />
+            <LockIcon className="size-4 text-faint" aria-hidden />
             AncesTree
           </h1>
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-muted-foreground">
             This copy of a family tree is locked. Ask whoever gave it to you for its password.
           </p>
         </div>
@@ -48,7 +48,7 @@ export function LockScreen({ onOpen }: { onOpen: (password: string) => Promise<v
             onChange={(event) => setPassword(event.target.value)}
           />
           {problem && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-destructive">
               {problem}
             </p>
           )}

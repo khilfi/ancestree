@@ -6,8 +6,8 @@
  * saved where it isn't meant asked about first, and moved home in one click. Names and addresses
  * are made up; the places are real.
  *
- * The place of death is shown only while the backend's switch is on: M57's tests run
- * with it on, so it doesn't decay; those at the end, with it off, as it ships.
+ * The place of death is shown nowhere: the screens' branch for it, behind the
+ * backend's switch, went in 0.9.0, the switch kept to bring it back.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act } from "react";
@@ -75,14 +75,13 @@ const person = (more: Partial<PersonDetail>) =>
     notes: null,
     ...more,
   }) as unknown as PersonDetail;
-// Ali as the form once made easy: his house saved as where he was born and where he died, and
-// where he lives his town alone.
-const mixedUp = person({ residence: klang, birth_place: house, death_place: house });
+// Ali as the form once made easy: his house saved as where he was born, and where he lives his
+// town alone.
+const mixedUp = person({ residence: klang, birth_place: house });
 
 let root: Root | undefined;
 let asked: { method: string; path: string; body: unknown }[] = [];
 let people: Record<string, PersonDetail> = {};
-let deathPlaces = true; // the backend's switch, as its health answer says
 
 afterEach(() => {
   act(() => root?.unmount());
@@ -90,7 +89,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   asked = [];
   people = {};
-  deathPlaces = true;
 });
 
 function answer() {
@@ -109,7 +107,6 @@ function answer() {
     if (known && request.method === "PUT") return Response.json({ person: known, notices: [] });
     if (known) return Response.json(known);
     if (path === "/api/map/packs") return Response.json({ packs: [], countries: [], places: [] });
-    if (path === "/api/health") return Response.json({ death_places: deathPlaces });
     return new Response("{}", { status: 404 });
   });
 }
@@ -184,27 +181,8 @@ describe("each place where it's meant", () => {
       "Where they were bornKajang, Selangor · at its town",
     ]);
     expect(blocks().some((each) => each.open)).toBe(false);
-    expect(document.body.textContent).not.toContain("Where they rest");
+    expect(document.body.textContent).not.toContain("Buried at");
     expect(document.querySelector("#death_date")).toBeNull();
-  });
-
-  it("shows the death part for someone who has died, with where they died and where they rest", async () => {
-    show(person({ living: false, is_living: false }));
-    await until("Where they died");
-    expect(blocks().map((each) => each.text.split("Not")[0])).toEqual([
-      "Where they live now",
-      "Where they were born",
-      "Where they died",
-    ]);
-    expect(document.body.textContent).toContain("Where they rest");
-    expect(document.body.textContent).not.toContain("They're marked as living");
-  });
-
-  it("keeps a living person's place of death, with a word, never hidden", async () => {
-    show(mixedUp);
-    await until("Where they died");
-    expect(block("Where they died").text).toContain("Klang, Selangor · confirmed");
-    expect(document.body.textContent).toContain("They're marked as living");
   });
 
   it("opens one place at a time", () => {
@@ -260,18 +238,16 @@ describe("each place where it's meant", () => {
 describe("a place saved where it isn't meant, asked about first", () => {
   const sent = () => asked.find((each) => each.method === "PUT")?.body as Record<string, Place>;
 
-  it("moves the address home in one click: the birthplace keeps its town, the place of death goes", async () => {
+  it("moves the address home in one click: the birthplace keeps its town", async () => {
     show(mixedUp);
     act(() => button("Save")?.click());
     await until("Is that where they live?");
-    expect(document.body.textContent).toContain("They're living, yet have a place of death");
     expect(document.body.textContent).toContain("Where they were born has an address");
     act(() => button("Move it to Where they live")?.click());
     await vi.waitFor(() => expect(sent()).toBeDefined());
     const body = sent();
     expect(body.residence).toMatchObject({ address: house.address, lat: 3.0312, exact: "hand" });
     expect(body.birth_place).toMatchObject({ town: "Klang", address: "", lat: null });
-    expect(body.death_place).toMatchObject({ town: "", address: "", lat: null });
   });
 
   it("saves as it is, when that's what's meant", async () => {
@@ -280,7 +256,7 @@ describe("a place saved where it isn't meant, asked about first", () => {
     await until("Is that where they live?");
     act(() => button("Save as it is")?.click());
     await vi.waitFor(() => expect(sent()).toBeDefined());
-    expect(sent().death_place).toMatchObject({ address: house.address });
+    expect(sent().birth_place).toMatchObject({ address: house.address });
   });
 
   it("asks nothing where each place is where it's meant", async () => {
@@ -291,13 +267,13 @@ describe("a place saved where it isn't meant, asked about first", () => {
   });
 });
 
-describe("the map's Where they died", () => {
-  it("lists those who have died with no place of death, each to add", () => {
+describe("the map's Where they were born", () => {
+  it("lists those born nowhere recorded, each to add, and never where they died", () => {
     answer();
     const tok = { id: "tok", full_name: "Ahmad bin Musa", is_living: false } as GraphPerson;
     render(
       <WhereList
-        field="death_place"
+        field="birth_place"
         spots={[]}
         people={new Map([[tok.id, tok]])}
         rough={[]}
@@ -312,19 +288,19 @@ describe("the map's Where they died", () => {
         onRemovePin={() => {}}
       />,
     );
-    expect(document.body.textContent).toContain("Where they died");
-    act(() => button("Add where they died")?.click());
-    expect(field("Ahmad bin Musa: died in: town")).not.toBeNull();
+    act(() => button("Add where they were born")?.click());
+    expect(field("Ahmad bin Musa: born in: town")).not.toBeNull();
+    expect(document.body.textContent).not.toContain("died");
   });
 });
 
 describe("What's missing: a place where it isn't meant", () => {
-  it("lists someone living with a place of death, and moves it home in one click", async () => {
+  it("lists someone with their address where they were born, and moves it home in one click", async () => {
     const ali = { ...mixedUp, birth_year: 1980, placeholder: false } as unknown as GraphPerson;
     const graph = { people: [ali], links: [], layout: { unlinked: [] } };
     const located = (place: Place) => ({ place, country: "Malaysia", lat: place.lat ?? null });
     const map = {
-      people: [{ id: "ali", lives: located(klang), born: located(house), died: located(house) }],
+      people: [{ id: "ali", lives: located(klang), born: located(house), died: null }],
       pins: [],
       towns: [],
     };
@@ -338,29 +314,26 @@ describe("What's missing: a place where it isn't meant", () => {
       if (path === "/api/family/facts")
         return Response.json({ to_fill_in: { no_birth_order: [] } });
       if (path === "/api/persons/ali") return Response.json({ person: mixedUp, notices: [] });
-      if (path === "/api/health") return Response.json({ death_places: deathPlaces });
       return new Response("{}", { status: 404 });
     });
     render(<MissingSection />);
-    await until("Living, with a place of death");
+    await until("Not confirmed on the map");
     expect(document.body.textContent).toContain(
-      "place of death No. 8, Jalan Kenari 2, Taman … Klang, Selangor · confirmed",
+      "address where they were born, No. 8, Jalan Kenari 2, Taman … Klang, Selangor · confirmed",
     );
     act(() => button("Move it to Where they live")?.click());
     await vi.waitFor(() => expect(asked.some((each) => each.method === "PATCH")).toBe(true));
     const sent = asked.find((each) => each.method === "PATCH")?.body as Record<string, unknown>;
     expect(sent.residence).toMatchObject({ address: house.address, exact: "hand" });
     expect(sent.birth_place).toMatchObject({ town: "Klang", address: null, lat: null });
-    expect(sent.death_place).toBeNull();
+    expect(sent).not.toHaveProperty("death_place");
   });
 });
 
 describe("no place of death shown", () => {
-  it("leaves where they died out of the form, and keeps the date and where they rest", async () => {
-    deathPlaces = false;
+  it("leaves where they died out of the form, and keeps the date and where they're buried", async () => {
     show(person({ living: false, is_living: false, death_date: { year: 1990 } as never }));
-    await until("Where they rest");
-    await vi.waitFor(() => expect(asked.some((each) => each.path === "/api/health")).toBe(true));
+    await until("Buried at");
     expect(blocks().map((each) => each.text.split("Not")[0])).toEqual([
       "Where they live now",
       "Where they were born",
@@ -370,7 +343,6 @@ describe("no place of death shown", () => {
   });
 
   it("asks nothing of a place of death, and What's missing has no list of them", async () => {
-    deathPlaces = false;
     const ali = { ...mixedUp, birth_year: 1980, placeholder: false } as unknown as GraphPerson;
     const graph = { people: [ali], links: [], layout: { unlinked: [] } };
     const located = (place: Place) => ({ place, country: "Malaysia", lat: place.lat ?? null });
@@ -386,12 +358,10 @@ describe("no place of death shown", () => {
       if (path === "/api/map") return Response.json(map);
       if (path === "/api/family/facts")
         return Response.json({ to_fill_in: { no_birth_order: [] } });
-      if (path === "/api/health") return Response.json({ death_places: false });
       return new Response("{}", { status: 404 });
     });
     render(<MissingSection />);
     await until("Not confirmed on the map");
-    await vi.waitFor(() => expect(asked.some((each) => each.path === "/api/health")).toBe(true));
     expect(document.body.textContent).not.toContain("place of death");
   });
 });

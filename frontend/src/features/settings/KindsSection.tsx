@@ -3,6 +3,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useDeleteKind, useKinds, useUpdateKind } from "@/api/queries";
 import type { KindUpdate, KindView } from "@/api/types";
+import { Failed } from "@/components/Failed";
+import { Hint } from "@/components/Hint";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,11 +40,11 @@ function Wording({
   return (
     <div>
       <div>{label.neutral}</div>
-      {gendered && <div className="text-xs text-stone-500">{gendered}</div>}
+      {gendered && <div className="text-xs text-faint">{gendered}</div>}
       {words.map(
         ([language, said]) =>
           said && (
-            <div key={language} lang={language} className="text-xs text-stone-500">
+            <div key={language} lang={language} className="text-xs text-faint">
               {language === "ms" ? "Melayu" : "Jawa"}: {said.neutral}
             </div>
           ),
@@ -68,11 +70,11 @@ export function KindsSection() {
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="font-semibold">Relationship kinds</h2>
-          <p className="max-w-2xl text-sm text-stone-500">
+          <p className="max-w-2xl text-sm text-faint">
             The kinds of parent and child link you can choose from. Biological is built in and is
             the only one that counts as blood, for lineage and the relationship finder.
           </p>
@@ -84,7 +86,11 @@ export function KindsSection() {
       </div>
 
       {kinds.isError ? (
-        <p className="text-sm text-red-600">{kinds.error.message}</p>
+        <Failed
+          error={kinds.error}
+          onRetry={() => void kinds.refetch()}
+          className="text-sm text-destructive"
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -102,7 +108,7 @@ export function KindsSection() {
           </TableHeader>
           <TableBody>
             {(kinds.data ?? []).map((kind) => (
-              <TableRow key={kind.key} className={kind.active ? undefined : "text-stone-400"}>
+              <TableRow key={kind.key} className={kind.active ? undefined : "text-faint"}>
                 <TableCell>
                   <div className="flex items-center gap-2 font-medium">
                     {kind.label}
@@ -166,15 +172,22 @@ export function KindsSection() {
                       <Button variant="ghost" size="sm" onClick={() => setEditing(kind)}>
                         Edit
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={kind.usage > 0}
-                        title={kind.usage > 0 ? "In use: hide it instead" : undefined}
-                        onClick={() => setDeleting(kind)}
-                      >
-                        Delete
-                      </Button>
+                      {kind.usage > 0 ? (
+                        // A button that can't be pressed takes no pointer: its hint is on
+                        // what holds it, which the keyboard reaches too.
+                        <Hint label="In use: hide it instead">
+                          {/* biome-ignore lint/a11y/noNoninteractiveTabindex: it holds the hint */}
+                          <span className="inline-flex rounded-lg" tabIndex={0}>
+                            <Button variant="ghost" size="sm" disabled>
+                              Delete
+                            </Button>
+                          </span>
+                        </Hint>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => setDeleting(kind)}>
+                          Delete
+                        </Button>
+                      )}
                     </>
                   )}
                 </TableCell>
@@ -184,7 +197,7 @@ export function KindsSection() {
         </Table>
       )}
 
-      <ul className="list-disc space-y-1 pl-5 text-xs text-stone-500">
+      <ul className="list-disc space-y-1 pl-5 text-xs text-faint">
         <li>
           <strong>In the tree</strong>: children linked this way are placed under this parent in the
           lineage layout. Off, they're placed with their birth parents only.

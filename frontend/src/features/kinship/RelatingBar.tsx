@@ -14,16 +14,17 @@ export function RelatingBar({
   const touch = useTouch(); // a finger: tap, and no keys to press
   const act = touch ? "Tap" : "Click";
   return (
+    // Above the canvas, where the toolbar was, and as high.
     <div
       role="status"
-      className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-300 bg-amber-50/95 px-3 py-1.5 text-sm text-amber-950 shadow-sm"
+      className="flex min-h-[41px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-kin-border bg-kin-soft px-3 py-1.5 text-sm text-kin-soft-foreground"
     >
       <span>
         {picking
           ? `${act} anyone to see how they're related to `
           : `${act} anyone else to compare with `}
         <span className="font-semibold">{name}</span>
-        <span className="text-amber-800">
+        <span className="text-kin-soft-foreground">
           {touch
             ? " · or search"
             : ` · or search with Ctrl K · Esc to ${picking ? "cancel" : "finish"}`}

@@ -53,6 +53,16 @@ let root: Root | undefined;
 let zoomed: Group[] = [];
 let selected: string[] = [];
 
+// A person's hint shows as the arrow keys bring the focus to them: Radix measures it.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
+
 afterEach(() => {
   act(() => root?.unmount());
   document.body.replaceChildren();
@@ -137,7 +147,11 @@ describe("a bundle that opens where it is", () => {
     expect(document.body.textContent).toContain("Fatimah and 2 more");
     expect(document.body.textContent).not.toContain("Kajang and");
     const circle = button(/^Fatimah, Aminah, Zulkifli · Kajang, Hulu Langat\. Open$/);
-    expect(circle?.title).toBe("Fatimah, Aminah, Zulkifli · Kajang, Hulu Langat");
+    // Its hint, as the keyboard brings the focus to it.
+    act(() => circle?.focus());
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe(
+      "Fatimah, Aminah, Zulkifli · Kajang, Hulu Langat",
+    );
 
     act(() => circle?.click());
 
@@ -293,7 +307,6 @@ describe("a pin like Google Maps', only where confirmed", () => {
           told={{ eldest: ["mak"], name: "Fatimah", few: "Fatimah" }}
           heading="No. 8, Jalan Kenari 2, Kajang, Hulu Langat"
           people={new Map(ONE.map((person) => [person.id, person]))}
-          withNames
           colourOf={() => "#0f766e"}
           faded={null}
           selectedId={chosen ? "mak" : null}

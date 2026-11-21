@@ -160,11 +160,11 @@ function PictureDialog() {
             <img
               src={preview}
               alt=""
-              className="mx-auto max-h-56 rounded-md object-contain ring-1 ring-stone-200"
+              className="mx-auto max-h-56 rounded-md object-contain ring-1 ring-border"
             />
           )}
           {!editing && chosen && !chosen.url && (
-            <p className="text-center text-sm text-stone-600">
+            <p className="text-center text-sm text-muted-foreground">
               {chosen.file.name} (this browser can't show it, but it will be added)
             </p>
           )}
@@ -203,7 +203,7 @@ function PictureDialog() {
                   if (event.key === "Enter") void submit();
                 }}
               />
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-faint">
                 Read aloud by screen readers, and shown in Notepad.
               </p>
             </div>

@@ -1,5 +1,6 @@
 import { type HierarchyPointNode, hierarchy, tree } from "d3-hierarchy";
 import type { Graph, LayoutUnit, Seat, TreeSettings } from "@/api/types";
+import { nameRings } from "./families";
 import { generationShifts } from "./generations";
 import {
   centreLayout,
@@ -16,23 +17,28 @@ import {
 } from "./rings";
 
 /*
- * Where married-in families go on the rings, one of four ways, as this
- * computer chose in the Layout menu; tried side by side in S7:
+ * Where married-in families go on the rings, one of two ways, as this computer
+ * chose in the Layout menu:
  * - fans, the first choice: each family opens outwards from its person, its oldest generation
  *   nearest and its rings drawn as arcs over the fan alone; moved around its host and out where
  *   it would meet another family;
+ * - tucked in: each family's people on its host's own rings, at their generations, beside their
+ *   person.
+ * Two more were tried side by side in S7, and offered until 0.9.0,
+ * when your answer of 19 Nov 2026 retired them: the spike's page alone still draws them.
  * - discs: each family on whole rings of its own, as it was before, moved around its
  *   host and out until it meets nothing;
  * - settled fans: the fans, then a fixed number of gentle steps that keep photos apart and pull
- *   links towards their length, the same every time;
- * - tucked in: each family's people on its host's own rings, at their generations, beside their
- *   person.
+ *   links towards their length, the same every time.
  * Whichever way, no photo overlaps another, and no family's rings cross another's people. The
  * family at the centre, and families with no link to it, are placed as `centreLayout` places
  * them.
  */
 
+/** A way this computer may choose: fans, or tucked in. */
 export type Way = TreeSettings["married_in"];
+/** Every way the rings can place them: the two to choose, and the two the spike's page shows. */
+export type Placing = Way | "discs" | "settled";
 
 /** The ways, as the Layout menu offers them: the first is chosen until another is. */
 export const WAYS: { way: Way; name: string; hint: string }[] = [
@@ -40,16 +46,6 @@ export const WAYS: { way: Way; name: string; hint: string }[] = [
     way: "fans",
     name: "Fans",
     hint: "Each opens out from the person who married in, the oldest generation nearest",
-  },
-  {
-    way: "discs",
-    name: "Discs",
-    hint: "Each on whole rings of its own, apart from the others",
-  },
-  {
-    way: "settled",
-    name: "Settled fans",
-    hint: "Fans, evened out a little",
   },
   {
     way: "tucked",
@@ -714,12 +710,21 @@ function tucked(graph: Graph, open: ReadonlySet<string>): RingLayout {
 }
 
 /** Coordinates for everyone shown on the rings: married-in families in `open` are unfolded, and
- *  placed the chosen way. */
-export function ringLayout(graph: Graph, open: ReadonlySet<string>, way: Way = "fans"): RingLayout {
-  if (way === "discs") return discs(graph, open);
-  if (way === "settled") return settled(graph, open);
-  if (way === "tucked") return tucked(graph, open);
-  return fans(graph, open).layout;
+ *  placed the chosen way. Each ring says what it is, each generation once (`nameRings`). */
+export function ringLayout(
+  graph: Graph,
+  open: ReadonlySet<string>,
+  way: Placing = "fans",
+): RingLayout {
+  const layout =
+    way === "discs"
+      ? discs(graph, open)
+      : way === "settled"
+        ? settled(graph, open)
+        : way === "tucked"
+          ? tucked(graph, open)
+          : fans(graph, open).layout;
+  return { ...layout, rings: nameRings(graph, layout.rings) };
 }
 
 /** Every married-in family, to open them all. */

@@ -1,8 +1,8 @@
 """The whole dates the timeline draws from, read from flattened properties."""
 
 from ancestree.domain.person import DateQualifier, PartialDate
+from ancestree.repo.mapping import date_from_row
 from ancestree.services.detail import living_from
-from ancestree.services.graph import date_from_row
 
 
 def test_a_date_keeps_its_qualifier_and_range() -> None:

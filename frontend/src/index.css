@@ -11,40 +11,71 @@ body,
   height: 100%;
 }
 
+/*
+ * The theme: one warm, stone-based set of colours, each a token named for what it
+ * means. Every button, field and highlight takes them, through Tailwind's classes (`bg-card`,
+ * `text-muted-foreground`, `border-warning-border`) or `var(--…)` here; nothing writes a
+ * colour of its own, and `styles/look.test.ts` fails on one. The drawing colours the code needs
+ * as values are in `styles/drawing.ts`. Each is Tailwind's shade named beside it.
+ *
+ * Text reads at 4.5:1 or better on every surface it sits on, which the same test works out from
+ * these values: `--faint` too, the quietest, for what's truly secondary. The app has no dark
+ * look: shadcn's `dark:` classes in `components/ui/` wait for a `.dark` that's never set.
+ */
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-soft: var(--highlight-soft);
+  --color-highlight-soft-foreground: var(--highlight-soft-foreground);
+  --color-highlight-border: var(--highlight-border);
+  --color-highlight-tint: var(--highlight-tint);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-warning-tint: var(--warning-tint);
+  --color-kin: var(--kin);
+  --color-kin-soft: var(--kin-soft);
+  --color-kin-soft-foreground: var(--kin-soft-foreground);
+  --color-kin-border: var(--kin-border);
+  --color-story-accent: var(--story-accent);
+  --color-story-soft: var(--story-soft);
+  --color-story-soft-foreground: var(--story-soft-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-tree-line: var(--tree-line);
+  --color-tree-marriage: var(--tree-marriage);
+  --color-tree-kin: var(--tree-kin);
+  --color-story-mark: var(--story-mark);
+  --color-story-mark-foreground: var(--story-mark-foreground);
+  --color-map-circle: var(--map-circle);
+  --color-map-circle-foreground: var(--map-circle-foreground);
+  --color-today: var(--today);
+  --color-today-foreground: var(--today-foreground);
+  --color-facts-bar: var(--facts-bar);
+  --color-facts-bar-pointed: var(--facts-bar-pointed);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -55,72 +86,71 @@ body,
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  /* The page, and what stands on it: panels, cards, the top bar, menus. */
+  --background: oklch(0.985 0.001 106.423); /* stone-50 */
+  --foreground: oklch(0.216 0.006 56.043); /* stone-900: names, headings, what's read */
+  --card: oklch(1 0 0); /* white */
+  --card-foreground: oklch(0.216 0.006 56.043);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.216 0.006 56.043);
+  /* Buttons: the main one dark and warm, the others quiet. */
+  --primary: oklch(0.268 0.007 34.298); /* stone-800 */
+  --primary-foreground: oklch(0.985 0.001 106.423);
+  --secondary: oklch(0.97 0.001 106.424); /* stone-100 */
+  --secondary-foreground: oklch(0.216 0.006 56.043);
+  /* Quiet surfaces, and text that's secondary. */
+  --muted: oklch(0.97 0.001 106.424); /* stone-100: wells, tracks, a code */
+  --muted-foreground: oklch(0.444 0.011 73.639); /* stone-600: what explains */
+  --faint: oklch(0.53 0.013 58); /* between stone-500 and 600: counts, dates, asides */
+  --accent: oklch(0.97 0.001 106.424); /* a menu's item pointed at */
+  --accent-foreground: oklch(0.216 0.006 56.043);
+  /* Lines. */
+  --border: oklch(0.923 0.003 48.717); /* stone-200 */
+  --input: oklch(0.869 0.005 56.366); /* stone-300: a field's edge, and the stronger lines */
+  --ring: oklch(0.588 0.158 241.966); /* sky-600: the focus ring, 4:1 on white */
+  /* What it means. */
+  --link: oklch(0.5 0.134 242.749); /* sky-700 */
+  --highlight: oklch(0.5 0.134 242.749); /* sky-700: what's chosen, open, or yours */
+  --highlight-foreground: oklch(1 0 0);
+  --highlight-soft: oklch(0.977 0.013 236.62); /* sky-50 */
+  --highlight-soft-foreground: oklch(0.391 0.09 240.876); /* sky-900 */
+  --highlight-border: oklch(0.901 0.058 230.902); /* sky-200 */
+  --highlight-tint: oklch(0.951 0.026 236.824); /* sky-100: a soft highlight pointed at */
+  --warning: oklch(0.555 0.163 48.998); /* amber-700: needs a look */
+  --warning-foreground: oklch(1 0 0);
+  --warning-soft: oklch(0.987 0.022 95.277); /* amber-50 */
+  --warning-soft-foreground: oklch(0.414 0.112 45.904); /* amber-900 */
+  --warning-border: oklch(0.879 0.169 91.605); /* amber-300 */
+  --warning-tint: oklch(0.962 0.059 95.617); /* amber-100: a count that waits */
+  /* Kinship: Find relationship, a kinship word, how you're related; amber as the path it
+     lights on the tree (--tree-kin). */
+  --kin: oklch(0.555 0.163 48.998); /* amber-700: what shows the path */
+  --kin-soft: oklch(0.987 0.022 95.277); /* amber-50 */
+  --kin-soft-foreground: oklch(0.414 0.112 45.904); /* amber-900: the word, and "you" */
+  --kin-border: oklch(0.879 0.169 91.605); /* amber-300 */
+  /* A life story's warm page: its life line, its sayings, the message card. */
+  --story-accent: oklch(0.879 0.169 91.605); /* amber-300 */
+  --story-soft: oklch(0.987 0.022 95.277); /* amber-50 */
+  --story-soft-foreground: oklch(0.414 0.112 45.904); /* amber-900 */
+  --destructive: oklch(0.505 0.213 27.518); /* red-700: deletes, or went wrong */
+  --success: oklch(0.508 0.118 165.612); /* emerald-700: done, or as it should be */
+  /* Drawn, not read: the tree's lines, as drawing.ts has them for the tree's picture;
+     the book mark on a photo of someone with a life story; the map's circles of people;
+     today on the timeline; the bars of Family facts. */
+  --tree-line: #a8a29e;
+  --tree-line-strong: #44403c;
+  --tree-marriage: #78716c;
+  --tree-pair: #d6d3d1;
+  --tree-kin: #f59e0b;
+  --story-mark: #d97706; /* amber-600: the white book on it at 3:1 */
+  --story-mark-foreground: #ffffff;
+  --map-circle: #0369a1; /* sky-700: its count in white, 5.9:1 */
+  --map-circle-foreground: #ffffff;
+  --today: #fbbf24; /* amber-400 */
+  --today-foreground: oklch(0.555 0.163 48.998); /* amber-700: its label, to read */
+  --facts-bar: #fcd34d; /* amber-300 */
+  --facts-bar-pointed: #fbbf24; /* amber-400 */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -132,6 +162,12 @@ body,
   }
   html {
     @apply font-sans;
+  }
+  /* Focus shown on everything that can be clicked: a ring the eye can find, whatever the
+     control. shadcn's own draw theirs with a box-shadow, and set no outline. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
 
@@ -163,22 +199,34 @@ body,
   z-index: 1000 !important;
 }
 
+/* Someone the keyboard reaches comes to the front too, with their card, as for the
+   pointer; the focus ring rounds them. */
+.react-flow__node:focus-visible {
+  /* biome-ignore lint/complexity/noImportantStyles: React Flow sets z-index inline */
+  z-index: 1000 !important;
+  border-radius: 1rem;
+  outline-offset: 4px;
+}
+.react-flow__node:focus-visible .person-card {
+  display: block;
+}
+
 .tree-link {
-  stroke: #a8a29e;
+  stroke: var(--tree-line);
   stroke-width: 1.5;
 }
 .tree-marriage {
-  stroke: #78716c;
+  stroke: var(--tree-marriage);
 }
 .tree-pair {
-  stroke: #d6d3d1;
+  stroke: var(--tree-pair);
 }
 .react-flow__edge:hover .tree-link {
-  stroke: #44403c;
+  stroke: var(--tree-line-strong);
   stroke-width: 2;
 }
 .tree-junction {
-  fill: #78716c;
+  fill: var(--tree-marriage);
 }
 
 /* A filter's others, when they're faded rather than hidden. */
@@ -195,23 +243,23 @@ body,
  * outline as well as the colour, so colour is never the only signal.
  */
 .kin-from .person-photo {
-  outline: 4px solid #f59e0b;
+  outline: 4px solid var(--tree-kin);
   outline-offset: 3px;
   animation: kin-pulse 1.4s ease-out infinite;
 }
 @keyframes kin-pulse {
   from {
-    box-shadow: 0 0 0 0 rgb(245 158 11 / 0.6);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--tree-kin) 60%, transparent);
   }
   to {
-    box-shadow: 0 0 0 18px rgb(245 158 11 / 0);
+    box-shadow: 0 0 0 18px transparent;
   }
 }
 .tree-kin .react-flow__node {
   cursor: pointer;
 }
 .kin-path .person-photo {
-  outline: 3px solid #f59e0b;
+  outline: 3px solid var(--tree-kin);
   outline-offset: 2px;
 }
 .tree-kin-result .react-flow__node:not(.kin-path) {
@@ -221,11 +269,11 @@ body,
   opacity: 0.12;
 }
 .react-flow__edge.kin-path .tree-link {
-  stroke: #f59e0b;
+  stroke: var(--tree-kin);
   stroke-width: 3;
 }
 .react-flow__edge.kin-path .tree-junction {
-  fill: #f59e0b;
+  fill: var(--tree-kin);
 }
 
 /*
@@ -252,7 +300,7 @@ body > .mdxeditor-popup-container {
   font-family: inherit;
   font-size: 15px;
   line-height: 1.65;
-  color: #292524;
+  color: var(--foreground);
 }
 /* A life story's page reads its story and parts at their own length; a part being
    written needs less room than the story. */
@@ -268,7 +316,7 @@ body > .mdxeditor-popup-container {
   right: 0;
   left: 0;
   white-space: normal;
-  color: #a8a29e;
+  color: var(--faint);
 }
 .story-editor .story > :not(:first-child) {
   margin-top: 0.75em;
@@ -277,7 +325,7 @@ body > .mdxeditor-popup-container {
   margin-top: 1.25em;
   font-weight: 600;
   line-height: 1.3;
-  color: #1c1917;
+  color: var(--foreground);
 }
 .story-editor .story h1 {
   font-size: 1.45em;
@@ -301,13 +349,13 @@ body > .mdxeditor-popup-container {
   margin-top: 0.25em;
 }
 .story-editor .story blockquote {
-  border-left: 3px solid #d6d3d1;
+  border-left: 3px solid var(--input);
   padding-left: 0.9em;
-  color: #57534e;
+  color: var(--muted-foreground);
   font-style: italic;
 }
 .story-editor .story a {
-  color: #0369a1;
+  color: var(--link);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -319,7 +367,7 @@ body > .mdxeditor-popup-container {
 .story-editor .story hr {
   margin: 1.5em 0;
   border: 0;
-  border-top: 1px solid #e7e5e4;
+  border-top: 1px solid var(--border);
 }
 
 /* The user guide, read as a life story is, with its tables, code, pictures and diagrams. */
@@ -331,7 +379,7 @@ body > .mdxeditor-popup-container {
   font-family: inherit;
   font-size: 15px;
   line-height: 1.65;
-  color: #292524;
+  color: var(--foreground);
 }
 .guide-editor .guide > :not(:first-child) {
   margin-top: 0.75em;
@@ -340,7 +388,7 @@ body > .mdxeditor-popup-container {
   margin-top: 1.4em;
   font-weight: 600;
   line-height: 1.3;
-  color: #1c1917;
+  color: var(--foreground);
   scroll-margin-top: 3.5rem; /* below the guide's own bar */
 }
 .guide-editor .guide h1 {
@@ -368,19 +416,19 @@ body > .mdxeditor-popup-container {
   margin-top: 0.3em;
 }
 .guide-editor .guide blockquote {
-  border-left: 3px solid #d6d3d1;
+  border-left: 3px solid var(--input);
   padding-left: 0.9em;
-  color: #57534e;
+  color: var(--muted-foreground);
 }
 .guide-editor .guide a {
-  color: #0369a1;
+  color: var(--link);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
 }
 .guide-editor .guide code {
   border-radius: 0.25rem;
-  background: #f5f5f4;
+  background: var(--muted);
   padding: 0.1em 0.3em;
   font-size: 0.9em;
 }
@@ -388,13 +436,13 @@ body > .mdxeditor-popup-container {
   max-width: 100%;
   height: auto;
   border-radius: 0.375rem;
-  box-shadow: 0 0 0 1px #e7e5e4;
+  box-shadow: 0 0 0 1px var(--border);
   cursor: zoom-in;
 }
 .guide-editor .guide hr {
   margin: 1.5em 0;
   border: 0;
-  border-top: 1px solid #e7e5e4;
+  border-top: 1px solid var(--border);
 }
 .guide-editor .guide table {
   width: 100%;
@@ -402,13 +450,13 @@ body > .mdxeditor-popup-container {
   font-size: 0.93em;
 }
 .guide-editor .guide :is(th, td) {
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--border);
   padding: 0.35em 0.6em;
   text-align: left;
   vertical-align: top;
 }
 .guide-editor .guide th {
-  background: #fafaf9;
+  background: var(--background);
   font-weight: 600;
 }
 .guide-editor .guide > :is(h1, h2):first-child {
@@ -418,7 +466,7 @@ body > .mdxeditor-popup-container {
 .guide-diagram-text {
   overflow-x: auto;
   border-radius: 0.375rem;
-  background: #f5f5f4;
+  background: var(--muted);
   padding: 0.75em 1em;
   font-size: 0.85em;
 }

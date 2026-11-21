@@ -70,6 +70,16 @@ describe("span", () => {
     });
   });
 
+  // The guide's short forms, as everywhere else: it said "bef. 1950", and "c. 1978" for
+  // born between 1976 and 1978.
+  it("says before, after and between in the guide's words", () => {
+    const born = (fields: Partial<PartialDate>) =>
+      span(person("p", { born: date(fields), is_living: true }), TODAY)?.years;
+    expect(born({ year: 1950, qualifier: "before" })).toBe("b. before 1950");
+    expect(born({ year: 1945, qualifier: "after" })).toBe("b. after 1945");
+    expect(born({ year: 1976, qualifier: "between", year_to: 1978 })).toBe("b. 1976–1978");
+  });
+
   it("fades out when someone died but no one recorded when", () => {
     const lane = span(person("tok", { born: date({ year: 1927 }), is_living: false }), TODAY);
     expect(lane).toMatchObject({ ending: "unknown", start: 1927.5, end: 1987.5, age: null });

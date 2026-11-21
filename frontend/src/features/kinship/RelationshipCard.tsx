@@ -1,8 +1,8 @@
 import {
   ArrowLeftRightIcon,
   ArrowRightIcon,
-  BookOpenIcon,
   CircleHelpIcon,
+  LanguagesIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -50,8 +50,8 @@ export function RelationshipCard({
   const [explaining, setExplaining] = useState(false);
 
   return (
-    <aside aria-label="Relationship" className="flex h-full flex-col bg-white">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-4 py-3">
+    <aside aria-label="Relationship" className="flex h-full flex-col bg-card">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <h2 className="text-base font-semibold">How are they related?</h2>
         <div className="flex items-center gap-1">
           <LanguageSwitch className="mr-1" />
@@ -69,7 +69,7 @@ export function RelationshipCard({
         {answer && (
           <div className="flex items-center gap-3">
             <Who person={people.get(answer.a)} />
-            <ArrowRightIcon className="size-4 shrink-0 text-stone-400" />
+            <ArrowRightIcon className="size-4 shrink-0 text-faint" />
             <Who person={people.get(answer.b)} />
           </div>
         )}
@@ -80,8 +80,8 @@ export function RelationshipCard({
             <Skeleton className="h-4 w-3/5" />
           </div>
         )}
-        {error && <p className="text-stone-600">{error.message}</p>}
-        {answer && !main && <p className="text-stone-700">{answer.message}</p>}
+        {error && <p className="text-muted-foreground">{error.message}</p>}
+        {answer && !main && <p className="text-foreground">{answer.message}</p>}
 
         {main && (
           <>
@@ -93,7 +93,7 @@ export function RelationshipCard({
                     type="button"
                     aria-expanded={explaining}
                     onClick={() => setExplaining((now) => !now)}
-                    className="inline-flex items-center gap-1 text-sm text-sky-700 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-link hover:underline"
                   >
                     <CircleHelpIcon className="size-3.5" />
                     What does this mean?
@@ -103,9 +103,9 @@ export function RelationshipCard({
                   <Link
                     to={`/dictionary?row=${main.forward.entry}`}
                     state={{ back: true }}
-                    className="inline-flex items-center gap-1 text-sm text-amber-700 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-kin hover:underline"
                   >
-                    <BookOpenIcon className="size-3.5" />
+                    <LanguagesIcon className="size-3.5" />
                     See it in the dictionary
                   </Link>
                 )}
@@ -115,7 +115,7 @@ export function RelationshipCard({
               )}
             </section>
             <section className="space-y-1">
-              <h3 className="text-xs font-medium tracking-wide text-stone-500 uppercase">
+              <h3 className="text-xs font-medium tracking-wide text-faint uppercase">
                 The other way round
               </h3>
               <Said statement={main.reverse} language={language} />
@@ -127,18 +127,18 @@ export function RelationshipCard({
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
             {lit.shared_ancestors.length > 0 && (
               <>
-                <dt className="text-stone-500">Shared ancestors</dt>
+                <dt className="text-faint">Shared ancestors</dt>
                 <dd>{lit.shared_ancestors.map((id) => people.get(id)?.name).join(" & ")}</dd>
               </>
             )}
-            <dt className="text-stone-500">Path</dt>
+            <dt className="text-faint">Path</dt>
             <dd>{lit.path.map((id) => people.get(id)?.name).join(" › ")}</dd>
           </dl>
         )}
 
         {others.length > 0 && (
           <section className="space-y-2">
-            <h3 className="text-xs font-medium tracking-wide text-stone-500 uppercase">
+            <h3 className="text-xs font-medium tracking-wide text-faint uppercase">
               Also related as…
             </h3>
             <ul className="space-y-1.5">
@@ -166,7 +166,7 @@ export function RelationshipCard({
         )}
       </div>
 
-      <footer className="flex gap-2 border-t border-stone-200 px-4 py-3">
+      <footer className="flex gap-2 border-t border-border px-4 py-3">
         <Button onClick={onPickAnother}>Pick another person</Button>
         <Button variant="outline" onClick={onDone}>
           Done
@@ -194,13 +194,13 @@ function Said({ statement, language, large = false }: SaidProps) {
   const said = statement.words?.[language];
   return (
     <>
-      <p className={cn(large ? "text-lg leading-snug font-semibold" : "text-stone-800")}>
+      <p className={cn(large ? "text-lg leading-snug font-semibold" : "text-foreground")}>
         <Sentence statement={statement} language={language} />
       </p>
       <Meaning
         statement={statement}
         language={language}
-        className="text-sm text-stone-600"
+        className="text-sm text-muted-foreground"
         missing={said?.english === true}
       />
     </>
@@ -215,7 +215,7 @@ function Sentence({ statement, language }: { statement: KinStatement; language: 
   return (
     <>
       {said.sentence.slice(0, said.sentence.length - said.term.length)}
-      <span lang={language} className="text-amber-800">
+      <span lang={language} className="text-kin-soft-foreground">
         {said.term}
       </span>
     </>
@@ -258,13 +258,13 @@ function Rung({ label, own }: { label: string | null; own: boolean }) {
   if (!label) return <span />;
   return (
     <span className="flex flex-col items-center">
-      <span aria-hidden="true" className="h-3 w-px bg-stone-300" />
+      <span aria-hidden="true" className="h-3 w-px bg-input" />
       <span
         className={cn(
           "rounded-full border px-2 py-0.5 text-center text-xs",
           own
-            ? "border-sky-300 bg-sky-50 font-semibold text-sky-900"
-            : "border-stone-200 bg-white text-stone-700",
+            ? "border-highlight-border bg-highlight-soft font-semibold text-highlight-soft-foreground"
+            : "border-border bg-card text-foreground",
         )}
       >
         {label}
@@ -292,19 +292,19 @@ function Explained({
   const rung = (id: string | null) => <Rung label={name(id)} own={id !== null && ends.has(id)} />;
 
   return (
-    <div className="mt-2 space-y-3 rounded-lg border border-sky-100 bg-sky-50/40 p-3 text-sm">
+    <div className="mt-2 space-y-3 rounded-lg border border-highlight-border bg-highlight-soft/40 p-3 text-sm">
       {explanation.sentences.map((sentence) => (
-        <p key={sentence} className="text-stone-800">
+        <p key={sentence} className="text-foreground">
           {sentence}
         </p>
       ))}
       {rows.length > 0 && (
         <figure aria-label="Both lines down from the shared ancestors" className="space-y-0">
           <div className="flex flex-col items-center">
-            <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-center text-xs font-medium text-amber-900">
+            <span className="rounded-full border border-kin-border bg-kin-soft px-2 py-0.5 text-center text-xs font-medium text-kin-soft-foreground">
               {shared || name(relation.path[top ?? 0] ?? null)}
             </span>
-            <span className="text-[11px] text-stone-500">the shared ancestors</span>
+            <span className="text-xs text-faint">the shared ancestors</span>
           </div>
           {rows.map((row) => (
             <div
@@ -312,20 +312,18 @@ function Explained({
               className="grid grid-cols-[1fr_auto_1fr] items-end gap-2"
             >
               {rung(row.left)}
-              <span className="pb-0.5 text-center text-[11px] whitespace-nowrap text-stone-500">
+              <span className="pb-0.5 text-center text-xs whitespace-nowrap text-faint">
                 {row.pair && explanation.pair ? `— ${explanation.pair} —` : ""}
               </span>
               <span className="flex flex-col items-center">
                 {rung(row.right)}
-                {row.note && (
-                  <span className="text-center text-[11px] text-stone-500">{row.note}</span>
-                )}
+                {row.note && <span className="text-center text-xs text-faint">{row.note}</span>}
               </span>
             </div>
           ))}
         </figure>
       )}
-      {explanation.rule && <p className="text-xs text-stone-600">{explanation.rule}</p>}
+      {explanation.rule && <p className="text-xs text-muted-foreground">{explanation.rule}</p>}
     </div>
   );
 }
@@ -349,24 +347,24 @@ function AlsoRelated({
       onClick={onShow}
       className={cn(
         "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors",
-        lit ? "border-amber-400 bg-amber-50" : "border-stone-200 hover:bg-stone-50",
+        lit ? "border-kin-border bg-kin-soft" : "border-border hover:bg-muted/50",
       )}
     >
-      <span className="block text-stone-800">
+      <span className="block text-foreground">
         <Sentence statement={relation.forward} language={language} />
       </span>
       {backwards && (
-        <span className="block text-stone-600">
+        <span className="block text-muted-foreground">
           The other way round: <Sentence statement={relation.reverse} language={language} />
         </span>
       )}
       <Meaning
         statement={relation.forward}
         language={language}
-        className="block text-stone-500"
+        className="block text-faint"
         missing={relation.forward.words?.[language]?.english === true}
       />
-      <span className="mt-0.5 block text-xs text-amber-700">
+      <span className="mt-0.5 block text-xs text-kin">
         {lit ? "Its path is lit on the tree" : "Show this path on the tree"}
       </span>
     </button>

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { HowDoesThisWork } from "@/features/guide/HowDoesThisWork";
+import { openFamilyFacts } from "@/lib/familyFacts";
 import { ACTION_MS, showError } from "@/lib/notify";
 import { carriedOut, type Ticks, tickAll, tickedIds } from "./importTicks";
 import { count, Group, LeftOut, Question, quoted, Review, Row, SecondLook, when } from "./review";
@@ -98,26 +99,26 @@ function ColumnGuide() {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((now) => !now)}
-        className="flex items-center gap-1 text-sm text-sky-700 hover:underline"
+        className="flex items-center gap-1 text-sm text-link hover:underline"
       >
         {open ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
         What goes in each column
       </button>
       {open && (
         <table className="mt-2 w-full text-left text-sm">
-          <thead className="text-xs text-stone-500">
+          <thead className="text-xs text-faint">
             <tr>
               <th className="py-1 pr-3 font-medium">Column</th>
               <th className="py-1 pr-3 font-medium">What goes in</th>
               <th className="py-1 font-medium">For example</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100 align-top">
+          <tbody className="divide-y divide-border align-top">
             {COLUMNS.map(([column, what, example]) => (
               <tr key={column}>
                 <td className="py-1.5 pr-3 font-medium whitespace-nowrap">{column}</td>
-                <td className="py-1.5 pr-3 text-stone-700">{what}</td>
-                <td className="py-1.5 text-stone-500">{example}</td>
+                <td className="py-1.5 pr-3 text-foreground">{what}</td>
+                <td className="py-1.5 text-faint">{example}</td>
               </tr>
             ))}
           </tbody>
@@ -155,27 +156,27 @@ function Preview({
           )}
         </p>
         {preview.matched > 0 && (
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             {count(preview.matched, "row is", "rows are")} someone already in the tree:{" "}
             {preview.matched === 1 ? "what its row changes is" : "what their rows change is"} listed
             for you to tick.
           </p>
         )}
         {preview.columns_not_read.length > 0 && (
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             Not read: {preview.columns_not_read.join(", ")}. The template shows the columns an
             import reads.
           </p>
         )}
         {preview.placed && (
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             On the map from their addresses, with no internet: {placedWords(preview.placed)}.
           </p>
         )}
       </div>
 
       <Group title="To check" items={preview.questions.length} open tone="attention">
-        <ul className="divide-y divide-stone-100">
+        <ul className="divide-y divide-border">
           {preview.questions.map((question) => (
             <Question
               key={question.id}
@@ -195,7 +196,7 @@ function Preview({
             Untick all
           </Button>
           {waiting.length > 0 && (
-            <span className="text-xs text-stone-500">
+            <span className="text-xs text-faint">
               Tick all leaves removals and clashes to their own ticks.
             </span>
           )}
@@ -206,15 +207,15 @@ function Preview({
       <SecondLook items={preview.second_look} />
 
       <Group title="Newer in the tree" items={preview.differences.length} open={false}>
-        <p className="pb-1 text-xs text-stone-500">
+        <p className="pb-1 text-xs text-faint">
           These have been changed in the app since the file was exported, and the file still has the
           old. The tree keeps its own.
         </p>
         <ul>
           {preview.differences.map((item) => (
             <Row key={`${item.row}-${item.column}`} row={item.row}>
-              {item.name}, <span className="text-stone-500">{item.column}</span>:{" "}
-              {quoted(item.written)} in the file, {quoted(item.in_tree)} in the tree
+              {item.name}, <span className="text-faint">{item.column}</span>: {quoted(item.written)}{" "}
+              in the file, {quoted(item.in_tree)} in the tree
             </Row>
           ))}
         </ul>
@@ -242,14 +243,14 @@ function EarlierImport({
     <li className="space-y-1 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         {item.kind === "folder" ? (
-          <LaptopIcon className="size-4 text-stone-400" aria-hidden />
+          <LaptopIcon className="size-4 text-faint" aria-hidden />
         ) : item.kind === "copy" ? (
-          <PencilIcon className="size-4 text-stone-400" aria-hidden />
+          <PencilIcon className="size-4 text-faint" aria-hidden />
         ) : (
-          <FileSpreadsheetIcon className="size-4 text-stone-400" aria-hidden />
+          <FileSpreadsheetIcon className="size-4 text-faint" aria-hidden />
         )}
         <span className="font-medium">{when(item.imported_at)}</span>
-        <span className="text-stone-600">
+        <span className="text-muted-foreground">
           ·{" "}
           {item.kind === "folder"
             ? `changes from ${item.for_name}`
@@ -257,7 +258,7 @@ function EarlierImport({
               ? `changes from ${item.for_name}'s copy, ${item.file_name}`
               : item.file_name}
         </span>
-        <span className="text-stone-600">
+        <span className="text-muted-foreground">
           · {count(item.people, "person", "people")}, {count(item.links, "link")}
           {item.changed > 0 && `, ${item.changed} changed`}
           {item.removed > 0 && `, ${item.removed} removed`}
@@ -266,10 +267,10 @@ function EarlierImport({
           {item.left_out.length > 0 && `, ${item.left_out.length} left out`}
         </span>
         {item.taken_back_at ? (
-          <span className="text-stone-500">· taken back {when(item.taken_back_at)}</span>
+          <span className="text-faint">· taken back {when(item.taken_back_at)}</span>
         ) : (
           gone > 0 && (
-            <span className="text-stone-500">
+            <span className="text-faint">
               · {item.people_present === 0 ? "none" : item.people_present} still in the tree
             </span>
           )
@@ -303,7 +304,7 @@ function EarlierImport({
         <ul className="pl-6">
           {item.left_out.map((left) => (
             <Row key={`${left.row}-${left.column}-${left.written}`} row={left.row}>
-              <span className="text-stone-500">{left.column}</span>
+              <span className="text-faint">{left.column}</span>
               {left.written && <span className="font-medium"> “{left.written}”</span>}: {left.why}
             </Row>
           ))}
@@ -398,9 +399,9 @@ function EarlierImports() {
   }
 
   return (
-    <section className="space-y-2 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-2 rounded-xl border border-border bg-card p-5">
       <h2 className="font-semibold">Earlier imports</h2>
-      <ul className="divide-y divide-stone-100">
+      <ul className="divide-y divide-border">
         {list.map((item) => (
           <EarlierImport
             key={item.id}
@@ -499,7 +500,14 @@ export function ImportSection() {
               ? `${count(done.left_out, "thing was", "things were")} left out: see Earlier imports. What's missing lists what's still to fill in.`
               : "Undo takes the whole import back. What's missing lists what's still to fill in.",
             duration: ACTION_MS,
-            action: { label: "What's missing", onClick: () => navigate("/settings/missing") },
+            // Family facts' What's missing, over the tree.
+            action: {
+              label: "What's missing",
+              onClick: () => {
+                navigate("/tree");
+                openFamilyFacts("missing");
+              },
+            },
           });
           reset(null);
         },
@@ -510,10 +518,10 @@ export function ImportSection() {
 
   return (
     <div className="space-y-4">
-      <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+      <section className="space-y-4 rounded-xl border border-border bg-card p-5">
         <div className="space-y-1">
           <h2 className="font-semibold">Import from a spreadsheet</h2>
-          <p className="max-w-2xl text-sm text-stone-500">
+          <p className="max-w-2xl text-sm text-faint">
             Bring in people from a spreadsheet: a branch a cousin typed up, or corrections and
             additions sent back on an export. You tick what should happen before anything changes,
             and the whole import can be undone.
@@ -535,7 +543,7 @@ export function ImportSection() {
               Example (.csv)
             </Button>
           </div>
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-faint">
             The example is the example family, every column filled in, to show what a spreadsheet
             can hold. A spreadsheet exported from AncesTree can be edited and imported too: the
             people already here are recognised by their IDs, what was changed in the file is offered
@@ -552,7 +560,7 @@ export function ImportSection() {
               <UploadIcon />
               {file ? "Choose another file…" : "Choose a file…"}
             </Button>
-            {file && <span className="text-sm text-stone-600">{file.name}</span>}
+            {file && <span className="text-sm text-muted-foreground">{file.name}</span>}
           </div>
           <input
             ref={input}
@@ -574,11 +582,11 @@ export function ImportSection() {
           <div className="space-y-3">
             <h3 className="text-sm font-medium">3. What will happen</h3>
             {preview.isError ? (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-destructive">
                 {preview.error.message}
               </p>
             ) : !shown ? (
-              <p className="text-sm text-stone-500">Reading {file.name}…</p>
+              <p className="text-sm text-faint">Reading {file.name}…</p>
             ) : (
               <>
                 <Preview
@@ -600,13 +608,13 @@ export function ImportSection() {
                     Cancel
                   </Button>
                   {preview.isFetching && (
-                    <span className="text-sm text-stone-500">Checking your answer…</span>
+                    <span className="text-sm text-faint">Checking your answer…</span>
                   )}
                   {changes.length > 0 && carried === 0 && !preview.isFetching && (
-                    <span className="text-sm text-stone-500">Nothing is ticked.</span>
+                    <span className="text-sm text-faint">Nothing is ticked.</span>
                   )}
                 </div>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-faint">
                   A backup is made first. The import is then one step for Undo.
                 </p>
               </>

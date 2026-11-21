@@ -58,9 +58,9 @@ export function quoted(text: string | null | undefined): string {
 }
 
 const BADGES = {
-  plain: "bg-stone-100 text-stone-600",
-  attention: "bg-amber-100 text-amber-900",
-  danger: "bg-red-100 text-red-800",
+  plain: "bg-muted text-muted-foreground",
+  attention: "bg-warning-tint text-warning-soft-foreground",
+  danger: "bg-destructive/10 text-destructive",
 };
 
 /** One part of the preview, folded or open, with how many it holds; `actions` sit on the
@@ -85,7 +85,7 @@ export function Group({
   const [open, setOpen] = useState(startOpen);
   if (items === 0) return null;
   return (
-    <div className="rounded-lg border border-stone-200">
+    <div className="rounded-lg border border-border">
       <div className="flex items-center gap-2 pr-2">
         <button
           type="button"
@@ -99,7 +99,7 @@ export function Group({
         </button>
         {actions}
       </div>
-      {open && <div className="border-t border-stone-100 px-3 py-2">{children}</div>}
+      {open && <div className="border-t border-border px-3 py-2">{children}</div>}
     </div>
   );
 }
@@ -109,7 +109,7 @@ export function Row({ row, children }: { row: number | null | undefined; childre
   return (
     <li className="flex gap-3 py-1.5 text-sm">
       {row !== null && row !== undefined && (
-        <span className="w-14 shrink-0 text-stone-500 tabular-nums">Row {row}</span>
+        <span className="w-14 shrink-0 text-faint tabular-nums">Row {row}</span>
       )}
       <span className="min-w-0 flex-1">{children}</span>
     </li>
@@ -126,10 +126,10 @@ export function Question({
   const where = question.row === null || question.row === undefined ? "" : `Row ${question.row}`;
   return (
     <li className="flex gap-3 py-2 text-sm">
-      {where && <span className="w-14 shrink-0 text-stone-500 tabular-nums">{where}</span>}
+      {where && <span className="w-14 shrink-0 text-faint tabular-nums">{where}</span>}
       <div className="min-w-0 flex-1 space-y-1.5">
         <p>
-          <span className="text-stone-500">{question.column}</span>{" "}
+          <span className="text-faint">{question.column}</span>{" "}
           <span className="font-medium">“{question.written}”</span>: {question.text}
         </p>
         <RadioGroup
@@ -145,7 +145,7 @@ export function Question({
                 <RadioGroupItem value={option.id} id={id} />
                 <Label htmlFor={id} className="font-normal">
                   {option.label}
-                  {option.detail && <span className="text-stone-500"> · {option.detail}</span>}
+                  {option.detail && <span className="text-faint"> · {option.detail}</span>}
                 </Label>
               </div>
             );
@@ -165,7 +165,7 @@ function ChangeText({ change }: { change: ImportChange }) {
       return (
         <>
           <span className="font-medium">{change.name}</span>
-          <span className="text-stone-500"> · {change.column}: </span>
+          <span className="text-faint"> · {change.column}: </span>
           {quoted(change.before)} → <span className="font-medium">{quoted(change.after)}</span>
         </>
       );
@@ -173,9 +173,9 @@ function ChangeText({ change }: { change: ImportChange }) {
       return (
         <>
           <span className="font-medium">{change.name}</span>
-          <span className="text-stone-500"> · life story {change.detail}</span>
+          <span className="text-faint"> · life story {change.detail}</span>
           {change.after && (
-            <span className="mt-0.5 block border-l-2 border-stone-200 pl-2 text-xs text-stone-600">
+            <span className="mt-0.5 block border-l-2 border-border pl-2 text-xs text-muted-foreground">
               {change.after}
             </span>
           )}
@@ -186,12 +186,12 @@ function ChangeText({ change }: { change: ImportChange }) {
       return (
         <>
           <span className="font-medium">{change.name}</span>
-          <span className="text-stone-500">
+          <span className="text-faint">
             {" "}
             · what {change.by || "someone"} says, {change.detail}
           </span>
           {(change.after || change.before) && (
-            <span className="mt-0.5 block border-l-2 border-sky-200 pl-2 text-xs text-stone-600">
+            <span className="mt-0.5 block border-l-2 border-highlight-border pl-2 text-xs text-muted-foreground">
               {change.after || change.before}
             </span>
           )}
@@ -205,7 +205,7 @@ function ChangeText({ change }: { change: ImportChange }) {
           )}
           <span>
             <span className="font-medium">{change.name}</span>
-            <span className="text-stone-500"> · photo {change.detail}</span>
+            <span className="text-faint"> · photo {change.detail}</span>
           </span>
         </span>
       );
@@ -221,7 +221,7 @@ function ChangeText({ change }: { change: ImportChange }) {
       return (
         <>
           <span className="font-medium">{change.name}</span>
-          {change.detail && <span className="text-stone-500"> · {change.detail}</span>}
+          {change.detail && <span className="text-faint"> · {change.detail}</span>}
         </>
       );
   }
@@ -238,13 +238,13 @@ function ChangeNote({
   source: Source;
 }) {
   const notes: [string, string][] = [];
-  if (held) notes.push(["text-stone-500", `Can't be made: ${held}.`]);
-  if (change.clash) notes.push(["text-amber-800", CLASHES[source]]);
-  if (change.unsure) notes.push(["text-stone-500", UNSURE[source]]);
-  if (change.kind === "set" && change.detail) notes.push(["text-stone-500", change.detail]);
+  if (held) notes.push(["text-faint", `Can't be made: ${held}.`]);
+  if (change.clash) notes.push(["text-warning", CLASHES[source]]);
+  if (change.unsure) notes.push(["text-faint", UNSURE[source]]);
+  if (change.kind === "set" && change.detail) notes.push(["text-faint", change.detail]);
   if (change.kind === "remove_person") {
     notes.push([
-      "text-red-700",
+      "text-destructive",
       "Moves to the Trash with their links, their photos and story; it can be restored for 30 days.",
     ]);
   }
@@ -283,13 +283,13 @@ function ChangeRow({
         onCheckedChange={(checked) => onTick(checked === true)}
       />
       {source === "spreadsheet" && (
-        <span className="w-14 shrink-0 text-stone-500 tabular-nums">
+        <span className="w-14 shrink-0 text-faint tabular-nums">
           {change.row === null || change.row === undefined ? "" : `Row ${change.row}`}
         </span>
       )}
       <Label
         htmlFor={id}
-        className={`block min-w-0 flex-1 font-normal leading-snug ${held && ticked ? "text-stone-400" : ""}`}
+        className={`block min-w-0 flex-1 font-normal leading-snug ${held && ticked ? "text-faint" : ""}`}
       >
         <ChangeText change={change} />
         <ChangeNote change={change} held={ticked ? held : null} source={source} />
@@ -359,7 +359,7 @@ export function Review({
               </span>
             }
           >
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-border">
               {group.map((change) => (
                 <ChangeRow
                   key={change.id}
@@ -385,7 +385,7 @@ export function LeftOut({ items }: { items: ImportLeftOut[] }) {
       <ul>
         {items.map((item) => (
           <Row key={`${item.row}-${item.column}-${item.written}-${item.why}`} row={item.row}>
-            <span className="text-stone-500">{item.column}</span>
+            <span className="text-faint">{item.column}</span>
             {item.written && <span className="font-medium"> “{item.written}”</span>}: {item.why}
           </Row>
         ))}

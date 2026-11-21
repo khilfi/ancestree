@@ -2,9 +2,10 @@ import { Redo2Icon, Undo2Icon } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useHistory, useHistoryMove } from "@/api/queries";
+import { Hint } from "@/components/Hint";
 import { Button } from "@/components/ui/button";
 import { typing } from "@/lib/keyboard";
-import { ACTION_MS, showError } from "@/lib/notify";
+import { ACTION_MS, offerTryAgain } from "@/lib/notify";
 
 type Direction = "undo" | "redo";
 
@@ -40,7 +41,7 @@ export function UndoRedo() {
             },
           });
         },
-        onError: showError,
+        onError: (error) => offerTryAgain(error, () => move(direction, step)),
       });
     },
     [undo, redo],
@@ -74,26 +75,28 @@ export function UndoRedo() {
   const redoStep = history.data?.redo;
   return (
     <div className="flex items-center">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        disabled={!undoStep || busy}
-        onClick={() => next("undo")}
-        aria-label={undoStep ? `Undo: ${undoStep.label}` : "Nothing to undo"}
-        title={undoStep ? `Undo: ${undoStep.label} (Ctrl+Z)` : "Nothing to undo"}
-      >
-        <Undo2Icon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        disabled={!redoStep || busy}
-        onClick={() => next("redo")}
-        aria-label={redoStep ? `Redo: ${redoStep.label}` : "Nothing to redo"}
-        title={redoStep ? `Redo: ${redoStep.label} (Ctrl+Y)` : "Nothing to redo"}
-      >
-        <Redo2Icon />
-      </Button>
+      <Hint label={undoStep ? `Undo: ${undoStep.label} (Ctrl+Z)` : "Nothing to undo"}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={!undoStep || busy}
+          onClick={() => next("undo")}
+          aria-label={undoStep ? `Undo: ${undoStep.label}` : "Nothing to undo"}
+        >
+          <Undo2Icon />
+        </Button>
+      </Hint>
+      <Hint label={redoStep ? `Redo: ${redoStep.label} (Ctrl+Y)` : "Nothing to redo"}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={!redoStep || busy}
+          onClick={() => next("redo")}
+          aria-label={redoStep ? `Redo: ${redoStep.label}` : "Nothing to redo"}
+        >
+          <Redo2Icon />
+        </Button>
+      </Hint>
     </div>
   );
 }

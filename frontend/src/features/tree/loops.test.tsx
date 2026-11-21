@@ -18,6 +18,7 @@ import { MissingSection } from "@/features/settings/MissingSection";
 import { standings } from "@/features/timeline/lanes";
 import { golden } from "@/kinship/golden";
 import { KinshipTwin } from "@/kinship/twin";
+import type { NoteLine } from "@/lib/notes";
 import { showRestored } from "@/lib/notify";
 import { until } from "@/viewer/looking";
 import { applyFilter, NO_FILTER, type Scope } from "./filters";
@@ -266,9 +267,8 @@ describe("What's missing: A child with three birth parents", () => {
 });
 
 describe("back from the Trash", () => {
-  it("says each link the rules refused", () => {
-    const warned = vi.spyOn(toast, "warning").mockImplementation(() => "");
-    vi.spyOn(toast, "success").mockImplementation(() => "");
+  it("says each link the rules refused, in the note that says they're back", () => {
+    const shown = vi.spyOn(toast, "success").mockImplementation(() => "");
     const said =
       "Hassan bin Ismail's link to Ali bin Hassan can't come back: Ali bin Hassan is already " +
       "an ancestor of Hassan bin Ismail. This would make Ali bin Hassan their own ancestor.";
@@ -279,6 +279,11 @@ describe("back from the Trash", () => {
       left_out: [said],
     } as unknown as RestoreResult;
     showRestored(result);
-    expect(warned).toHaveBeenCalledWith(said, expect.anything());
+    expect(shown).toHaveBeenCalledTimes(1);
+    const [message, options] = shown.mock.calls[0] ?? [];
+    expect(message).toBe("Hassan bin Ismail is back, with 1 link.");
+    const lines = (options?.description as { props: { lines: NoteLine[] } } | undefined)?.props
+      .lines;
+    expect(lines).toEqual([{ words: said, warning: true }]);
   });
 });

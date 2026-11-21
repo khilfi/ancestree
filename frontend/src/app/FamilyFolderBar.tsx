@@ -69,13 +69,13 @@ export function FamilyFolderBar() {
     return (
       <div
         role="status"
-        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 md:px-4"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-background px-3 py-1.5 text-sm text-foreground md:px-4"
       >
         <span>
           The family is offered to {status.offer_made.name}: it can't be changed here until they
           answer.
         </span>
-        <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
+        <Link to="/settings/family#family-folder" className="text-link hover:underline">
           Family folder
         </Link>
       </div>
@@ -86,7 +86,7 @@ export function FamilyFolderBar() {
     return (
       <div
         role="status"
-        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 md:px-4"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-background px-3 py-1.5 text-sm text-foreground md:px-4"
       >
         <span>{onARelatives(status)}</span>
         {(sendsToTheKeeper(status) || sendsWords(status)) && (status.pending ?? 0) > 0 && (
@@ -99,7 +99,7 @@ export function FamilyFolderBar() {
             {sync.isPending ? "Sending…" : "Send now"}
           </Button>
         )}
-        <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
+        <Link to="/settings/family#family-folder" className="text-link hover:underline">
           Family folder
         </Link>
       </div>
@@ -111,7 +111,7 @@ export function FamilyFolderBar() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-sky-200 bg-sky-50 px-3 py-1.5 text-sm text-sky-900 md:px-4"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-highlight-border bg-highlight-soft px-3 py-1.5 text-sm text-highlight-soft-foreground md:px-4"
     >
       <span>
         Welcome to AncesTree. Has your family's keeper sent you an invitation? Join with it, or

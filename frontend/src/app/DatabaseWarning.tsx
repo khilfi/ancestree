@@ -16,7 +16,7 @@ export function DatabaseWarning() {
     <Link
       to="/settings/about"
       role="alert"
-      className="flex items-center gap-1.5 rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700 hover:bg-red-100"
+      className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-sm font-medium text-destructive hover:bg-destructive/10"
     >
       <TriangleAlertIcon className="size-4" />
       Can't reach the database

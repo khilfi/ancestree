@@ -11,6 +11,7 @@ import {
 import { useTreeSettings } from "@/api/queries";
 import type { Graph, GraphPerson } from "@/api/types";
 import { useCanEdit } from "@/app/copy";
+import { Hint } from "@/components/Hint";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TOOL_SELECT, ViewToolbar } from "@/components/ViewToolbar";
 import { StoryMark } from "@/features/biography/StoryMark";
-import { ClosenessKey } from "@/features/me/ClosenessKey";
 import { useMeId } from "@/features/me/useMeId";
 import { FilterChips, FilterMenu } from "@/features/tree/FilterMenu";
 import { applyFilter, NO_FILTER, type TreeFilter, writeView } from "@/features/tree/filters";
@@ -30,6 +31,8 @@ import { shortName } from "@/features/tree/words";
 import { typing } from "@/lib/keyboard";
 import { useTouch } from "@/lib/media";
 import { cn } from "@/lib/utils";
+import { DRAWING } from "@/styles/drawing";
+import { ColourKey } from "./ColourKey";
 import {
   arrange,
   fitAll,
@@ -50,13 +53,14 @@ import {
   zoomAround,
 } from "./lanes";
 
-const GREY = "#a8a29e";
+const GREY = DRAWING.line;
 const SOFT = 18; // px: how far an approximate date's bar end fades
 
 /**
  * Everyone on a year axis: a photo at the birth year and a bar across
- * the lifetime, to today for the living. Scroll to zoom, drag to move; only the lanes in
- * view are drawn, so a family of any size stays smooth.
+ * the lifetime, to today for the living, coloured as the tree is, with its key; each named as on
+ * the tree, the nickname after. The wheel goes down the list, Ctrl+wheel or a pinch zooms,
+ * a drag moves; only the lanes in view are drawn, so a family of any size stays smooth.
  */
 export function Timeline({
   graph,
@@ -96,6 +100,8 @@ export function Timeline({
     return spans(people, today);
   }, [graph, today, kept, faded]);
   const standing = useMemo(() => standings(graph), [graph]);
+  // A branch is named by whom it starts with, short ("Acan's branch"); people by their full
+  // name, as on the tree, the nickname after.
   const names = useMemo(() => new Map(graph.people.map((p) => [p.id, shortName(p)])), [graph]);
   // "Me": coloured by closeness to you, as on the tree; not for the made-up sample.
   const meId = useMeId();
@@ -124,31 +130,35 @@ export function Timeline({
     return () => observer.disconnect();
   }, []);
 
-  // Scroll zooms around the pointer, as on the tree; a sideways swipe moves along; with
-  // Shift, scrolling goes down the lanes instead.
+  // The wheel goes down the list, as anywhere else: the page scrolls it, by your answer of 19
+  // Nov 2026. Ctrl+wheel zooms around the pointer, as does a touchpad's pinch, which the
+  // browser sends as one; a sideways swipe, or Shift+wheel, moves along the years.
   useEffect(() => {
     const element = scroller.current;
     if (!element) return;
     const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
       const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1;
-      if (event.shiftKey) {
-        element.scrollTop += (event.deltaY || event.deltaX) * scale;
-        return;
-      }
       const width = element.clientWidth || 1;
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-        setView((now) => panBy(now, ((event.deltaX * scale) / width) * (now.end - now.start)));
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault(); // never the page's own zoom
+        const fraction = (event.clientX - element.getBoundingClientRect().left) / width;
+        setView((now) =>
+          zoomAround(
+            now,
+            Math.exp(-event.deltaY * scale * 0.002),
+            now.start + fraction * (now.end - now.start),
+          ),
+        );
         return;
       }
-      const fraction = (event.clientX - element.getBoundingClientRect().left) / width;
-      setView((now) =>
-        zoomAround(
-          now,
-          Math.exp(-event.deltaY * scale * 0.002),
-          now.start + fraction * (now.end - now.start),
-        ),
-      );
+      const along = event.shiftKey
+        ? event.deltaX || event.deltaY
+        : Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : 0;
+      if (!along) return;
+      event.preventDefault();
+      setView((now) => panBy(now, ((along * scale) / width) * (now.end - now.start)));
     };
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
@@ -290,12 +300,12 @@ export function Timeline({
   const todayShown = today >= view.start && today <= view.end;
 
   return (
-    <div className="flex h-full flex-col bg-stone-50">
-      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200 bg-white px-3 py-2 text-sm">
-        <span className="flex items-center gap-2 text-stone-600">
+    <div className="flex h-full flex-col bg-background">
+      <ViewToolbar label="The timeline's tools">
+        <span className="flex items-center gap-2 text-muted-foreground">
           Group by
           <Select value={grouping} onValueChange={(value) => setGrouping(value as Grouping)}>
-            <SelectTrigger size="sm" className="h-7 text-xs" aria-label="Group by">
+            <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Group by">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -305,10 +315,10 @@ export function Timeline({
             </SelectContent>
           </Select>
         </span>
-        <span className="flex items-center gap-2 text-stone-600">
+        <span className="flex items-center gap-2 text-muted-foreground">
           Sort by
           <Select value={sorting} onValueChange={(value) => setSorting(value as Sorting)}>
-            <SelectTrigger size="sm" className="h-7 text-xs" aria-label="Sort by">
+            <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Sort by">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -321,10 +331,10 @@ export function Timeline({
         {onFilter && (
           <FilterMenu graph={graph} filter={filter} onChange={onFilter} selectedId={selectedId} />
         )}
-        <span className="text-xs text-stone-500">
+        <span className="text-xs text-faint">
           {touch
             ? "Pinch to zoom · drag to move"
-            : "Scroll to zoom · drag to move · Shift+scroll to go down"}
+            : "Scroll to go down · Ctrl+scroll to zoom · drag to move"}
         </span>
         <div className="ml-auto flex items-center gap-1">
           <Button
@@ -340,24 +350,25 @@ export function Timeline({
           </Button>
           <Button variant="outline" size="sm" onClick={showEveryone}>
             <MaximizeIcon />
-            Fit
+            Show everyone
           </Button>
         </div>
-      </div>
+      </ViewToolbar>
 
-      {onSelect && colours === "closeness" && (
-        <div className="shrink-0 border-b border-stone-200 bg-white px-3 py-1.5">
-          <ClosenessKey chosen={me !== null} />
+      {/* What the colours say, as on the tree; closeness only for the real family. */}
+      {colours !== "off" && (onSelect || colours !== "closeness") && (
+        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
+          <ColourKey graph={graph} colours={colours} me={me} names={names} />
         </div>
       )}
       {onFilter && (
-        <div className="shrink-0 border-b border-stone-200 bg-white px-3 py-1.5 empty:hidden">
+        <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
           <FilterChips graph={graph} filter={filter} onChange={onFilter} shown={shownCount} />
         </div>
       )}
 
       <div
-        className="relative h-7 shrink-0 overflow-hidden border-b border-stone-200 bg-white text-[11px] text-stone-500 select-none"
+        className="relative h-7 shrink-0 overflow-hidden border-b border-border bg-card text-xs text-faint select-none"
         style={{ width: size.width || undefined }}
         aria-hidden="true"
       >
@@ -374,7 +385,7 @@ export function Timeline({
           ))}
         {todayShown && (
           <span
-            className="absolute top-1.5 pl-1 font-medium text-amber-700"
+            className="absolute top-1.5 pl-1 font-medium text-today-foreground"
             style={{ left: x(today) }}
           >
             today
@@ -401,13 +412,13 @@ export function Timeline({
           {ticks.map((year) => (
             <div
               key={year}
-              className="pointer-events-none absolute inset-y-0 w-px bg-stone-200/60"
+              className="pointer-events-none absolute inset-y-0 w-px bg-border/60"
               style={{ left: x(year) }}
             />
           ))}
           {todayShown && (
             <div
-              className="pointer-events-none absolute inset-y-0 w-px bg-amber-400/80"
+              className="pointer-events-none absolute inset-y-0 w-px bg-today/80"
               style={{ left: x(today) }}
             />
           )}
@@ -420,7 +431,6 @@ export function Timeline({
                 lane={row.span}
                 top={row.top}
                 x={x}
-                name={names.get(row.key) ?? row.span.person.full_name}
                 colour={colourOf(row.key)}
                 selected={row.key === selectedId}
                 faded={faded !== null && !faded.has(row.key)}
@@ -429,7 +439,7 @@ export function Timeline({
             ),
           )}
           {rows.length === 0 && (
-            <p className="absolute inset-x-0 top-10 text-center text-sm text-stone-500">
+            <p className="absolute inset-x-0 top-10 text-center text-sm text-faint">
               {kept
                 ? `No one the filter shows has a birth year yet. ${canEdit ? "Add one in someone's panel, or change the filter." : "Change the filter to see more."}`
                 : `No one has a birth year yet.${canEdit ? " Add one in someone's panel and they appear here." : ""}`}
@@ -441,7 +451,6 @@ export function Timeline({
       <UndatedTray
         people={undated}
         standing={standing.of}
-        names={names}
         selectedId={selectedId}
         open={trayOpen}
         onToggle={() => setTrayOpen((open) => !open)}
@@ -455,7 +464,7 @@ export function Timeline({
 function GroupRow({ row }: { row: Extract<Row, { kind: "group" }> }) {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 flex items-end gap-2 px-4 pb-1 text-xs font-semibold tracking-wide text-stone-500 uppercase"
+      className="pointer-events-none absolute inset-x-0 flex items-end gap-2 px-4 pb-1 text-xs font-semibold tracking-wide text-faint uppercase"
       style={{ top: row.top, height: GROUP_HEIGHT }}
     >
       {row.label}
@@ -478,11 +487,15 @@ function barPaint(lane: Span, colour: string): string {
   return `linear-gradient(to right, ${from}, ${to})`;
 }
 
+/** Someone named as on the tree, the nickname after: "Hassan bin Ismail “Acan”". */
+export function calledOnTimeline(person: Pick<GraphPerson, "full_name" | "nickname">): string {
+  return person.nickname ? `${person.full_name} “${person.nickname}”` : person.full_name;
+}
+
 function Lane({
   lane,
   top,
   x,
-  name,
   colour,
   selected,
   faded = false,
@@ -491,7 +504,6 @@ function Lane({
   lane: Span;
   top: number;
   x: (year: number) => number;
-  name: string;
   colour: string | null;
   selected: boolean;
   faded?: boolean; // left out by the filter, which fades the others
@@ -514,11 +526,11 @@ function Lane({
       type="button"
       disabled={!onSelect}
       onClick={() => onSelect?.(lane.person.id)}
-      aria-label={`${name}, ${lane.years}`}
+      aria-label={`${calledOnTimeline(lane.person)}, ${lane.years}`}
       className={cn(
         "group absolute inset-x-0 text-left",
-        onSelect ? "cursor-pointer hover:bg-white/80" : "cursor-default",
-        selected && "bg-sky-50 hover:bg-sky-50",
+        onSelect ? "cursor-pointer hover:bg-card/80" : "cursor-default",
+        selected && "bg-highlight-soft hover:bg-highlight-soft",
         faded && "opacity-25",
       )}
       style={{ top, height: LANE_HEIGHT }}
@@ -546,7 +558,7 @@ function Lane({
           className={cn(
             "border-2",
             lane.start === null && "border-dashed",
-            selected && "!border-sky-500 ring-2 ring-sky-200",
+            selected && "!border-highlight ring-2 ring-highlight-border",
           )}
           style={colour && !selected ? { borderColor: colour } : undefined}
         />
@@ -556,10 +568,11 @@ function Lane({
         className="pointer-events-none absolute top-0.5 text-xs leading-4 whitespace-nowrap"
         style={{ left: labelAt }}
       >
-        <span className="font-medium text-stone-800">{name}</span>{" "}
-        <span className="text-stone-500">{lane.years}</span>
+        <span className="font-medium text-foreground">{lane.person.full_name}</span>
+        {lane.person.nickname && <span className="text-faint"> “{lane.person.nickname}”</span>}{" "}
+        <span className="text-faint">{lane.years}</span>
         {lane.age && (
-          <span className="ml-1 hidden text-stone-700 group-hover:inline">· {lane.age}</span>
+          <span className="ml-1 hidden text-foreground group-hover:inline">· {lane.age}</span>
         )}
       </span>
     </button>
@@ -570,7 +583,6 @@ function Lane({
 function UndatedTray({
   people,
   standing,
-  names,
   selectedId,
   open,
   onToggle,
@@ -579,7 +591,6 @@ function UndatedTray({
 }: {
   people: GraphPerson[];
   standing: Map<string, Standing>;
-  names: Map<string, string>;
   selectedId: string | null;
   open: boolean;
   onToggle: () => void;
@@ -593,19 +604,19 @@ function UndatedTray({
     return where ? where.family * 1000 + where.generation : 1e9;
   };
   const sorted = [...people].sort(
-    (a, b) => rank(a) - rank(b) || (names.get(a.id) ?? "").localeCompare(names.get(b.id) ?? ""),
+    (a, b) => rank(a) - rank(b) || a.full_name.localeCompare(b.full_name),
   );
   return (
-    <section className="shrink-0 border-t border-stone-200 bg-white" aria-label="Undated">
+    <section className="shrink-0 border-t border-border bg-card" aria-label="Undated">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-stone-50"
+        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-muted/50"
         aria-expanded={open}
       >
         {open ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
         <span className="font-medium">Undated ({people.length})</span>
-        <span className="text-stone-500">
+        <span className="text-faint">
           {canEdit ? "Add a birth year to place them on the timeline" : "No birth year recorded"}
         </span>
       </button>
@@ -615,21 +626,24 @@ function UndatedTray({
             const where = standing.get(person.id);
             return (
               <li key={person.id}>
-                <button
-                  id={`undated-${person.id}`}
-                  type="button"
-                  disabled={!onSelect}
-                  onClick={() => onSelect?.(person.id)}
-                  title={where ? `Generation ${where.generation}` : "Not linked yet"}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border border-stone-200 bg-white py-0.5 pr-2.5 pl-0.5 text-xs hover:bg-stone-100",
-                    person.id === selectedId && "border-sky-500 bg-sky-50 ring-2 ring-sky-200",
-                    faded && !faded.has(person.id) && "opacity-25",
-                  )}
-                >
-                  <PersonAvatar person={person} size="sm" className="size-6 text-[10px]" />
-                  {names.get(person.id)}
-                </button>
+                <Hint label={where ? `Generation ${where.generation}` : "Not linked yet"}>
+                  <button
+                    id={`undated-${person.id}`}
+                    type="button"
+                    disabled={!onSelect}
+                    onClick={() => onSelect?.(person.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border border-border bg-card py-0.5 pr-2.5 pl-0.5 text-xs hover:bg-muted",
+                      person.id === selectedId &&
+                        "border-highlight bg-highlight-soft ring-2 ring-highlight-border",
+                      faded && !faded.has(person.id) && "opacity-25",
+                    )}
+                  >
+                    <PersonAvatar person={person} size="sm" className="size-6 text-xs" />
+                    {person.full_name}
+                    {person.nickname && <span className="text-faint">“{person.nickname}”</span>}
+                  </button>
+                </Hint>
               </li>
             );
           })}

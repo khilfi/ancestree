@@ -246,7 +246,7 @@ export function StoryWrite({ person, opened }: { person: PersonDetail; opened: B
       )}
 
       <section aria-labelledby="their-story" className="space-y-2">
-        <h3 id="their-story" className="text-sm font-semibold text-stone-800">
+        <h3 id="their-story" className="text-sm font-semibold text-foreground">
           Their story
         </h3>
         {plain === null ? (
@@ -261,7 +261,7 @@ export function StoryWrite({ person, opened }: { person: PersonDetail; opened: B
           </Suspense>
         ) : (
           <div className="space-y-2">
-            <p className="rounded-md bg-stone-100 px-3 py-2 text-xs text-stone-600">
+            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
               This story has something the editor can't show, such as HTML, or Obsidian's
               properties, [[links]] or footnotes, so it's shown as plain text. Nothing in it is
               lost.{" "}
@@ -294,13 +294,13 @@ export function StoryWrite({ person, opened }: { person: PersonDetail; opened: B
       </section>
 
       <section aria-labelledby="their-parts" className="space-y-2">
-        <h3 id="their-parts" className="text-sm font-semibold text-stone-800">
+        <h3 id="their-parts" className="text-sm font-semibold text-foreground">
           The parts of their life
         </h3>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-faint">
           Fill in only those you want: an empty one doesn't show when it's read.
         </p>
-        <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+        <div className="divide-y divide-border rounded-lg border border-border">
           {PARTS.map((part) => (
             <PartWriter
               key={`${part.key}:${start.round}`}
@@ -339,16 +339,16 @@ function PartWriter({
         id={id}
         aria-expanded={open}
         onClick={() => setOpen((now) => !now)}
-        className="flex w-full items-center gap-1.5 text-left text-sm font-medium text-stone-800"
+        className="flex w-full items-center gap-1.5 text-left text-sm font-medium text-foreground"
       >
         <ChevronRightIcon
-          className={`size-4 text-stone-400 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`size-4 text-faint transition-transform ${open ? "rotate-90" : ""}`}
         />
         {part.title}
       </button>
       {open && (
         <div className="life-story-part space-y-2 pt-2 pb-1 pl-5">
-          <p className="text-xs text-stone-500">{part.hint}</p>
+          <p className="text-xs text-faint">{part.hint}</p>
           {part.kind === "text" ? (
             <Suspense fallback={<Skeleton className="h-24 w-full" />}>
               <StoryEditor
@@ -417,7 +417,7 @@ function ItemsList({
     <div className="space-y-1.5">
       {rows.map((row, index) => (
         <div key={row.id} className="flex items-start gap-1">
-          <span className="pt-1.5 text-stone-400">•</span>
+          <span className="pt-1.5 text-faint">•</span>
           <GrowingText
             ref={(element) => {
               if (element) fields.current.set(row.id, element);
@@ -528,17 +528,17 @@ function SaveStatus({
   failure: string;
   onRetry: () => void;
 }) {
-  if (status === "saving") return <span className="text-xs text-stone-500">Saving…</span>;
+  if (status === "saving") return <span className="text-xs text-faint">Saving…</span>;
   if (status === "saved") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-emerald-700">
+      <span className="inline-flex items-center gap-1 text-xs text-success">
         Saved <CheckIcon className="size-3.5" />
       </span>
     );
   }
   if (status === "failed") {
     return (
-      <span role="alert" className="text-xs text-red-700">
+      <span role="alert" className="text-xs text-destructive">
         Not saved: {failure}{" "}
         <button type="button" className="font-medium underline" onClick={onRetry}>
           Try again
@@ -563,7 +563,7 @@ function ChangedOutside({
   return (
     <div
       role="alert"
-      className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+      className="space-y-2 rounded-lg border border-warning-border bg-warning-soft p-3 text-sm text-warning-soft-foreground"
     >
       <p className="font-medium">This story was changed outside AncesTree since you opened it.</p>
       <p>
@@ -572,7 +572,7 @@ function ChangedOutside({
       </p>
       <details className="text-xs">
         <summary className="cursor-pointer font-medium">See the file's version</summary>
-        <pre className="mt-1 max-h-48 overflow-auto rounded bg-white/70 p-2 font-sans whitespace-pre-wrap">
+        <pre className="mt-1 max-h-48 overflow-auto rounded bg-card/70 p-2 font-sans whitespace-pre-wrap">
           {text || "(The file is now empty.)"}
         </pre>
       </details>

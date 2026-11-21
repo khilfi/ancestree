@@ -2,6 +2,7 @@ import { BookOpenIcon, MessageSquarePlusIcon, PencilIcon } from "lucide-react";
 import { useBiography } from "@/api/queries";
 import type { PersonDetail } from "@/api/types";
 import { useCanEdit, useCopy, useWordsHere } from "@/app/copy";
+import { Failed } from "@/components/Failed";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { openLifeStory } from "@/lib/lifeStory";
@@ -36,15 +37,24 @@ export function BiographyTab({ person }: { person: PersonDetail }) {
   const story = useBiography(person.placeholder ? null : person.id);
   if (person.placeholder) {
     return (
-      <p className="px-4 pt-3 text-sm text-stone-500">
+      <p className="px-4 pt-3 text-sm text-faint">
         {canEdit
           ? "An unknown parent has no story yet. Fill them in first."
           : "An unknown parent has no story."}
       </p>
     );
   }
-  if (story.isError)
-    return <p className="px-4 pt-3 text-sm text-stone-600">{story.error.message}</p>;
+  if (story.isError) {
+    return (
+      <div className="px-4 pt-3">
+        <Failed
+          error={story.error}
+          onRetry={() => void story.refetch()}
+          className="text-sm text-muted-foreground"
+        />
+      </div>
+    );
+  }
   if (!story.data) {
     return (
       <div className="space-y-3 px-4 pt-3">
@@ -64,20 +74,20 @@ export function BiographyTab({ person }: { person: PersonDetail }) {
       {told ? (
         <>
           {story.data.story.trim() && (
-            <p className="font-serif text-base leading-relaxed text-stone-800">
+            <p className="font-serif text-base leading-relaxed text-foreground">
               {opening(story.data.story)}
             </p>
           )}
           {parts.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
+              <p className="text-xs font-semibold tracking-wide text-faint uppercase">
                 Also written
               </p>
               <ul className="flex flex-wrap gap-1.5">
                 {parts.map((title) => (
                   <li
                     key={title}
-                    className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs text-amber-900"
+                    className="rounded-full bg-story-soft px-2.5 py-0.5 text-xs text-story-soft-foreground"
                   >
                     {title}
                   </li>
@@ -87,7 +97,7 @@ export function BiographyTab({ person }: { person: PersonDetail }) {
           )}
         </>
       ) : (
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-faint">
           {hidden
             ? "Living people's stories aren't in this copy."
             : canEdit

@@ -265,7 +265,7 @@ async def test_removing_says_what_goes_and_saves_every_familys_backups_first(
     setup = families.places(added).data / "familyfolder" / "setup.json"
     setup.parent.mkdir(parents=True)
     setup.write_text(json.dumps({"role": "keeper"}), encoding="utf-8")
-    # One in AncesTree's bin, whose backups are kept too (the user's answer of 19 Nov 2026).
+    # One in the Trash, whose backups are kept too (the user's answer of 19 Nov 2026).
     binned = families.add("Keluarga Ayah")
     (families.places(binned).backups / "ancestree-backup-2026-11-03T09-00-00.zip").write_bytes(
         b"made up too"
@@ -493,6 +493,15 @@ def test_the_engine_trusts_what_the_computer_trusts() -> None:
     assert not isinstance(ssl.create_default_context(), truststore.SSLContext)
     main = inspect.getsource(engine.main)
     assert main.index("trust_what_the_computer_trusts()") < main.index("Families.load(")
+
+
+def test_a_packed_engine_has_no_test_pages() -> None:
+    """The test pages' made-up families (/api/sample/…) only from the code: a packed engine,
+    as every release is, builds the app without them."""
+    import inspect
+
+    main = inspect.getsource(engine.main)
+    assert "create_app(settings, on_round=in_step, docs=False, samples=not FROZEN)" in main
 
 
 def test_an_install_is_tidied_of_what_earlier_updates_left(tmp_path: Path) -> None:

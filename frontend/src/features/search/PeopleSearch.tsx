@@ -2,6 +2,7 @@ import { SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useSearchPeople } from "@/api/queries";
+import { Hint } from "@/components/Hint";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,21 +53,23 @@ export function PeopleSearch() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        // It takes the room the top bar has left, and gives way first; where the bar is short,
-        // the icon alone.
-        className="max-w-56 min-w-28 flex-1 justify-start text-stone-500 max-lg:min-w-0 max-lg:flex-none"
-        aria-label="Search people"
-        onClick={() => setOpen(true)}
-      >
-        <SearchIcon />
-        <span className="truncate max-lg:hidden">Search people…</span>
-        <kbd className="ml-auto rounded border border-stone-200 px-1 text-[10px] text-stone-400 max-lg:hidden pointer-coarse:hidden">
-          Ctrl K
-        </kbd>
-      </Button>
+      <Hint label="Search people (Ctrl+K)">
+        <Button
+          variant="outline"
+          size="sm"
+          // Its words whole from 1024 pixels across, never cut short: the family's name
+          // gives way first. Narrower, the icon alone, with its hint.
+          className="shrink-0 justify-start text-faint lg:w-48 xl:w-56"
+          aria-label="Search people"
+          onClick={() => setOpen(true)}
+        >
+          <SearchIcon />
+          <span className="max-lg:hidden">Search people…</span>
+          <kbd className="ml-auto rounded border border-border px-1 text-xs text-faint max-xl:hidden pointer-coarse:hidden">
+            Ctrl K
+          </kbd>
+        </Button>
+      </Hint>
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
@@ -90,9 +93,9 @@ export function PeopleSearch() {
                 <PersonAvatar person={person} size="sm" />
                 <span className="min-w-0 flex-1 truncate">
                   {person.full_name}
-                  {person.nickname && <span className="text-stone-500"> “{person.nickname}”</span>}
+                  {person.nickname && <span className="text-faint"> “{person.nickname}”</span>}
                 </span>
-                <span className="text-xs text-stone-500">{lifeYears(person)}</span>
+                <span className="text-xs text-faint">{lifeYears(person)}</span>
               </CommandItem>
             ))}
           </CommandList>

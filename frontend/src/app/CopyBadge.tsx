@@ -1,5 +1,6 @@
 import { EyeIcon } from "lucide-react";
 import { useState } from "react";
+import { Hint } from "@/components/Hint";
 import {
   Dialog,
   DialogContent,
@@ -18,20 +19,21 @@ export function CopyBadge({ copy }: { copy: CopyAbout }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title="About this copy"
-        className="flex min-w-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-900 hover:bg-amber-100"
-      >
-        <EyeIcon className="size-3.5 shrink-0" aria-hidden />
-        <span className="truncate max-md:hidden">
-          {copy.title ? `${copy.title} · ` : ""}
-          view-only, {day(copy.made_at, "short")}
-        </span>
-        {/* On a phone, short: the rest is in About this copy. */}
-        <span className="truncate md:hidden">{copy.title || "View-only"}</span>
-      </button>
+      <Hint label="About this copy">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex min-w-0 items-center gap-1 rounded-full border border-warning-border bg-warning-soft px-2 py-0.5 text-xs text-warning-soft-foreground hover:bg-warning-tint"
+        >
+          <EyeIcon className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate max-md:hidden">
+            {copy.title ? `${copy.title} · ` : ""}
+            view-only, {day(copy.made_at, "short")}
+          </span>
+          {/* On a phone, short: the rest is in About this copy. */}
+          <span className="truncate md:hidden">{copy.title || "View-only"}</span>
+        </button>
+      </Hint>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -41,7 +43,7 @@ export function CopyBadge({ copy }: { copy: CopyAbout }) {
               {day(copy.made_at, "long")}, with {copy.people} people.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-sm text-stone-700">
+          <div className="space-y-2 text-sm text-foreground">
             <p>
               Look around as you like: nothing you do here changes the family's record. What you
               choose, such as who you are (<strong>Me</strong>), the colours or the language of

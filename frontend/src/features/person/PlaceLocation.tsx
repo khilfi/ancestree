@@ -135,25 +135,27 @@ export function PlaceLocation({
   };
 
   return (
-    <div className="space-y-2 rounded-lg border border-stone-200 p-2.5 text-xs">
+    <div className="space-y-2 rounded-lg border border-border p-2.5 text-xs">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-medium text-stone-700">On the map</span>
+        <span className="font-medium text-foreground">On the map</span>
         {placed ? (
           <>
             <span
               className={cn(
                 "rounded px-1.5 py-0.5",
-                confirmed ? "bg-sky-50 text-sky-800" : "bg-amber-50 text-amber-900",
+                confirmed
+                  ? "bg-highlight-soft text-highlight-soft-foreground"
+                  : "bg-warning-soft text-warning-soft-foreground",
               )}
             >
               {confirmed ? "Confirmed" : "About here"}
             </span>
-            <span className="text-stone-600">
+            <span className="text-muted-foreground">
               {confirmed
                 ? "on the map as a pin"
                 : `on the map at ${town || MARK[exact ?? "town"].toLowerCase()}`}
             </span>
-            <span className="text-stone-400 tabular-nums">
+            <span className="text-faint tabular-nums">
               {lat.toFixed(4)}, {lon.toFixed(4)}
             </span>
             {!confirmed && (
@@ -163,7 +165,7 @@ export function PlaceLocation({
             )}
           </>
         ) : (
-          <span className="text-stone-500">
+          <span className="text-faint">
             {town ? "at its town, as the map finds it" : "not yet"}
           </span>
         )}
@@ -201,7 +203,7 @@ export function PlaceLocation({
         </span>
       </div>
       {question && (
-        <div className="flex flex-wrap items-center gap-2 rounded bg-amber-50 p-2 text-amber-900">
+        <div className="flex flex-wrap items-center gap-2 rounded bg-warning-soft p-2 text-warning-soft-foreground">
           <span className="flex-1">
             Its place on the map was confirmed. Keep it there, or place it from the new address?
           </span>
@@ -222,13 +224,13 @@ export function PlaceLocation({
         </div>
       )}
       {filled && (
-        <p className="text-stone-600">
+        <p className="text-muted-foreground">
           Filled in from the nearest place known: {filled}. Change anything that isn't right.
         </p>
       )}
       {shown &&
         (drawn && SmallMap ? (
-          <Suspense fallback={<div className="h-56 animate-pulse rounded-lg bg-stone-100" />}>
+          <Suspense fallback={<div className="h-56 animate-pulse rounded-lg bg-muted" />}>
             <SmallMap
               pin={placed ? { lat, lon } : null}
               around={around}
@@ -238,18 +240,18 @@ export function PlaceLocation({
               label={label}
               onMove={putHere}
             />
-            <p className="text-stone-500">
+            <p className="text-faint">
               {placed
                 ? "If it's wrong, drag the pin, or click the right spot."
                 : "Click where it is."}
             </p>
           </Suspense>
         ) : webgl2 && world ? (
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             The small map needs the world's map, downloaded once.{" "}
             <button
               type="button"
-              className="text-sky-700 hover:underline"
+              className="text-link hover:underline"
               disabled={world.fetching || fetchPack.isPending}
               onClick={() => fetchPack.mutate(world.key, { onError: showError })}
             >
@@ -258,7 +260,7 @@ export function PlaceLocation({
             Or type where it is, below.
           </p>
         ) : (
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             This computer can't draw the small map. Type or paste where it is, below.
           </p>
         ))}
@@ -279,7 +281,7 @@ export function PlaceLocation({
           if (typed.trim()) read();
         }}
       />
-      {problem && <p className="text-red-700">{problem}</p>}
+      {problem && <p className="text-destructive">{problem}</p>}
     </div>
   );
 }

@@ -37,7 +37,7 @@ function toggled<T>(set: ReadonlySet<T>, item: T, on: boolean): Set<T> {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="space-y-1.5">
-      <legend className="pb-1 text-xs font-semibold tracking-wide text-stone-500 uppercase">
+      <legend className="pb-1 text-xs font-semibold tracking-wide text-faint uppercase">
         {title}
       </legend>
       {children}
@@ -128,7 +128,7 @@ function PersonPicker({
 
   if (chosen) {
     return (
-      <div className="flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-sm">
+      <div className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-sm">
         <span className="min-w-0 flex-1 truncate font-medium">{chosen.full_name}</span>
         <Button
           variant="ghost"
@@ -151,12 +151,12 @@ function PersonPicker({
         onChange={(event) => setText(event.target.value)}
       />
       {matches.length > 0 && (
-        <ul className="max-h-40 overflow-y-auto rounded-md border border-stone-200 bg-white text-sm">
+        <ul className="max-h-40 overflow-y-auto rounded-md border border-border bg-card text-sm">
           {matches.map((person) => (
             <li key={person.id}>
               <button
                 type="button"
-                className="w-full px-2 py-1 text-left hover:bg-stone-100"
+                className="w-full px-2 py-1 text-left hover:bg-muted"
                 onClick={() => {
                   setText("");
                   onChange(person.id);
@@ -234,12 +234,20 @@ export function FilterMenu({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="xs" className={cn(active && "border-sky-300 bg-sky-50")}>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(active && "border-highlight-border bg-highlight-soft")}
+        >
           <FilterIcon />
           Filter{active ? ` (${active})` : ""}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-[70vh] w-[26rem] gap-4 overflow-y-auto p-4">
+      <PopoverContent
+        align="start"
+        aria-label="Filter"
+        className="max-h-[70vh] w-[26rem] gap-4 overflow-y-auto p-4"
+      >
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Filter</h2>
           <Button
@@ -341,7 +349,7 @@ export function FilterMenu({
 
         <Section title="Only">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="w-24 text-stone-600">Generations</span>
+            <span className="w-24 text-muted-foreground">Generations</span>
             <Select
               value={String(filter.generations?.[0] ?? "")}
               onValueChange={(value) =>
@@ -389,7 +397,7 @@ export function FilterMenu({
             </Select>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="w-24 text-stone-600">Born</span>
+            <span className="w-24 text-muted-foreground">Born</span>
             <YearInput
               label="Born from the year"
               value={filter.born?.[0] ?? null}
@@ -411,7 +419,7 @@ export function FilterMenu({
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="w-24 text-stone-600">Born in</span>
+            <span className="w-24 text-muted-foreground">Born in</span>
             <Select
               value={filter.place ?? "anywhere"}
               onValueChange={(place) => set({ place: place === "anywhere" ? null : place })}
@@ -494,13 +502,13 @@ export function FilterChips({
       {found.map((chip) => (
         <span
           key={chip.key}
-          className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 py-0.5 pr-1 pl-2.5 text-xs text-sky-900"
+          className="inline-flex items-center gap-1 rounded-full border border-highlight-border bg-highlight-soft py-0.5 pr-1 pl-2.5 text-xs text-highlight-soft-foreground"
         >
           {chip.label}
           <button
             type="button"
             aria-label={`Remove: ${chip.label}`}
-            className="rounded-full p-0.5 hover:bg-sky-100"
+            className="rounded-full p-0.5 hover:bg-highlight-tint"
             onClick={() => onChange(chip.without(filter))}
           >
             <XIcon className="size-3" />
@@ -510,14 +518,14 @@ export function FilterChips({
       {found.length > 1 && (
         <button
           type="button"
-          className="text-xs text-sky-800 underline-offset-2 hover:underline"
+          className="text-xs text-link underline-offset-2 hover:underline"
           onClick={() => onChange({ ...NO_FILTER, others: filter.others })}
         >
           Clear all
         </button>
       )}
       {shown != null && (
-        <span className="text-xs text-stone-500">
+        <span className="text-xs text-faint">
           {shown} {shown === 1 ? "person" : "people"} shown
         </span>
       )}

@@ -193,7 +193,7 @@ describe("Remove AncesTree from this computer", () => {
   });
 
   it("saves every family's backups to a folder first: Documents, a disk, or one typed", async () => {
-    // Keluarga Ibu is in AncesTree's bin: its backups are kept too (the user's answer of 19 Nov).
+    // Keluarga Ibu is in the Trash: its backups are kept too (the user's answer of 19 Nov).
     answer({
       ...WINDOWS,
       families: WINDOWS.families.map((f) => ({ ...f, keeper: false, removed: f.id === "b2" })),
@@ -201,10 +201,8 @@ describe("Remove AncesTree from this computer", () => {
     await open("4 backups");
     const text = document.body.textContent ?? "";
     expect(text).toContain("this computer's family, Keluarga Contoh: its people");
-    expect(text).toContain("backups; and Keluarga Ibu, in AncesTree's bin.");
-    expect(text).toContain(
-      `those of a family in AncesTree's bin into one of its name and "(removed)"`,
-    );
+    expect(text).toContain("backups; and Keluarga Ibu, in the Trash.");
+    expect(text).toContain(`those of a family in the Trash into one of its name and "(removed)"`);
     act(() => named("Save the backups to a folder…").click());
     await until("Drive E:");
     act(() => named("Save them there").click()); // Documents, as it opens

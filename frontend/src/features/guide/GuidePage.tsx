@@ -34,12 +34,12 @@ export function GuidePage() {
   const target = known ? asked : (section?.slug ?? "");
   const open = useCallback((slug: string) => navigate({ hash: `#${slug}` }), [navigate]);
 
-  if (!section) return <p className="p-6 text-sm text-stone-600">This guide is empty.</p>;
+  if (!section) return <p className="p-6 text-sm text-muted-foreground">This guide is empty.</p>;
   return (
     <div className="guide-page flex h-full min-h-0 flex-col md:flex-row">
-      <aside className="flex max-h-[40%] shrink-0 flex-col gap-3 overflow-y-auto border-b border-stone-200 bg-white p-3 md:max-h-none md:w-72 md:border-r md:border-b-0">
+      <aside className="flex max-h-[40%] shrink-0 flex-col gap-3 overflow-y-auto border-b border-border bg-card p-3 md:max-h-none md:w-72 md:border-r md:border-b-0">
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-stone-400" />
+          <SearchIcon className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-faint" />
           <Input
             type="search"
             value={query}
@@ -56,7 +56,7 @@ export function GuidePage() {
         )}
       </aside>
       <div className="guide-scroller min-w-0 flex-1 overflow-y-auto">
-        <div className="guide-toolbar sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-stone-200 bg-stone-50/95 px-4 py-2 backdrop-blur">
+        <div className="guide-toolbar sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeftIcon />
             Back
@@ -69,14 +69,14 @@ export function GuidePage() {
             href={`${ONLINE}#${target}`}
             target="_blank"
             rel="noreferrer"
-            className="ml-auto inline-flex items-center gap-1 text-sm text-sky-700 hover:underline"
+            className="ml-auto inline-flex items-center gap-1 text-sm text-link hover:underline"
           >
             The newest guide, online
             <ExternalLinkIcon className="size-3.5" />
           </a>
         </div>
         <article className="guide-print mx-auto max-w-3xl px-6 pt-2 pb-16">
-          <Suspense fallback={<p className="py-6 text-sm text-stone-500">Opening the guide…</p>}>
+          <Suspense fallback={<p className="py-6 text-sm text-faint">Opening the guide…</p>}>
             <GuideText
               key={section.slug}
               section={section}

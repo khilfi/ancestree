@@ -17,8 +17,9 @@ import { formatPlace, MALAYSIAN_STATES } from "@/lib/people";
 
 const NO_STATE = "__none__"; // Select items can't have an empty value
 
-/** Which place a quick fix gives: where they live, were born, or died. */
-export type PlaceField = "residence" | "birth_place" | "death_place";
+/** Which place a quick fix gives: where they live, or were born. Where they died is
+ *  kept, but shown nowhere. */
+export type PlaceField = "residence" | "birth_place";
 
 /** Each place, as words after someone's name, and as a quick fix's label says it. */
 export const PLACE_WORDS: Record<
@@ -36,12 +37,6 @@ export const PLACE_WORDS: Record<
     label: "born in",
     add: "Add where they were born",
     all: "Where they were born",
-  },
-  death_place: {
-    did: "died in",
-    label: "died in",
-    add: "Add where they died",
-    all: "Where they died",
   },
 };
 

@@ -16,6 +16,33 @@ describe("lifeYears", () => {
     expect(lifeYears({ birth_year: null, death_year: 1975 })).toBe("d. 1975");
     expect(lifeYears({ birth_year: null, death_year: null })).toBe("");
   });
+
+  // Short years keep a date's qualifier, by the user's answer of 19–20 Nov 2026:
+  // "before 1950" showed as "b. 1950", and "about 1920" as "b. 1920", as if each were certain.
+  it("says how sure each year is, as the guide writes such dates", () => {
+    const years = (born: object | null, died: object | null = null) =>
+      lifeYears({
+        birth_year: (born as { year?: number } | null)?.year ?? null,
+        death_year: (died as { year?: number } | null)?.year ?? null,
+        born: born as never,
+        died: died as never,
+      });
+    expect(years({ year: 1950, qualifier: "before" })).toBe("b. before 1950");
+    expect(years({ year: 1920, qualifier: "about" })).toBe("b. c. 1920");
+    expect(years({ year: 1945, qualifier: "after" })).toBe("b. after 1945");
+    expect(years({ year: 1976, qualifier: "between", year_to: 1978 })).toBe("b. 1976–1978");
+    expect(years(null, { year: 2010, qualifier: "about" })).toBe("d. c. 2010");
+    expect(years({ year: 1950, month: 3, day: 12, qualifier: "exact" })).toBe("b. 1950");
+    // Both: an en dash between, as ever; spaced where either is itself two years.
+    expect(years({ year: 1872, qualifier: "about" }, { year: 1938 })).toBe("c. 1872–1938");
+    expect(years({ year: 1950, qualifier: "before" }, { year: 2011, qualifier: "after" })).toBe(
+      "before 1950–after 2011",
+    );
+    expect(years({ year: 1976, qualifier: "between", year_to: 1978 }, { year: 2011 })).toBe(
+      "1976–1978 – 2011",
+    );
+    expect(years({ year: 1938 }, { year: 2011 })).toBe("1938–2011");
+  });
 });
 
 describe("relationWord", () => {

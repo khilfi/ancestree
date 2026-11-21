@@ -4,6 +4,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { useEffect, useRef } from "react";
 import type { MapPack } from "@/api/types";
 import { mapStyle } from "@/features/map/style";
+import { DRAWING } from "@/styles/drawing";
 
 maplibregl.setWorkerUrl(workerUrl);
 
@@ -82,7 +83,7 @@ export default function SmallMap({
       return;
     }
     if (!marker.current) {
-      const placed = new maplibregl.Marker({ draggable: true, color: "#0369a1" })
+      const placed = new maplibregl.Marker({ draggable: true, color: DRAWING.pin })
         .setLngLat([pin.lon, pin.lat])
         .addTo(made);
       placed.getElement().setAttribute("aria-label", `${label}: the pin, to drag`);
@@ -102,7 +103,7 @@ export default function SmallMap({
       ref={box}
       role="application"
       aria-label={`${label}: a small map, to put the pin where it is`}
-      className="h-56 w-full overflow-hidden rounded-lg border border-stone-200"
+      className="h-56 w-full overflow-hidden rounded-lg border border-border"
     />
   );
 }

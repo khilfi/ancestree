@@ -1,5 +1,6 @@
 import type { Graph, GraphPerson } from "@/api/types";
 import { branchColours } from "./colours";
+import type { Ring } from "./rings";
 import { shortName } from "./words";
 
 /*
@@ -10,7 +11,7 @@ import { shortName } from "./words";
 
 export type Family = {
   unit: string; // its set of rings
-  centre: string; // whom "Centre here" puts at the centre: the oldest in its middle
+  centre: string; // whom "Centre the tree here" puts at the centre: the oldest in its middle
   name: string; // "Ismail & Fatimah", from the couple in its middle
   people: number; // not counting unknown parents
   anchor: string | null; // the person it hangs off, on the rings it hangs from
@@ -83,6 +84,46 @@ export function familiesOf(graph: Graph): { families: Family[]; branches: Branch
       };
     });
   return { families, branches };
+}
+
+/**
+ * What each ring says, as you answered on 20 Nov 2026: each generation once. A family's
+ * own rings say their generation: the one at the centre, and one not linked to the rest, which
+ * counts its own. A married-in family's arcs (or discs) say no number, which the main rings
+ * already say, though they keep it for their colours; its oldest is named for its couple,
+ * as the Centre menu names them: "Rashid & Kamariah".
+ */
+export function nameRings(graph: Graph, rings: Ring[]): Ring[] {
+  const oldest = new Map<string, number>();
+  for (const ring of rings) {
+    if (ring.cluster)
+      oldest.set(ring.unit, Math.min(oldest.get(ring.unit) ?? ring.generation, ring.generation));
+  }
+  const names = new Map<string, string>();
+  if (oldest.size) {
+    const people = new Map(graph.people.map((person) => [person.id, person]));
+    // Each named family's first child of its middle, for "Ali's parents" when both are unknown.
+    const firstChild = new Map<string, { id: string; order: number }>();
+    const middleOf = new Map(graph.layout.units.map((unit) => [unit.id, unit.centre[0] ?? ""]));
+    for (const [id, seat] of Object.entries(graph.layout.seats)) {
+      if (!oldest.has(seat.unit) || seat.parent !== middleOf.get(seat.unit)) continue;
+      const found = firstChild.get(seat.unit);
+      if (!found || seat.order < found.order) firstChild.set(seat.unit, { id, order: seat.order });
+    }
+    for (const unit of graph.layout.units) {
+      if (oldest.has(unit.id)) {
+        names.set(unit.id, familyName(people, unit.centre, firstChild.get(unit.id)?.id));
+      }
+    }
+  }
+  return rings.map((ring) => ({
+    ...ring,
+    label: !ring.cluster
+      ? `Generation ${ring.generation}`
+      : ring.generation === oldest.get(ring.unit)
+        ? (names.get(ring.unit) ?? null)
+        : null,
+  }));
 }
 
 /** Everyone in a family's rings, and the person it hangs off: what Show brings into view. */

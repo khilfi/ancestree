@@ -10,6 +10,7 @@ import {
   useOpenFamily,
 } from "@/api/desktop";
 import { ApiError } from "@/api/errors";
+import { Hint } from "@/components/Hint";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -51,7 +52,7 @@ export function Opening({ name }: { name: string }) {
   return (
     <div
       role="status"
-      className="fixed inset-0 z-50 grid place-items-center bg-stone-50/90 text-stone-700 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-background/90 text-foreground backdrop-blur-sm"
     >
       <p className="text-lg">Opening {name}…</p>
     </div>
@@ -178,7 +179,7 @@ export function AddFamilyDialog({ open, onClose }: { open: boolean; onClose: () 
               if (file) addFrom(file);
             }}
           />
-          <div className="space-y-2 border-t border-stone-200 pt-3 text-sm text-stone-600">
+          <div className="space-y-2 border-t border-border pt-3 text-sm text-muted-foreground">
             <p>
               Or <strong>the example family</strong>, Keluarga Contoh: made-up people with
               portraits, life stories and places, to see what AncesTree can do. A family of its own,
@@ -240,7 +241,7 @@ export function ExampleBar() {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-950 md:px-4"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-warning-border bg-warning-soft px-3 py-1.5 text-sm text-warning-soft-foreground md:px-4"
     >
       <SparklesIcon className="size-4" aria-hidden />
       <span>
@@ -271,20 +272,21 @@ export function FamilyMenu() {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            // The last to give way: its name shortened, where the top bar is short of room.
-            className="max-w-48 min-w-0 shrink gap-1 px-2 text-stone-700"
-            data-family-menu
-            aria-label={`Family: ${current?.name ?? ""}. Families on this computer`}
-            title="Families on this computer"
-          >
-            <span className="truncate">{current?.name}</span>
-            <ChevronDownIcon />
-          </Button>
-        </DropdownMenuTrigger>
+        <Hint label="Families on this computer">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              // The last to give way: its name shortened, where the top bar is short of room.
+              className="max-w-48 min-w-0 shrink gap-1 px-2 text-foreground"
+              data-family-menu
+              aria-label={`Family: ${current?.name ?? ""}. Families on this computer`}
+            >
+              <span className="truncate">{current?.name}</span>
+              <ChevronDownIcon />
+            </Button>
+          </DropdownMenuTrigger>
+        </Hint>
         <DropdownMenuContent align="start" className="w-96 max-w-[calc(100vw-2rem)]">
           <DropdownMenuLabel>Families on this computer</DropdownMenuLabel>
           {families.families.map((family) => (
@@ -301,7 +303,7 @@ export function FamilyMenu() {
               )}
               <span className="min-w-0">
                 <span className="block truncate">{family.name}</span>
-                <span className="block text-xs text-stone-500">{familyPlace(family)}</span>
+                <span className="block text-xs text-faint">{familyPlace(family)}</span>
               </span>
             </DropdownMenuItem>
           ))}

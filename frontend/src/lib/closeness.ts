@@ -1,4 +1,5 @@
 import type { Graph } from "@/api/types";
+import { CLOSENESS } from "@/styles/drawing";
 
 /*
  * How close everyone is to you, for "Me": blood relatives by
@@ -61,12 +62,9 @@ export function closeness(graph: Graph, me: string): Map<string, Closeness> {
   return found;
 }
 
-/** The colours: warm for the closest, cooler further out; violet for those linked otherwise. */
-export const CLOSENESS_COLOURS = {
-  you: "#9a3412",
-  degrees: ["#dc2626", "#f97316", "#eab308", "#65a30d", "#0d9488", "#0284c7"], // 1 … 6 and more
-  linked: "#a78bfa",
-} as const;
+/** The colours: warm for the closest, cooler further out; violet for those linked otherwise.
+ *  They're among the drawing colours. */
+export const CLOSENESS_COLOURS = CLOSENESS;
 
 export function closenessColour(place: Closeness | undefined): string | null {
   if (!place) return null;

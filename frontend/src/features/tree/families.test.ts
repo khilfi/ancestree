@@ -3,7 +3,8 @@ import type { Graph, GraphPerson, LayoutUnit, Seat } from "@/api/types";
 import { branchColours, generationColour, RING_LINE, ringStroke, tint } from "./colours";
 import { branchMembers, familiesOf, familyMembers } from "./families";
 import { generationShifts, treeGeneration } from "./generations";
-import { ringLayout } from "./placing";
+import { allFamilies, ringLayout, WAYS } from "./placing";
+import { ringText } from "./rings";
 import { colourer } from "./toFlow";
 
 /*
@@ -137,6 +138,34 @@ describe("married-in families on the tree's own generations", () => {
     expect(byBranch("abu")).not.toBe(byBranch("ali"));
     expect(byBranch("daud")).toBeNull();
     expect(byBranch("pak")).toBeNull();
+  });
+});
+
+describe("each ring said once, by its own generation", () => {
+  // Your answer of 20 Nov 2026: "Generation N" once for each generation, on a family's own
+  // rings (an unlinked family counts its own); a married-in family's arcs say no number, which
+  // the main rings already say, and its oldest is named for its couple, as the Centre menu
+  // names them. Their numbers stay, for the colours.
+  it.each(WAYS.map(({ way }) => way))("%s", (way) => {
+    const { rings } = ringLayout(graph, allFamilies(graph), way);
+    const said = (unit: string) => rings.filter((ring) => ring.unit === unit).map(ringText);
+    for (const unit of ["main:0", "main:1"]) {
+      const own = rings.filter((ring) => ring.unit === unit);
+      expect(own.length).toBeGreaterThan(0);
+      expect(own.map(ringText)).toEqual(own.map((ring) => `Generation ${ring.generation}`));
+      expect(new Set(said(unit)).size).toBe(own.length);
+    }
+    const names: Record<string, string> = { "cluster:siti": "Pak & Mak", "cluster:wati": "Ibu" };
+    for (const [unit, name] of Object.entries(names)) {
+      const arcs = rings.filter((ring) => ring.unit === unit);
+      if (arcs.length === 0) continue; // tucked in: on their host's own rings
+      const oldest = Math.min(...arcs.map((ring) => ring.generation));
+      expect(arcs.map(ringText)).toEqual(
+        arcs.map((ring) => (ring.generation === oldest ? name : null)),
+      );
+    }
+    // The fans and the discs have a married-in family's arcs or rings to say it on.
+    if (way !== "tucked") expect(said("cluster:siti")).toContain("Pak & Mak");
   });
 });
 

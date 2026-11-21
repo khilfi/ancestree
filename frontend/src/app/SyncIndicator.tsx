@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Link } from "react-router";
 import { useFamilyFolder, useSyncNow, waitingIn } from "@/api/familyFolder";
 import type { FamilyFolderStatus } from "@/api/types";
+import { Hint } from "@/components/Hint";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ago } from "@/lib/ago";
@@ -170,32 +171,39 @@ export function SyncIndicator() {
   const waiting = waits(status);
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Family folder: ${state.text}`}
-          title="The family folder: how the family stands with it"
-          className={cn(
-            "flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs whitespace-nowrap transition-colors",
-            state.tone === "warn"
-              ? "bg-amber-50 font-medium text-amber-800 hover:bg-amber-100"
-              : "text-stone-500 hover:bg-stone-100 hover:text-stone-800",
-          )}
-        >
-          <Icon
+      <Hint label="The family folder: how the family stands with it">
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Family folder: ${state.text}`}
             className={cn(
-              "size-3.5",
-              busy && "animate-spin",
-              state.tone === "good" && "text-emerald-600",
+              "flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs whitespace-nowrap transition-colors",
+              state.tone === "warn"
+                ? "bg-warning-soft font-medium text-warning-soft-foreground hover:bg-warning-tint"
+                : "text-faint hover:bg-muted hover:text-foreground",
             )}
-          />
-          <span className="max-xl:sr-only">{sync.isPending ? "Keeping in step…" : state.text}</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 gap-3 p-4 text-sm">
+          >
+            <Icon
+              className={cn(
+                "size-3.5",
+                busy && "animate-spin",
+                state.tone === "good" && "text-success",
+              )}
+            />
+            <span className="max-xl:sr-only">
+              {sync.isPending ? "Keeping in step…" : state.text}
+            </span>
+          </button>
+        </PopoverTrigger>
+      </Hint>
+      <PopoverContent
+        align="start"
+        aria-label="The family folder"
+        className="w-80 gap-3 p-4 text-sm"
+      >
         <div className="space-y-1">
           <p className="font-medium">{status.family || "The family"}'s family folder</p>
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             {status.last_sync ? `Last in step ${at(status.last_sync)}.` : "Not in step yet."}{" "}
             {keeper
               ? status.published
@@ -208,19 +216,21 @@ export function SyncIndicator() {
         </div>
         {state.why && (
           <p
-            className={cn(state.tone === "warn" ? "font-medium text-amber-700" : "text-stone-600")}
+            className={cn(
+              state.tone === "warn" ? "font-medium text-warning" : "text-muted-foreground",
+            )}
           >
             {state.why}
           </p>
         )}
         {waiting.length > 0 && (
-          <ul className="list-disc space-y-0.5 pl-5 text-stone-600">
+          <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
             {waiting.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
         )}
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-faint">
           AncesTree keeps in step every minute while it's on, and soon after each change here.
         </p>
         <div className="flex items-center justify-between gap-2">
@@ -232,7 +242,7 @@ export function SyncIndicator() {
             <RefreshCwIcon className={cn(busy && "animate-spin")} />
             {busy ? "Keeping in step…" : "Sync now"}
           </Button>
-          <Link to="/settings/family#family-folder" className="text-sky-700 hover:underline">
+          <Link to="/settings/family#family-folder" className="text-link hover:underline">
             Family folder settings
           </Link>
         </div>

@@ -98,7 +98,7 @@ export function FolderReview({
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50/60 p-4">
+    <div className="space-y-3 rounded-lg border border-border bg-background/60 p-4">
       <p className="text-sm">
         From <strong>{changes.name}</strong>
         {changes.email ? ` (${changes.email})` : ""}, sent {when(changes.sent_at)}.
@@ -107,7 +107,7 @@ export function FolderReview({
       </p>
       {review.isError ? (
         <>
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-destructive">
             {review.error.message}
           </p>
           <div className="max-w-xl space-y-1">
@@ -130,7 +130,7 @@ export function FolderReview({
           </div>
         </>
       ) : !shown ? (
-        <p className="text-sm text-stone-500">Comparing what they sent with your tree…</p>
+        <p className="text-sm text-faint">Comparing what they sent with your tree…</p>
       ) : (
         <>
           <p className="text-sm">
@@ -143,7 +143,7 @@ export function FolderReview({
             )}
           </p>
           <Group title="To check" items={shown.questions.length} open tone="attention">
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-border">
               {shown.questions.map((question) => (
                 <Question
                   key={question.id}
@@ -162,7 +162,7 @@ export function FolderReview({
                 Untick all
               </Button>
               {waiting.length > 0 && (
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-faint">
                   Tick all leaves what takes something out, and the clashes, to their own ticks.
                 </span>
               )}
@@ -193,11 +193,9 @@ export function FolderReview({
             <Button variant="ghost" onClick={onClose} disabled={busy}>
               Not now
             </Button>
-            {review.isFetching && (
-              <span className="text-sm text-stone-500">Checking your answer…</span>
-            )}
+            {review.isFetching && <span className="text-sm text-faint">Checking your answer…</span>}
           </div>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-faint">
             A backup is made first. The people, details and links are then one step for Undo; Take
             back, under Settings → Import, undoes all of it, life stories and photos too. What you
             bring in reaches every computer in the family.

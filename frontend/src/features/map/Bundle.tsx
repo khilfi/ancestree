@@ -2,6 +2,7 @@ import { NetworkIcon } from "lucide-react";
 import { type KeyboardEvent, type RefObject, useEffect } from "react";
 import { useNavigate } from "react-router";
 import type { GraphPerson } from "@/api/types";
+import { Hint } from "@/components/Hint";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { shortName } from "@/features/tree/words";
@@ -70,7 +71,7 @@ export function OpenFan({
       onKeyDown={arrows}
     >
       <div
-        className="pointer-events-auto absolute rounded-full bg-white/85 shadow-md ring-1 ring-stone-200 animate-in fade-in zoom-in-95 duration-200"
+        className="pointer-events-auto absolute rounded-full bg-card/85 shadow-md ring-1 ring-border animate-in fade-in zoom-in-95 duration-200"
         style={{
           width: backdrop * 2,
           height: backdrop * 2,
@@ -91,16 +92,16 @@ export function OpenFan({
                 y1={from.y}
                 x2={to.x}
                 y2={to.y}
-                className="stroke-stone-400"
+                className="stroke-tree-line"
                 strokeWidth={1}
               />
-              <circle cx={to.x} cy={to.y} r={2.5} className="fill-sky-600" />
+              <circle cx={to.x} cy={to.y} r={2.5} className="fill-map-circle" />
             </g>
           );
         })}
       </svg>
       <span
-        className="absolute left-0 w-max max-w-80 -translate-x-1/2 truncate rounded bg-white px-1.5 text-xs font-medium text-stone-700 shadow-sm"
+        className="absolute left-0 w-max max-w-80 -translate-x-1/2 truncate rounded bg-card px-1.5 text-xs font-medium text-foreground shadow-sm"
         style={{ top: -backdrop + 4 }}
       >
         {place}
@@ -111,35 +112,35 @@ export function OpenFan({
         if (!person) return null;
         const colour = colourOf(id);
         return (
-          <button
-            key={id}
-            type="button"
-            data-someone
-            className={cn(
-              "pointer-events-auto absolute flex w-20 flex-col items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
-              faded && !faded.has(id) && "opacity-40",
-            )}
-            style={{ transform: `translate(${spot.x - 40}px, ${spot.y - PHOTO / 2}px)` }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect?.(id);
-            }}
-            title={person.full_name}
-          >
-            <PersonAvatar
-              person={person}
-              size="sm"
+          <Hint key={id} label={person.full_name}>
+            <button
+              type="button"
+              data-someone
               className={cn(
-                "size-[34px] max-w-none shadow-sm transition-transform hover:scale-110",
-                id === selectedId && "ring-2 ring-sky-500 ring-offset-1",
+                "pointer-events-auto absolute flex w-20 flex-col items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-highlight",
+                faded && !faded.has(id) && "opacity-40",
               )}
-              style={colour ? { borderColor: colour } : undefined}
-            />
-            <span className="mt-0.5 w-20 truncate text-center text-[10px] leading-tight text-stone-700">
-              {shortName(person)}
-            </span>
-          </button>
+              style={{ transform: `translate(${spot.x - 40}px, ${spot.y - PHOTO / 2}px)` }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect?.(id);
+              }}
+            >
+              <PersonAvatar
+                person={person}
+                size="sm"
+                className={cn(
+                  "size-[34px] max-w-none shadow-sm transition-transform hover:scale-110",
+                  id === selectedId && "ring-2 ring-highlight ring-offset-1",
+                )}
+                style={colour ? { borderColor: colour } : undefined}
+              />
+              <span className="mt-0.5 w-20 truncate text-center text-xs leading-tight text-foreground">
+                {shortName(person)}
+              </span>
+            </button>
+          </Hint>
         );
       })}
     </div>
@@ -201,14 +202,14 @@ export function OpenStack({
       onKeyDown={arrows}
     >
       <span
-        className="absolute w-max max-w-80 -translate-x-1/2 truncate rounded bg-white px-1.5 text-xs font-medium text-stone-700 shadow-sm"
+        className="absolute w-max max-w-80 -translate-x-1/2 truncate rounded bg-card px-1.5 text-xs font-medium text-foreground shadow-sm"
         style={{ left: left + wide / 2, top: top - HEADING + 2 }}
       >
         {heading}
       </span>
       {/* The stem, from the columns down to the pin. */}
       <div
-        className="absolute w-px bg-stone-400"
+        className="absolute w-px bg-tree-line"
         style={{ left: group.at.x, top: bottom, height: STEM }}
       />
       {eldest.map((id, index) => {
@@ -218,31 +219,31 @@ export function OpenStack({
         const row = index % perColumn;
         const colour = colourOf(id);
         return (
-          <button
-            key={id}
-            type="button"
-            data-someone
-            className={cn(
-              "pointer-events-auto absolute flex h-7 items-center gap-1.5 rounded-full bg-white pr-2.5 pl-0.5 text-left shadow-sm ring-1 ring-stone-200 outline-none animate-in fade-in slide-in-from-bottom-2 duration-200 hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-sky-500",
-              id === selectedId && "ring-2 ring-sky-500",
-              faded && !faded.has(id) && "opacity-40",
-            )}
-            style={{ left: left + column * (WIDE + GAP), top: top + row * ROW, width: WIDE }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect?.(id);
-            }}
-            title={person.full_name}
-          >
-            <PersonAvatar
-              person={person}
-              size="sm"
-              className="size-6 max-w-none shrink-0 text-[10px]"
-              style={colour ? { borderColor: colour } : undefined}
-            />
-            <span className="truncate text-xs text-stone-700">{shortName(person)}</span>
-          </button>
+          <Hint key={id} label={person.full_name}>
+            <button
+              type="button"
+              data-someone
+              className={cn(
+                "pointer-events-auto absolute flex h-7 items-center gap-1.5 rounded-full bg-card pr-2.5 pl-0.5 text-left shadow-sm ring-1 ring-border outline-none animate-in fade-in slide-in-from-bottom-2 duration-200 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-highlight",
+                id === selectedId && "ring-2 ring-highlight",
+                faded && !faded.has(id) && "opacity-40",
+              )}
+              style={{ left: left + column * (WIDE + GAP), top: top + row * ROW, width: WIDE }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect?.(id);
+              }}
+            >
+              <PersonAvatar
+                person={person}
+                size="sm"
+                className="size-6 max-w-none shrink-0 text-xs"
+                style={colour ? { borderColor: colour } : undefined}
+              />
+              <span className="truncate text-xs text-foreground">{shortName(person)}</span>
+            </button>
+          </Hint>
         );
       })}
     </div>
@@ -282,7 +283,7 @@ export function BundleCard({
   return (
     <div
       ref={box}
-      className="pointer-events-auto absolute z-20 flex flex-col rounded-lg border border-stone-200 bg-white shadow-lg animate-in fade-in zoom-in-95 duration-200"
+      className="pointer-events-auto absolute z-20 flex flex-col rounded-lg border border-border bg-card shadow-lg animate-in fade-in zoom-in-95 duration-200"
       style={{ left, top, width, maxHeight: tallest }}
       role="dialog"
       aria-label={`${name}, ${place}`}
@@ -290,9 +291,9 @@ export function BundleCard({
       onWheel={(event) => event.stopPropagation()}
       onKeyDown={arrows}
     >
-      <div className="border-b border-stone-100 px-3 py-2">
-        <p className="truncate text-sm font-medium text-stone-800">{name}</p>
-        <p className="truncate text-xs text-stone-500">{place}</p>
+      <div className="border-b border-border px-3 py-2">
+        <p className="truncate text-sm font-medium text-foreground">{name}</p>
+        <p className="truncate text-xs text-faint">{place}</p>
         {onSelect && (
           <Button
             variant="outline"
@@ -317,15 +318,15 @@ export function BundleCard({
                 type="button"
                 data-someone
                 className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5 text-left outline-none hover:bg-stone-50 focus-visible:bg-sky-50",
-                  id === selectedId && "bg-sky-50",
+                  "flex w-full items-center gap-2 px-3 py-1.5 text-left outline-none hover:bg-muted/50 focus-visible:bg-highlight-soft",
+                  id === selectedId && "bg-highlight-soft",
                 )}
                 onClick={() => onSelect?.(id)}
               >
                 <PersonAvatar person={person} size="sm" className="size-7 shrink-0" />
                 <span className="min-w-0">
-                  <span className="block truncate text-sm text-stone-800">{person.full_name}</span>
-                  <span className="block truncate text-xs text-stone-500">
+                  <span className="block truncate text-sm text-foreground">{person.full_name}</span>
+                  <span className="block truncate text-xs text-faint">
                     {spot?.address ? `${spot.address} · ${where}` : where}
                   </span>
                 </span>

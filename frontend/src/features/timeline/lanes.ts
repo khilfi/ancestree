@@ -2,6 +2,7 @@ import type { Graph, GraphPerson, PartialDate, Seat } from "@/api/types";
 import { branchColours } from "@/features/tree/colours";
 import { generationShifts } from "@/features/tree/generations";
 import { ageOf, yearOf } from "@/lib/dates";
+import { lifeYears } from "@/lib/people";
 
 /*
  * The timeline: one lane per person, a photo at the birth year and a
@@ -25,12 +26,6 @@ function rough(date: PartialDate): boolean {
   return date.qualifier !== "exact";
 }
 
-function said(date: PartialDate): string {
-  if (date.qualifier === "between" && date.year_to != null) return `c. ${Math.round(yearOf(date))}`;
-  const prefix = { exact: "", about: "c. ", before: "bef. ", after: "aft. ", between: "" };
-  return `${prefix[date.qualifier]}${date.year}`;
-}
-
 export type Span = {
   person: GraphPerson;
   start: number | null; // the birth, where the photo sits; null: only the death is known
@@ -38,7 +33,7 @@ export type Span = {
   ending: "death" | "today" | "unknown"; // unknown: died, but not recorded when
   roughStart: boolean; // an approximate date: a soft end and "c."
   roughEnd: boolean;
-  years: string; // "c. 1901–1975", "b. 1962", "d. 1975"
+  years: string; // "c. 1901–1975", "b. 1962", "d. 1975": as everywhere else (lib/people)
   age: string | null; // "died aged 74", "43 years old": as everywhere else (lib/dates)
 };
 
@@ -48,6 +43,12 @@ export function span(person: GraphPerson, today: number): Span | null {
   const died = person.died?.year != null ? person.died : null;
   if (!born && !died) return null;
   const { age } = ageOf({ born, died, living: person.is_living }, today);
+  const years = lifeYears({
+    birth_year: born?.year ?? null,
+    death_year: died?.year ?? null,
+    born,
+    died,
+  });
   if (!born && died) {
     return {
       person,
@@ -56,7 +57,7 @@ export function span(person: GraphPerson, today: number): Span | null {
       ending: "death",
       roughStart: true,
       roughEnd: rough(died),
-      years: `d. ${said(died)}`,
+      years,
       age: null,
     };
   }
@@ -70,7 +71,7 @@ export function span(person: GraphPerson, today: number): Span | null {
       ending: "death",
       roughStart: rough(bornDate),
       roughEnd: rough(died),
-      years: `${said(bornDate)}–${said(died)}`,
+      years,
       age,
     };
   }
@@ -82,7 +83,7 @@ export function span(person: GraphPerson, today: number): Span | null {
       ending: "today",
       roughStart: rough(bornDate),
       roughEnd: false,
-      years: `b. ${said(bornDate)}`,
+      years,
       age,
     };
   }
@@ -93,7 +94,7 @@ export function span(person: GraphPerson, today: number): Span | null {
     ending: "unknown",
     roughStart: rough(bornDate),
     roughEnd: true,
-    years: `b. ${said(bornDate)}`,
+    years,
     age: null,
   };
 }
@@ -155,7 +156,8 @@ export type Row =
 
 type Group = { key: string; label: string; rank: number[]; lanes: Span[] };
 
-/** The lanes in order, under a header per group, each at its height down the page. */
+/** The lanes in order, under a header per group, each at its height down the page. A branch
+ *  is named by whom it starts with, by `names`, as the key names it. */
 export function arrange(
   lanes: Span[],
   standing: ReturnType<typeof standings>,
@@ -185,7 +187,7 @@ export function arrange(
       });
       top += GROUP_HEIGHT;
     }
-    for (const lane of group.lanes.sort(byOrder(sorting, names))) {
+    for (const lane of group.lanes.sort(byOrder(sorting))) {
       rows.push({ kind: "lane", key: lane.person.id, span: lane, top });
       top += LANE_HEIGHT;
     }
@@ -232,9 +234,10 @@ function compareRanks(a: number[], b: number[]): number {
   return 0;
 }
 
-/** Birth year (birth order for twins), name, or death year. */
-function byOrder(sorting: Sorting, names: Map<string, string>): (a: Span, b: Span) => number {
-  const name = (lane: Span) => names.get(lane.person.id) ?? lane.person.full_name;
+/** Birth year (birth order for twins), name, or death year. By name is by the name shown,
+ *  the full name, as on the tree. */
+function byOrder(sorting: Sorting): (a: Span, b: Span) => number {
+  const name = (lane: Span) => lane.person.full_name;
   const byName = (a: Span, b: Span) =>
     name(a).localeCompare(name(b), undefined, { sensitivity: "base" });
   const byBirth = (a: Span, b: Span) =>

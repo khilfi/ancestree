@@ -1,4 +1,5 @@
 import type { Graph } from "@/api/types";
+import { DRAWING, GENERATIONS } from "@/styles/drawing";
 
 /*
  * The tree's colours: people by branch or by generation, and the rings and
@@ -6,23 +7,12 @@ import type { Graph } from "@/api/types";
  * them, so a colour always means the same thing.
  */
 
-// Distinct at a glance, and never the only signal.
-export const PALETTE = [
-  "#0284c7",
-  "#e11d48",
-  "#16a34a",
-  "#d97706",
-  "#7c3aed",
-  "#0d9488",
-  "#db2777",
-  "#65a30d",
-  "#ea580c",
-  "#4f46e5",
-];
+// Distinct at a glance, and never the only signal: the drawing colours.
+export const PALETTE: readonly string[] = GENERATIONS;
 
 /** Rings, rows and bands: clearly there, and still quiet behind the people. */
-export const RING_LINE = "#d6d3d1"; // stone-300
-export const RING_LABEL = "#78716c"; // stone-500, which reads at 4.8:1 on white
+export const RING_LINE = DRAWING.ring;
+export const RING_LABEL = DRAWING.ringLabel; // reads at 4.8:1 on white
 
 /** A generation's colour. Generations before the centre's, which a married-in family can
  *  reach, wrap around the palette like the rest. */

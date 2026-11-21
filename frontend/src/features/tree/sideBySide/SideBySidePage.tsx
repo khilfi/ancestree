@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { showError } from "@/lib/notify";
 import { drawTree, type Measure } from "../picture";
-import { allFamilies, ringLayout, type Way } from "../placing";
+import { allFamilies, type Placing, ringLayout } from "../placing";
 import { toFlow } from "../toFlow";
 import { layoutTime, type Measures, measure, routeTime, unfoldMove } from "./measures";
 
@@ -19,7 +19,7 @@ import { layoutTime, type Measures, measure, routeTime, unfoldMove } from "./mea
  */
 
 /** The four ways in S7's order, with its names. */
-const WAYS: { way: Way; name: string; how: string }[] = [
+const WAYS: { way: Placing; name: string; how: string }[] = [
   {
     way: "discs",
     name: "A. Discs, pushed apart",
@@ -44,7 +44,7 @@ const WAYS: { way: Way; name: string; how: string }[] = [
 
 type Family = { key: string; title: string; about: string; graph: Graph };
 type Result = {
-  way: Way;
+  way: Placing;
   picture: string;
   measures: Measures;
   moved: number;
@@ -141,14 +141,14 @@ function FamilyRow({ family, onDone }: { family: Family; onDone: (results: Resul
   const best = (of: (result: Result) => number) => Math.min(...results.map(of));
   return (
     <section
-      className="space-y-3 border-t border-stone-200 pt-6"
+      className="space-y-3 border-t border-border pt-6"
       aria-labelledby={`family-${family.key}`}
     >
       <div>
         <h2 id={`family-${family.key}`} className="text-lg font-semibold">
           {family.title}
         </h2>
-        <p className="max-w-3xl text-sm text-stone-600">
+        <p className="max-w-3xl text-sm text-muted-foreground">
           {family.about} {family.graph.people.length.toLocaleString("en")} people,{" "}
           {family.graph.layout.units.filter((unit) => unit.anchor).length} married-in families, all
           open.
@@ -163,7 +163,7 @@ function FamilyRow({ family, onDone }: { family: Family; onDone: (results: Resul
               {result ? (
                 <button
                   type="button"
-                  className="block w-full cursor-zoom-in rounded-md border border-stone-200 bg-white"
+                  className="block w-full cursor-zoom-in rounded-md border border-border bg-card"
                   onClick={() => setLarge(result)}
                   aria-label={`${name}, larger`}
                 >
@@ -174,7 +174,7 @@ function FamilyRow({ family, onDone }: { family: Family; onDone: (results: Resul
                   />
                 </button>
               ) : (
-                <div className="flex aspect-square items-center justify-center rounded-md border border-dashed border-stone-200 text-sm text-stone-500">
+                <div className="flex aspect-square items-center justify-center rounded-md border border-dashed border-border text-sm text-faint">
                   Laying it out…
                 </div>
               )}
@@ -185,10 +185,10 @@ function FamilyRow({ family, onDone }: { family: Family; onDone: (results: Resul
                       const value = row.of(result);
                       const out = row.label === "Photos overlapping" && value > 0;
                       return (
-                        <tr key={row.label} className="border-b border-stone-100">
-                          <td className="py-0.5 pr-2 text-stone-600">{row.label}</td>
+                        <tr key={row.label} className="border-b border-border">
+                          <td className="py-0.5 pr-2 text-muted-foreground">{row.label}</td>
                           <td
-                            className={`py-0.5 text-right tabular-nums ${out ? "font-semibold text-red-700" : value === best(row.of) ? "font-semibold" : ""}`}
+                            className={`py-0.5 text-right tabular-nums ${out ? "font-semibold text-destructive" : value === best(row.of) ? "font-semibold" : ""}`}
                           >
                             {number(value)}
                             {row.unit ? ` ${row.unit}` : ""}
@@ -262,7 +262,7 @@ function Summary({ done }: { done: Map<string, Result[]> }) {
   return (
     <table className="w-full max-w-6xl text-sm">
       <thead>
-        <tr className="border-b border-stone-200 text-left text-stone-600">
+        <tr className="border-b border-border text-left text-muted-foreground">
           <th className="py-1 pr-3 font-medium">Way</th>
           <th className="py-1 pr-3 text-right font-medium">Photos overlapping</th>
           <th className="py-1 pr-3 text-right font-medium">Photos under lines</th>
@@ -277,15 +277,15 @@ function Summary({ done }: { done: Map<string, Result[]> }) {
       </thead>
       <tbody>
         {totals.map((total) => (
-          <tr key={total.way} className="border-b border-stone-100 align-top">
+          <tr key={total.way} className="border-b border-border align-top">
             <td className="py-1.5 pr-3">
               <div className="font-medium">
                 {total.name}
                 {total.overlaps > 0 && (
-                  <span className="ml-2 text-red-700">out: photos overlap</span>
+                  <span className="ml-2 text-destructive">out: photos overlap</span>
                 )}
               </div>
-              <div className="text-xs text-stone-500">{total.how}</div>
+              <div className="text-xs text-faint">{total.how}</div>
             </td>
             <td className="py-1.5 pr-3 text-right tabular-nums">{total.overlaps}</td>
             <td className="py-1.5 pr-3 text-right tabular-nums">{total.underLines}</td>
@@ -348,7 +348,7 @@ export function SideBySidePage() {
       <div className="mx-auto max-w-[1600px] space-y-6 p-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">Families side by side</h1>
-          <p className="max-w-3xl text-sm text-stone-600">
+          <p className="max-w-3xl text-sm text-muted-foreground">
             Four ways of placing married-in families when several are open, tried on families made
             up to be hard. Each is drawn as the tree's picture is, the links between families routed
             through the openings, with what each way measures: the best of each row in bold, and in
@@ -368,7 +368,7 @@ export function SideBySidePage() {
                   ? "Another backup…"
                   : "Add your family from a backup…"}
             </Button>
-            <span className="text-xs text-stone-500">
+            <span className="text-xs text-faint">
               A backup from Settings → Backups. It's read here, on this computer, and kept nowhere.
             </span>
             <input
@@ -385,8 +385,8 @@ export function SideBySidePage() {
           </div>
         </header>
         <Summary done={done} />
-        {families.isPending && <p className="text-sm text-stone-500">Making up the families…</p>}
-        {families.isError && <p className="text-sm text-red-700">{families.error.message}</p>}
+        {families.isPending && <p className="text-sm text-faint">Making up the families…</p>}
+        {families.isError && <p className="text-sm text-destructive">{families.error.message}</p>}
         {list.map((family) => (
           <FamilyRow
             key={family.key}

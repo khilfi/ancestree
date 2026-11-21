@@ -1,12 +1,15 @@
 import { MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { GraphPerson } from "@/api/types";
+import { Hint } from "@/components/Hint";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { StoryMark } from "@/features/biography/StoryMark";
 import { shortName } from "@/features/tree/words";
+import { useEscape } from "@/lib/escape";
 import { lifeYears } from "@/lib/people";
 import { cn } from "@/lib/utils";
+import { DRAWING } from "@/styles/drawing";
 import { BundleCard, OpenFan, OpenStack, standing } from "./Bundle";
 import {
   bundleName,
@@ -19,8 +22,10 @@ import {
   spotPlace,
 } from "./bundles";
 import { PLANE_PER_KM, STATE_MIDDLES } from "./geo";
+import { type Box, bodyOf, type Named, type NamePlace, placeNames } from "./labels";
 import {
   bubbleRadius,
+  crowded,
   flowerRadius,
   type Group,
   gather,
@@ -49,31 +54,43 @@ const MARGIN = 200; // drawn this far outside the screen, so panning shows no ga
 
 /** The family gathered for the zoom, and where each group goes on screen: `toScreen` takes a
  *  point of the plane (geo.ts) to the screen, as each drawing places it. At the map's deepest
- *  nothing is merged: each spot is its own pin, however near another. */
+ *  nothing is merged: each spot is its own pin, however near another. Where the states'
+ *  circles have no room to sit near their states, the countries' instead: `level` says
+ *  which is shown. */
 export function familyGroups(
   spots: readonly Spot[],
-  level: Level,
+  zoom: Level,
   toScreen: (point: Point) => Point,
   withNames: boolean,
   spacing: number,
   deepest = false,
-): Group[] {
+): { level: Level; groups: Group[] } {
   const middle = (state: string) => {
     const found = STATE_MIDDLES.get(state);
     return found ? { x: found[0], y: found[1] } : null;
   };
   const atSpots = oneSpotsOf(spots);
-  const gathered = gather(spots, level, toScreen, middle, (id) => atSpots.get(id));
-  if (level !== "towns") return separate(gathered, (g) => bubbleRadius(g.members.length));
-  if (deepest) return gathered;
+  const gathered = (level: Level) =>
+    gather(spots, level, toScreen, middle, (id) => atSpots.get(id));
+  const circle = (g: Group) => bubbleRadius(g.members.length);
+  if (zoom === "states") {
+    const states = gathered("states");
+    const apart = separate(states, circle);
+    if (!crowded(states, apart, circle)) return { level: "states", groups: apart };
+  }
+  if (zoom !== "towns") {
+    return { level: "countries", groups: separate(gathered("countries"), circle) };
+  }
+  if (deepest) return { level: "towns", groups: gathered("towns") };
   const shown = (count: number) => (withNames ? count : Math.min(count, MOST));
-  return mergeTowns(gathered, (g) =>
+  const groups = mergeTowns(gathered("towns"), (g) =>
     g.towns > 1
-      ? bubbleRadius(g.members.length)
+      ? circle(g)
       : pinned(g)
         ? PIN.head.r + 2
         : flowerRadius(shown(g.members.length), spacing),
   );
+  return { level: "towns", groups };
 }
 
 /** A spot's group, drawn as one pin: its people are where they are, not about there. */
@@ -90,11 +107,103 @@ function oneSpotsOf(spots: readonly Spot[]): Map<string, OneSpot> {
   return found;
 }
 
+/** A group's name as it's written on the map, where it's written, and how. */
+export type ShownName = NamePlace & {
+  text: string;
+  widest: number; // cut short past this
+  quiet: boolean; // a town found only roughly: faint, in italics
+};
+
+/** What a group's name is, and what its circle, photos or pin take of the screen around it. */
+function named(
+  group: Group,
+  level: Level,
+  { withNames, spacing, people, generationOf }: Naming,
+): Named & { quiet: boolean } {
+  const { key, at } = group;
+  const count = group.members.length;
+  if (level !== "towns" || group.towns > 1) {
+    // A country's, a state's, or a bundle's circle, named by its eldest.
+    const r = bubbleRadius(count);
+    const bundle = level === "towns";
+    const text = bundle
+      ? bundleName(eldestFirst(group.members, people, generationOf), people)
+      : group.label;
+    return {
+      key,
+      text,
+      at,
+      reach: { up: r, down: r, left: r, right: r },
+      widest: 160,
+      quiet: false,
+    };
+  }
+  if (pinned(group)) {
+    // A pin stands on its spot, its head above: its name beside the head, or under the tip.
+    const eldest = eldestFirst(group.members, people, generationOf);
+    const first = people.get(eldest[0] ?? "");
+    const text =
+      count > 1 ? bundleName(eldest, people) : withNames && first ? shortName(first) : "";
+    const { head, tip } = PIN;
+    return {
+      key,
+      text,
+      at: { x: at.x, y: at.y - tip.y + head.y },
+      reach: { up: head.y, down: tip.y - head.y, left: PIN.width / 2, right: PIN.width / 2 },
+      widest: 160,
+      quiet: false,
+    };
+  }
+  // A town's photos, each with its name under it once they're shown.
+  const reach = flowerRadius(withNames ? count : Math.min(count, MOST), spacing);
+  const names = withNames ? 12 : 0;
+  return {
+    key,
+    text: group.label,
+    at,
+    reach: { up: reach, down: reach + names, left: reach + names * 2, right: reach + names * 2 },
+    widest: 176,
+    quiet: group.rough,
+  };
+}
+
+type Naming = {
+  withNames: boolean;
+  spacing: number;
+  people: ReadonlyMap<string, GraphPerson>;
+  generationOf: (id: string) => number | undefined;
+};
+
+/**
+ * The groups' names, none over another, over any circle, photos or pin, or over the map's
+ * buttons and credits (`taken`); the biggest groups first. With what they all take of the
+ * screen, for the names written after them, the towns' around.
+ */
+export function groupNames(
+  groups: readonly Group[],
+  level: Level,
+  naming: Naming,
+  taken: readonly Box[],
+  size: { width: number; height: number },
+): { names: Map<string, ShownName>; taken: Box[] } {
+  const shapes = groups.map((group) => named(group, level, naming));
+  const placed = placeNames(shapes, taken, size);
+  const names = new Map<string, ShownName>();
+  const all = [...taken, ...shapes.map(bodyOf)];
+  for (const shape of shapes) {
+    const place = placed.get(shape.key);
+    if (!place) continue;
+    names.set(shape.key, { ...place, text: shape.text, widest: shape.widest, quiet: shape.quiet });
+    all.push(place.box);
+  }
+  return { names, taken: all };
+}
+
 /** The groups on screen, and a little beyond it: a circle for a country, a state or towns too
  *  close together, else a town's people as their photos. A country's or a state's circle
  *  zooms in on a click; a bundle of towns opens where it is when zooming in wouldn't part it,
  *  its people within about 30 m or the map at its deepest, and else zooms in, with Open here
- *  beside it. */
+ *  beside it. Their names where `names` puts them, worked out here if not given. */
 export function FamilyPlaces({
   groups,
   level,
@@ -111,6 +220,7 @@ export function FamilyPlaces({
   screenOf,
   generationOf,
   deepest,
+  names: given,
 }: {
   groups: Group[];
   level: Level;
@@ -127,35 +237,36 @@ export function FamilyPlaces({
   screenOf: (id: string) => Point | null; // where each really is, on screen
   generationOf: (id: string) => number | undefined; // on the rings, for the eldest
   deepest: boolean; // the map zoomed in as far as it goes
+  names?: ReadonlyMap<string, ShownName>; // each group's name, where it's written
 }) {
   const visible = (at: Point) =>
     at.x > -MARGIN && at.y > -MARGIN && at.x < size.width + MARGIN && at.y < size.height + MARGIN;
+  const names =
+    given ??
+    groupNames(groups, level, { withNames, spacing, people, generationOf }, [], size).names;
   const nameOf = (id: string) => people.get(id)?.full_name ?? "";
   // The bundle open, by its key: one at a time. Esc, or a click anywhere else, folds it back,
-  // and Esc gives the keys back to its circle.
+  // and Esc gives the keys back to its circle. Esc only when nothing opened over it, a dialog,
+  // is open, through useEscape.
   const [openKey, setOpenKey] = useState<string | null>(null);
   const opened = useRef<HTMLDivElement>(null);
   const open = openKey ? groups.find((group) => group.key === openKey) : undefined;
+  useEscape(() => {
+    if (!openKey) return;
+    setOpenKey(null);
+    // Once its circle shows again: hidden, it can't take the keys.
+    const circle = `[data-bundle="${CSS.escape(openKey)}"]`;
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>(circle)?.focus({ preventScroll: true }),
+    );
+  }, openKey !== null);
   useEffect(() => {
     if (!openKey) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpenKey(null);
-      // Once its circle shows again: hidden, it can't take the keys.
-      const circle = `[data-bundle="${CSS.escape(openKey)}"]`;
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLElement>(circle)?.focus({ preventScroll: true }),
-      );
-    };
     const onPointer = (event: PointerEvent) => {
       if (!opened.current?.contains(event.target as Node)) setOpenKey(null);
     };
-    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onPointer, true);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onPointer, true);
-    };
+    return () => window.removeEventListener("pointerdown", onPointer, true);
   }, [openKey]);
   // A bundle of towns: named by its eldest; pointing at it names the first few and where.
   const bundled = (group: Group) => level === "towns" && group.towns > 1;
@@ -196,6 +307,7 @@ export function FamilyPlaces({
               onOpenHere={() => setOpenKey(group.key)}
               nameOf={nameOf}
               hidden={group.key === openKey}
+              nameBelow={names.get(group.key)?.side === "below"}
             />
           ) : pinned(group) ? (
             <SpotPin
@@ -204,7 +316,6 @@ export function FamilyPlaces({
               told={told(group)}
               heading={headingOf(group)}
               people={people}
-              withNames={withNames}
               colourOf={colourOf}
               faded={faded}
               selectedId={selectedId}
@@ -226,6 +337,13 @@ export function FamilyPlaces({
             />
           ),
         )}
+      {groups
+        // An open bundle's circle is hidden, its people shown instead; an open pin stays.
+        .filter((group) => !(group.key === openKey && !pinned(group)) && visible(group.at))
+        .map((group) => {
+          const name = names.get(group.key);
+          return name ? <GroupName key={`name:${group.key}`} name={name} /> : null;
+        })}
       {open && shownOpen && stands && !stands.card && (
         <OpenStack
           group={open}
@@ -275,20 +393,21 @@ export function FamilyPlaces({
 export function PlacingHint({ placing }: { placing: string }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-14 flex justify-center">
-      <div className="rounded-full bg-sky-700 px-4 py-1.5 text-sm text-white shadow">
+      <div className="rounded-full bg-highlight px-4 py-1.5 text-sm text-highlight-foreground shadow">
         Click where {placing} is · Esc to cancel
       </div>
     </div>
   );
 }
 
-/** Zoom in, zoom out and back to Malaysia, as the + − F keys do. */
+/** Zoom in, zoom out and back to everyone, as the first view shows them, as the + − F
+ *  keys do. */
 export function MapButtons({
   onZoomBy,
-  onShowMalaysia,
+  onShowEveryone,
 }: {
   onZoomBy: (factor: number) => void;
-  onShowMalaysia: () => void;
+  onShowEveryone: () => void;
 }) {
   return (
     <div className="absolute bottom-3 left-3 flex flex-col gap-1">
@@ -303,7 +422,7 @@ export function MapButtons({
       >
         <MinusIcon />
       </Button>
-      <Button variant="outline" size="icon-sm" aria-label="Show Malaysia" onClick={onShowMalaysia}>
+      <Button variant="outline" size="icon-sm" aria-label="Show everyone" onClick={onShowEveryone}>
         <ScanIcon />
       </Button>
     </div>
@@ -320,6 +439,7 @@ export function Bubble({
   onOpenHere,
   nameOf,
   hidden,
+  nameBelow = false,
 }: {
   group: Group;
   told?: { name: string; place: string; few: string }; // a bundle's, else a place's circle
@@ -328,6 +448,7 @@ export function Bubble({
   onOpenHere: () => void;
   nameOf: (id: string) => string;
   hidden?: boolean; // open, its people shown instead
+  nameBelow?: boolean; // its name written under it, so Open here goes under that
 }) {
   const radius = bubbleRadius(group.members.length);
   const count = group.members.length;
@@ -335,40 +456,41 @@ export function Bubble({
   const who = count === 1 ? nameOf(group.members[0] ?? "") : `${count} people`;
   const pointed = told ? `${told.few} · ${told.place}` : `${what}: ${who}`;
   return (
+    // Its name is written apart, where there's room for it (GroupName).
     <div
-      className={cn("group absolute flex flex-col items-center", hidden && "invisible")}
+      className={cn("group absolute", hidden && "invisible")}
       style={{
-        transform: `translate(${group.at.x}px, ${group.at.y}px) translate(-50%, -${radius}px)`,
+        width: radius * 2,
+        transform: `translate(${group.at.x - radius}px, ${group.at.y - radius}px)`,
       }}
     >
-      <button
-        type="button"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpen();
-        }}
-        className={cn(
-          "pointer-events-auto flex items-center justify-center rounded-full border-2 font-semibold shadow-sm transition-transform hover:scale-105",
-          group.rough
-            ? "border-dashed border-stone-400 bg-white/90 text-stone-600"
-            : "border-white bg-sky-600/85 text-white",
-        )}
-        style={{ width: radius * 2, height: radius * 2, fontSize: Math.min(18, 10 + radius / 5) }}
-        data-bundle={told ? group.key : undefined}
-        aria-label={`${told ? pointed : `${what}: ${who}`}. ${opens ? "Open" : "Zoom in"}`}
-        title={pointed}
-      >
-        {count}
-      </button>
-      <span className="mt-0.5 max-w-40 truncate rounded bg-white/80 px-1 text-xs font-medium text-stone-700">
-        {what}
-      </span>
+      <Hint label={pointed}>
+        <button
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          className={cn(
+            "pointer-events-auto flex items-center justify-center rounded-full border-2 font-semibold shadow-sm transition-transform hover:scale-105",
+            group.rough
+              ? "border-dashed border-input bg-card/90 text-muted-foreground"
+              : "border-card bg-map-circle/85 text-map-circle-foreground",
+          )}
+          style={{ width: radius * 2, height: radius * 2, fontSize: Math.min(18, 12 + radius / 5) }}
+          data-bundle={told ? group.key : undefined}
+          aria-label={`${told ? pointed : `${what}: ${who}`}. ${opens ? "Open" : "Zoom in"}`}
+        >
+          {count}
+        </button>
+      </Hint>
       {/* A bundle that zooms in can open where it is too: shown when pointed at or reached. */}
       {told && !opens && (
         <button
           type="button"
-          className="pointer-events-auto mt-0.5 rounded bg-white/90 px-1 text-[11px] text-sky-700 underline-offset-2 opacity-0 shadow-sm group-hover:opacity-100 hover:underline focus-visible:opacity-100"
+          className="pointer-events-auto absolute left-1/2 -translate-x-1/2 rounded bg-card/90 px-1 text-xs whitespace-nowrap text-link underline-offset-2 opacity-0 shadow-sm group-hover:opacity-100 hover:underline focus-visible:opacity-100"
+          style={{ top: radius * 2 + 2 + (nameBelow ? 18 : 0) }}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
@@ -402,7 +524,6 @@ export function SpotPin({
   told,
   heading,
   people,
-  withNames,
   colourOf,
   faded,
   selectedId,
@@ -413,7 +534,6 @@ export function SpotPin({
   told: { eldest: string[]; name: string; few: string };
   heading: string;
   people: Map<string, GraphPerson>;
-  withNames: boolean;
   colourOf: (id: string) => string | null;
   faded: ReadonlySet<string> | null;
   selectedId: string | null;
@@ -434,63 +554,56 @@ export function SpotPin({
       className="absolute"
       style={{ left: group.at.x - tip.x, top: group.at.y - tip.y, width: PIN.width }}
     >
-      <button
-        type="button"
-        data-bundle={group.key}
-        data-pin
-        className={cn(
-          "pointer-events-auto relative block origin-bottom transition-transform hover:z-10 hover:scale-110",
-          chosen && "z-10 scale-115",
-          faded && group.members.every((id) => !faded.has(id)) && "opacity-30",
-        )}
-        style={{ width: PIN.width, height: PIN.height }}
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (count > 1) onOpen();
-          else onSelect?.(first);
-        }}
-        title={`${who} · ${heading}`}
-        aria-label={count > 1 ? `${who} · ${heading}. Open` : `${who}, ${heading}, exactly here`}
-      >
-        <svg
-          className="absolute inset-0 overflow-visible drop-shadow-sm"
-          width={PIN.width}
-          height={PIN.height}
-          aria-hidden="true"
+      <Hint label={`${who} · ${heading}`}>
+        <button
+          type="button"
+          data-bundle={group.key}
+          data-pin
+          className={cn(
+            "pointer-events-auto relative block origin-bottom transition-transform hover:z-10 hover:scale-110",
+            chosen && "z-10 scale-115",
+            faded && group.members.every((id) => !faded.has(id)) && "opacity-30",
+          )}
+          style={{ width: PIN.width, height: PIN.height }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (count > 1) onOpen();
+            else onSelect?.(first);
+          }}
+          aria-label={count > 1 ? `${who} · ${heading}. Open` : `${who}, ${heading}, exactly here`}
         >
-          <ellipse cx={tip.x} cy={tip.y} rx={6} ry={2.5} className="fill-black/20" />
-          <path
-            d={TEARDROP}
-            fill="white"
-            stroke={chosen ? "#0284c7" : (colour ?? "#78716c")}
-            strokeWidth={PIN.stroke}
-            strokeLinejoin="round"
-          />
-        </svg>
-        <PersonAvatar
-          person={person}
-          size="sm"
-          className="absolute size-[28px] max-w-none border-0 text-[11px]"
-          style={{ left: head.x - 14, top: head.y - 14 }}
-        />
-        {count > 1 && (
-          <span
-            className="absolute min-w-4 rounded-full bg-sky-600 px-1 text-center text-[10px] leading-4 font-semibold text-white ring-2 ring-white"
-            style={{ left: head.x + 9, top: head.y - head.r - 2 }}
+          <svg
+            className="absolute inset-0 overflow-visible drop-shadow-sm"
+            width={PIN.width}
+            height={PIN.height}
+            aria-hidden="true"
           >
-            {count}
-          </span>
-        )}
-      </button>
-      {(count > 1 || withNames) && (
-        <span
-          className="absolute left-1/2 max-w-40 -translate-x-1/2 truncate rounded bg-white/80 px-1 text-[11px] font-medium whitespace-nowrap text-stone-700"
-          style={{ top: PIN.height + 3 }}
-        >
-          {count > 1 ? told.name : shortName(person)}
-        </span>
-      )}
+            <ellipse cx={tip.x} cy={tip.y} rx={6} ry={2.5} className="fill-foreground/20" />
+            <path
+              d={TEARDROP}
+              fill={DRAWING.paper}
+              stroke={chosen ? DRAWING.chosen : (colour ?? DRAWING.uncoloured)}
+              strokeWidth={PIN.stroke}
+              strokeLinejoin="round"
+            />
+          </svg>
+          <PersonAvatar
+            person={person}
+            size="sm"
+            className="absolute size-[28px] max-w-none border-0 text-xs"
+            style={{ left: head.x - 14, top: head.y - 14 }}
+          />
+          {count > 1 && (
+            <span
+              className="absolute min-w-4 rounded-full bg-map-circle px-1 text-center text-xs leading-4 font-semibold text-map-circle-foreground ring-2 ring-card"
+              style={{ left: head.x + 9, top: head.y - head.r - 2 }}
+            >
+              {count}
+            </span>
+          )}
+        </button>
+      </Hint>
     </div>
   );
 }
@@ -529,15 +642,16 @@ export function Town({
   return (
     <div className="absolute" style={{ transform: `translate(${group.at.x}px, ${group.at.y}px)` }}>
       {about && (
-        <div
-          className="absolute rounded-full border border-sky-500/30 bg-sky-300/15"
-          style={{
-            width: (reach + 10) * 2,
-            height: (reach + 10) * 2,
-            transform: `translate(-${reach + 10}px, -${reach + 10}px)`,
-          }}
-          title={`${group.label}: about here`}
-        />
+        <Hint label={`${group.label}: about here`}>
+          <div
+            className="absolute rounded-full border border-map-circle/30 bg-map-circle/10"
+            style={{
+              width: (reach + 10) * 2,
+              height: (reach + 10) * 2,
+              transform: `translate(-${reach + 10}px, -${reach + 10}px)`,
+            }}
+          />
+        </Hint>
       )}
       {shown.map((id, index) => {
         const person = people.get(id);
@@ -546,47 +660,50 @@ export function Town({
         const colour = colourOf(id);
         const years = lifeYears(person);
         return (
-          <button
+          <Hint
             key={id}
-            type="button"
-            className={cn(
-              "pointer-events-auto absolute flex flex-col items-center rounded-full transition-transform hover:z-10 hover:scale-110",
-              faded && !faded.has(id) && "opacity-30",
-            )}
-            style={{ transform: `translate(${at.x - PHOTO / 2}px, ${at.y - PHOTO / 2}px)` }}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect?.(id);
-            }}
-            title={[person.full_name, years, group.label, where].filter(Boolean).join(" · ")}
-            aria-label={[person.full_name, group.label, where].filter(Boolean).join(", ")}
+            label={[person.full_name, years, group.label, where].filter(Boolean).join(" · ")}
           >
-            <PersonAvatar
-              person={person}
-              size="sm"
+            <button
+              type="button"
               className={cn(
-                // Never narrowed: a photo is an image, which may be no wider than its button,
-                // and a button with no name under it has no width of its own.
-                "size-[34px] max-w-none shadow-sm",
-                group.rough && "border-dashed",
-                id === selectedId && "ring-2 ring-sky-500 ring-offset-1",
+                "pointer-events-auto absolute flex flex-col items-center rounded-full transition-transform hover:z-10 hover:scale-110",
+                faded && !faded.has(id) && "opacity-30",
               )}
-              style={colour ? { borderColor: colour } : undefined}
-            />
-            <StoryMark person={person} inside className="top-[20px] left-[20px]" />
-            {withNames && (
-              <span className="mt-0.5 w-20 truncate text-center text-[10px] leading-tight text-stone-700">
-                {shortName(person)}
-              </span>
-            )}
-          </button>
+              style={{ transform: `translate(${at.x - PHOTO / 2}px, ${at.y - PHOTO / 2}px)` }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect?.(id);
+              }}
+              aria-label={[person.full_name, group.label, where].filter(Boolean).join(", ")}
+            >
+              <PersonAvatar
+                person={person}
+                size="sm"
+                className={cn(
+                  // Never narrowed: a photo is an image, which may be no wider than its button,
+                  // and a button with no name under it has no width of its own.
+                  "size-[34px] max-w-none shadow-sm",
+                  group.rough && "border-dashed",
+                  id === selectedId && "ring-2 ring-highlight ring-offset-1",
+                )}
+                style={colour ? { borderColor: colour } : undefined}
+              />
+              <StoryMark person={person} inside className="top-[20px] left-[20px]" />
+              {withNames && (
+                <span className="mt-0.5 w-20 truncate text-center text-xs leading-tight text-foreground">
+                  {shortName(person)}
+                </span>
+              )}
+            </button>
+          </Hint>
         );
       })}
       {cut && (
         <button
           type="button"
-          className="pointer-events-auto absolute flex items-center justify-center rounded-full border-2 border-white bg-stone-700 text-xs font-semibold text-white shadow-sm"
+          className="pointer-events-auto absolute flex items-center justify-center rounded-full border-2 border-card bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
           style={{
             width: PHOTO,
             height: PHOTO,
@@ -602,15 +719,28 @@ export function Town({
           +{all.length - shown.length}
         </button>
       )}
-      <span
-        className={cn(
-          "absolute left-0 w-max max-w-44 -translate-x-1/2 truncate rounded bg-white/80 px-1 text-xs font-medium",
-          group.rough ? "text-stone-500 italic" : "text-stone-700",
-        )}
-        style={{ top: reach + (withNames ? 14 : 2) }}
-      >
-        {group.label}
-      </span>
     </div>
+  );
+}
+
+/** A group's name, on the side of it `placeNames` found room on: centred under or over
+ *  it, or beside it. Its box is as wide as the name could be, so the name itself is held to the
+ *  side nearest its group. */
+export function GroupName({ name }: { name: ShownName }) {
+  const { box, side } = name;
+  const middle = (box.x0 + box.x1) / 2;
+  const left = side === "right" ? box.x0 : side === "left" ? box.x1 : middle;
+  const shift = side === "right" ? "0" : side === "left" ? "-100%" : "-50%";
+  return (
+    <span
+      className={cn(
+        "absolute truncate rounded bg-card/80 px-1 text-xs leading-4 font-medium whitespace-nowrap",
+        name.quiet ? "text-faint italic" : "text-foreground",
+      )}
+      style={{ left, top: box.y0, maxWidth: name.widest, transform: `translateX(${shift})` }}
+      data-map-name // the journeys measure that no two overlap
+    >
+      {name.text}
+    </span>
   );
 }

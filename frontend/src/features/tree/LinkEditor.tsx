@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useKinds, useLink, useUnlink, useUpdateLink } from "@/api/queries";
 import type { GraphLink, GraphPerson, SpouseStatus } from "@/api/types";
 import { useCanEdit } from "@/app/copy";
+import { Hint } from "@/components/Hint";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -34,7 +35,7 @@ function RemoveButton({ what, onRemove }: { what: string; onRemove: () => void }
   }
   return (
     <span className="flex items-center gap-1">
-      <span className="text-xs text-stone-600">Remove {what}?</span>
+      <span className="text-xs text-muted-foreground">Remove {what}?</span>
       <Button variant="destructive" size="sm" onClick={onRemove}>
         Remove
       </Button>
@@ -71,8 +72,7 @@ function ParentLinkRow({
       { id: link.id, body },
       {
         onSuccess: (result) => {
-          feedback(result);
-          toast.success(done);
+          feedback(done, result);
           onDone();
         },
         onError: showError,
@@ -94,14 +94,15 @@ function ParentLinkRow({
                   onChange={(next) => change({ kind: next, swap: false }, "Kind of link changed.")}
                 />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                title={`Make ${shortName(child)} the parent instead`}
-                onClick={() => change({ swap: true }, "Direction swapped.")}
-              >
-                Swap
-              </Button>
+              <Hint label={`Make ${shortName(child)} the parent instead`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => change({ swap: true }, "Direction swapped.")}
+                >
+                  Swap
+                </Button>
+              </Hint>
             </>
           )}
           {canEdit && (
@@ -244,19 +245,28 @@ export function LinkEditor({
   bounds: { width: number; height: number };
   onClose: () => void;
 }) {
+  const name = (id: string | undefined) => {
+    const person = id ? people.get(id) : undefined;
+    return person ? shortName(person) : "";
+  };
   let body = null;
+  let label = "A link on the tree"; // its name, by whom it links
   if (pick.type === "child") {
     body = pick.links.map((link) => (
       <ParentLinkRow key={link.id} link={link} people={people} onDone={onClose} />
     ));
+    const child = name(pick.links[0]?.target);
+    if (child) label = `${child}'s parents`;
   } else if (pick.type === "spouse") {
     body = <MarriageRow link={pick.link} people={people} onDone={onClose} />;
+    label = `The marriage of ${name(pick.link.source)} and ${name(pick.link.target)}`;
   } else {
     const [a, b] = [people.get(pick.a), people.get(pick.b)];
     if (a && b) body = <PairRow a={a} b={b} onDone={onClose} />;
+    label = `${name(pick.a)} and ${name(pick.b)}`;
   }
   return (
-    <FloatingCard at={at} bounds={bounds} width={340}>
+    <FloatingCard at={at} bounds={bounds} width={340} label={label} onClose={onClose}>
       {body}
     </FloatingCard>
   );

@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEscape } from "@/lib/escape";
 import { showError } from "@/lib/notify";
 import { MALAYSIAN_STATES } from "@/lib/people";
 import { PlaceLocation } from "./PlaceLocation";
@@ -97,6 +98,11 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
   useEffect(() => {
     if (showing) listed.current?.scrollIntoView?.({ block: "nearest" });
   }, [showing]);
+  // Esc puts them away first, the form staying open; the address stays as typed.
+  useEscape(() => {
+    setLine("");
+    setOnline(null);
+  }, showing);
   const key = found.data && !found.data.downloaded ? found.data.country : null;
   const offered = key ? packs.data?.countries?.find((each) => each.key === key) : undefined;
   const byHand = (field: "town" | "postcode" | "country") =>
@@ -133,7 +139,7 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
         <ul
           ref={listed}
           aria-label={`${label}: suggested`}
-          className="divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200 text-sm"
+          className="divide-y divide-border overflow-hidden rounded-lg border border-border text-sm"
         >
           {(online ?? suggestions).map((suggestion) => (
             <li
@@ -141,7 +147,7 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
             >
               <button
                 type="button"
-                className="w-full px-2.5 py-1.5 text-left hover:bg-stone-50"
+                className="w-full px-2.5 py-1.5 text-left hover:bg-muted/50"
                 onClick={() => choose(suggestion)}
               >
                 {suggestionWords(suggestion)}
@@ -149,17 +155,15 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
             </li>
           ))}
           {online?.length === 0 && (
-            <li className="px-2.5 py-1.5 text-stone-500">Nothing found online either.</li>
+            <li className="px-2.5 py-1.5 text-faint">Nothing found online either.</li>
           )}
         </ul>
       )}
       {online !== null && online.length > 0 && (
-        <p className="text-xs text-stone-500">
-          Found online: check it on the small map once chosen.
-        </p>
+        <p className="text-xs text-faint">Found online: check it on the small map once chosen.</p>
       )}
       {offered && line.trim().length >= 2 && (
-        <p className="text-xs text-stone-600">
+        <p className="text-xs text-muted-foreground">
           {asked ? (
             `${offered.title}'s map and places are on their way: Settings → Map shows how it goes.`
           ) : (
@@ -167,7 +171,7 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
               {offered.title}'s towns, villages and postcodes aren't on this computer yet.{" "}
               <button
                 type="button"
-                className="text-sky-700 hover:underline"
+                className="text-link hover:underline"
                 disabled={fetchCountry.isPending}
                 onClick={() =>
                   fetchCountry.mutate(offered.key, {
@@ -183,11 +187,11 @@ export function PlaceFields({ name, label }: { name: PlaceKey; label: string }) 
         </p>
       )}
       {lookup !== "never" && online === null && typed.length >= 3 && line.trim().length >= 2 && (
-        <p className="text-xs text-stone-600">
+        <p className="text-xs text-muted-foreground">
           {nothingHere ? "Not found without the internet. " : "Not the right place? "}
           <button
             type="button"
-            className="text-sky-700 hover:underline"
+            className="text-link hover:underline"
             disabled={lookUp.isPending}
             onClick={() => (lookup === "always" ? lookItUp() : setAsking(true))}
           >

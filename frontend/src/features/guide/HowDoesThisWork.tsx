@@ -10,7 +10,7 @@ export function HowDoesThisWork({ at, className }: { at: GuidePlace; className?:
     <Link
       to={guideAt(at)}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 text-xs font-normal text-sky-700 hover:underline",
+        "inline-flex shrink-0 items-center gap-1 text-xs font-normal text-link hover:underline",
         className,
       )}
     >

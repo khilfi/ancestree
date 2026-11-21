@@ -136,7 +136,7 @@ describe("Several families on one computer", () => {
     expect(asked).toContain("POST /api/desktop/families/removed/cccccccccccccccc/put-back");
   });
 
-  it("removes a family to AncesTree's bin, once sure", async () => {
+  it("removes a family to the Trash, once sure", async () => {
     answer(TWO);
     await show(<FamiliesSection />, "Keluarga Ibu");
     act(() => button("Remove…").click());

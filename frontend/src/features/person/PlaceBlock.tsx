@@ -1,5 +1,4 @@
 import { ChevronDownIcon, ChevronRightIcon, type LucideIcon } from "lucide-react";
-import type { SVGProps } from "react";
 import { useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { PlaceFields } from "./PlaceFields";
@@ -10,27 +9,6 @@ export type PlaceKey = "residence" | "birth_place" | "death_place";
 export type FormPlace = PersonFormValues["residence"];
 /** Another place to fill this one in from, in one click: "Same as where they were born". */
 export type Copy = { label: string; place: FormPlace };
-
-/** A headstone: the sign for where someone died and rests. Lucide has none. */
-export function StoneIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M6 21V10a6 6 0 0 1 12 0v11" />
-      <path d="M3 21h18" />
-      <path d="M10 12h4" />
-      <path d="M12 9v6" />
-    </svg>
-  );
-}
 
 /**
  * One of someone's places in their form: titled clearly,
@@ -48,7 +26,7 @@ export function PlaceBlock({
 }: {
   name: PlaceKey;
   title: string;
-  sign: LucideIcon | typeof StoneIcon;
+  sign: LucideIcon;
   open: boolean;
   onOpen: () => void;
   copies: Copy[];
@@ -57,23 +35,23 @@ export function PlaceBlock({
   const line = placeLine(watch(name));
   const Chevron = open ? ChevronDownIcon : ChevronRightIcon;
   return (
-    <div className="rounded-lg border border-stone-200">
+    <div className="rounded-lg border border-border">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={`${name}-place`}
         onClick={onOpen}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-stone-50"
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-muted/50"
       >
-        <Sign className="size-4 shrink-0 text-stone-500" />
-        <span className="shrink-0 text-sm font-medium text-stone-800">{title}</span>
-        <span className="min-w-0 flex-1 truncate text-sm text-stone-500">
+        <Sign className="size-4 shrink-0 text-faint" />
+        <span className="shrink-0 text-sm font-medium text-foreground">{title}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-faint">
           {line || "Not filled in"}
         </span>
-        <Chevron className="size-4 shrink-0 text-stone-400" />
+        <Chevron className="size-4 shrink-0 text-faint" />
       </button>
       {open && (
-        <div id={`${name}-place`} className="space-y-2 border-t border-stone-200 p-3">
+        <div id={`${name}-place`} className="space-y-2 border-t border-border p-3">
           {copies.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {copies.map((copy) => (

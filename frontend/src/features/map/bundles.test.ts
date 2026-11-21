@@ -89,7 +89,7 @@ describe("people at one spot", () => {
     const k = DEEPEST_PER_KM / PLANE_PER_KM; // zoom 19: 6 m is 20 pixels
     const near = [...three, spot("child", 6)];
     const at = (p: { x: number; y: number }) => ({ x: p.x * k, y: p.y * k });
-    const deepest = familyGroups(near, "towns", at, true, 64, true);
+    const deepest = familyGroups(near, "towns", at, true, 64, true).groups;
     expect(deepest.map((group) => group.members.length).sort()).toEqual([1, 3]);
     const above = familyGroups(
       near,
@@ -97,7 +97,7 @@ describe("people at one spot", () => {
       (p) => ({ x: p.x * k * 0.5, y: p.y * k * 0.5 }),
       true,
       64,
-    );
+    ).groups;
     expect(above).toHaveLength(1); // their pins would cover each other: one circle
     expect(above[0]?.towns).toBe(2);
   });

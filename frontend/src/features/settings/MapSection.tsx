@@ -13,6 +13,8 @@ import {
   useRemovePack,
 } from "@/api/mapPacks";
 import type { Lookup, MapCountry, MapPack, MapPlaces } from "@/api/types";
+import { Failed } from "@/components/Failed";
+import { LoadingRows } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +38,7 @@ function plain(text: string): string {
 function Progress({ label, done, size }: { label: string; done: number; size: number }) {
   return (
     <div
-      className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100"
+      className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
       role="progressbar"
       aria-label={`${label}, fetched so far`}
       aria-valuemin={0}
@@ -44,7 +46,7 @@ function Progress({ label, done, size }: { label: string; done: number; size: nu
       aria-valuenow={done}
     >
       <div
-        className="h-full bg-sky-600 transition-[width]"
+        className="h-full bg-highlight transition-[width]"
         style={{ width: `${(100 * done) / Math.max(size, 1)}%` }}
       />
     </div>
@@ -90,7 +92,7 @@ function PackRow({ pack }: { pack: MapPack }) {
         <div
           className={cn(
             "text-xs",
-            pack.error && !pack.fetching ? "text-red-600" : "text-stone-500",
+            pack.error && !pack.fetching ? "text-destructive" : "text-faint",
           )}
         >
           {sizeOf(pack.size)} · {packState(pack)}
@@ -111,7 +113,7 @@ function WorldRow({ world, places }: { world: MapPack; places?: MapPlaces }) {
     <div className="flex items-center gap-4 px-4 py-3">
       <div className="min-w-0 flex-1">
         <div className="font-medium">{world.title}</div>
-        <div className={cn("text-xs", state.error ? "text-red-600" : "text-stone-500")}>
+        <div className={cn("text-xs", state.error ? "text-destructive" : "text-faint")}>
           {sizeOf(state.size)} · {state.words}
         </div>
         {state.fetching && <Progress label={world.title} done={state.done} size={state.size} />}
@@ -153,7 +155,7 @@ function CountryRow({
       <div className="flex items-center gap-4 px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="font-medium">{country.title}</div>
-          <div className={cn("text-xs", state.error ? "text-red-600" : "text-stone-500")}>
+          <div className={cn("text-xs", state.error ? "text-destructive" : "text-faint")}>
             {sizeOf(state.size)} · {state.words}
           </div>
           {state.fetching && <Progress label={country.title} done={state.done} size={state.size} />}
@@ -184,11 +186,11 @@ function CountryRow({
         </div>
       </div>
       {split && (
-        <details open={matching !== null} className="border-t border-stone-100 px-4 pb-2">
-          <summary className="cursor-pointer py-2 text-sm text-sky-700">
+        <details open={matching !== null} className="border-t border-border px-4 pb-2">
+          <summary className="cursor-pointer py-2 text-sm text-link">
             Or one of its {state.parts.length} states or provinces
           </summary>
-          <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+          <div className="divide-y divide-border rounded-lg border border-border">
             {(matching ?? state.parts).map((pack) => (
               <PackRow key={pack.key} pack={pack} />
             ))}
@@ -210,12 +212,12 @@ const LOOKUPS: [Lookup, string][] = [
 function LookupChoice({ lookup }: { lookup: Lookup }) {
   const choose = useChooseLookup();
   return (
-    <div className="space-y-2 rounded-lg border border-stone-200 px-4 py-3">
+    <div className="space-y-2 rounded-lg border border-border px-4 py-3">
       <div className="space-y-1">
         <p className="font-medium" id="map-lookup">
           Online address lookup
         </p>
-        <p className="max-w-2xl text-xs text-stone-500">
+        <p className="max-w-2xl text-xs text-faint">
           Where an address isn't found without the internet, a person's form offers to look it up
           once, through Photon, komoot's search of OpenStreetMap. It sends the address as typed,
           with its country, and Photon sees this computer's internet address; nothing else of your
@@ -276,8 +278,8 @@ export function MapSection() {
   const list = (title: string, shown: Found[]) =>
     shown.length > 0 && (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-stone-700">{title}</h3>
-        <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <ul className="divide-y divide-border rounded-lg border border-border">
           {shown.map(({ country, matching }) => (
             <CountryRow
               key={country.key}
@@ -292,25 +294,34 @@ export function MapSection() {
     );
 
   return (
-    <section className="space-y-4 rounded-xl border border-stone-200 bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-border bg-card p-5">
       <div className="space-y-1">
         <h2 className="font-semibold">Map</h2>
-        <p className="max-w-2xl text-sm text-stone-500">
+        <p className="max-w-2xl text-sm text-faint">
           The map's detail comes from OpenStreetMap, in packs AncesTree keeps on this computer, so
           the map looks nothing up online as you use it, unless you choose online detail below. The
           world comes the first time you open the map; download a country here for its towns, roads
           and kampungs close up. Each pack is checked before it's used.
         </p>
       </div>
-      {packs.isPending && <p className="text-sm text-stone-500">Loading…</p>}
-      {packs.isError && <p className="text-sm text-red-600">{packs.error.message}</p>}
+      {packs.isPending && <LoadingRows label="Loading the map's packs…" />}
+      {packs.isError && (
+        <Failed
+          error={packs.error}
+          onRetry={() => void packs.refetch()}
+          className="text-sm text-destructive"
+        />
+      )}
       {world && (
-        <div className="rounded-lg border border-stone-200">
+        <div className="rounded-lg border border-border">
           <WorldRow world={world} places={placesOf.get("world")} />
         </div>
       )}
       {Object.entries(packs.data?.placed ?? {}).map(([key, count]) => (
-        <p key={key} className="rounded-md bg-sky-50 px-3 py-2 text-sm text-sky-900">
+        <p
+          key={key}
+          className="rounded-md bg-highlight-soft px-3 py-2 text-sm text-highlight-soft-foreground"
+        >
           {count === 1 ? "1 address" : `${count} addresses`}
           {key === "world"
             ? ""
@@ -332,12 +343,12 @@ export function MapSection() {
           {list("Where your family lives or was born", theirs)}
           {list(theirs.length ? "Every other country" : "Every country", others)}
           {found.length === 0 && (
-            <p className="text-sm text-stone-500">No country or state is called that.</p>
+            <p className="text-sm text-faint">No country or state is called that.</p>
           )}
         </>
       )}
       {packs.data && (
-        <div className="flex items-start gap-3 rounded-lg border border-stone-200 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-lg border border-border px-4 py-3">
           <Switch
             id="map-online"
             className="mt-0.5"
@@ -349,7 +360,7 @@ export function MapSection() {
             <label htmlFor="map-online" className="font-medium">
               Online detail where the packs end
             </label>
-            <p className="max-w-2xl text-xs text-stone-500">
+            <p className="max-w-2xl text-xs text-faint">
               OpenFreeMap fills in what no pack here shows close up: a town in a country you haven't
               downloaded, say, or Germany closer than its pack goes. As you look at those places,
               AncesTree asks OpenFreeMap's server for them, so it learns which parts of the world
@@ -362,7 +373,7 @@ export function MapSection() {
       )}
       {packs.data && <LookupChoice lookup={packs.data.lookup} />}
       {packs.data && (
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-faint">
           Map data © OpenStreetMap contributors, under the Open Database License, as Protomaps cut
           it on {packs.data.build.slice(6, 8)}/{packs.data.build.slice(4, 6)}/
           {packs.data.build.slice(0, 4)}

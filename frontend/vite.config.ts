@@ -104,7 +104,8 @@ export default defineConfig(({ mode }) => {
         { chunkSizeWarningLimit: 1100 },
     test: {
       environment: "node",
-      include: ["src/**/*.test.{ts,tsx}"],
+      // With the journeys' own, such as what their pages may reach.
+      include: ["src/**/*.test.{ts,tsx}", "journeys/**/*.test.ts"],
       // Room for a computer busy with other work: these tests check what's shown, with the
       // engine's answers made up, never how fast (0.8.7).
       testTimeout: 15_000,

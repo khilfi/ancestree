@@ -1,17 +1,13 @@
 import asyncio
-from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi import APIRouter, status
 
 from ancestree.api.deps import Ctx, Hist
-from ancestree.domain.graph import Graph, Positions, SampleFamily, TreeSettings
-from ancestree.exchange.restore import read_graph
+from ancestree.domain.graph import Graph, Positions, TreeSettings
 from ancestree.repo import graph as graph_repo
 from ancestree.repo import people as people_repo
-from ancestree.seed.clusters import clustered_families
-from ancestree.seed.generated import generated_family
 from ancestree.services.context import read
-from ancestree.services.graph import build_graph, graph_from_archive, load_graph, with_story_marks
+from ancestree.services.graph import load_graph, with_story_marks
 from ancestree.storage.biography import with_stories
 from ancestree.storage.settings import read_tree_settings, write_tree_settings
 
@@ -25,8 +21,6 @@ _COLOURS = {
 }
 _MARRIED_IN = {
     "fans": "Married-in families as fans",
-    "discs": "Married-in families as discs",
-    "settled": "Married-in families as settled fans",
     "tucked": "Married-in families tucked in",
 }
 
@@ -40,40 +34,6 @@ async def get_graph(ctx: Ctx) -> Graph:
     ids = [str(person.id) for person in graph.people if not person.placeholder]
     told = await asyncio.to_thread(with_stories, ctx.data_dir, ids)
     return with_story_marks(graph, told)
-
-
-@router.get("/sample/graph")
-async def get_sample_graph(people: Annotated[int, Query(ge=10, le=5000)] = 2000) -> Graph:
-    """A generated, fictional family, for trying the canvas at size. Nothing is stored."""
-    rows, links = generated_family(people)
-    return build_graph(rows, links, {"biological": True}, None)
-
-
-@router.get("/sample/families")
-async def get_sample_families() -> list[SampleFamily]:
-    """Six made-up families whose married-in families hang off them in hard ways, each seated
-    as the tree seats it, for trying ways of placing those families side by side.
-    Nothing is stored."""
-    return [
-        SampleFamily(
-            key=family.key,
-            title=family.title,
-            about=family.about,
-            graph=build_graph(family.people, family.links, {"biological": True}, None),
-        )
-        for family in clustered_families()
-    ]
-
-
-@router.post("/sample/families/backup")
-async def get_family_from_backup(
-    file: Annotated[UploadFile, File(description="An AncesTree backup archive (.zip)")],
-) -> Graph:
-    """The family in a backup archive, seated as the tree seats it, to try the same ways on
-    (S7). Read in memory and checked as a restore checks it: nothing is restored or kept.
-    Refused (422, "bad_archive") if it isn't a backup that can be read."""
-    archive = await asyncio.to_thread(read_graph, file.file, file.filename or "The file")
-    return graph_from_archive(archive)
 
 
 @router.put("/layout/positions", status_code=status.HTTP_204_NO_CONTENT)

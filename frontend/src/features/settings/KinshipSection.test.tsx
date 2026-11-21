@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /**
- * Settings → Kinship words, on a relative's computer (0.3.1): the language is its own, but the
- * Malay birth-order titles are the family's, set by the keeper, so they're shown, not changed.
+ * Settings → Kinship → Malay birth-order titles, on a relative's computer (0.3.1): the titles
+ * are the family's, set by the keeper, so they're shown, not changed. The language of the
+ * kinship words is set where they're seen, no longer here.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act } from "react";
@@ -56,7 +57,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Settings → Kinship words", () => {
+describe("Settings → Kinship → Malay birth-order titles", () => {
+  it("keeps the titles alone: the language is set where the words are seen", async () => {
+    answer("keeper");
+    await show();
+    await vi.waitFor(() => expect(document.querySelector("#title-0")).not.toBeNull());
+    expect(document.querySelector('[role="radiogroup"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("Bahasa Melayu");
+    expect(document.body.textContent).toContain("beside how two people are related");
+  });
+
   it("shows a relative the family's titles, set by the keeper, and nothing to change them", async () => {
     answer("member");
     await show();

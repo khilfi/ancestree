@@ -143,4 +143,55 @@ describe("the picture", () => {
     expect(svg).toContain(">+3</text>");
     expect(svg).toContain(">Not linked yet</text>");
   });
+
+  it("stands each name and its years on a soft background, as the tree does", () => {
+    const lines = svg.split("\n");
+    for (const name of [">Hassan bin Ismail</text>", ">Yusof</text>"]) {
+      const at = lines.findIndex((line) => line.includes(name));
+      expect(at).toBeGreaterThan(0);
+      // Just before the name, a box the paper's colour, a little see-through, round its words.
+      expect(lines[at - 1]).toMatch(/^<rect [^>]*fill="#ffffff" fill-opacity="0.9"\/>$/);
+    }
+    // Hassan's box takes his name and his years: two lines, 30 pixels and more high.
+    const hassan = lines.findIndex((line) => line.includes(">Hassan bin Ismail</text>"));
+    const high = Number(/height="([\d.]+)"/.exec(lines[hassan - 1] ?? "")?.[1]);
+    expect(high).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe("the rings' words in the picture", () => {
+  // As the tree says them: each generation once, a married-in family's oldest arc named for
+  // its couple, and its other arcs nothing.
+  const { svg } = drawTree(
+    {
+      ...snapshot,
+      rings: [
+        { unit: "main", generation: 2, x: 0, y: 0, radius: 400, cluster: false },
+        { unit: "main", generation: 3, x: 0, y: 0, radius: 600, cluster: false },
+        ...[2, 3].map((generation) => ({
+          unit: "cluster:m",
+          generation,
+          x: 1500,
+          y: 0,
+          radius: 210 * (generation - 1),
+          cluster: true,
+          span: { from: 0.5, to: 1.5 },
+        })),
+      ].map((ring) => ({
+        ...ring,
+        label: ring.cluster
+          ? ring.generation === 2
+            ? "Pak & Mak"
+            : null
+          : `Generation ${ring.generation}`,
+      })),
+    },
+    { photos: new Map(), fontFace: "", measure },
+  );
+
+  it("are the rings' own: each generation once, and the family's name", () => {
+    expect(svg.match(/>Generation 2<\/text>/g)).toHaveLength(1);
+    expect(svg.match(/>Generation 3<\/text>/g)).toHaveLength(1);
+    expect(svg).toContain(">Pak &amp; Mak</text>");
+  });
 });

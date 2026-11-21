@@ -16,10 +16,10 @@ export function SamplePage() {
   const [picked, setPicked] = useState<string | null>(null);
 
   if (sample.isPending) {
-    return <p className="p-8 text-stone-500">Making up a family of {people} people…</p>;
+    return <p className="p-8 text-faint">Making up a family of {people} people…</p>;
   }
   if (sample.isError) {
-    return <p className="p-8 text-red-600">{sample.error.message}</p>;
+    return <p className="p-8 text-destructive">{sample.error.message}</p>;
   }
   return (
     <div className="relative h-full">
@@ -33,7 +33,8 @@ export function SamplePage() {
           onView={(view) => setParams((now) => writeView(view, now))}
         />
       </ReactFlowProvider>
-      <p className="pointer-events-none absolute top-3 right-3 rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-900 shadow-sm">
+      {/* At the bottom: the tree's toolbar is along the top. */}
+      <p className="pointer-events-none absolute right-3 bottom-3 rounded-md bg-warning-soft px-3 py-1.5 text-xs text-warning-soft-foreground shadow-sm">
         A made-up family of {people} people, to try the tree at size. Nothing here is stored.
       </p>
     </div>

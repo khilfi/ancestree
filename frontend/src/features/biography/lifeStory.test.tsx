@@ -13,12 +13,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { keys } from "@/api/queries";
-import type { Biography, Graph, PersonDetail } from "@/api/types";
+import type { Biography, Graph, KindView, PersonDetail } from "@/api/types";
 import { type CopyAbout, CopyProvider } from "@/app/copy";
 import { closeLifeStory, openLifeStory } from "@/lib/lifeStory";
 import { until } from "@/viewer/looking";
 import { BiographyTab, opening } from "./BiographyTab";
-import { LifeStoryHost, lifeLine } from "./LifeStory";
+import { LifeStoryHost, lifeLine, StoryPage } from "./LifeStory";
 import { StoryMark } from "./StoryMark";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -66,7 +66,7 @@ const hassan = {
   child_groups: [
     {
       children: [
-        summary("karim", "Karim bin Hassan", "Son", 1965),
+        { ...summary("karim", "Karim bin Hassan", "Son", 1965), gender: "male" },
         summary("aminah", "Aminah binti Hassan", "Daughter", 1962),
       ],
       other_parents: [],
@@ -200,7 +200,7 @@ describe("the life story's window", () => {
     expect(pressed("Read")).toBe("true");
     const page = document.querySelector(".life-story-page")?.textContent ?? "";
     expect(page).toContain("Haji Hassan bin Ismail");
-    expect(page).toContain("Born, 14 March 1938, Kota Bharu, Kelantan");
+    expect(page).toContain("Born 14 March 1938 in Kota Bharu, Kelantan");
     // The parts in their order, whatever order they were given in: sayings, message, talents.
     const cards = [...document.querySelectorAll("section[aria-label]")].map((s) =>
       s.getAttribute("aria-label"),
@@ -322,14 +322,57 @@ describe("the life story's window", () => {
 });
 
 describe("the line of their life", () => {
-  it("is born, married, their children born by year, and died, from what's known", () => {
-    expect(lifeLine(hassan).map((moment) => [moment.label, moment.when])).toEqual([
-      ["Born", "14 March 1938"],
-      ["Wife: Mariam binti Daud", ""],
-      ["Daughter Aminah binti Hassan born", "1962"],
-      ["Son Karim bin Hassan born", "1965"],
-      ["Died", "2011"],
+  // Written as sentences: it read "Daughter Aminah binti Hassan born, 1962".
+  it("is born, married, their children born by year, and died, each a sentence", () => {
+    expect(lifeLine(hassan).map((moment) => moment.text)).toEqual([
+      "Born 14 March 1938 in Kota Bharu, Kelantan",
+      "Married Mariam binti Daud",
+      "Aminah binti Hassan, a daughter, born 1962",
+      "Karim bin Hassan, a son, born 1965",
+      "Died 2011",
     ]);
+  });
+
+  it("says a child by their kind of link, in English, and a marriage that ended", () => {
+    const kinds = [
+      { key: "biological", blood: true, child_label: { neutral: "child" } },
+      {
+        key: "adoptive",
+        blood: false,
+        child_label: { neutral: "adopted child", male: "adopted son", female: "adopted daughter" },
+      },
+    ] as unknown as KindView[];
+    const karim = { ...summary("karim", "Karim bin Hassan", "Anak angkat", 1965), gender: "male" };
+    const adopted = {
+      ...hassan,
+      spouses: [
+        { ...summary("mariam", "Mariam binti Daud", "Bekas isteri", 1942), status: "divorced" },
+      ],
+      child_groups: [
+        {
+          children: [{ ...karim, kind: "adoptive" }],
+          other_parents: [],
+          order_decided: true,
+        },
+      ],
+    } as unknown as PersonDetail;
+    expect(lifeLine(adopted, kinds).map((moment) => moment.text)).toEqual([
+      "Born 14 March 1938 in Kota Bharu, Kelantan",
+      "Married Mariam binti Daud, later divorced",
+      "Karim bin Hassan, an adopted son, born 1965",
+      "Died 2011",
+    ]);
+  });
+});
+
+describe("where they live, on the life story", () => {
+  // It said "Lives in" for someone who has died, where their details say "Lived in".
+  it("says Lived in for someone who has died", async () => {
+    answer({ hassan: NONE });
+    const home = { town: "Kuantan", state: "Pahang", country: "Malaysia" };
+    show(<StoryPage person={{ ...hassan, residence: home } as PersonDetail} story={NONE} />);
+    await until("Lived in Kuantan");
+    expect(document.body.textContent).not.toContain("Lives in");
   });
 });
 
@@ -364,7 +407,7 @@ describe("where the life story opens from", () => {
         <StoryMark person={{ id: "aminah", full_name: "Aminah binti Hassan", has_story: false }} />
       </>,
     );
-    expect(document.querySelectorAll('[title="Life story"]')).toHaveLength(1);
+    expect(document.querySelectorAll('button[aria-label$="life story"]')).toHaveLength(1);
     act(() =>
       document
         .querySelector<HTMLButtonElement>('[aria-label="Hassan bin Ismail\'s life story"]')

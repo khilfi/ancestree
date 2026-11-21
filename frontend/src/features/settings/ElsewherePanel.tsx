@@ -70,7 +70,7 @@ function ChoosePlace({ open, onClose }: { open: boolean; onClose: () => void }) 
                 <RadioGroupItem value={place.path} id={`place-${place.path}`} />
                 <Label htmlFor={`place-${place.path}`} className="font-normal">
                   {place.name}{" "}
-                  <span className="text-xs text-stone-500">
+                  <span className="text-xs text-faint">
                     {place.kind === "cloud" ? "· kept by its cloud" : "· a disk"} · {place.path}
                   </span>
                 </Label>
@@ -120,7 +120,7 @@ function ChoosePlace({ open, onClose }: { open: boolean; onClose: () => void }) 
                   onChange={(event) => setAgain(event.target.value)}
                   autoComplete="new-password"
                 />
-                <p className="text-xs text-stone-500 sm:col-span-2">
+                <p className="text-xs text-faint sm:col-span-2">
                   {mismatch
                     ? "The two aren't the same."
                     : "AncesTree doesn't keep it: keep it with your recovery code. Opening a copy on another computer asks for it."}
@@ -148,14 +148,14 @@ export function ElsewherePanel({ elsewhere }: { elsewhere: Elsewhere | null | un
   const copy = useCopyNow();
   const stop = useStopCopying();
   return (
-    <div className="space-y-2 rounded-lg border border-stone-200 p-4 text-sm">
+    <div className="space-y-2 rounded-lg border border-border p-4 text-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h3 className="font-semibold">Copies in another place</h3>
         <HowDoesThisWork at="elsewhere" />
       </div>
       {!elsewhere ? (
         <>
-          <p className="max-w-2xl text-stone-600">
+          <p className="max-w-2xl text-muted-foreground">
             The backups are on this computer's own disk. Keep copies somewhere else too, such as a
             USB stick, or a folder OneDrive or Dropbox keeps, so that losing this computer doesn't
             lose them.
@@ -166,7 +166,7 @@ export function ElsewherePanel({ elsewhere }: { elsewhere: Elsewhere | null | un
         </>
       ) : (
         <>
-          <p className="text-stone-600">
+          <p className="text-muted-foreground">
             Each backup is copied to <code className="break-all">{elsewhere.inside}</code>
             {elsewhere.locked ? ", locked with your password" : ""}: {elsewhere.copies}{" "}
             {elsewhere.copies === 1 ? "copy" : "copies"} there
@@ -175,7 +175,7 @@ export function ElsewherePanel({ elsewhere }: { elsewhere: Elsewhere | null | un
               ` ${elsewhere.waiting} ${elsewhere.waiting === 1 ? "backup waits" : "backups wait"} to be copied.`}
           </p>
           {elsewhere.problem && (
-            <p role="alert" className="font-medium text-amber-700">
+            <p role="alert" className="font-medium text-warning">
               {elsewhere.problem}
             </p>
           )}

@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { useKinshipDictionary, useKinshipLanguage } from "@/api/queries";
 import type { DictionaryRow, DictionaryWord, KinshipLanguage } from "@/api/types";
+import { Failed } from "@/components/Failed";
+import { Hint } from "@/components/Hint";
+import { LoadingRows } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,7 +58,7 @@ export function DictionaryPage() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold">Kinship dictionary</h1>
-            <p className="max-w-3xl text-sm text-stone-500">
+            <p className="max-w-3xl text-sm text-faint">
               Every word AncesTree uses for a relative, in English, Bahasa Melayu and Basa Jawa. The
               answers use the word in bold; below it are other words people say.
             </p>
@@ -70,7 +73,7 @@ export function DictionaryPage() {
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="relative w-full max-w-xs">
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-stone-400" />
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-faint" />
             <Input
               type="search"
               value={query}
@@ -81,7 +84,7 @@ export function DictionaryPage() {
             />
           </div>
           <fieldset aria-label="Languages shown" className="flex items-center gap-1.5 text-sm">
-            <span className="text-stone-500">Show</span>
+            <span className="text-faint">Show</span>
             {KINSHIP_LANGUAGES.map((code) => (
               <button
                 key={code}
@@ -91,8 +94,8 @@ export function DictionaryPage() {
                 className={cn(
                   "rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
                   shown.includes(code)
-                    ? "border-stone-300 bg-white text-stone-900"
-                    : "border-transparent text-stone-400 hover:text-stone-700",
+                    ? "border-input bg-card text-foreground"
+                    : "border-transparent text-faint hover:text-foreground",
                 )}
               >
                 {LANGUAGE_NAMES[code]}
@@ -100,17 +103,23 @@ export function DictionaryPage() {
             ))}
           </fieldset>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-stone-500">Answers in</span>
+            <span className="text-faint">Answers in</span>
             <LanguageSwitch />
           </div>
         </div>
 
         <Guide />
 
-        {dictionary.isPending && <p className="text-sm text-stone-500">Loading…</p>}
-        {dictionary.isError && <p className="text-sm text-red-600">{dictionary.error.message}</p>}
+        {dictionary.isPending && <LoadingRows label="Loading the words…" rows={6} />}
+        {dictionary.isError && (
+          <Failed
+            error={dictionary.error}
+            onRetry={() => void dictionary.refetch()}
+            className="text-sm text-destructive"
+          />
+        )}
         {dictionary.data && sections.length === 0 && (
-          <p className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
+          <p className="rounded-xl border border-dashed border-input p-8 text-center text-sm text-faint">
             No word or relation matches “{query}”.
           </p>
         )}
@@ -121,10 +130,10 @@ export function DictionaryPage() {
               {section.title}
             </h2>
             {/* On a phone, a card for each relation instead of columns. */}
-            <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+            <div className="overflow-x-auto rounded-xl border border-border bg-card">
               <table className="w-full text-sm max-md:block md:min-w-[40rem]">
                 <thead className="max-md:hidden">
-                  <tr className="border-b border-stone-200 text-left text-xs text-stone-500">
+                  <tr className="border-b border-border text-left text-xs text-faint">
                     <th scope="col" className="w-1/4 px-3 py-2 font-medium">
                       Relation
                     </th>
@@ -135,7 +144,7 @@ export function DictionaryPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100 max-md:block">
+                <tbody className="divide-y divide-border max-md:block">
                   {section.rows.map((row) => (
                     <Row key={row.id} row={row} columns={columns} lit={row.id === target} />
                   ))}
@@ -161,17 +170,17 @@ function Row({
   return (
     <tr
       id={`row-${row.id}`}
-      className={cn("align-top max-md:block max-md:px-3 max-md:py-2.5", lit && "bg-amber-50")}
+      className={cn("align-top max-md:block max-md:px-3 max-md:py-2.5", lit && "bg-kin-soft")}
     >
       <th
         scope="row"
-        className="px-3 py-2 text-left font-normal text-stone-700 max-md:block max-md:px-0 max-md:pt-0 max-md:pb-1 max-md:font-medium max-md:text-stone-900"
+        className="px-3 py-2 text-left font-normal text-foreground max-md:block max-md:px-0 max-md:pt-0 max-md:pb-1 max-md:font-medium max-md:text-foreground"
       >
         {row.relation}
       </th>
       {columns.map((code) => (
         <td key={code} className="px-3 py-2 max-md:flex max-md:gap-3 max-md:px-0 max-md:py-1">
-          <span className="w-24 shrink-0 pt-px text-xs text-stone-500 md:hidden">
+          <span className="w-24 shrink-0 pt-px text-xs text-faint md:hidden">
             {LANGUAGE_NAMES[code]}
           </span>
           <Word word={row.words[code]} language={code} />
@@ -185,35 +194,35 @@ function Word({ word, language }: { word: DictionaryWord | undefined; language: 
   if (!word?.word) {
     return (
       <div className="space-y-0.5">
-        <span className="text-stone-400" title="No word for this">
-          —
-        </span>
-        {word?.note && <p className="text-xs text-stone-500 italic">{word.note}</p>}
+        <Hint label="No word for this">
+          <span className="text-faint">
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">No word for this</span>
+          </span>
+        </Hint>
+        {word?.note && <p className="text-xs text-faint italic">{word.note}</p>}
       </div>
     );
   }
   return (
     <div className="space-y-0.5">
       <p>
-        <span lang={language} className="font-semibold text-stone-900">
+        <span lang={language} className="font-semibold text-foreground">
           {word.word}
         </span>
         {word.descr && (
-          <span
-            className="ml-1 text-xs text-stone-500"
-            title="A description, not a word of its own"
-          >
-            (descr.)
-          </span>
+          <Hint label="A description, not a word of its own">
+            <span className="ml-1 text-xs text-faint">(descr.)</span>
+          </Hint>
         )}
       </p>
       {(word.also ?? []).length > 0 && (
-        <p lang={language} className="text-xs text-stone-600">
+        <p lang={language} className="text-xs text-muted-foreground">
           {(word.also ?? []).join(" · ")}
         </p>
       )}
       {(word.krama || word.krama_inggil) && (
-        <p className="text-xs text-stone-600">
+        <p className="text-xs text-muted-foreground">
           {word.krama && (
             <>
               krama <span lang="jv">{word.krama}</span>
@@ -228,11 +237,11 @@ function Word({ word, language }: { word: DictionaryWord | undefined; language: 
         </p>
       )}
       {(word.address ?? []).length > 0 && (
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-faint">
           Address: <span lang={language}>{(word.address ?? []).join(", ")}</span>
         </p>
       )}
-      {word.note && <p className="text-xs text-stone-500 italic">{word.note}</p>}
+      {word.note && <p className="text-xs text-faint italic">{word.note}</p>}
     </div>
   );
 }
@@ -240,11 +249,11 @@ function Word({ word, language }: { word: DictionaryWord | undefined; language: 
 /** How the three languages see family, and how to read the tables. */
 function Guide() {
   return (
-    <details className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm">
+    <details className="rounded-xl border border-border bg-card px-4 py-3 text-sm">
       <summary className="cursor-pointer font-medium">
         How the three languages see family, and how to read this
       </summary>
-      <div className="mt-3 grid gap-4 text-stone-700 md:grid-cols-2">
+      <div className="mt-3 grid gap-4 text-foreground md:grid-cols-2">
         <ul className="list-disc space-y-1.5 pl-5">
           <li>
             <strong>English</strong> names a relative by line and distance: <em>grand-</em>,{" "}

@@ -2,6 +2,7 @@ import { type Edge, MarkerType } from "@xyflow/react";
 import type { Graph, GraphLink, TreeSettings } from "@/api/types";
 import { closeness, closenessColour } from "@/lib/closeness";
 import { lifeYears } from "@/lib/people";
+import { DRAWING } from "@/styles/drawing";
 import { branchColours, generationColour } from "./colours";
 import type { ChildFlowEdge, PairFlowEdge, SpouseFlowEdge } from "./edges";
 import { generationShifts, treeGeneration } from "./generations";
@@ -115,7 +116,7 @@ export function toFlow(
   };
   const byChild = new Map<string, GraphLink[]>();
   const edges: TreeEdge[] = [];
-  const arrow = { type: MarkerType.ArrowClosed, width: 14, height: 14, color: "#a8a29e" };
+  const arrow = { type: MarkerType.ArrowClosed, width: 14, height: 14, color: DRAWING.line };
   const blood = (link: GraphLink) => (link.kind ?? "biological") === "biological";
   for (const link of graph.links) {
     if (link.type !== "parent" || !shown(link.source) || !shown(link.target)) continue;

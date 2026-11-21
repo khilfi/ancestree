@@ -12,7 +12,6 @@ import {
 import { useNavigate, useSearchParams } from "react-router";
 import { megabytes, useFetchPack, useMapPacks } from "@/api/mapPacks";
 import {
-  useDeathPlaces,
   useFamilyMap,
   useGraph,
   usePutPin,
@@ -23,7 +22,8 @@ import {
 } from "@/api/queries";
 import type { AtParents, GraphPerson, MapTown, Place } from "@/api/types";
 import { useCopy } from "@/app/copy";
-import { StartAdvice } from "@/app/StartAdvice";
+import { CouldNotLoad } from "@/app/StartAdvice";
+import { LoadingView } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
@@ -34,9 +34,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { TOOL_SELECT, ViewToolbar } from "@/components/ViewToolbar";
 import { ClosenessKey } from "@/features/me/ClosenessKey";
 import { useMeId } from "@/features/me/useMeId";
 import { PersonPanel } from "@/features/person/PersonPanel";
+import { usePanelWidth } from "@/features/person/panelWidth";
 import { useMoveToTrash } from "@/features/person/useMoveToTrash";
 import { FilterChips, FilterMenu } from "@/features/tree/FilterMenu";
 import { applyFilter, readView, withView, writeView } from "@/features/tree/filters";
@@ -45,19 +47,19 @@ import { useNarrow, useTouch } from "@/lib/media";
 import { showError } from "@/lib/notify";
 import { formatPlace } from "@/lib/people";
 import { onPlane } from "./geo";
-import type { Spot } from "./levels";
+import { type Spot, stateOf } from "./levels";
 import { MapCanvas, type MapTarget, type Move } from "./MapCanvas";
 import type { PlaceField } from "./PlaceFix";
-import { WhereList } from "./WhereList";
+import { listBeside, WhereList } from "./WhereList";
 
 // Which places the map shows, as its address says them: where they live by default.
-const BY: Record<PlaceField, string> = { residence: "", birth_place: "born", death_place: "died" };
+const BY: Record<PlaceField, string> = { residence: "", birth_place: "born" };
 
 import { drawnFromPacks, drawsWebGL2 } from "./webgl";
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center p-8 text-center text-stone-500">
+    <div className="flex h-full items-center justify-center p-8 text-center text-faint">
       <div className="max-w-md space-y-2">{children}</div>
     </div>
   );
@@ -72,15 +74,20 @@ const MapLibreCanvas =
 /**
  * The map: where the family lives, or was born, with the same side
  * panel as the tree. Which places, Moves and the tree's filters are in the address, so Back
- * undoes them. `?sample=2000` shows the made-up family, spread over real towns.
+ * undoes them. `?sample=2000` shows the made-up family, spread over real towns, in a
+ * development build alone.
  */
 export function MapPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const narrow = useNarrow();
+  const width = usePanelWidth(); // the panel as wide as it was last
   const touch = useTouch();
   const editable = useCopy() === null; // pins are the app's own, never a copy's
-  const sample = Math.min(5000, Math.max(0, Number(params.get("sample")) || 0));
+  // A test page's, in a development build alone, as `sampleSize` reads it for the timeline.
+  const sample = import.meta.env.DEV
+    ? Math.min(5000, Math.max(0, Number(params.get("sample")) || 0))
+    : 0;
   const realGraph = useGraph(sample === 0);
   const madeGraph = useSampleGraph(sample || 10, sample > 0);
   const realMap = useFamilyMap(sample === 0);
@@ -89,11 +96,7 @@ export function MapPage() {
   const map = sample ? madeMap : realMap;
   const selectedId = sample ? null : params.get("person");
   const view = readView(params);
-  const by = params.get("by");
-  // Where they died, only while the place of death is shown.
-  const deathPlaces = useDeathPlaces();
-  const field: PlaceField =
-    by === "born" ? "birth_place" : by === "died" && deathPlaces ? "death_place" : "residence";
+  const field: PlaceField = params.get("by") === "born" ? "birth_place" : "residence";
   const showMoves = params.get("moves") === "1";
   const own = useMemo(
     () => ({
@@ -115,6 +118,31 @@ export function MapPage() {
   const close = () => go({});
   const moveToTrash = useMoveToTrash(close, select);
   const [listOpen, setListOpen] = useState(!narrow);
+  // The place list sits beside the map where that leaves the map room enough, and otherwise
+  // over the map. There, it gives way when someone's panel opens, and comes back as it
+  // closes.
+  const [areaWidth, setAreaWidth] = useState(0);
+  const area = useCallback((element: HTMLDivElement | null) => {
+    if (!element) return;
+    const measure = () => setAreaWidth(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const beside = listBeside(areaWidth);
+  const gaveWay = useRef(false);
+  const panelOpen = selectedId !== null;
+  useEffect(() => {
+    if (!areaWidth) return;
+    if (panelOpen && !beside && listOpen && !gaveWay.current) {
+      gaveWay.current = true;
+      setListOpen(false);
+    } else if (!panelOpen && gaveWay.current) {
+      gaveWay.current = false;
+      setListOpen(true);
+    }
+  }, [panelOpen, beside, listOpen, areaWidth]);
 
   const settings = useTreeSettings();
   const colours = sample ? "branch" : (settings.data?.colours ?? "branch");
@@ -147,10 +175,7 @@ export function MapPage() {
     for (const entry of map.data?.people ?? []) {
       const person = people.get(entry.id);
       if (!person || (hideOthers && kept && !kept.has(entry.id))) continue;
-      // Where they died: those who have, never the living, missing none.
-      if (field === "death_place" && person.is_living !== false) continue;
-      const located =
-        field === "residence" ? entry.lives : field === "birth_place" ? entry.born : entry.died;
+      const located = field === "residence" ? entry.lives : entry.born;
       if (field === "residence" && entry.at_parents) atParents.set(entry.id, entry.at_parents);
       if (!located) {
         missing.push(person);
@@ -169,7 +194,7 @@ export function MapPage() {
         y,
         place: located.name ?? located.place.town ?? located.country,
         district: located.district ?? null,
-        state: located.state ?? null,
+        state: stateOf(located.country, located.state),
         country: located.country,
         rough: isRough,
         exact: located.exact ?? null,
@@ -254,14 +279,18 @@ export function MapPage() {
 
   let content: ReactNode;
   if (graph.isPending || map.isPending) {
-    content = <Message>Loading the map…</Message>;
+    content = <LoadingView label="Loading the map…" view="map" />;
   } else if (graph.isError || map.isError) {
     content = (
       <Message>
-        <p className="font-medium text-stone-700">Could not load the map.</p>
-        <p className="text-sm">
-          <StartAdvice />
-        </p>
+        <CouldNotLoad
+          what="the map"
+          error={graph.error ?? map.error}
+          onRetry={() => {
+            if (graph.isError) void graph.refetch();
+            if (map.isError) void map.refetch();
+          }}
+        />
       </Message>
     );
   } else {
@@ -299,9 +328,9 @@ export function MapPage() {
     };
     const todaysMap = <MapCanvas {...drawn} towns={map.data?.towns ?? NO_TOWNS} />;
     content = (
-      <div className="flex h-full flex-col bg-stone-50">
-        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200 bg-white px-3 py-2 text-sm">
-          <span className="flex items-center gap-2 text-stone-600">
+      <div className="flex h-full flex-col bg-background">
+        <ViewToolbar label="The map's tools">
+          <span className="flex items-center gap-2 text-muted-foreground">
             Show
             <Select
               value={field}
@@ -312,18 +341,17 @@ export function MapPage() {
                 })
               }
             >
-              <SelectTrigger size="sm" className="h-7 text-xs" aria-label="Which places">
+              <SelectTrigger size="sm" className={TOOL_SELECT} aria-label="Which places">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="residence">Where they live</SelectItem>
                 <SelectItem value="birth_place">Where they were born</SelectItem>
-                {deathPlaces && <SelectItem value="death_place">Where they died</SelectItem>}
               </SelectContent>
             </Select>
           </span>
           {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch inside is the control */}
-          <label className="flex items-center gap-2 text-stone-600">
+          <label className="flex items-center gap-2 text-muted-foreground">
             <Switch
               checked={showMoves}
               onCheckedChange={(on) =>
@@ -340,11 +368,11 @@ export function MapPage() {
               selectedId={selectedId}
             />
           )}
-          <span className="text-xs text-stone-500">
+          <span className="text-xs text-faint">
             {touch ? "Pinch to zoom · drag to move" : "Scroll to zoom · drag to move"}
           </span>
           {coming && (
-            <span className="text-xs text-stone-500" role="status">
+            <span className="text-xs text-faint" role="status">
               Fetching the map's detail: {megabytes(coming.done)} of {megabytes(coming.size)}
             </span>
           )}
@@ -358,14 +386,14 @@ export function MapPage() {
             <ListIcon />
             {found.spots.length} placed
           </Button>
-        </div>
+        </ViewToolbar>
         {!sample && colours === "closeness" && (
-          <div className="shrink-0 border-b border-stone-200 bg-white px-3 py-1.5">
+          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5">
             <ClosenessKey chosen={me !== null} />
           </div>
         )}
         {family && (
-          <div className="shrink-0 border-b border-stone-200 bg-white px-3 py-1.5 empty:hidden">
+          <div className="shrink-0 border-b border-border bg-card px-3 py-1.5 empty:hidden">
             <FilterChips
               graph={family}
               filter={view.filter}
@@ -374,7 +402,7 @@ export function MapPage() {
             />
           </div>
         )}
-        <div className="relative flex min-h-0 flex-1">
+        <div ref={area} className="relative flex min-h-0 flex-1">
           <div className="relative min-w-0 flex-1">
             {detailed && MapLibreCanvas ? (
               // Today's map while MapLibre's own code comes.
@@ -392,9 +420,14 @@ export function MapPage() {
           </div>
           {listOpen &&
             (narrow ? (
-              <div className="absolute inset-0 z-10 overflow-y-auto bg-white">{list}</div>
+              <div className="absolute inset-0 z-10 overflow-y-auto bg-card">{list}</div>
+            ) : beside ? (
+              <div className="w-72 shrink-0 overflow-y-auto border-l border-border bg-card">
+                {list}
+              </div>
             ) : (
-              <div className="w-72 shrink-0 overflow-y-auto border-l border-stone-200 bg-white">
+              // Over the map, at its side, where beside it would leave the map too little.
+              <div className="absolute inset-y-0 right-0 z-10 w-72 max-w-full overflow-y-auto border-l border-border bg-card shadow-lg">
                 {list}
               </div>
             ))}
@@ -421,19 +454,19 @@ export function MapPage() {
     return (
       <div className="relative h-full">
         {content}
-        {panel && <div className="absolute inset-0 z-20 bg-white">{panel}</div>}
+        {panel && <div className="absolute inset-0 z-20 bg-card">{panel}</div>}
       </div>
     );
   }
   return (
-    <ResizablePanelGroup className="h-full">
+    <ResizablePanelGroup className="h-full" {...width.group}>
       <ResizablePanel id="map" minSize="30">
         {content}
       </ResizablePanel>
       {panel && (
         <>
           <ResizableHandle withHandle />
-          <ResizablePanel id="person" defaultSize={440} minSize={340} maxSize="60">
+          <ResizablePanel id="person" {...width.panel}>
             {panel}
           </ResizablePanel>
         </>
