@@ -11,9 +11,13 @@ def test_a_generated_family_is_the_same_every_time() -> None:
 def test_two_thousand_people_are_seated_well_within_a_second() -> None:
     people, links = generated_family(2000)
 
-    started = time.perf_counter()
+    # By this thread's own clock, which stands still while others take their turn on the CPU,
+    # as on a PC busy with other runs of the checks. Seating is all arithmetic, with nothing to
+    # wait for, so that clock holds all of its own time, and a real slowdown still shows. It
+    # takes about 0.2 s; Windows counts it in steps of 15.6 ms.
+    started = time.thread_time()
     graph = build_graph(people, links, {"biological": True}, None)
-    elapsed = time.perf_counter() - started
+    elapsed = time.thread_time() - started
 
     assert len(graph.people) == 2000
     anchors = {unit.anchor for unit in graph.layout.units if unit.anchor}

@@ -1,5 +1,5 @@
 import json
-import time
+from typing import Any
 
 import httpx
 import pytest
@@ -7,6 +7,7 @@ from neo4j import AsyncDriver
 
 from ancestree.config import Settings
 from tests.integration.conftest import create_person, link, load_generated_family
+from tests.timing import at_best, fastest
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
@@ -89,13 +90,18 @@ async def test_two_thousand_people_load_within_a_second(
     await load_generated_family(driver, settings.neo4j_database, 2000)
     await client.get("/api/graph")  # warm up the query plans
 
-    started = time.perf_counter()
-    graph = (await client.get("/api/graph")).json()
-    elapsed = time.perf_counter() - started
+    async def load() -> dict[str, Any]:
+        graph: dict[str, Any] = (await client.get("/api/graph")).json()
+        return graph
+
+    # The fastest of up to five tries, stopping at the first within the second (tests/timing.py):
+    # a PC busy with other things, such as other runs of the checks, only ever makes a try
+    # slower. It takes about half a second alone, and has taken 1.33 s on a busy PC.
+    graph, timings = await fastest(load, 1.0)
 
     assert len(graph["people"]) == 2000
     assert len(graph["layout"]["seats"]) == 2000
-    assert elapsed < 1.0, f"loading 2,000 people took {elapsed:.2f}s"  # D10
+    assert min(timings) < 1.0, f"loading 2,000 people took {at_best(timings)}"  # D10
 
 
 async def test_a_sample_family_can_be_generated_without_storing_it(

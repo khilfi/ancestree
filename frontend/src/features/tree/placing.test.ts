@@ -215,15 +215,26 @@ describe("each way at 2,000 people", () => {
   const thousands = bigFamily(2000);
   const open = allFamilies(thousands);
 
-  it.each(WAYS.map(({ way }) => way))("%s: within 50 milliseconds, nobody overlapping", (way) => {
-    // The quickest of a few: the other tests run beside these, and take turns with them.
-    let quickest = Number.POSITIVE_INFINITY;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const started = performance.now();
-      ringLayout(thousands, open, way as Way);
-      quickest = Math.min(quickest, performance.now() - started);
-    }
-    expect(quickest).toBeLessThan(50);
-    expect(measure(thousands, ringLayout(thousands, open, way as Way)).overlaps).toBe(0);
-  });
+  it.each(WAYS.map(({ way }) => way))(
+    "%s: within 50 milliseconds, nobody overlapping",
+    async (way) => {
+      // The quickest of up to twenty tries, a moment apart, stopping at the first within the
+      // limit. Other tests take turns with these, and on a busy PC, such as with several runs
+      // of the checks at once, so do other runs: that only ever makes a try slower. A try takes
+      // 6 to 17 ms alone, shorter than a turn, and a thread that has just waited gets a fresh
+      // turn, so some try still runs through untouched. Starved of the CPU, where the quickest
+      // of five back to back took up to 85 ms, each way had one within 50 ms in eight tries at
+      // most. A real slowdown makes every try slow. (This thread's own clock, which leaves out
+      // the others' turns, counts in steps of 15.6 ms on Windows: too coarse for this.)
+      let quickest = Number.POSITIVE_INFINITY;
+      for (let tries = 0; tries < 20 && quickest >= 50; tries++) {
+        if (tries) await new Promise((done) => setTimeout(done, 10));
+        const started = performance.now();
+        ringLayout(thousands, open, way as Way);
+        quickest = Math.min(quickest, performance.now() - started);
+      }
+      expect(quickest).toBeLessThan(50);
+      expect(measure(thousands, ringLayout(thousands, open, way as Way)).overlaps).toBe(0);
+    },
+  );
 });

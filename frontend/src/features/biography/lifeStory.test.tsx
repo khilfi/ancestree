@@ -20,8 +20,20 @@ import { until } from "@/viewer/looking";
 import { BiographyTab, opening } from "./BiographyTab";
 import { LifeStoryHost, lifeLine, StoryPage } from "./LifeStory";
 import { StoryMark } from "./StoryMark";
+// The story's editor (MDXEditor) loads with this file, before any test's time starts, not in
+// the first test to show a story. It's heavy: on a busy PC it took seconds, and its loading ran
+// on into the tests after, taking their time.
+import "./StoryEditor";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// Fifteen seconds for each test, not Vitest's five. Even with the editor loaded first, a test
+// that takes a quarter of a second alone took nearly 5 s on a busy PC, such as with several
+// runs of the checks at once. And Vitest doesn't stop a test it gives up on: what that test
+// still does overlaps the next tests' act() calls, so every test after it fails too ("… never
+// showed"). A test waiting for something that never comes still fails in seconds: the wait
+// helper gives up after 200 looks, a look each time the page has nothing left to do.
+vi.setConfig({ testTimeout: 15_000 });
 
 vi.hoisted(() => {
   const NodeRequest = globalThis.Request;
@@ -232,16 +244,20 @@ describe("the life story's window", () => {
     expect(talent).toBeNull(); // empty: just the button to add one
     act(() => button("Add one")?.click());
     const first = document.querySelector<HTMLTextAreaElement>('[aria-label="Hidden talents: 1"]');
-    act(() => {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(
-        first,
-        "Whistling like a bulbul",
-      );
-      first?.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-    await act(async () => {
-      await new Promise((done) => setTimeout(done, 2300)); // a pause in typing saves
-    });
+    // A pause in typing saves: two seconds, on a stand-in clock. Slept through, they were most
+    // of this test's time, and a busy PC stretched the rest past the time allowed. Only
+    // setTimeout stands in, and only until the save starts; then React Query's timers and the
+    // wait helper's are on the real clock again.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      type(first, "Whistling like a bulbul");
+      await act(() => vi.advanceTimersByTimeAsync(1999));
+      expect(saved).toEqual([]); // not before the pause is over
+      await act(() => vi.advanceTimersByTimeAsync(1));
+    } finally {
+      vi.useRealTimers();
+    }
+    await until("Saved");
     expect(saved).toEqual([
       {
         story: "",
